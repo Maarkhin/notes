@@ -8043,6 +8043,15 @@ html body[class*="theme-"] .content-container .action-bar label:hover{background
 html body[class*="theme-"] .content-container .action-bar > .mc-group.mc-danger{border-color:rgba(239,68,68,.28) !important}
 html body[class*="theme-"] .content-container .action-bar .mc-btn-danger{background:rgba(239,68,68,.08) !important;border-color:rgba(239,68,68,.3) !important}
 </style>
+<style id="muMxeCaret">
+/* The new editor's light theme has a near-white page, but #muWhiteEditText forces caret-color:#fff !important on every
+   .text-box / title input, so the blinking caret was white on white (invisible). Give the caret the editor's own text
+   colour again (dark in the light theme, light in the dark theme). The id selector beats the generic rule above. */
+html body #contentsContainer .mxe .mc-title-input,
+html body #contentsContainer .mxe .mc-title-input:disabled{caret-color:var(--mx-title) !important}
+html body #contentsContainer .mxe .text-box,
+html body #contentsContainer .mxe .text-box *:not(mark):not([data-mu-at]){caret-color:var(--mx-note) !important}
+</style>
 <style id="muFocusToolsCss">
 /* ---- smaller DNA / A- / A+ / eye / delete / copy / undo / redo ---- */
 .mu-tools-line{gap:5px !important;margin:2px 0 5px !important}
@@ -30560,14 +30569,21 @@ window.attachWrapperEvents = function(categoryId){
     function refreshField(el){ setMark(el, wantsLtr(el.value)); }
 
     // Own inline text of a block (stops at the first child block; <br> counts as a line break).
+    /* Only ever used as firstLine(ownText(el)). Perf: in a note whose lines are not wrapped in <div>s (text nodes + <br>
+       directly in the box) this used to concatenate and split the WHOLE note on every keystroke. Stop as soon as the first
+       non-blank line is complete - the result of firstLine() is identical. */
     function ownText(el){
         var s = '';
         for (var n = el.firstChild; n; n = n.nextSibling) {
             if (n.nodeType === 3) s += n.nodeValue;
             else if (n.nodeType === 1) {
-                if (n.nodeName === 'BR') { s += '\n'; continue; }
-                if (BLOCK_RE.test(n.nodeName)) break;
-                s += n.textContent;
+                if (n.nodeName === 'BR') s += '\n';
+                else if (BLOCK_RE.test(n.nodeName)) break;
+                else s += n.textContent;
+            }
+            if (s.length && /[\r\n\u2028\u2029]/.test(s)) {
+                var ps = s.split(LINE_SPLIT);
+                for (var k = 0; k < ps.length - 1; k++) if (!BLANK_RE.test(ps[k])) return s;
             }
         }
         return s;
@@ -34531,21 +34547,77 @@ vault: function (id) { callFn('mkVaultAddNote', id); },
     D.addEventListener('keydown', function (e) { if (e.key === 'Escape') closePops(); });
 
     /* ---------- page state: scroll lock, light/dark from the app's own text colour, keyboard-safe height ---------- */
+    /* Plain browsers (Chrome etc.): the keyboard overlays the page, so the visual viewport alone can leave the bottom
+       bar under the keyboard. While the editor is open we ask the browser for the exact keyboard rectangle
+       (VirtualKeyboard API) and end the panel right above it. Inside Telegram nothing changes (it already works). */
+    function mxeIsTG() {
+        try { var T = window.Telegram && window.Telegram.WebApp; return !!(T && ((T.initData && T.initData.length) || (T.platform && T.platform !== 'unknown'))); } catch (_) { return false; }
+    }
+    function mxeVK() {
+        try { return (!mxeIsTG() && navigator.virtualKeyboard) ? navigator.virtualKeyboard : null; } catch (_) { return null; }
+    }
+    var vvT = 0, __mxeLastH = 0;
     function vv() {
-        if (!D.querySelector('.content-container.mxe.show')) return;
+        var box = D.querySelector('.content-container.mxe.show');
+        if (!box) return;
         var v = window.visualViewport;
         if (!v || v.scale > 1.01) return;
-        root.style.setProperty('--mxe-vh', Math.round(v.height) + 'px');
-        root.style.setProperty('--mxe-top', Math.round(v.offsetTop) + 'px');
+        var top = Math.round(v.offsetTop), bottom = top + Math.round(v.height);
+        var VK = mxeVK();
+        if (VK) {
+            try {
+                var r = VK.boundingRect;
+                if (r && r.height > 0) {
+                    var kt = Math.round(r.top);
+                    if (kt > top + 80 && kt < bottom) bottom = kt;
+                }
+            } catch (_) {}
+        }
+        var h = bottom - top;
+        /* Telegram: the page is resized only once the keyboard animation ends. Apply the new height at once (cheap) and
+           slide just the bottom bar from where it was to where it belongs on the compositor (transform), instead of
+           animating the whole panel's height (a full relayout of the note every frame = the lag). */
+        if (root.classList.contains('mxe-tg') && __mxeLastH && Math.abs(h - __mxeLastH) > 40) {
+            try {
+                var bar = box.querySelector('.mxe-bottom');
+                if (bar && bar.animate && !(window.matchMedia && matchMedia('(prefers-reduced-motion:reduce)').matches))
+                    bar.animate([{ transform: 'translateY(' + (__mxeLastH - h) + 'px)' }, { transform: 'translateY(0)' }], { duration: 150, easing: 'cubic-bezier(.2,.8,.3,1)' });
+            } catch (_) {}
+        }
+        __mxeLastH = h;
+        root.style.setProperty('--mxe-vh', h + 'px');
+        root.style.setProperty('--mxe-top', top + 'px');
+        /* safety net: if the panel still ends lower than intended, pull it up by the difference */
+        if (VK && !vvT) vvT = requestAnimationFrame(function () {
+            vvT = 0;
+            try {
+                var b = D.querySelector('.content-container.mxe.show'); if (!b) return;
+                var over = Math.round(b.getBoundingClientRect().bottom - bottom);
+                if (over > 1 && over < 400) root.style.setProperty('--mxe-vh', (h - over) + 'px');
+            } catch (_) {}
+        });
         try { refitPops(); } catch (_) {}
     }
+    function vvSoon() { vv(); setTimeout(vv, 120); setTimeout(vv, 350); setTimeout(vv, 700); }
     function sync() {
         var open = D.querySelector('.content-container.mxe.show');
         root.classList.toggle('mxe-open', !!open);
+        var VK = mxeVK();
+        if (!window.__mxeTgCss) {
+            window.__mxeTgCss = 1;
+            try {
+                var st = D.createElement('style'); st.id = 'mxeTgSmoothCss';
+                st.textContent = 'html.mxe-tg body #contentsContainer .mxe .mxe-bottom{will-change:transform}';
+                D.head.appendChild(st);
+            } catch (_) {}
+        }
+        root.classList.toggle('mxe-tg', mxeIsTG());
         if (!open) {
-            root.style.removeProperty('--mxe-vh'); root.style.removeProperty('--mxe-top');
+            root.style.removeProperty('--mxe-vh'); root.style.removeProperty('--mxe-top'); __mxeLastH = 0;
+            try { if (VK && VK.overlaysContent) VK.overlaysContent = false; } catch (_) {}
             return;
         }
+        try { if (VK && !VK.overlaysContent) VK.overlaysContent = true; } catch (_) {}
         root.setAttribute('data-mxe-theme', getTheme());
         vv();
         updUR(idOf(open));
@@ -34554,6 +34626,11 @@ vault: function (id) { callFn('mkVaultAddNote', id); },
         window.visualViewport.addEventListener('resize', vv);
         window.visualViewport.addEventListener('scroll', vv);
     }
+    window.addEventListener('resize', vv);
+    D.addEventListener('focusin', function (e) { if (e.target && e.target.closest && e.target.closest('.content-container.mxe')) vvSoon(); }, true);
+    D.addEventListener('focusout', function (e) { if (e.target && e.target.closest && e.target.closest('.content-container.mxe')) vvSoon(); }, true);
+    try { var _vk = mxeVK(); if (_vk) _vk.addEventListener('geometrychange', vv); } catch (_) {}
+    try { var _T = window.Telegram && window.Telegram.WebApp; if (_T && _T.onEvent) _T.onEvent('viewportChanged', vv); } catch (_) {}
     window.addEventListener('orientationchange', function () { setTimeout(vv, 250); });
     (function () {
         var orig = window.renderContents;
@@ -34813,6 +34890,7 @@ vault: function (id) { callFn('mkVaultAddNote', id); },
     var h = Math.round((v && v.height) || window.innerHeight || 0);
     base = Math.max(base, h, window.innerHeight || 0);
     var shrunk = h < base - 120, a = document.activeElement;
+    try { var _vk = navigator.virtualKeyboard; if (_vk && _vk.overlaysContent && _vk.boundingRect && _vk.boundingRect.height > 120) shrunk = true; } catch (_) {}
     root.classList.toggle('mu-kb', editable(a) && shrunk);
     /* 'mu-kbo' = same, for a text field anywhere in the app (search boxes, dialogs...) */
     var any = !!a && (a.isContentEditable || a.tagName === 'TEXTAREA' || (a.tagName === 'INPUT' && /^(text|search|url|email|password|number|tel|)$/i.test(a.type || '')));
@@ -34823,6 +34901,7 @@ vault: function (id) { callFn('mkVaultAddNote', id); },
   document.addEventListener('focusout', function () { clearTimeout(t); t = setTimeout(upd, 120); }, true);
   window.addEventListener('resize', function () { upd(); });
   if (window.visualViewport) window.visualViewport.addEventListener('resize', upd);
+  try { if (navigator.virtualKeyboard) navigator.virtualKeyboard.addEventListener('geometrychange', upd); } catch (_) {}
   try {
     var _tg = window.Telegram && window.Telegram.WebApp;
     if (_tg && _tg.onEvent) _tg.onEvent('viewportChanged', function () { upd(); setTimeout(upd, 200); });
@@ -37580,7 +37659,15 @@ setInterval(function(){ var s=document.getElementById('mkVaultBtnLbl'); if(s){ v
   window.mu_tgNewUiColors=function(){
     try{
       var th=window.mu_nfsTheme && window.mu_nfsTheme();
-      if(!th) return null;
+      if(!th){
+        /* classic / any other way of opening the note editor: Telegram's native background (the strip revealed while the
+           keyboard slides away) must match the editor, otherwise a dark band flashes under it */
+        if(document.documentElement.classList.contains('mxe-open') && document.querySelector('.content-container.mxe.show')){
+          var _ec=document.documentElement.getAttribute('data-mxe-theme')==='light' ? '#f9f9f9' : '#1d1d1f';
+          return {top:_ec,bottom:_ec};
+        }
+        return null;
+      }
       var nfs=document.getElementById('muNotesFs');
       var open=!!(nfs && nfs.classList.contains('mu-open'));
       var el=open ? nfs : document.querySelector('.content-container.mxe.show');
@@ -37598,7 +37685,7 @@ setInterval(function(){ var s=document.getElementById('mkVaultBtnLbl'); if(s){ v
     t=0;
     try{
       var th=window.mu_nfsTheme && window.mu_nfsTheme();
-      var key=String(th)+'|'+document.documentElement.className;
+      var key=String(th)+'|'+document.documentElement.className+'|'+document.documentElement.getAttribute('data-mxe-theme');
       if(key===lastKey) return; lastKey=key;
       if(window.mu_tgHeaderSync) window.mu_tgHeaderSync(true);
     }catch(e){}
