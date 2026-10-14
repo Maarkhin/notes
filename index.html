@@ -8169,6 +8169,12 @@ html body .content-container .action-bar .mc-row .mc-btn-danger,
 html body[class*="theme-"] .content-container .action-bar .mc-row .mc-btn-danger{border:1px solid #ef4444 !important;color:#ff6b6b !important}
 </style>
 <style id="muHeadingGlobal">/* heading format (the H tool) must look like a heading everywhere the note is shown, not only inside the editor */
+.mk-cb{display:inline-block;box-sizing:border-box;width:22px;height:22px;border:2px solid #8b93a1;border-radius:50%;vertical-align:-5px;margin-inline-end:10px;font-size:0 !important;line-height:0;cursor:pointer;position:relative;user-select:none;-webkit-user-select:none;-webkit-tap-highlight-color:transparent;overflow:hidden}
+.mk-cb::after{content:'';position:absolute;left:6px;top:2px;width:5px;height:10px;border:solid #fff;border-width:0 2.5px 2.5px 0;transform:rotate(45deg);opacity:0}
+.mk-cb-on{background:#2f6df6;border-color:#2f6df6}
+.mk-cb-on::after{opacity:1}
+.mk-hl{background:#ffeb3b;color:#111 !important;-webkit-text-fill-color:#111;border-radius:3px;padding:0 1px;-webkit-box-decoration-break:clone;box-decoration-break:clone;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+.mk-hl-ico{background:#ffeb3b;color:#111;padding:0 5px;border-radius:3px;font-weight:800}
 .mxe-h{font-size:1.45em;line-height:1.35;margin:.15em 0}
 /* active (selected) state of the writing-tool buttons: clearly visible ring */
 html body #contentsContainer .mxe .mxe-pop .grid button.on{box-shadow:inset 0 0 0 2px currentColor !important;font-weight:700 !important}</style>
@@ -8284,6 +8290,8 @@ html:not([dir="ltr"]) .mu-nb-en{display:none}
 .mu-nfs-fh.mu-nfs-fh-r{width:auto;flex:1 1 0;min-width:0;justify-content:flex-end}
 .mu-nfs-fadd{display:flex;align-items:center;justify-content:center;flex:0 0 auto;width:26px;height:26px;border:1.5px solid var(--nfs-border);border-radius:50%;background:transparent;color:var(--nfs-ink) !important;cursor:pointer;padding:0;-webkit-tap-highlight-color:transparent}
 .mu-nfs-fadd:active{background:rgba(127,127,127,.25)}
+.mu-nfs-frow .mu-nfs-fadd + .mu-nfs-fadd{margin-inline-start:6px}
+#muNotesFs .mu-nfs-fadd.mu-nfs-fdel{color:#ff5a5a !important;border-color:#ff5a5a !important}
 .mu-nfs-fadd svg{width:15px;height:15px}
 .mu-nfs-pkq{display:block;width:100%;box-sizing:border-box;height:40px;margin:0 0 8px;border:1px solid var(--nfs-border);border-radius:12px;background:transparent;color:var(--nfs-ink) !important;font-family:inherit;font-size:15px;padding:0 12px;outline:0;-webkit-appearance:none;appearance:none}
 .mu-nfs-pklist{max-height:48vh;overflow-y:auto;-webkit-overflow-scrolling:touch}
@@ -9196,6 +9204,24 @@ html.mu-nfs-open:not(#_nfs) body .advanced-card:has(.markhin-filename-input) .ma
 #muNav .mu-nav-panel:not(.mu-nav-paired) .mu-nav-item svg{width:20px;height:20px}
 #muNav .mu-nav-panel:not(.mu-nav-paired) .mu-nav-row .mu-nav-item{padding-inline-end:40px}
 #muNav .mu-nav-panel:not(.mu-nav-paired) .mu-nav-help{inset-inline-end:8px;width:22px;height:22px;min-width:22px;font-size:12px;line-height:20px}
+/* Grid menu layout: same narrow panel width as the list layout, with proportionally smaller controls */
+#muNav .mu-nav-panel.mu-nav-paired{width:min(80vw,300px);gap:6px;padding-inline:10px}
+#muNav .mu-nav-panel.mu-nav-paired .mu-nav-head{gap:5px;padding:0 0 6px}
+#muNav .mu-nav-panel.mu-nav-paired .mu-nav-head .mu-nav-ai,#muNav .mu-nav-panel.mu-nav-paired .mu-nav-head .mu-nav-layout{flex:0 0 34px;width:34px;height:34px;border-radius:11px}
+#muNav .mu-nav-panel.mu-nav-paired .mu-nav-head .mu-nav-ai svg{width:18px;height:18px}
+#muNav .mu-nav-panel.mu-nav-paired .mu-nav-head .mu-nav-layout svg{width:17px;height:17px}
+#muNav .mu-nav-panel.mu-nav-paired .mu-nav-head .mu-nav-old{height:34px;border-radius:11px;font-size:10.5px;padding:0 4px}
+#muNav .mu-nav-panel.mu-nav-paired .mu-nav-head .mu-nav-lang{height:34px;border-radius:11px;font-size:10.5px;padding:0 8px;gap:4px}
+#muNav .mu-nav-panel.mu-nav-paired .mu-nav-head .mu-nav-lang svg{width:15px;height:15px}
+#muNav .mu-nav-panel.mu-nav-paired .mu-nav-sec{padding:3px 8px 2px;font-size:10.5px}
+#muNav .mu-nav-panel.mu-nav-paired .mu-nav-sep{margin:4px 6px}
+#muNav .mu-nav-panel.mu-nav-paired .mu-nav-pair{gap:5px;margin:0 0 5px;padding:0}
+#muNav .mu-nav-panel.mu-nav-paired .mu-nav-pair .mu-nav-item{min-height:38px;padding:4px 6px;gap:5px;border-radius:12px;font-size:12px}
+#muNav .mu-nav-panel.mu-nav-paired .mu-nav-pair .mu-nav-item svg{width:17px;height:17px}
+#muNav .mu-nav-panel.mu-nav-paired .mu-nav-pair.mu-nav-solo .mu-nav-item{min-height:40px;font-size:13.5px;gap:8px}
+#muNav .mu-nav-panel.mu-nav-paired .mu-nav-pair.mu-nav-solo .mu-nav-item svg{width:19px;height:19px}
+#muNav .mu-nav-panel.mu-nav-paired .mu-nav-pair .mu-nav-row .mu-nav-item{padding-inline-start:6px;padding-inline-end:26px}
+#muNav .mu-nav-panel.mu-nav-paired .mu-nav-pair .mu-nav-help{inset-inline-end:4px;width:18px;height:18px;min-width:18px;font-size:11px;line-height:16px}
 </style>
 <style id="muNavPortalHelp">
 #muNav .mu-nav-row{position:relative;display:block;flex:0 0 auto}
@@ -10235,11 +10261,18 @@ html body #themePickerOverlay .tp-check{
            gradient (a copy of the body's own background, same size and origin) over the top inset, so the
            theme keeps flowing behind Telegram's buttons while notes scroll underneath instead of overlapping. */
         var __muStripRaf = 0;
+        try { ['input', 'keydown'].forEach(function(n){ document.addEventListener(n, function(){ window.__muLastTypeAt = Date.now(); }, { capture: true, passive: true }); }); } catch (_) {}
         function mu_tgFsPaintStrip(){
             /* Trailing debounce: while the keyboard animates, resize / ResizeObserver fire every frame and each run
                forces style + layout. Wait until things settle (the strip only matters once the page is scrolled). */
             if (__muStripRaf) clearTimeout(__muStripRaf);
-            __muStripRaf = setTimeout(function(){ __muStripRaf = 0; mu_tgFsPaintStripNow(); }, 140);
+            /* Perf: typing makes the page grow / changes classes, which used to trigger a full re-measure (several
+               getComputedStyle calls + forced layout) right after each pause. While keys are being pressed, wait. */
+            __muStripRaf = setTimeout(function run(){
+                var idle = Date.now() - (window.__muLastTypeAt || 0);
+                if (idle < 1200) { __muStripRaf = setTimeout(run, 1250 - idle); return; }
+                __muStripRaf = 0; mu_tgFsPaintStripNow();
+            }, 140);
         }
         function mu_tgFsPaintStripNow(){
             try{
@@ -10541,7 +10574,7 @@ html body #themePickerOverlay .tp-check{
         const CLOUD_CONFIG_KEY = 'mk_cfg';
         /* ---- Manual-backup count setting --------------------------------
            The person can choose how many manual snapshots to keep (0-7,
-           default 2) from Cloud Backup -> Settings. The key budget is FIXED
+           default 1) from Cloud Backup -> Settings. The key budget is FIXED
            at ~960 of Telegram's 1024 keys (~64 spare) and is split equally
            between the single auto slot and the manual slots:
                keys per backup = floor((960 - 2 reserved) / (1 + manualCount))
@@ -10551,7 +10584,7 @@ html body #themePickerOverlay .tp-check{
            shared by every device, with a localStorage copy as a fallback. */
         const CLOUD_MANUAL_MIN = 0;
         const CLOUD_MANUAL_MAX = 7;
-        const CLOUD_MANUAL_DEFAULT = 2;
+        const CLOUD_MANUAL_DEFAULT = 1;
         const CLOUD_LOCAL_LIMIT_KEY = 'mk_manual_limit_v1';
         const CLOUD_KEY_BUDGET = 960;
         const CLOUD_RESERVED_KEYS = 2;
@@ -15153,7 +15186,7 @@ html body #themePickerOverlay .tp-check{
                 media: 'رسانه', write: 'ابزار نوشتن', undo: 'واگرد', redo: 'جلو', copy: 'کپی متن', clear: 'پاک‌کردن متن', more: 'بیشتر',
                 image: 'تصویر', voice: 'ضبط صدا', voiceStop: 'توقف ضبط', draw: 'نقاشی',
                 bold: 'پررنگ', italic: 'کج', strike: 'خط‌خورده', heading: 'عنوان', ul: 'فهرست', todo: 'چک‌لیست', quote: 'نقل‌قول', code: 'کد',
-                underline: 'زیرخط', ol: 'شماره‌دار', table: 'جدول', linkf: 'لینک', smaller: 'کوچک‌تر', bigger: 'بزرگ‌تر', clearf: 'حذف قالب', size: 'اندازه',
+                underline: 'زیرخط', highlight: 'هایلایت', ol: 'شماره‌دار', table: 'جدول', linkf: 'لینک', smaller: 'کوچک‌تر', bigger: 'بزرگ‌تر', clearf: 'حذف قالب', size: 'اندازه',
                 gQuick: 'دسترسی سریع', toDay: 'حالت روز', toNight: 'حالت شب', gTheme: 'تم', gManage: 'مدیریت', gSecurity: 'امنیت', gTr: 'ترجمه', gOrganize: 'سازمان‌دهی', gSpecial: 'جلوه‌های ویژه', gDanger: 'خطر', gInfo: 'اطلاعات',
                 view: 'نمایش یادداشت', fakeEdit: 'ویرایش یادداشت جعلی', fake: 'یادداشت جعلی', vault: 'افزودن به گاوصندوق',
                 toEn: 'ترجمه به انگلیسی', toFa: 'ترجمه به فارسی',
@@ -15165,7 +15198,7 @@ html body #themePickerOverlay .tp-check{
                 media: 'Media', write: 'Writing tools', undo: 'Undo', redo: 'Redo', copy: 'Copy text', clear: 'Clear text', more: 'More',
                 image: 'Image', voice: 'Voice', voiceStop: 'Stop recording', draw: 'Drawing',
                 bold: 'Bold', italic: 'Italic', strike: 'Strike', heading: 'Heading', ul: 'List', todo: 'Checklist', quote: 'Quote', code: 'Code',
-                underline: 'Underline', ol: 'Numbered', table: 'Table', linkf: 'Link', smaller: 'Smaller', bigger: 'Bigger', clearf: 'Clear format', size: 'Size',
+                underline: 'Underline', highlight: 'Highlight', ol: 'Numbered', table: 'Table', linkf: 'Link', smaller: 'Smaller', bigger: 'Bigger', clearf: 'Clear format', size: 'Size',
                 gQuick: 'Quick actions', toDay: 'Day mode', toNight: 'Night mode', gTheme: 'Theme', gManage: 'Manage', gSecurity: 'Security', gTr: 'Translate', gOrganize: 'Organize', gSpecial: 'Special effects', gDanger: 'Danger', gInfo: 'Info',
                 view: 'View note', fakeEdit: 'Edit fake note', fake: 'Fake note', vault: 'Add to vault',
                 toEn: 'Translate to EN', toFa: 'Translate to FA',
@@ -15226,6 +15259,7 @@ html body #themePickerOverlay .tp-check{
                             fmt('quote', '<span style="font-size:20px">”</span>', L.quote) +
                             fmt('code', '<span style="font-size:14px;font-family:monospace">&lt;/&gt;</span>', L.code) +
                             fmt('underline', '<u style="font-size:18px">U</u>', L.underline) +
+                            fmt('highlight', '<span style="font-size:15px;font-weight:800;background:#ffeb3b;color:#111;padding:0 6px;border-radius:4px;line-height:1.4">A</span>', L.highlight) +
                             fmt('ol', '<span style="font-size:15px">1.</span>', L.ol) +
                             fmt('table', '<span style="font-size:18px">▦</span>', L.table) +
                             fmt('link', MXE_IC.link, L.linkf) +
@@ -17404,6 +17438,7 @@ html body #themePickerOverlay .tp-check{
             const textEl = document.getElementById(`text-${id}`);
             if (!item || !textEl || item.isDecoy || hiddenState[id]) return;
             const cleanHtml = sanitizeHtml(textEl.innerHTML);
+            window.__muSaveLen = cleanHtml.length;
             if (cleanHtml === String(item.html || '')) return;
             item.html = cleanHtml;
             mu_historyPush(id, cleanHtml);
@@ -17461,7 +17496,10 @@ html body #themePickerOverlay .tp-check{
             }
             const id = textBox.id.slice(5);
             clearTimeout(autosaveTimer);
-            autosaveTimer = setTimeout(() => autosaveCategory(id), 700);
+            // Perf: the save pass (sanitizeHtml + innerText) costs more the longer the note is, and it fires on every
+            // typing pause - so very long notes wait a little longer (flushed anyway on hide / close / Save).
+            const __L = window.__muSaveLen || 0;
+            autosaveTimer = setTimeout(() => autosaveCategory(id), __L < 60000 ? 700 : Math.min(2500, 700 + Math.round((__L - 60000) / 80)));
         });
 
         async function copyCategory(id) {
@@ -18757,7 +18795,7 @@ html body #themePickerOverlay .tp-check{
                     const parts = node.textContent.replace(/\r\n?/g, '\n').split('\n');
                     parts.forEach((part, i) => runs.push(new TextRun({
                         text: part, break: i > 0 ? 1 : undefined,
-                        bold: fmt.bold, italics: fmt.italics, underline: fmt.underline ? {} : undefined, strike: fmt.strike,
+                        bold: fmt.bold, italics: fmt.italics, underline: fmt.underline ? {} : undefined, strike: fmt.strike, highlight: fmt.highlight,
                         font: fmt.font, rightToLeft: fmt.rtl || undefined
                     })));
                 }
@@ -18767,12 +18805,14 @@ html body #themePickerOverlay .tp-check{
             const tag = node.tagName;
             if (tag === 'BR') { runs.push(new TextRun({ text: '', break: 1 })); return runs; }
             if (tag === 'BUTTON') return runs;
+            if (tag === 'SPAN' && node.classList && node.classList.contains('mk-cb')) { runs.push(new TextRun({ text: node.classList.contains('mk-cb-on') ? '☑ ' : '☐ ', font: fmt.font })); return runs; }
             if (node.classList && node.classList.contains('img-toolbar')) return runs;
             const childFmt = { ...fmt };
             if (tag === 'B' || tag === 'STRONG') childFmt.bold = true;
             if (tag === 'I' || tag === 'EM') childFmt.italics = true;
             if (tag === 'U') childFmt.underline = true;
             if (tag === 'S') childFmt.strike = true;
+            if (tag === 'SPAN' && node.classList && node.classList.contains('mk-hl')) childFmt.highlight = 'yellow';
             if (tag === 'CODE') childFmt.font = 'Consolas';
             if (tag === 'A') {
                 const href = node.getAttribute('href');
@@ -20282,6 +20322,7 @@ html body #themePickerOverlay .tp-check{
   .mu-note-body .mu-row-c>.mu-img-side:first-child{text-align:right}.mu-note-body .mu-row-c>.mu-img-side:last-child{text-align:left}
   .mu-note-body p{margin:0 0 1em}
   .mu-note-body div,.mu-note-body p,.mu-note-body li,.mu-note-body blockquote,.mu-note-body pre{unicode-bidi:plaintext}
+  .mk-hl{background:#fff176;color:#111;border-radius:3px;padding:0 2px}
   .mu-note-body blockquote{border-inline-start:3px solid #60a5fa;margin:10px 0;padding:8px 14px;background:rgba(96,165,250,.06);border-radius:8px}
   .mu-note-body pre,.mu-note-body code{font-family:Consolas,Menlo,monospace}
   .mu-note-body code{background:rgba(127,127,127,.15);padding:1px 5px;border-radius:4px;direction:ltr;unicode-bidi:isolate}
@@ -20882,6 +20923,8 @@ ${body}
                 if (t === 'B' || t === 'STRONG') return wrapMd(inner, '**');
                 if (t === 'I' || t === 'EM') return wrapMd(inner, '*');
                 if (t === 'S') return wrapMd(inner, '~~');
+                if (t === 'SPAN' && n.classList && n.classList.contains('mk-hl')) return wrapMd(inner, '==');
+                if (t === 'SPAN' && n.classList && n.classList.contains('mk-cb')) return n.classList.contains('mk-cb-on') ? '[x] ' : '[ ] ';
                 if (t === 'CODE') return inner ? '`' + inner + '`' : inner;
                 if (t === 'A') return '[' + inner + '](' + (n.getAttribute('href') || '') + ')';
                 return inner;
@@ -21446,6 +21489,7 @@ ${body}
                 if (has('w:i')) inner = `<em>${inner}</em>`;
                 if (has('w:u')) inner = `<u>${inner}</u>`;
                 if (has('w:strike')) inner = `<s>${inner}</s>`;
+                { const hl = mu_docxDirectChildren(rPr, 'w:highlight')[0]; const hv = hl && hl.getAttribute('w:val'); if (hv && hv !== 'none') inner = `<span class="mk-hl">${inner}</span>`; }
             }
             return inner;
         }
@@ -24031,7 +24075,8 @@ function mdToHtml(md){
          .replace(/^#\s+(.*)$/gm, '<h1>$1</h1>');
     x = x.replace(/\[([^\]]+)\]\((https?:\/\/[^\s)]+)\)/g, '<a href="$2">$1</a>');
     x = x.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
-         .replace(/__(.+?)__/g, '<strong>$1</strong>');
+         .replace(/__(.+?)__/g, '<strong>$1</strong>')
+         .replace(/==([^\s=](?:[^=\n]*?[^\s=])?)==/g, '<span class="mk-hl">$1</span>');
     // Word-boundary-aware italics: only treat * or _ as emphasis when
     // they're not glued to a letter/digit/underscore (Latin or Persian) on
     // the outside, so real prose with underscores/asterisks in it is left
@@ -24066,7 +24111,7 @@ function mdToHtml(md){
    // Exposed on window for the same reason as ensureItem above — other code in a
    // different <script> tag may call this by bare name.
 window.mdToHtml = mdToHtml;
-function htmlToMd(html){const d=document.createElement('div');d.innerHTML=sanitizeHtml(html||'');d.querySelectorAll('br').forEach(x=>x.replaceWith('\n'));d.querySelectorAll('strong,b').forEach(x=>x.replaceWith('**'+x.textContent+'**'));d.querySelectorAll('em,i').forEach(x=>x.replaceWith('*'+x.textContent+'*'));d.querySelectorAll('u').forEach(x=>x.replaceWith('__'+x.textContent+'__'));d.querySelectorAll('blockquote').forEach(x=>x.replaceWith('\n> '+x.textContent+'\n'));d.querySelectorAll('li').forEach(x=>x.replaceWith('- '+x.textContent+'\n'));d.querySelectorAll('a').forEach(x=>x.replaceWith('['+x.textContent+']('+x.getAttribute('href')+')'));return (d.innerText||d.textContent||'').replace(/\n{3,}/g,'\n\n').trim();}
+function htmlToMd(html){const d=document.createElement('div');d.innerHTML=sanitizeHtml(html||'');d.querySelectorAll('br').forEach(x=>x.replaceWith('\n'));d.querySelectorAll('strong,b').forEach(x=>x.replaceWith('**'+x.textContent+'**'));d.querySelectorAll('em,i').forEach(x=>x.replaceWith('*'+x.textContent+'*'));d.querySelectorAll('u').forEach(x=>x.replaceWith('__'+x.textContent+'__'));d.querySelectorAll('span.mk-hl').forEach(x=>x.replaceWith('=='+x.textContent+'=='));d.querySelectorAll('span.mk-cb').forEach(x=>x.replaceWith(x.classList.contains('mk-cb-on')?'- [x] ':'- [ ] '));d.querySelectorAll('blockquote').forEach(x=>x.replaceWith('\n> '+x.textContent+'\n'));d.querySelectorAll('li').forEach(x=>x.replaceWith('- '+x.textContent+'\n'));d.querySelectorAll('a').forEach(x=>x.replaceWith('['+x.textContent+']('+x.getAttribute('href')+')'));return (d.innerText||d.textContent||'').replace(/\n{3,}/g,'\n\n').trim();}
 function addFeatureTools(item,box){
  const text=document.getElementById('text-'+item.id); if(!text)return; ensureItem(item);
  const tools=box.querySelector('.note-tools'); if(!tools)return;
@@ -24100,7 +24145,7 @@ function addFeatureTools(item,box){
  // it and the text box — the title must stay exactly above the text.
  const titleEl=document.getElementById('mc-title-'+item.id);
  const insertPoint=titleEl||text;
- const row=document.createElement('div');row.className='markhin-editor-tools';row.innerHTML=`<button type="button" title="Bold"><b>B</b></button><button type="button" title="Italic"><i>I</i></button><button type="button" title="Underline"><u>U</u></button><button type="button" title="Quote">❝</button><button type="button" title="List">☷</button><button type="button" title="Table">▦</button><button type="button" title="Link">🔗</button><button type="button" title="Strikethrough"><s>S</s></button><button type="button" title="Numbered list">1.</button><button type="button" title="Clear formatting">✕</button><select title="Size"><option value="12">12</option><option value="13">13</option><option value="15">15</option><option value="18">18</option><option value="22">22</option><option value="28">28</option></select>`;
+ const row=document.createElement('div');row.className='markhin-editor-tools';row.innerHTML=`<button type="button" title="Bold"><b>B</b></button><button type="button" title="Italic"><i>I</i></button><button type="button" title="Underline"><u>U</u></button><button type="button" title="Quote">❝</button><button type="button" title="List">☷</button><button type="button" title="Table">▦</button><button type="button" title="Link">🔗</button><button type="button" title="Strikethrough"><s>S</s></button><button type="button" title="Numbered list">1.</button><button type="button" title="Clear formatting">✕</button><button type="button" title="Highlight"><span class="mk-hl-ico">A</span></button><select title="Size"><option value="12">12</option><option value="13">13</option><option value="15">15</option><option value="18">18</option><option value="22">22</option><option value="28">28</option></select>`;
  const btns=row.querySelectorAll('button');
  // Remember the last caret/selection inside the note: tapping a toolbar button (or the link dialog) can move
  // focus away and drop the selection, which made Bold/Link/etc. silently do nothing on phones.
@@ -24136,18 +24181,25 @@ function addFeatureTools(item,box){
   restoreSel();const sl=window.getSelection();
   if(sl&&sl.rangeCount&&sl.isCollapsed){const sa=url.replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;');document.execCommand('insertHTML',false,'<a href="'+sa+'">'+sa+'</a>&nbsp;');autosaveCategory(item.id)}
   else cmd('createLink',url)};
- btns[7].onclick=()=>cmd('strikeThrough');btns[8].onclick=()=>cmd('insertOrderedList');btns[9].onclick=()=>{restoreSel();document.execCommand('removeFormat');autosaveCategory(item.id)};
+ btns[7].onclick=()=>cmd('strikeThrough');btns[8].onclick=()=>cmd('insertOrderedList');btns[9].onclick=()=>{restoreSel();document.execCommand('removeFormat');autosaveCategory(item.id)};btns[10].onclick=()=>{restoreSel();if(window.mkToggleHighlight)window.mkToggleHighlight(item.id)};
  const selects=row.querySelectorAll('select');selects[0].value=String(item.fontSize||13);selects[0].onchange=()=>{item.fontSize=Number(selects[0].value)||13;text.style.fontSize=item.fontSize+'px';saveToLocalStorage()};
  {
   // Writing tools: show which formats are ON at the caret / selection (Bold, Italic, Underline, Quote, List, Link).
   const fmtBtns=row.querySelectorAll('button');
   const inText=()=>{const sel=window.getSelection();return !!(sel&&sel.rangeCount&&text.contains(sel.anchorNode))};
+  /* Perf: upFmt runs on every selectionchange / keyup / mouseup (= every keystroke), and each queryCommandState() call
+     forces a style flush. Do the cheap checks first, then at most ONE real update per frame. */
+  let upFmtRaf=0;
   const upFmt=()=>{
    if(!row.isConnected){document.removeEventListener('selectionchange',upFmt);return}
-   if(!inText())return;
+   if(upFmtRaf||!inText())return;
+   upFmtRaf=requestAnimationFrame(()=>{upFmtRaf=0;upFmtNow()});
+  };
+  const upFmtNow=()=>{
+   if(!row.isConnected||!inText())return;
    const q=c=>{try{return document.queryCommandState(c)}catch(e){return false}};
    const sel=window.getSelection();const an=sel.anchorNode&&(sel.anchorNode.nodeType===1?sel.anchorNode:sel.anchorNode.parentElement);
-   const st=[q('bold'),q('italic'),q('underline'),!!(an&&an.closest&&an.closest('blockquote')&&text.contains(an.closest('blockquote'))),q('insertUnorderedList'),false,!!(an&&an.closest&&an.closest('a')&&text.contains(an.closest('a'))),q('strikeThrough'),q('insertOrderedList'),false];
+   const st=[q('bold'),q('italic'),q('underline'),!!(an&&an.closest&&an.closest('blockquote')&&text.contains(an.closest('blockquote'))),q('insertUnorderedList'),false,!!(an&&an.closest&&an.closest('a')&&text.contains(an.closest('a'))),q('strikeThrough'),q('insertOrderedList'),false,!!(an&&an.closest&&an.closest('.mk-hl')&&text.contains(an.closest('.mk-hl')))];
    st.forEach((on,i)=>{const b=fmtBtns[i];if(!b)return;b.classList.toggle('mu-fmt-on',!!on);b.setAttribute('aria-pressed',on?'true':'false')});
   };
   document.addEventListener('selectionchange',upFmt);
@@ -24536,6 +24588,7 @@ window.exportSingleHTML=async function(id){
     article ul,article ol{padding-inline:0;list-style-position:inside}
     h1{unicode-bidi:plaintext;text-align:start}
     article img{max-width:100%;height:auto;border-radius:8px}
+    .mk-hl{background:#fff176;color:#111;border-radius:3px;padding:0 2px;-webkit-print-color-adjust:exact;print-color-adjust:exact}
     article blockquote{border-${fa?'right':'left'}:3px solid #60a5fa;margin:10px 0;padding:8px 14px;background:rgba(96,165,250,.06);border-radius:0 8px 8px 0}
     article table{border-collapse:collapse;width:100%;margin:10px 0;display:block;overflow-x:auto}
     article td,article th{border:1px solid #475569;padding:8px}
@@ -26419,7 +26472,7 @@ function markhinDash_showCloudSettingsHelp(){
             <h4 style="margin:0 0 6px">🎯 این تنظیم چیست؟</h4>
             <p>مشخص می‌کند چند «بکاپ دستی» (همان‌هایی که با دکمه‌ی «ذخیره‌ی یک بکاپ جدید» می‌سازی) هم‌زمان در Cloud تلگرام نگه داشته شود. همیشه یک «بکاپ خودکار» هم وجود دارد که خودش به‌روز می‌شود و جزو این عدد نیست.</p>
             <h4 style="margin:14px 0 6px">🔢 محدوده و پیش‌فرض</h4>
-            <p>از 0 تا 7 قابل تنظیم است و پیش‌فرض 2 است. یک عدد را انتخاب کن؛ پایین آن بلافاصله حجم تقریبی بکاپ خودکار و هر بکاپ دستی نوشته می‌شود. تا وقتی «ذخیره‌ی تنظیمات» را نزنی هیچ چیزی تغییر نمی‌کند و هیچ بکاپی حذف نمی‌شود.</p>
+            <p>از 0 تا 7 قابل تنظیم است و پیش‌فرض 1 است. یک عدد را انتخاب کن؛ پایین آن بلافاصله حجم تقریبی بکاپ خودکار و هر بکاپ دستی نوشته می‌شود. تا وقتی «ذخیره‌ی تنظیمات» را نزنی هیچ چیزی تغییر نمی‌کند و هیچ بکاپی حذف نمی‌شود.</p>
             <h4 style="margin:14px 0 6px">📐 فضا چطور تقسیم می‌شود؟</h4>
             <p>تلگرام برای هر ربات فقط 1024 کلید ذخیره‌سازی می‌دهد. برنامه عمداً فقط حدود ${totalKeys} کلید را مصرف می‌کند (حدود 64 کلید حاشیه‌ی امن) و این تعداد ثابت است؛ 2 کلید برای فهرست و تنظیمات کنار گذاشته می‌شود و بقیه بین بکاپ خودکار و بکاپ‌های دستی <b>مساوی</b> تقسیم می‌شود. پس هرچه بکاپ دستی بیشتری بخواهی، سقف حجم هر بکاپ کمتر می‌شود و برعکس:</p>
             ${tableRows}
@@ -26446,7 +26499,7 @@ function markhinDash_showCloudSettingsHelp(){
             <h4 style="margin:0 0 6px">🎯 What is this setting?</h4>
             <p>It sets how many manual backups (the ones you create with "Save a new backup") are kept in Telegram Cloud at the same time. There is always one automatic backup as well, which updates itself and is not counted in this number.</p>
             <h4 style="margin:14px 0 6px">🔢 Range and default</h4>
-            <p>You can choose from 0 to 7; the default is 2. Pick a number and the approximate size of the auto backup and of each manual backup is shown right below it. Nothing changes and no backup is deleted until you press "Save settings".</p>
+            <p>You can choose from 0 to 7; the default is 1. Pick a number and the approximate size of the auto backup and of each manual backup is shown right below it. Nothing changes and no backup is deleted until you press "Save settings".</p>
             <h4 style="margin:14px 0 6px">📐 How is the space split?</h4>
             <p>Telegram gives each bot only 1024 storage keys. The app deliberately uses at most about ${totalKeys} of them (roughly 64 keys of safety margin), and this is fixed. 2 keys are reserved for the index and settings; the rest is split <b>equally</b> between the auto backup and the manual backups. So the more manual backups you want, the smaller each backup's size cap, and vice versa:</p>
             ${tableRows}
@@ -30622,12 +30675,24 @@ window.attachWrapperEvents = function(categoryId){
     // replaced and mark them again.
     var pendingBoxes = new Set();
     var flushQueued = false;
+    /* Perf: while the person types in a box, onInput already marks the caret line immediately; the whole-box pass is only
+       needed to heal after a re-render, so for the focused box it runs at most every 500 ms instead of on every keystroke. */
+    var deferT = 0;
+    function deferBox(b){
+        pendingBoxes.add(b);
+        if (!deferT) deferT = setTimeout(function(){ deferT = 0; if (!flushQueued) { flushQueued = true; requestAnimationFrame(flushBoxes); } }, 500);
+    }
     function flushBoxes(){
         flushQueued = false;
         var list = Array.from(pendingBoxes);
         pendingBoxes.clear();
+        var now = Date.now();
         for (var i = 0; i < list.length; i++) {
-            if (list[i].isConnected) refreshBoxAll(list[i]);
+            var b = list[i];
+            if (!b.isConnected) continue;
+            if (document.activeElement === b && b.__muAllAt && now - b.__muAllAt < 500) { deferBox(b); continue; }
+            b.__muAllAt = now;
+            refreshBoxAll(b);
         }
     }
     function queueBox(box){
@@ -32699,6 +32764,7 @@ window.mu_flagIcons=function(item){return (item&&item.pinned?window.mu_flagIc('p
     createlink:{fa:['افزودن لینک','متن انتخاب‌شده را به آدرسی که وارد می‌کنی لینک می‌کند.'],en:['Add link','Turns the selected text into a link to the address you enter.']},
     strike:{fa:['خط‌خورده','روی متن انتخاب‌شده خط می‌کشد (برای کارهای انجام‌شده یا حذف‌شده).'],en:['Strikethrough','Draws a line through the selected text.']},
     numlist:{fa:['فهرست شماره‌دار','خط‌های انتخاب‌شده را به فهرست 1، 2، 3… تبدیل می‌کند.'],en:['Numbered list','Turns the selected lines into a 1, 2, 3… list.']},
+    highlight:{fa:['هایلایت','متن انتخاب‌شده را با رنگ زرد هایلایت می‌کند. دوباره بزنی هایلایت برداشته می‌شود. بدون انتخاب، متنی که بعد از آن می‌نویسی هایلایت می‌شود.'],en:['Highlight','Highlights the selected text in yellow; tap again to remove it. With nothing selected, the text you type next is highlighted.']},
     clearfmt:{fa:['پاک‌کردن قالب','قالب‌بندی متن انتخاب‌شده (پررنگ، کج، خط و…) را برمی‌دارد.'],en:['Clear formatting','Removes bold, italic, underline etc. from the selected text.']},
     size:{fa:['اندازهٔ متن','اندازهٔ حروف این یادداشت را عوض می‌کند.'],en:['Text size','Changes the font size of this note.']},
     del:{fa:['حذف متن یادداشت','تمام متن یادداشت را پاک می‌کند. اگر اشتباه شد با دکمهٔ واگرد برمی‌گردد.'],en:['Delete note text','Clears all the text in this note. Use Undo if you change your mind.']},
@@ -32729,7 +32795,7 @@ window.mu_flagIcons=function(item){return (item&&item.pinned?window.mu_flagIc('p
     if(b.closest('.markhin-editor-tools')){
       if(b.tagName==='SELECT') return 'size';
       var t=b.getAttribute('title');
-      return {Bold:'bold',Italic:'italic',Underline:'underline',Quote:'quote',List:'list',Table:'table',Link:'createlink',Strikethrough:'strike','Numbered list':'numlist','Clear formatting':'clearfmt'}[t]||null;
+      return {Bold:'bold',Italic:'italic',Underline:'underline',Quote:'quote',List:'list',Table:'table',Link:'createlink',Strikethrough:'strike','Numbered list':'numlist','Clear formatting':'clearfmt',Highlight:'highlight'}[t]||null;
     }
     if(b.closest('.markhin-undo-redo-row,.mu-media-slot')){
       if(oc.indexOf('clearNoteText')>-1) return 'del';
@@ -33781,30 +33847,102 @@ window.muTabSelect = function (id, i, btn) {
         if (host) caretEnd(host);
         saved(id);
     }
+    /* ---------- checklist: a real checkbox <span class="mk-cb" contenteditable="false">☐ </span> (glyph text kept for exports / old notes) ---------- */
+    var CB_RE = /^[☐☑]/;
+    function cbMake(on) {
+        var sp = D.createElement('span');
+        sp.className = 'mk-cb' + (on ? ' mk-cb-on' : '');
+        sp.setAttribute('contenteditable', 'false');
+        sp.textContent = (on ? '☑' : '☐') + ' ';
+        return sp;
+    }
+    function cbOf(node) { var el = node && (node.nodeType === 1 ? node : node.parentElement); return el && el.closest ? el.closest('.mk-cb') : null; }
+    /* old notes keep the glyph as plain text: turn "☐ text" at the start of a line into a real checkbox */
+    function cbUpgrade(t) {
+        var w = D.createTreeWalker(t, NodeFilter.SHOW_TEXT), n, list = [];
+        while ((n = w.nextNode())) { if (CB_RE.test(n.nodeValue) && !cbOf(n)) list.push(n); }
+        list.forEach(function (n) {
+            if (lineFirstText(t, n) !== n) return;
+            var s = window.getSelection(), off = -1;
+            if (s.rangeCount && s.isCollapsed && s.anchorNode === n) off = s.anchorOffset;
+            var on = n.nodeValue.charAt(0) === '☑', cut = /^[☐☑] /.test(n.nodeValue) ? 2 : 1;
+            n.parentNode.insertBefore(cbMake(on), n);
+            n.nodeValue = n.nodeValue.slice(cut);
+            if (off >= 0) { try { var r = D.createRange(); r.setStart(n, Math.max(0, Math.min(n.nodeValue.length, off - cut))); r.collapse(true); s.removeAllRanges(); s.addRange(r); } catch (_) {} }
+        });
+    }
+    var cbQueued = false, cbPend = new Set(), cbAll = false;
+    function cbScan() {
+        cbQueued = false;
+        var list = cbAll ? D.querySelectorAll('.text-box[contenteditable="true"]') : Array.from(cbPend);
+        cbAll = false; cbPend.clear();
+        for (var i = 0; i < list.length; i++) {
+            var t = list[i];
+            if (!t.isConnected || t.getAttribute('contenteditable') !== 'true') continue;
+            var tx = t.textContent; if (tx.indexOf('\u2610') < 0 && tx.indexOf('\u2611') < 0) continue;
+            cbUpgrade(t);
+        }
+    }
+    /* Perf: this used to read textContent of EVERY note's editor on every DOM change anywhere in the page (including each
+       node created while typing). Now only the editor that actually changed is checked, and only when nodes containing a
+       checkbox glyph were added or something was removed; a full scan happens only when a whole editor is added. */
+    function cbHasGlyph(nl) {
+        for (var i = 0; i < nl.length; i++) {
+            var x = nl[i], v = x.nodeType === 3 ? x.nodeValue : (x.nodeType === 1 ? x.textContent : '');
+            if (v && (v.indexOf('\u2610') > -1 || v.indexOf('\u2611') > -1)) return true;
+        }
+        return false;
+    }
+    try {
+        new MutationObserver(function (recs) {
+            for (var i = 0; i < recs.length; i++) {
+                var r = recs[i], n = r.target;
+                if (n && n.nodeType === 3) n = n.parentNode;
+                var tb = n && n.closest ? n.closest('.text-box') : null;
+                if (tb) {
+                    if (r.removedNodes.length || cbHasGlyph(r.addedNodes)) cbPend.add(tb);
+                } else if (r.addedNodes.length) {
+                    for (var j = 0; j < r.addedNodes.length; j++) {
+                        var a2 = r.addedNodes[j];
+                        if (a2.nodeType === 1 && ((a2.classList && a2.classList.contains('text-box')) || (a2.querySelector && a2.querySelector('.text-box')))) { cbAll = true; break; }
+                    }
+                }
+            }
+            if ((cbAll || cbPend.size) && !cbQueued) { cbQueued = true; requestAnimationFrame(cbScan); }
+        }).observe(D.body, { childList: true, subtree: true });
+    } catch (_) {}
     function toggleTodo(id) {
         var t = restoreText(id); if (!t) return;
+        cbUpgrade(t);
         var r = lineRun(t); if (!r) return;
-        var tn = null, before = null, parent = null;
-        if (r.block) { tn = firstText(r.block); parent = r.block; before = r.block.firstChild; }
+        var cb = null, parent = null, before = null;
+        if (r.block) { parent = r.block; before = r.block.firstChild; cb = before && cbOf(before) && before.nodeType === 1 ? before : null; }
         else if (r.from) {
             parent = t; before = r.from;
-            for (var n = r.from, stop = r.to.nextSibling; n && n !== stop; n = n.nextSibling) {
-                tn = n.nodeType === 3 ? n : (n.nodeType === 1 ? firstText(n) : null);
-                if (tn) break;
-            }
+            for (var n = r.from, stop = r.to.nextSibling; n && n !== stop; n = n.nextSibling) { if (n.nodeType === 1 && n.classList.contains('mk-cb')) { cb = n; break; } }
         } else if (r.empty) { parent = t; before = r.empty; }
-        if (tn && /^[\u2610\u2611] /.test(tn.nodeValue)) {
-            tn.nodeValue = tn.nodeValue.charAt(0) === '\u2610' ? '\u2611 ' + tn.nodeValue.slice(2) : tn.nodeValue.slice(2);
-        } else if (tn) {
-            tn.nodeValue = '\u2610 ' + tn.nodeValue;
-        } else if (parent) {
-            var nt = D.createTextNode('\u2610 ');
-            parent.insertBefore(nt, before);
-            var s = window.getSelection(), rg = D.createRange();
-            rg.setStart(nt, nt.nodeValue.length); rg.collapse(true); s.removeAllRanges(); s.addRange(rg);
+        var s = window.getSelection();
+        if (cb) { cb.parentNode.removeChild(cb); }
+        else if (parent) {
+            var nc = cbMake(false);
+            parent.insertBefore(nc, before);
+            var rg = D.createRange(); rg.setStartAfter(nc); rg.collapse(true); s.removeAllRanges(); s.addRange(rg);
         }
+        try { t.dispatchEvent(new Event('input', { bubbles: true })); } catch (_) {}
         saved(id);
     }
+    /* tap a checkbox to tick / untick it */
+    D.addEventListener('click', function (e) {
+        var cb = e.target && e.target.closest ? e.target.closest('.text-box[contenteditable="true"] .mk-cb') : null;
+        if (!cb) return;
+        e.preventDefault(); e.stopImmediatePropagation();
+        var on = !cb.classList.contains('mk-cb-on');
+        cb.classList.toggle('mk-cb-on', on);
+        cb.textContent = (on ? '☑' : '☐') + ' ';
+        var t = cb.closest('.text-box');
+        try { t.dispatchEvent(new Event('input', { bubbles: true })); } catch (_) {}
+        saved(t.id.slice('text-'.length));
+    }, true);
     function toggleCode(id) {
         var t = restoreText(id); if (!t) return;
         var s = window.getSelection(); if (!s.rangeCount) return;
@@ -33819,6 +33957,127 @@ window.muTabSelect = function (id, i, btn) {
         D.execCommand('insertHTML', false, '<code>' + esc + '</code>');
         saved(id);
     }
+
+    /* ---------- highlight (marker): wraps text in <span class="mk-hl"> (a class survives sanitizeHtml, an inline style would not) ---------- */
+    function hlOf(node, t) {
+        var el = node && (node.nodeType === 1 ? node : node.parentElement);
+        var h = el && el.closest ? el.closest('.mk-hl') : null;
+        return h && t.contains(h) && h !== t ? h : null;
+    }
+    function hlHasContent(frag) {
+        return (frag.textContent || '').length > 0 || !!(frag.querySelector && frag.querySelector('img,br,canvas,audio,video,table'));
+    }
+    /* split the text nodes at both ends of the selection so the range covers whole text nodes only */
+    function hlSplitRange(range) {
+        var sc = range.startContainer, so = range.startOffset, ec = range.endContainer, eo = range.endOffset;
+        if (ec.nodeType === 3 && eo > 0 && eo < ec.nodeValue.length) ec.splitText(eo);
+        if (sc.nodeType === 3 && so > 0 && so < sc.nodeValue.length) { var nn = sc.splitText(so); if (ec === sc) ec = nn; sc = nn; so = 0; }
+        if (ec.nodeType === 3 && eo > 0) eo = ec.nodeValue.length;
+        var r = D.createRange();
+        r.setStart(sc, so); r.setEnd(ec, eo);
+        return r;
+    }
+    function hlTexts(r) {
+        var root = r.commonAncestorContainer, out = [];
+        if (root.nodeType === 3) { if (root.nodeValue) out.push(root); return out; }
+        var w = D.createTreeWalker(root, NodeFilter.SHOW_TEXT), n;
+        while ((n = w.nextNode())) {
+            if (!n.nodeValue) continue;
+            if (r.comparePoint(n, 0) !== 0 || r.comparePoint(n, n.nodeValue.length) !== 0) continue;
+            out.push(n);
+        }
+        return out;
+    }
+    var HL_SKIP = /^(TABLE|TBODY|THEAD|TFOOT|TR|UL|OL|BUTTON|AUDIO|SCRIPT|STYLE)$/;
+    function hlOk(n) {
+        var p = n.parentNode;
+        if (!p || p.nodeType !== 1 || HL_SKIP.test(p.tagName)) return false;
+        if (p.closest && p.closest('[contenteditable="false"],button,audio')) return false;
+        if (!/\S/.test(n.nodeValue.replace(/​/g, '')) && /\n/.test(n.nodeValue)) return false;
+        return true;
+    }
+    /* take one text node out of its highlight span (splitting the span around it) */
+    function hlUnwrapNode(t, n) {
+        var h = hlOf(n, t); if (!h) return;
+        var a = D.createRange(); a.setStart(h, 0); a.setEndBefore(n);
+        var fa = a.extractContents();
+        var b = D.createRange(); b.setStartAfter(n); b.setEnd(h, h.childNodes.length);
+        var fb = b.extractContents();
+        if (hlHasContent(fa)) { var h1 = h.cloneNode(false); h1.appendChild(fa); h.parentNode.insertBefore(h1, h); }
+        if (hlHasContent(fb)) { var h2 = h.cloneNode(false); h2.appendChild(fb); h.parentNode.insertBefore(h2, h.nextSibling); }
+        while (h.firstChild) h.parentNode.insertBefore(h.firstChild, h);
+        h.parentNode.removeChild(h);
+    }
+    function hlMerge(t) {
+        Array.prototype.slice.call(t.querySelectorAll('.mk-hl')).forEach(function (s) {
+            if (!s.parentNode) return;
+            var nx = s.nextSibling;
+            while (nx && nx.nodeType === 1 && nx.classList.contains('mk-hl')) {
+                while (nx.firstChild) s.appendChild(nx.firstChild);
+                var dn = nx; nx = nx.nextSibling; dn.parentNode.removeChild(dn);
+            }
+        });
+    }
+    function hlTidy(t) {
+        var s = window.getSelection(), an = s.rangeCount ? s.anchorNode : null;
+        Array.prototype.slice.call(t.querySelectorAll('.mk-hl')).forEach(function (h) {
+            if (h.textContent.replace(/​/g, '') !== '' || h.querySelector('img,br,canvas,audio,video,table')) return;
+            if (an && h.contains(an)) return;
+            h.parentNode.removeChild(h);
+        });
+    }
+    /* mode 'toggle': highlight the selection, or remove it if all of it is already highlighted; 'off': only remove */
+    function hlApply(t, range, mode) {
+        var r = hlSplitRange(range);
+        var nodes = hlTexts(r).filter(hlOk);
+        if (!nodes.length) return false;
+        var any = nodes.some(function (n) { return hlOf(n, t); });
+        var all = nodes.every(function (n) { return hlOf(n, t); });
+        if (mode === 'off' && !any) return false;
+        var off = mode === 'off' ? true : all;
+        nodes.forEach(function (n) {
+            if (off) hlUnwrapNode(t, n);
+            else if (!hlOf(n, t)) {
+                var sp = D.createElement('span'); sp.className = 'mk-hl';
+                n.parentNode.insertBefore(sp, n); sp.appendChild(n);
+            }
+        });
+        hlMerge(t);
+        try {
+            var f = nodes[0], l = nodes[nodes.length - 1], rg = D.createRange(), s = window.getSelection();
+            rg.setStart(f, 0); rg.setEnd(l, l.nodeValue.length);
+            s.removeAllRanges(); s.addRange(rg);
+        } catch (_) {}
+        return true;
+    }
+    /* no selection: switch highlighting on/off for the text typed next (a zero-width marker holds the caret) */
+    function hlCaret(t, s) {
+        var CMDS = ['bold', 'italic', 'underline', 'strikeThrough'], was = CMDS.map(function (c) { try { return D.queryCommandState(c); } catch (_) { return false; } });
+        var r = s.getRangeAt(0), h = hlOf(r.startContainer, t), zw = D.createTextNode('​'), rg = D.createRange();
+        if (h) {
+            var tail = D.createRange(); tail.selectNodeContents(h); tail.setStart(r.startContainer, r.startOffset);
+            var more = tail.toString().replace(/​/g, '') !== '' || !!tail.cloneContents().querySelector('img,br,canvas,audio,video,table');
+            if (more) { var fr = tail.extractContents(), h2 = h.cloneNode(false); h2.appendChild(fr); h.parentNode.insertBefore(h2, h.nextSibling); }
+            h.parentNode.insertBefore(zw, h.nextSibling);
+        } else {
+            var sp = D.createElement('span'); sp.className = 'mk-hl'; sp.appendChild(zw);
+            r.insertNode(sp);
+        }
+        rg.setStart(zw, 1); rg.collapse(true); s.removeAllRanges(); s.addRange(rg);
+        CMDS.forEach(function (c, i) { try { if (was[i] && !D.queryCommandState(c)) D.execCommand(c); } catch (_) {} });
+    }
+    function toggleHighlight(id) {
+        var t = restoreText(id); if (!t) return;
+        var s = window.getSelection();
+        if (!s.rangeCount || !t.contains(s.anchorNode)) return;
+        var range = s.getRangeAt(0);
+        if (range.collapsed) hlCaret(t, s);
+        else if (!hlApply(t, range, 'toggle')) return;
+        hlTidy(t);
+        try { t.dispatchEvent(new Event('input', { bubbles: true })); } catch (_) {}
+        saved(id);
+    }
+    window.mkToggleHighlight = toggleHighlight;
 
     /* ---------- font size (same item.fontSize the old A- / A+ and Size menu use) ---------- */
     function setSize(id, n) {
@@ -33866,7 +34125,7 @@ window.muTabSelect = function (id, i, btn) {
         st.bold = !!b;
         st.italic = !!up('i,em'); st.underline = !!up('u'); st.strike = !!up('s,strike,del');
         st.ul = !!up('ul'); st.ol = !!up('ol'); st.quote = !!up('blockquote'); st.link = !!up('a');
-        st.code = !!up('code'); st.heading = !!up('.mxe-h'); st.table = !!up('table');
+        st.highlight = !!up('.mk-hl'); st.code = !!up('code'); st.heading = !!up('.mxe-h'); st.table = !!up('table');
         try {
             var ls = window.getSelection();
             if (ls && ls.rangeCount && t.contains(ls.anchorNode)) {
@@ -33912,12 +34171,24 @@ window.muTabSelect = function (id, i, btn) {
     });
 
     var inFmtClick = false; /* the old toolbar's own click must not close the menu */
+    /* an empty note has no line yet, so list / checklist commands did nothing: give it one first */
+    function ensureLine(id, k) {
+        var t = restoreText(id); if (!t) return;
+        if (t.textContent.replace(/​/g, '') !== '' || t.querySelector('img,table,audio,canvas,video,li')) return;
+        var d = D.createElement('div'), zt = D.createTextNode(k === 'todo' ? '' : '\u200b'); if (k === 'todo') d.appendChild(D.createElement('br')); else d.appendChild(zt);
+        t.innerHTML = ''; t.appendChild(d);
+        var r = D.createRange(); if (k === 'todo') r.setStart(d, 0); else r.setStart(zt, 1); r.collapse(true);
+        var s = window.getSelection(); s.removeAllRanges(); s.addRange(r);
+        lastRange = r.cloneRange(); lastId = id;
+    }
     function fmt0(id, box, k) {
+        if (k === 'ul' || k === 'ol' || k === 'todo') ensureLine(id, k);
         if (k in FM) {
             if (k === 'clear') {
                 /* "Clear format" must also turn a heading line back into normal text */
                 try {
                     var ct = restoreText(id), cs = window.getSelection();
+                    try { if (ct && cs.rangeCount && !cs.isCollapsed) hlApply(ct, cs.getRangeAt(0), 'off'); } catch (_) {}
                     var can = ct && cs.rangeCount && cs.anchorNode, cel = can && (can.nodeType === 1 ? can : can.parentElement);
                     var ch = cel && cel.closest && cel.closest('.mxe-h');
                     if (ch && ct.contains(ch)) {
@@ -33935,7 +34206,8 @@ window.muTabSelect = function (id, i, btn) {
             try { if (bs && bs[FM[k]]) bs[FM[k]].click(); } finally { inFmtClick = false; }
             return true;
         }
-        if (k === 'heading') toggleHeading(id);
+        if (k === 'highlight') toggleHighlight(id);
+        else if (k === 'heading') toggleHeading(id);
         else if (k === 'todo') toggleTodo(id);
         else if (k === 'code') toggleCode(id);
         else if (k === 'smaller' || k === 'bigger') {
@@ -33946,12 +34218,60 @@ window.muTabSelect = function (id, i, btn) {
         return true;
     }
 
-    var KEEPOPEN = { bold: 1, italic: 1, underline: 1, strike: 1, heading: 1, todo: 1, ul: 1, ol: 1, quote: 1, code: 1 };
+    var KEEPOPEN = { highlight: 1, bold: 1, italic: 1, underline: 1, strike: 1, heading: 1, todo: 1, ul: 1, ol: 1, quote: 1, code: 1 };
     function fmt(id, box, k) {
         var r = fmt0(id, box, k);
         if (KEEPOPEN[k]) { setTimeout(function () { syncFmt(box); }, 40); setTimeout(function () { syncFmt(box); }, 200); return false; }
         return r;
     }
+    /* Enter on a checklist line: the next line starts with a checkbox too (Enter on an empty item ends the list);
+       Enter on an empty bullet / numbered item ends that list */
+    D.addEventListener('keydown', function (e) {
+        if (e.key !== 'Enter' || e.shiftKey || e.ctrlKey || e.metaKey || e.altKey || e.isComposing) return;
+        var t = e.target && e.target.closest ? e.target.closest('.text-box[contenteditable="true"]') : null;
+        if (!t || !t.id || t.id.indexOf('text-') !== 0) return;
+        var s = window.getSelection();
+        if (!s.rangeCount || !s.isCollapsed || !t.contains(s.anchorNode)) return;
+        var id = t.id.slice('text-'.length);
+        var an0 = s.anchorNode.nodeType === 1 ? s.anchorNode : s.anchorNode.parentElement, li0 = an0 && an0.closest ? an0.closest('li') : null;
+        if (li0 && t.contains(li0) && li0.textContent.replace(/​/g, '') === '' && !li0.querySelector('img,table,audio,canvas,video') && li0.parentNode && /^(UL|OL)$/.test(li0.parentNode.tagName)) {
+            e.preventDefault();
+            var ordered = li0.parentNode.tagName === 'OL';
+            li0.textContent = '';
+            try { D.execCommand(ordered ? 'insertOrderedList' : 'insertUnorderedList'); } catch (_) {}
+            saved(id); return;
+        }
+        var tn = lineFirstText(t, s.anchorNode);
+        var cb = tn && cbOf(tn);
+        if (!cb || !t.contains(cb)) return;
+        var rg0 = s.getRangeAt(0), cc = rg0.startContainer, co = rg0.startOffset, afterBox;
+        if (cc === cb.parentNode) afterBox = co > Array.prototype.indexOf.call(cc.childNodes, cb);
+        else afterBox = !cb.contains(cc) && !!(cb.compareDocumentPosition(cc) & Node.DOCUMENT_POSITION_FOLLOWING);
+        if (!afterBox) return;                                                          /* caret is before the box */
+        var blk = cb.parentNode && cb.parentNode !== t ? cb.closest('div,p,li') : null;
+        var lineTxt = (blk && blk !== t && t.contains(blk) ? blk.textContent : '').replace(/^[☐☑]\s?/, '').replace(/​/g, '');
+        var after = cb.nextSibling, plain = !after || (after.nodeType === 3 && after.nodeValue.replace(/​/g, '') === '' && !after.nextSibling) || (after.nodeType === 1 && after.tagName === 'BR');
+        if (plain && (blk ? lineTxt === '' : true)) {
+            e.preventDefault();
+            var r0 = D.createRange();
+            if (blk && blk !== t && t.contains(blk) && blk.tagName === 'DIV') { blk.innerHTML = '<br>'; r0.setStart(blk, 0); }
+            else { var pr = cb.parentNode, ix = Array.prototype.indexOf.call(pr.childNodes, cb); pr.removeChild(cb); r0.setStart(pr, ix); }
+            r0.collapse(true); s.removeAllRanges(); s.addRange(r0);
+            try { t.dispatchEvent(new Event('input', { bubbles: true })); } catch (_) {}
+            saved(id); return;
+        }
+        setTimeout(function () {
+            try {
+                var s2 = window.getSelection(); if (!s2.rangeCount) return;
+                var nc = cbMake(false), r = s2.getRangeAt(0);
+                r.insertNode(nc);
+                var rr = D.createRange(); rr.setStartAfter(nc); rr.collapse(true); s2.removeAllRanges(); s2.addRange(rr);
+                t.dispatchEvent(new Event('input', { bubbles: true }));
+            } catch (_) {}
+            saved(id);
+        }, 0);
+    }, true);
+
     /* Enter at the end of a heading line starts a normal line (not another heading) */
     D.addEventListener('keydown', function (e) {
         if (e.key !== 'Enter' || e.shiftKey || e.ctrlKey || e.metaKey || e.altKey || e.isComposing) return;
@@ -34290,6 +34610,7 @@ vault: function (id) { callFn('mkVaultAddNote', id); },
     'fmt:todo': ['چک‌لیست', 'فهرست کارها با کادر تیک می‌سازد.', 'Checklist', 'Creates a to-do list with tick boxes.'],
     'fmt:quote': ['نقل‌قول', 'متن را به صورت نقل‌قول (بلوک ارجاع) درمی‌آورد.', 'Quote', 'Formats the text as a quote block.'],
     'fmt:code': ['کد', 'متن را با قالب کد (فونت ثابت) نشان می‌دهد.', 'Code', 'Shows the text in code (monospace) style.'],
+    'fmt:highlight': ['هایلایت', 'متن انتخاب‌شده را زرد هایلایت می‌کند؛ دوباره بزنی برمی‌دارد. بدون انتخاب، متنِ بعدی که می‌نویسی هایلایت می‌شود.', 'Highlight', 'Highlights the selected text in yellow; tap again to remove. With no selection, the next text you type is highlighted.'],
     'fmt:underline': ['زیرخط', 'زیر متن انتخاب‌شده خط می‌کشد.', 'Underline', 'Underlines the selected text.'],
     'fmt:ol': ['شماره‌دار', 'یک فهرست شماره‌دار می‌سازد.', 'Numbered list', 'Creates a numbered list.'],
     'fmt:table': ['جدول', 'یک جدول در یادداشت درج می‌کند.', 'Table', 'Inserts a table into the note.'],
@@ -34570,6 +34891,8 @@ vault: function (id) { callFn('mkVaultAddNote', id); },
     prev:svg('<rect x="3.5" y="4.5" width="17" height="15" rx="2.6"/><path d="M7.5 9h9M7.5 12.5h9M7.5 16h5.5"/>'),
     tick:svg('<path d="M5 12.5l4.5 4.5L19 7.5"/>',2.4),
     plus:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>',
+    minus:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M5 12h14"/></svg>',
+    trash:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 7h16M10 11v6M14 11v6M6 7l1 12a2 2 0 002 2h6a2 2 0 002-2l1-12M9 7V4h6v3"/></svg>',
     chev:'<svg class="mu-nfs-chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg>',
     bulb:svg('<path d="M9 18h6M10 21h4M12 3a6 6 0 0 0-3.6 10.8c.6.5.9 1.1.9 1.8V16h5.4v-.6c0-.7.3-1.3.9-1.8A6 6 0 0 0 12 3z"/>'),
     folder:svg('<path d="M3.5 7.5a2 2 0 0 1 2-2h4l2 2.2h7a2 2 0 0 1 2 2v7.8a2 2 0 0 1-2 2h-13a2 2 0 0 1-2-2z"/>'),
@@ -34606,7 +34929,7 @@ vault: function (id) { callFn('mkVaultAddNote', id); },
   function lsSet(k,v){ try{ localStorage.setItem(k,v); }catch(e){} }
   function norm(s){
     s=String(s||'').toLowerCase();
-    try{ s=s.replace(/ي/g,'ی').replace(/ك/g,'ک').replace(/[\u064B-\u065F\u0670\u200c\u200d]/g,''); }catch(e){}
+    try{ s=s.replace(/ي/g,'ی').replace(/ك/g,'ک').replace(/[\u064B-\u065F\u0670\u200c\u200d]/g,'').replace(/[\u06F0-\u06F9]/g,function(d){ return String(d.charCodeAt(0)-0x6F0); }).replace(/[\u0660-\u0669]/g,function(d){ return String(d.charCodeAt(0)-0x660); }); }catch(e){}
     return s;
   }
   function allNotes(){
@@ -34753,35 +35076,57 @@ vault: function (id) { callFn('mkVaultAddNote', id); },
       default:             return function(a,b){ return ts(b)-ts(a); };
     }
   }
+  /* Splits a search into: plain words, "quoted phrases", -excluded words and tag:/folder:/is: operators (all normalized) */
+  function parseQ(raw){
+    var plain=[], phr=[], negs=[], ops=[];
+    var rest=String(raw).replace(/"([^"]*)"|«([^»]*)»/g,function(m,a,b){
+      var p=norm(a!=null?a:b).replace(/\s+/g,' ').trim(); if(p) phr.push(p); return ' ';
+    });
+    rest.split(/\s+/).filter(Boolean).forEach(function(tok){
+      var n;
+      if(/^(?:tag|برچسب|folder|پوشه):./i.test(tok) || /^(?:is|وضعیت):(?:pinned|favorite|fav|locked|سنجاق|علاقه|قفل)$/i.test(tok)) ops.push(tok);
+      else if(/^[-−]./.test(tok)){ n=norm(tok.slice(1)).trim(); if(n) negs.push(n); }
+      else { n=norm(tok).trim(); if(n) plain.push(n); }
+    });
+    return {plain:plain, phr:phr, negs:negs, ops:ops};
+  }
   function build(){
     var cmp=cmpFor(S.sort);
     var items=allNotes().slice().sort(function(a,b){
       return (Number(!!b.pinned)-Number(!!a.pinned)) || (S.sort==='manual' ? (Number(!!b.favorite)-Number(!!a.favorite)) : 0) || cmp(a,b);
     });
-    var q=norm(S.q).trim();
-    var terms=q?q.split(/\s+/).filter(Boolean):[];
     var rawQ=String(S.q||'').trim();
-    /* Same engine as the main search (typo / Finglish / synonym tolerant, tag: folder: is: "phrase" -exclude).
-       Only the matching comes from it; the page keeps its own ordering and look. */
+    /* Matching is LITERAL, so every note shown really contains what was typed (the same text the highlight marks):
+       every typed word / "phrase" must appear in the title or body (punctuation such as @ and # counts, so "@M"
+       finds "@M#81"), and -word excludes. Only the tag: folder: is: operators go to the main search engine
+       (they filter by tag / folder / pin state, never by typo-tolerant text matching). */
+    var P=rawQ ? parseQ(rawQ) : null;
     var eng=null;
-    if(rawQ && typeof window.mu_smartSearch==='function'){
-      try{
-        var allow=new Set(items.map(function(c){ return c.id; }));
-        var er=window.mu_smartSearch(rawQ,{allowedIds:allow,includeArchived:false,limit:1});
-        if(er && Array.isArray(er.ids)) eng=new Set(er.ids);
-      }catch(e){ eng=null; }
+    if(P && P.ops.length){
+      if(typeof window.mu_smartSearch==='function'){
+        try{
+          var allow=new Set(items.map(function(c){ return c.id; }));
+          var er=window.mu_smartSearch(P.ops.join(' '),{allowedIds:allow,includeArchived:false,limit:1});
+          if(er && Array.isArray(er.ids)) eng=new Set(er.ids);
+        }catch(e){ eng=null; }
+      }
+      if(!eng) P.ops.forEach(function(t){ var n=norm(t).trim(); if(n) P.plain.push(n); });   // engine unavailable: treat as plain words
     }
     var out=[];
     for(var i=0;i<items.length;i++){
       var inf=info(items[i]);
-      if(rawQ){
+      if(P){
         var ok=true;
-        if(eng && !(inf.locked || items[i].titleHidden)){
-          ok=eng.has(items[i].id);
-        } else if(terms.length){
-          var hay=inf.searchable || norm(inf.title);
-          for(var j=0;j<terms.length;j++){ if(hay.indexOf(terms[j])<0){ ok=false; break; } }
-        } else if(eng){ ok=false; }
+        if(eng && !eng.has(items[i].id)) ok=false;
+        if(ok && (P.plain.length || P.phr.length || P.negs.length)){
+          var hay=inf.searchable || norm(inf.title), j;
+          for(j=0;j<P.plain.length && ok;j++){ if(hay.indexOf(P.plain[j])<0) ok=false; }
+          for(j=0;j<P.negs.length && ok;j++){ if(hay.indexOf(P.negs[j])>=0) ok=false; }
+          if(ok && P.phr.length){
+            var hc=hay.replace(/\s+/g,' ');
+            for(j=0;j<P.phr.length && ok;j++){ if(hc.indexOf(P.phr[j])<0) ok=false; }
+          }
+        }
         if(!ok) continue;
       }
       out.push(inf);
@@ -34875,7 +35220,8 @@ vault: function (id) { callFn('mkVaultAddNote', id); },
       var t=ph!=null ? ph : w;
       if(ph==null){
         if(t.charAt(0)==='-') return m;            // excluded term
-        t=t.replace(/^[a-z]+:/i,'');               // tag: / folder: / is: operators
+        if(/^(?:is|وضعیت):/i.test(t)) return m;     // is:pinned etc. filter notes, nothing to highlight
+        t=t.replace(/^(?:tag|برچسب|folder|پوشه):/i,'');   // tag: / folder: operators
       }
       t=norm(t).trim();
       if(t){ HLORD.push(t); if(HLT.indexOf(t)<0) HLT.push(t); }
@@ -35050,6 +35396,8 @@ vault: function (id) { callFn('mkVaultAddNote', id); },
         +'<button type="button" class="mu-nfs-fh mu-nfs-fh-l" data-fi="'+gi+'">'+ICONS.chev
         +'<span class="mu-nfs-fname" dir="auto">'+esc(g.none?(fa()?'بدون پوشه':'No folder'):'📁 '+g.name)+'</span></button>'
         +(g.none?'':'<button type="button" class="mu-nfs-fadd" data-fa="'+gi+'" aria-label="'+(fa()?'افزودن یادداشت‌های موجود به این پوشه':'Add existing notes to this folder')+'">'+ICONS.plus+'</button>')
+        +(g.none?'':'<button type="button" class="mu-nfs-fadd mu-nfs-frem" data-fr="'+gi+'" aria-label="'+(fa()?'حذف یادداشت‌ها از این پوشه':'Remove notes from this folder')+'">'+ICONS.minus+'</button>')
+        +(g.none?'':'<button type="button" class="mu-nfs-fadd mu-nfs-fdel" data-fd="'+gi+'" aria-label="'+(fa()?'حذف این پوشه':'Delete this folder')+'">'+ICONS.trash+'</button>')
         +'<button type="button" class="mu-nfs-fh mu-nfs-fh-r" data-fi="'+gi+'" tabindex="-1" aria-hidden="true"><span class="mu-nfs-fcount">'+nfa(g.items.length)+'</span></button>'
         +'</div>'
         +'<div class="mu-nfs-fbody">'+groupBodyHtml(g)+'</div></section>';
@@ -35149,18 +35497,18 @@ vault: function (id) { callFn('mkVaultAddNote', id); },
   function openSheet(kind,arg){
     var sh=$('muNfsSheet'); if(!sh) return;
     var html='';
-    if(kind==='pick'){
-      S.pick={name:arg, sel:{}};
-      var rows=allNotes().filter(function(c){ return noteFolders(c).indexOf(arg)<0; }).sort(cmpFor(S.sort)).map(function(c){
+    if(kind==='pick' || kind==='unpick'){
+      var rem=(kind==='unpick'); S.pick={name:arg, sel:{}, rem:rem};
+      var rows=allNotes().filter(function(c){ return rem ? noteFolders(c).indexOf(arg)>=0 : noteFolders(c).indexOf(arg)<0; }).sort(cmpFor(S.sort)).map(function(c){
         var inf=info(c);
         return '<button type="button" class="mu-nfs-opt mu-nfs-pk" data-pk="'+esc(inf.id)+'" data-q="'+esc(inf.searchable||norm(inf.title))+'"><span dir="auto">'+esc(inf.flags+(inf.title||(fa()?'بدون عنوان':'Untitled')))+'</span>'+ICONS.tick+'</button>';
       }).join('');
-      html='<h4>'+esc((fa()?'افزودن به 📁 ':'Add to 📁 ')+arg)+'</h4>'
+      html='<h4>'+esc(rem ? ((fa()?'حذف از 📁 ':'Remove from 📁 ')+arg) : ((fa()?'افزودن به 📁 ':'Add to 📁 ')+arg))+'</h4>'
         +(rows
           ? '<input type="search" id="muNfsPickQ" class="mu-nfs-pkq" autocomplete="off" dir="auto" placeholder="'+(fa()?'جستجو':'Search')+'">'
             +'<div class="mu-nfs-pklist">'+rows+'</div>'
-            +'<button type="button" class="mu-nfs-pkok" data-pk-ok="1" disabled>'+(fa()?'افزودن':'Add')+'</button>'
-          : '<div class="mu-nfs-fempty" style="text-align:center;padding:18px 6px">'+(fa()?'یادداشتی برای افزودن نیست.':'No notes to add.')+'</div>');
+            +'<button type="button" class="mu-nfs-pkok" data-pk-ok="1" disabled>'+(rem?(fa()?'حذف از پوشه':'Remove'):(fa()?'افزودن':'Add'))+'</button>'
+          : '<div class="mu-nfs-fempty" style="text-align:center;padding:18px 6px">'+(rem?(fa()?'این پوشه یادداشتی ندارد.':'This folder has no notes.'):(fa()?'یادداشتی برای افزودن نیست.':'No notes to add.'))+'</div>');
     } else if(kind==='imp' || kind==='exp'){
       var lst=(kind==='imp')?IO_IN:IO_OUT;
       html='<h4>'+(kind==='imp'?(fa()?'ورودی‌ها':'Import'):(fa()?'خروجی‌ها':'Export'))+'</h4>'
@@ -35619,6 +35967,29 @@ vault: function (id) { callFn('mkVaultAddNote', id); },
       Promise.resolve(p).then(function(){ if(fsOpen()){ applyChrome(); render(); } });
     },
     pickNotes:function(name){ openSheet('pick',name); },
+    unpickNotes:function(name){ openSheet('unpick',name); },
+    deleteFolder:function(name){
+      var f=fa();
+      var ask=(typeof mu_confirmYesNo==='function') ? mu_confirmYesNo({
+        title: f?'🗑️ حذف پوشه':'🗑️ Delete folder',
+        message: f?('پوشه «'+name+'» حذف شود؟ یادداشت‌های داخلش حذف نمی‌شوند و فقط بدون پوشه می‌مانند.'):('Delete folder “'+name+'”? Its notes are kept, just unfiled.'),
+        okText: f?'🗑️ حذف':'🗑️ Delete', cancelText: f?'انصراف':'Cancel'
+      }) : Promise.resolve(window.confirm(name));
+      Promise.resolve(ask).then(function(ok){
+        if(!ok) return;
+        try{
+          categories.forEach(function(item){ if(window.mu_inFolder(item,name)) window.mu_removeFolderFromNote(item,name); });
+          folders = folders.filter(function(x){ return x!==name; });
+          recordFolderTombstone(name);
+          if(currentFolder===name) currentFolder=DEFAULT_FOLDER;
+          saveToLocalStorage(); saveFoldersToLocalStorage();
+          if(typeof scheduleCloudBackup==='function') scheduleCloudBackup(true);
+          try{ renderApp(); }catch(e){}
+        }catch(e){ try{ console.warn('Notes page: delete folder failed',e); }catch(_){} }
+        if(fsOpen()){ build(); render(); }
+        try{ showToast(f?'🗑️ پوشه حذف شد':'🗑️ Folder deleted'); }catch(_){}
+      });
+    },
     pickDone:function(){
       var P=S.pick; if(!P){ closeSheet(); return; }
       var ids=Object.keys(P.sel).filter(function(k){ return P.sel[k]; });
@@ -35627,7 +35998,7 @@ vault: function (id) { callFn('mkVaultAddNote', id); },
         ids.forEach(function(id){
           var it=categories.find(function(c){ return String(c.id)===String(id); }); if(!it) return;
           var cur=(window.mu_noteFolders?window.mu_noteFolders(it):[]).filter(function(x){ return x && x!==P.name; });
-          cur.push(P.name); window.mu_setNoteFolders(it,cur); changed=true;
+          if(!P.rem) cur.push(P.name); window.mu_setNoteFolders(it,cur); changed=true;
         });
         if(changed){ saveToLocalStorage(); try{ renderApp(); }catch(e){} }
       }catch(e){ try{ console.warn('Notes page: add to folder failed',e); }catch(_){} }
@@ -35704,10 +36075,18 @@ vault: function (id) { callFn('mkVaultAddNote', id); },
       var pid=pk.getAttribute('data-pk'); var on=!S.pick.sel[pid]; S.pick.sel[pid]=on; pk.classList.toggle('on',on);
       var n=Object.keys(S.pick.sel).filter(function(k){ return S.pick.sel[k]; }).length;
       var okb=$('muNfsSheet').querySelector('[data-pk-ok]');
-      if(okb){ okb.disabled=!n; okb.textContent=(fa()?'افزودن':'Add')+(n?' ('+nfa(n)+')':''); }
+      if(okb){ okb.disabled=!n; okb.textContent=(S.pick.rem?(fa()?'حذف از پوشه':'Remove'):(fa()?'افزودن':'Add'))+(n?' ('+nfa(n)+')':''); }
       return;
     }
     if(t.closest('#muNotesFs [data-pk-ok]')){ api.pickDone(); return; }
+    var frem=t.closest('#muNotesFs .mu-nfs-frem');
+    if(frem){
+      var gr=S.groups[+frem.getAttribute('data-fr')];
+      if(gr && !gr.none){ if(!gr.items.length){ try{ showToast(fa()?'این پوشه یادداشتی ندارد.':'This folder has no notes.'); }catch(_){} } else api.unpickNotes(gr.name); }
+      return;
+    }
+    var fdel=t.closest('#muNotesFs .mu-nfs-fdel');
+    if(fdel){ var gd=S.groups[+fdel.getAttribute('data-fd')]; if(gd && !gd.none) api.deleteFolder(gd.name); return; }
     var fadd=t.closest('#muNotesFs .mu-nfs-fadd');
     if(fadd){ var ga=S.groups[+fadd.getAttribute('data-fa')]; if(ga && !ga.none) api.pickNotes(ga.name); return; }
     var fh=t.closest('#muNotesFs .mu-nfs-fh');
@@ -36561,7 +36940,13 @@ html.mu-tg-fs .mklk .mklk-col{padding-top:14px}
     } else { sync(); }
   });
   try{
-    new MutationObserver(soon).observe(document.documentElement, { subtree:true, childList:true, attributes:true, attributeFilter:['class','style','hidden'] });
+    new MutationObserver(function(recs){
+      for (var i = 0; i < recs.length; i++) {
+        var n = recs[i].target;
+        if (n && n.nodeType === 3) n = n.parentNode;
+        if (!(n && n.nodeType === 1 && n.closest && n.closest('.text-box[contenteditable="true"]'))) { soon(); return; }   /* typing inside a note can't open or close a layer */
+      }
+    }).observe(document.documentElement, { subtree:true, childList:true, attributes:true, attributeFilter:['class','style','hidden'] });
   }catch(e){}
   setInterval(sync, 600);
   document.addEventListener('visibilitychange', soon);
@@ -37187,16 +37572,24 @@ setInterval(function(){ var s=document.getElementById('mkVaultBtnLbl'); if(s){ v
     return '#'+[m[1],m[2],m[3]].map(function(v){v=(+v).toString(16);return v.length<2?'0'+v:v;}).join('');
   }
   function bgOf(el){ try{ return el ? hex(getComputedStyle(el).backgroundColor) : ''; }catch(e){ return ''; } }
+  /* Perf: getComputedStyle() forces a full style recalc, and on this page (huge stylesheet, many theme rules) a single
+     call cost ~300 ms - and it was re-run on every header sync, including while typing in the editor. The colour only
+     depends on which surface is showing and its theme, so it is cached per that key and re-read only when the key
+     changes. A transparent / mid-transition read (hex()==='') is not trusted: its fallback is cached for 500 ms only. */
+  var _cKey='', _cVal='', _cReal=false, _cAt=0;
   window.mu_tgNewUiColors=function(){
     try{
       var th=window.mu_nfsTheme && window.mu_nfsTheme();
       if(!th) return null;
-      var nfs=document.getElementById('muNotesFs'), c='';
-      if(nfs && nfs.classList.contains('mu-open')){
-        c=bgOf(nfs) || (th==='dark' ? '#1c1c1c' : '#eeeeee');
-      } else {
-        c=bgOf(document.querySelector('.content-container.mxe.show')) || (th==='dark' ? '#1d1d1f' : '#f9f9f9');
-      }
+      var nfs=document.getElementById('muNotesFs');
+      var open=!!(nfs && nfs.classList.contains('mu-open'));
+      var el=open ? nfs : document.querySelector('.content-container.mxe.show');
+      var key=th+'|'+(open?'n:'+nfs.getAttribute('data-theme'):'m:'+document.documentElement.getAttribute('data-mxe-theme'))+'|'+(el?1:0);
+      var now=Date.now();
+      if(key===_cKey && _cVal && (_cReal || now-_cAt<500)) return {top:_cVal,bottom:_cVal};
+      var c=bgOf(el), real=!!c;
+      if(!c) c = open ? (th==='dark' ? '#1c1c1c' : '#eeeeee') : (th==='dark' ? '#1d1d1f' : '#f9f9f9');
+      _cKey=key; _cVal=c; _cReal=real; _cAt=now;
       return {top:c,bottom:c};
     }catch(e){ return null; }
   };
