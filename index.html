@@ -34574,17 +34574,9 @@ vault: function (id) { callFn('mkVaultAddNote', id); },
             } catch (_) {}
         }
         var h = bottom - top;
-        /* Telegram: the page is resized only once the keyboard animation ends. Apply the new height at once (cheap) and
-           slide just the bottom bar from where it was to where it belongs on the compositor (transform), instead of
-           animating the whole panel's height (a full relayout of the note every frame = the lag). */
-        if (root.classList.contains('mxe-tg') && __mxeLastH && Math.abs(h - __mxeLastH) > 40) {
-            try {
-                var bar = box.querySelector('.mxe-bottom');
-                if (bar && bar.animate && !(window.matchMedia && matchMedia('(prefers-reduced-motion:reduce)').matches))
-                    bar.animate([{ transform: 'translateY(' + (__mxeLastH - h) + 'px)' }, { transform: 'translateY(0)' }], { duration: 150, easing: 'cubic-bezier(.2,.8,.3,1)' });
-            } catch (_) {}
-        }
         __mxeLastH = h;
+        /* page really resized with the keyboard (Telegram)? then CSS alone keeps the panel exact; otherwise use the JS height */
+        root.classList.toggle('mxe-lay', root.classList.contains('mxe-tg') && Math.abs((window.innerHeight || 0) - bottom) < 4);
         root.style.setProperty('--mxe-vh', h + 'px');
         root.style.setProperty('--mxe-top', top + 'px');
         /* safety net: if the panel still ends lower than intended, pull it up by the difference */
@@ -34607,7 +34599,12 @@ vault: function (id) { callFn('mkVaultAddNote', id); },
             window.__mxeTgCss = 1;
             try {
                 var st = D.createElement('style'); st.id = 'mxeTgSmoothCss';
-                st.textContent = 'html.mxe-tg body #contentsContainer .mxe .mxe-bottom{will-change:transform}';
+                st.textContent =
+                    /* Telegram: let the panel follow the real page size by CSS alone (bottom:0) so it resizes in the very same frame
+                       as the webview, with no JS round trip (that one-frame gap is what flashed the dark page behind it) */
+                    'html.mxe-tg.mxe-lay body #contentsContainer .content-container.mxe.show{height:auto !important;bottom:0 !important}' +
+                    'html.mxe-tg[data-mxe-theme="light"].mxe-open,html.mxe-tg[data-mxe-theme="light"].mxe-open body{background:#f9f9f9 !important}' +
+                    'html.mxe-tg[data-mxe-theme="dark"].mxe-open,html.mxe-tg[data-mxe-theme="dark"].mxe-open body{background:#1d1d1f !important}';
                 D.head.appendChild(st);
             } catch (_) {}
         }
