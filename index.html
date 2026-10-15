@@ -6616,9 +6616,19 @@ html.mu-viewer-open,html.mu-viewer-open body{overflow:hidden}
 .mu-viewer-close{position:absolute;top:12px;inset-inline-end:12px;z-index:2;width:36px;height:36px;padding:0;display:inline-flex;align-items:center;justify-content:center;border-radius:50%;border:1px solid var(--panel-border);background:rgba(255,255,255,.08);color:var(--text-color);cursor:pointer;-webkit-tap-highlight-color:transparent;transition:background .16s ease,transform .12s ease}
 .mu-viewer-close svg{width:16px;height:16px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round}
 .mu-viewer-close:active{transform:scale(.9);background:rgba(255,255,255,.2)}
+/* viewer close = plain back arrow (no circle / frame); the Windows-95 style keeps its own title-bar X */
+.mu-viewer-close .vb{display:none}
+html body .mu-viewer.mu-viewer:not(.mu-vs-retro) .mu-viewer-close.mu-viewer-close{border:0 !important;background:transparent !important;box-shadow:none !important;-webkit-backdrop-filter:none !important;backdrop-filter:none !important;border-radius:10px}
+html body .mu-viewer.mu-viewer:not(.mu-vs-retro) .mu-viewer-close.mu-viewer-close:active{background:transparent !important;opacity:.6}
+html body .mu-viewer.mu-viewer:not(.mu-vs-retro) .mu-viewer-close .vx{display:none}
+html body .mu-viewer.mu-viewer:not(.mu-vs-retro) .mu-viewer-close .vb{display:inline}
+html body .mu-viewer.mu-viewer:not(.mu-vs-retro) .mu-viewer-close svg{width:24px !important;height:24px !important;stroke-width:2.2 !important;stroke-linejoin:round}
+html[dir="rtl"] body .mu-viewer:not(.mu-vs-retro) .mu-viewer-close svg{transform:scaleX(-1)}
 .mu-viewer-head{padding:22px 64px 0 22px;padding-inline:22px 60px}
 .mu-viewer-title{margin:0;font-size:clamp(19px,5vw,24px);font-weight:800;line-height:1.55;color:var(--text-color);unicode-bidi:plaintext;text-align:start;overflow-wrap:anywhere}
 .mu-viewer-rule{width:46px;height:3px;border-radius:3px;margin:12px 0 0;background:var(--text-color);opacity:.5}
+/* no line under the note title in the viewer (every style / theme) */
+html body .mu-viewer .mu-viewer-rule,html body .mu-viewer .mu-viewer-rule::after{display:none !important}
 .mu-viewer-body{flex:1 1 auto;min-height:0;overflow-y:auto;-webkit-overflow-scrolling:touch;overscroll-behavior:contain;padding:16px 22px 26px;font-size:15px;line-height:2;color:rgba(255,255,255,.92);white-space:pre-wrap;word-break:break-word;overflow-wrap:anywhere;unicode-bidi:plaintext;text-align:start;-webkit-user-select:text;user-select:text}
 .mu-viewer-body div,.mu-viewer-body p,.mu-viewer-body li,.mu-viewer-body blockquote,.mu-viewer-body h1,.mu-viewer-body h2,.mu-viewer-body h3,.mu-viewer-body h4,.mu-viewer-body td,.mu-viewer-body th{unicode-bidi:plaintext}
 .mu-viewer-body ul,.mu-viewer-body ol{padding-inline:0;margin-block:6px;list-style-position:inside}
@@ -8190,6 +8200,48 @@ html body #contentsContainer .mxe .mxe-pop .grid button.on{box-shadow:inset 0 0 
 <style id="muLpHelpCss">
 /* Edit panel: press-and-hold on any option (top bar, bottom bar, menus, tools) shows its name + what it does. */
 .content-container.mxe button{-webkit-touch-callout:none;-webkit-user-select:none;user-select:none}
+/* ===== App-wide: nothing is selectable / copyable, except the exceptions listed right below ===== */
+html body,html body *{-webkit-user-select:none !important;user-select:none !important}
+html body :is(
+  input,textarea,select,[contenteditable]:not([contenteditable="false"]),[contenteditable]:not([contenteditable="false"]) *,
+  .mc-title-input,.text-box,.text-box *,
+  .mu-viewer-title,.mu-viewer-body,.mu-viewer-body *,
+  .mkv-view,.mkv-view *,
+  .mcx-out,.mcx-out *,.mcx-ta,
+  .mAi-bubble,.mAi-bubble *
+){-webkit-user-select:text !important;user-select:text !important}
+html body :is(.text-box,.mu-viewer-body) :is(img,svg,button,[contenteditable="false"]){-webkit-user-select:none !important;user-select:none !important}
+/* Telegram Cloud Backup panel: nothing selectable / copyable (input fields still work) */
+html body .advanced-card:has(>.advanced-head[data-mkcloud]),
+html body .advanced-card:has(>.advanced-head[data-mkcloud]) *{-webkit-user-select:none !important;user-select:none !important;-webkit-touch-callout:none}
+html body .advanced-card:has(>.advanced-head[data-mkcloud]) :is(input,textarea,select){-webkit-user-select:text !important;user-select:text !important}
+/* Vault (PIN screen, lists, dialogs): nothing selectable except the text of an opened vault note and real input fields */
+html body #mkvFull,html body #mkvFull *,
+html body .advanced-card:has(.mkv-body),html body .advanced-card:has(.mkv-body) *{-webkit-user-select:none !important;user-select:none !important;-webkit-touch-callout:none}
+html body #mkvFull :is(input,textarea,select,.mkv-view,.mkv-view *),
+html body .advanced-card:has(.mkv-body) :is(input,textarea,select,.mkv-view,.mkv-view *){-webkit-user-select:text !important;user-select:text !important}
+/* Settings page: nothing is selectable / copyable (only real input fields keep working) */
+html body .advanced-card:has(.mu-set-row),
+html body .advanced-card:has(.mu-set-row) *,
+html body .advanced-card:has(.mu-lite-warn-list),
+html body .advanced-card:has(.mu-lite-warn-list) *{-webkit-user-select:none !important;user-select:none !important;-webkit-touch-callout:none}
+html body .advanced-card:has(.mu-set-row) :is(input,textarea,select),
+html body .advanced-card:has(.mu-lite-warn-list) :is(input,textarea,select){-webkit-user-select:text !important;user-select:text !important}
+/* Edit panel: only the note title and the note text can be selected / copied. Bars, menus, formatting panel, badges, previews = not selectable. */
+html body #contentsContainer .content-container.mxe,
+html body #contentsContainer .content-container.mxe *{-webkit-user-select:none !important;user-select:none !important;-webkit-touch-callout:none}
+html body #contentsContainer .content-container.mxe .mc-title-input,
+html body #contentsContainer .content-container.mxe .text-box,
+html body #contentsContainer .content-container.mxe .text-box *{-webkit-user-select:text !important;user-select:text !important;-webkit-touch-callout:default}
+html body #contentsContainer .content-container.mxe .text-box img,
+html body #contentsContainer .content-container.mxe .text-box .mxe-emo{-webkit-user-select:none !important;user-select:none !important}
+/* selection colour is translucent so a highlight (yellow) stays visible while its text is selected */
+html body #contentsContainer .content-container.mxe .text-box ::selection,
+html body #contentsContainer .content-container.mxe .text-box::selection{background:rgba(30,136,229,.32) !important;color:inherit !important;-webkit-text-fill-color:currentColor !important}
+html body #contentsContainer .content-container.mxe .mc-title-input::selection,
+html body #contentsContainer .content-container.mxe .mc-title-input ::selection{background:rgba(30,136,229,.32) !important;color:inherit !important;-webkit-text-fill-color:currentColor !important}
+html body #contentsContainer .content-container.mxe .text-box .mk-hl::selection,
+html body #contentsContainer .content-container.mxe .text-box .mk-hl *::selection{background:rgba(30,136,229,.28) !important;color:#111 !important;-webkit-text-fill-color:#111 !important}
 #muLpTip{position:fixed;left:0;top:0;z-index:2147483600;max-width:min(300px,88vw);box-sizing:border-box;padding:10px 14px;border-radius:14px;background:rgba(14,18,28,.97);color:#f4f6fb;border:1px solid rgba(255,255,255,.22);box-shadow:0 10px 30px rgba(0,0,0,.5);font-size:13px;line-height:1.8;pointer-events:none;opacity:0;visibility:hidden;transition:opacity .14s ease;font-family:inherit;text-align:start}
 #muLpTip.show{opacity:1;visibility:visible}
 #muLpTip .t{display:block;font-weight:700;font-size:14px;color:#fff}
@@ -8258,6 +8310,11 @@ html:not([dir="ltr"]) .mu-nb-en{display:none}
 
 /* ----- drag to reorder ----- */
 .mu-nfs-card{-webkit-user-select:none;user-select:none;-webkit-touch-callout:none}
+/* smoother scrolling: no scroll chaining / bounce into the page below, no tap delay, cards laid out & painted independently */
+.mu-nfs-body{overscroll-behavior:contain;-webkit-overflow-scrolling:touch}
+.mu-nfs-card{touch-action:manipulation;contain:layout style}
+.mu-nfs-fab,.mu-nfs-bar button{touch-action:manipulation}
+@media (prefers-reduced-motion:reduce){.mu-nfs *{transition:none !important;animation:none !important}}
 #muNotesFs .mu-nfs-card.mu-drag-src{opacity:.3 !important}
 #muNotesFs .mu-nfs-card{position:relative}
 #muNotesFs .mu-nfs-card.mu-drop-before::before,#muNotesFs .mu-nfs-card.mu-drop-after::after{content:'';position:absolute;left:0;right:0;height:6px;background:var(--nfs-text);border-radius:3px;z-index:2;pointer-events:none}
@@ -9616,15 +9673,25 @@ window.mu_syncHtmlBg = function(){
             });
             localStorage.setItem('app_theme_order_v25', '1');
         }
+        // One-time migration: Hugo is now the 1st and default theme, Oceanic the 2nd (swap of slots 0 and 1),
+        // so a saved index keeps pointing at the same theme the person had chosen.
+        if (!localStorage.getItem('app_theme_order_v26')) {
+            ['app_theme_index_v14','app_lite_prev_theme_v1'].forEach(function(k){
+                var v = parseInt(localStorage.getItem(k), 10);
+                if (!Number.isFinite(v) || v < 0) return;
+                if (v === 0) localStorage.setItem(k, '1'); else if (v === 1) localStorage.setItem(k, '0');
+            });
+            localStorage.setItem('app_theme_order_v26', '1');
+        }
         var saved = localStorage.getItem('app_theme_index_v14');
-        if (saved === null) return;
+        if (saved === null) saved = '0';
         var idx = parseInt(saved, 10);
         if (!Number.isFinite(idx) || idx < 0) return;
         // Must stay in the exact same order as MU_Theme's own `list` below —
         // this early copy only exists so the very first paint (before that
         // script block runs) can already show the right theme instead of
         // flashing the default and then snapping over.
-        var classes = ['theme-oceanic','theme-hugo','theme-yourname-original','theme-anime','theme-bw','theme-yourname','theme-darkweb','theme-terminal','theme-interstellar','theme-onepiece','theme-hogwarts','theme-homealone','theme-strangerthings','theme-vampire','theme-phantom','theme-halloween','theme-dreamy','theme-spider','theme-redhorizon','theme-midnightblue','theme-aurora','theme-aurora-phantom','theme-love','theme-anonymous'];
+        var classes = ['theme-hugo','theme-oceanic','theme-yourname-original','theme-anime','theme-bw','theme-yourname','theme-darkweb','theme-terminal','theme-interstellar','theme-onepiece','theme-hogwarts','theme-homealone','theme-strangerthings','theme-vampire','theme-phantom','theme-halloween','theme-dreamy','theme-spider','theme-redhorizon','theme-midnightblue','theme-aurora','theme-aurora-phantom','theme-love','theme-anonymous'];
         var cls = classes[idx];
         if (cls && cls !== 'theme-oceanic') {
             document.body.classList.remove('theme-oceanic');
@@ -11208,7 +11275,7 @@ html body #themePickerOverlay .tp-check{
                     encrypted: persisted.encrypted, hint: persisted.hint,
                     tags: persisted.tags, pinned: persisted.pinned, favorite: persisted.favorite,
                     archived: persisted.archived, order: persisted.order,
-                    fontFamily: persisted.fontFamily, fontSize: persisted.fontSize,
+                    fontFamily: persisted.fontFamily, fontSize: persisted.fontSize, color: persisted.color,
                     titleHistory: persisted.titleHistory,
                     // Bug fix: these note fields were never backed up, so a restore (here or on
                     // another device) silently dropped Fake Note content and reset Time Capsule /
@@ -12460,6 +12527,7 @@ html body #themePickerOverlay .tp-check{
                         local.folder = cloudItem.folder; local.extraFolders = Array.isArray(cloudItem.extraFolders) ? cloudItem.extraFolders.filter(f => typeof f === 'string' && f) : [];
                         local.tags = Array.isArray(cloudItem.tags) ? cloudItem.tags.filter(Boolean).map(String) : (local.tags || []);
                         local.pinned = !!cloudItem.pinned; local.favorite = !!cloudItem.favorite; local.archived = !!cloudItem.archived;
+                        if (typeof cloudItem.color === 'string' && /^[a-z]*$/.test(cloudItem.color)) local.color = cloudItem.color;
                         local.metaEditedAt = cloudItem.metaEditedAt;
                     }
                     if (cloudTextNewer || cloudMetaNewer) updated++;
@@ -13130,8 +13198,8 @@ html body #themePickerOverlay .tp-check{
            ===================================================================== */
         const MU_Theme = (function () {
             const list = [
-                { id: 'oceanic', emoji: '', nameFa: 'اقیانوسی', nameEn: 'Oceanic', class: 'theme-oceanic' },
                 { id: 'hugo', emoji: '', nameFa: 'هوگو', nameEn: 'Hugo', class: 'theme-hugo' },
+                { id: 'oceanic', emoji: '', nameFa: 'اقیانوسی', nameEn: 'Oceanic', class: 'theme-oceanic' },
                 { id: 'yourname-original', emoji: '', nameFa: 'نام تو', nameEn: 'Your Name', class: 'theme-yourname-original' },
                 { id: 'anime', emoji: '', nameFa: 'دخترونه', nameEn: 'Girly', class: 'theme-anime' },
                 { id: 'bw', emoji: '', nameFa: 'سیاه سفید', nameEn: 'Black & White', class: 'theme-bw' },
@@ -14233,7 +14301,8 @@ html body #themePickerOverlay .tp-check{
                 order: Number(src.order) || 0,
                 fakeContent: typeof src.fakeContent === 'string' ? src.fakeContent : '',
                 fontFamily: typeof src.fontFamily === 'string' ? src.fontFamily : '',
-                fontSize: Number(src.fontSize) || 13
+                fontSize: Number(src.fontSize) || 13,
+                color: (typeof src.color === 'string' && /^[a-z]*$/.test(src.color)) ? src.color : ''
             };
         }
 
@@ -15174,6 +15243,7 @@ html body #themePickerOverlay .tp-check{
             hide: '<svg viewBox="0 0 24 24"><path d="M2.5 12S6 5.5 12 5.5 21.5 12 21.5 12 18 18.5 12 18.5 2.5 12 2.5 12z"/><circle cx="12" cy="12" r="2.8"/><path d="M4 20L20 4"/></svg>',
             link: '<svg viewBox="0 0 24 24"><path d="M10 14a4 4 0 005.7 0l3-3a4 4 0 00-5.7-5.7l-1 1M14 10a4 4 0 00-5.7 0l-3 3A4 4 0 0011 18.7l1-1"/></svg>',
             eye: '<svg viewBox="0 0 24 24"><path d="M2.5 12S6 5.5 12 5.5 21.5 12 21.5 12 18 18.5 12 18.5 2.5 12 2.5 12z"/><circle cx="12" cy="12" r="2.8"/></svg>',
+            search: '<svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="6.5"/><path d="M16 16l4.5 4.5"/></svg>',
             dna: '<svg viewBox="0 0 24 24"><path d="M7 3c0 6 10 6 10 12s-10 6-10 6M17 3c0 6-10 6-10 12M8 7h8M8 17h8"/></svg>',
             hint: '<svg viewBox="0 0 24 24"><path d="M9 18h6M10 21h4M12 3a6 6 0 00-3.5 10.9c.6.5 1 1.2 1 2.1h5c0-.9.4-1.6 1-2.1A6 6 0 0012 3z"/></svg>',
             doc: '<svg viewBox="0 0 24 24"><rect x="5" y="3" width="14" height="18" rx="2"/><path d="M8.5 8h7M8.5 12h7M8.5 16h4"/></svg>',
@@ -15182,6 +15252,7 @@ html body #themePickerOverlay .tp-check{
             tr: '<svg viewBox="0 0 24 24"><path d="M4 6h9M8.5 4v2M6 6c.5 3 2.5 5.5 5.5 7M11 6c-.5 3-3 6-6.5 7.5M13 20l4-9 4 9M14.4 17h5.2"/></svg>',
             trEn: '<svg viewBox="0 0 24 24"><path d="M4 7h16M4 12h10M4 17h6"/></svg>',
             trFa: '<svg viewBox="0 0 24 24"><path d="M20 7H4M20 12H10M20 17h-6"/></svg>',
+            palette: '<svg viewBox="0 0 24 24"><path d="M12 3a9 9 0 100 18c1.2 0 1.9-.9 1.6-1.9-.3-1 .3-2.1 1.4-2.1H17a4 4 0 004-4c0-5-4.3-10-9-10z"/><circle class="f" cx="7.6" cy="11.2" r="1.1"/><circle class="f" cx="10.4" cy="7.2" r="1.1"/><circle class="f" cx="15.2" cy="7.6" r="1.1"/></svg>',
             dup: '<svg viewBox="0 0 24 24"><rect x="8.5" y="8.5" width="11.5" height="11.5" rx="3"/><path d="M15.5 8.5V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7.5a2 2 0 002 2h2.5"/></svg>',
             folder: '<svg viewBox="0 0 24 24"><path d="M3 7a2 2 0 012-2h4l2 2.5h8a2 2 0 012 2V18a2 2 0 01-2 2H5a2 2 0 01-2-2z"/></svg>',
             capsule: '<svg viewBox="0 0 24 24"><circle cx="12" cy="13" r="7.5"/><path d="M12 9v4l2.5 2M9.5 3h5"/></svg>',
@@ -15283,6 +15354,7 @@ html body #themePickerOverlay .tp-check{
                         pitem('more:delete', MXE_IC.trash, fa ? 'حذف خود یادداشت' : 'Delete the note itself', 'danger') +
                     `</div>` +
                     `<div class="mxe-pop r" data-pop="more">` +
+                        pitem('more:find', MXE_IC.search, fa ? 'جستجو در یادداشت' : 'Search in note') +
                         `<div class="grp">${q(L.gManage)}</div>` +
                         pitem('save', MXE_IC.save, L.save) +
                         pitem('archive', MXE_IC.arc, L.arc) +
@@ -15297,6 +15369,7 @@ html body #themePickerOverlay .tp-check{
                         pitem('flag:favorite', MXE_IC.fav, L.fav) +
                         pitem('more:dup', MXE_IC.dup, L.dup) +
                         pitem('more:tags', MXE_IC.tag, L.tags) +
+                        pitem('more:color', MXE_IC.palette, fa ? 'رنگ یادداشت' : 'Colour') +
                         `<div class="grp">${q(L.gSecurity)}</div>` +
                         pitem('lock', locked ? MXE_IC.lockOn : MXE_IC.lockOff, L.enc) +
                         (locked ? pitem('more:hint', MXE_IC.hint, t.changeHint || 'Change hint') : '') +
@@ -15385,6 +15458,7 @@ html body #themePickerOverlay .tp-check{
                 const mu_isOpenBox = activeOpenId === item.id;
                 const mu_skipOpenAnim = mu_isOpenBox && mu_reopenNoAnimId === item.id;
                 box.className = `content-container ${mu_isOpenBox ? 'show' : ''} ${mu_skipOpenAnim ? 'mu-noanim' : ''} ${(window.__muFocus && window.__muFocus.has(String(item.id))) ? 'mu-focus' : ''} mxe ${(window.__mxeFocus && window.__mxeFocus.has(String(item.id))) ? 'mxe-focus' : ''}`;
+                try { if (item.color && /^[a-z]+$/.test(item.color)) box.setAttribute('data-mk-color', item.color); else box.removeAttribute('data-mk-color'); } catch (_) {}
 
                 let customFolders = folders.filter(f => f !== DEFAULT_FOLDER);
                 let folderOptions = `<option value="" ${!item.folder ? 'selected' : ''}>${t.noFolder}</option>`;
@@ -23946,6 +24020,7 @@ function ensureItem(item){
  item.fakeContent=typeof item.fakeContent==='string'?item.fakeContent:'';
  item.fontFamily=typeof item.fontFamily==='string'?item.fontFamily:'';
  item.fontSize=Number(item.fontSize)||13;
+ item.color=(typeof item.color==='string'&&/^[a-z]*$/.test(item.color))?item.color:'';
 }
 // Exposed on window: this whole script tag is wrapped in its own IIFE, so
 // without this, a bare `ensureItem` reference from a different <script>
@@ -24161,7 +24236,7 @@ function addFeatureTools(item,box){
  let lastRange=null;
  const keepRange=()=>{ if(!row.isConnected){document.removeEventListener('selectionchange',keepRange);return} const s=window.getSelection(); if(s&&s.rangeCount&&text.contains(s.anchorNode)) lastRange=s.getRangeAt(0).cloneRange(); };
  document.addEventListener('selectionchange',keepRange);
- const restoreSel=()=>{ text.focus(); const s=window.getSelection(); if(lastRange&&!(s.rangeCount&&text.contains(s.anchorNode))){ try{ s.removeAllRanges(); s.addRange(lastRange); }catch(_){} } };
+ const restoreSel=()=>{ (window.mkSoftFocus||function(x){x.focus();})(text); const s=window.getSelection(); if(lastRange&&!(s.rangeCount&&text.contains(s.anchorNode))){ try{ s.removeAllRanges(); s.addRange(lastRange); }catch(_){} } };
  // keep the editor focused (and the selection alive) when a toolbar button is pressed
  row.addEventListener('mousedown',e=>{ if(e.target.closest&&e.target.closest('button')) e.preventDefault(); });
  const cmd=(c,v=null)=>{restoreSel();document.execCommand(c,false,v);autosaveCategory(item.id)};
@@ -31639,7 +31714,7 @@ window.mu_setViewerStyle = function(v){
     root.setAttribute('role','dialog'); root.setAttribute('aria-modal','true');
     root.innerHTML='<div class="mu-viewer-backdrop"></div>'
       +'<article class="mu-viewer-card">'
-      +'<button type="button" class="mu-viewer-close"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 5l14 14M19 5L5 19"/></svg></button>'
+      +'<button type="button" class="mu-viewer-close"><svg viewBox="0 0 24 24" aria-hidden="true"><path class="vx" d="M5 5l14 14M19 5L5 19"/><path class="vb" d="M15 5l-7 7 7 7"/></svg></button>'
       +'<header class="mu-viewer-head"><h2 class="mu-viewer-title" dir="auto"></h2><div class="mu-viewer-rule"></div></header>'
       +'<div class="mu-viewer-tools" role="toolbar"><button type="button" class="mu-viewer-tool" data-act="dec"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 18l5-12 5 12M5.8 14h6.4M17 11h4"/></svg></button><button type="button" class="mu-viewer-tool" data-act="inc"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 18l5-12 5 12M4.8 14h6.4M18 8v6M15 11h6"/></svg></button><span class="mu-viewer-tools-sep"></span><span class="mu-viewer-tools-grp"><button type="button" class="mu-viewer-tool" data-act="copy"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="9" y="9" width="11" height="11" rx="2"/><path d="M5 15V6a2 2 0 012-2h9"/></svg><span class="mu-viewer-tool-label"></span></button><button type="button" class="mu-viewer-tool" data-act="play"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 4.5l12 7.5-12 7.5z"/></svg></button><button type="button" class="mu-viewer-tool" data-act="pspeed"><span class="mu-live-spd">×1</span></button><button type="button" class="mu-viewer-tool mu-viewer-showall" data-act="showall"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 5l7 7-7 7M13 5l7 7-7 7"/></svg><span class="mu-viewer-showall-label"></span></button><button type="button" class="mu-viewer-tool" data-act="edit" aria-pressed="false" hidden><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 20l1-4L16.5 4.5a2 2 0 013 3L8 19z"/><path d="M14 7l3 3"/></svg></button><button type="button" class="mu-viewer-tool" data-act="img" hidden><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3.5" y="5" width="17" height="14" rx="2"/><circle cx="9" cy="10" r="1.6"/><path d="M4 17l5-4.5 3.5 3 3-2.5 4.5 4"/></svg></button></span></div><div class="mu-viewer-progress"><i></i></div>'
       +'<div class="mu-viewer-body" dir="auto"></div>'
@@ -32770,6 +32845,7 @@ window.mu_flagIcons=function(item){return (item&&item.pinned?window.mu_flagIc('p
     pinned:{fa:['پین','یادداشت را بالای لیست نگه می‌دارد. دوباره بزنی پین برداشته می‌شود.'],en:['Pin','Keeps this note at the top of the list. Tap again to unpin.']},
     favorite:{fa:['فیوریت','یادداشت را به مورد علاقه‌ها اضافه می‌کند تا راحت‌تر پیدایش کنی. دوباره بزنی برداشته می‌شود.'],en:['Favorite','Marks the note as a favorite so it is easy to find. Tap again to remove.']},
     link:{fa:['نمایش لینک','لینک‌های داخل متن یادداشت را به‌صورت قابل‌کلیک نشان می‌دهد یا مخفی می‌کند.'],en:['Show link','Shows or hides the links found in the note text as clickable links.']},
+    find:{fa:['جستجو در یادداشت','فقط داخل همین یادداشت جستجو می‌کند و هر چه تایپ کنی را داخل خود متن هایلایت می‌کند؛ با دکمه‌های بالا و پایین بین موارد پیدا‌شده می‌روی.'],en:['Search in note','Searches only inside this note and highlights what you type right in the text; use the up / down buttons to step between matches.']},
     dna:{fa:['DNA','تحلیل کامل یادداشت: تعداد کلمه و حرف، تصویرها و لینک‌ها، غنای واژگان و کلمات کلیدی.'],en:['DNA','A full analysis of the note: word and character counts, images and links, vocabulary richness and keywords.']},
     bold:{fa:['ضخیم (Bold)','متن انتخاب‌شده را ضخیم می‌کند.'],en:['Bold','Makes the selected text bold.']},
     italic:{fa:['کج (Italic)','متن انتخاب‌شده را کج می‌کند.'],en:['Italic','Makes the selected text italic.']},
@@ -33770,7 +33846,7 @@ window.muTabSelect = function (id, i, btn) {
             var avail = Math.floor(bar.getBoundingClientRect().top - 4 - topLimit - 8);
             p.style.overflowY = 'auto';
             p.style.overscrollBehavior = 'contain';
-            p.style.maxHeight = Math.max(110, Math.min(avail, 520)) + 'px';
+            p.style.maxHeight = Math.max(110, Math.min(avail, 800)) + 'px';
         } catch (_) {}
     }
     function refitPops() { D.querySelectorAll('.mxe-pop.open').forEach(fitPop); }
@@ -33792,7 +33868,7 @@ window.muTabSelect = function (id, i, btn) {
     function restoreText(id) {
         var t = D.getElementById('text-' + id);
         if (!t || t.getAttribute('contenteditable') !== 'true') return null;
-        t.focus({ preventScroll: true });
+        (window.mkSoftFocus ? window.mkSoftFocus(t) : t.focus({ preventScroll: true }));
         var s = window.getSelection();
         if (lastRange && lastId === id && !(s.rangeCount && t.contains(s.anchorNode))) {
             try { s.removeAllRanges(); s.addRange(lastRange); } catch (_) {}
@@ -34349,7 +34425,41 @@ window.muTabSelect = function (id, i, btn) {
         var it = itemOf(id), el = box.querySelector('.mxe-info-val');
         if (it && el) el.textContent = it.lastEdited || (fa() ? 'ثبت نشده' : 'Not recorded');
     }
+    /* ---------- note colour: Google-Keep style basic colours (stored on the note as item.color) ---------- */
+    var MK_PAL = [['red','#faafa8','#77172e','قرمز','Red'],['orange','#f39f76','#692b17','نارنجی','Orange'],['yellow','#fff8b8','#7c4a03','زرد','Yellow'],['green','#e2f6d3','#264d3b','سبز','Green'],['teal','#b4ddd3','#0c625d','فیروزه‌ای','Teal'],['sky','#d4e4ed','#256377','آبی روشن','Sky'],['blue','#aeccdc','#284255','آبی','Blue'],['purple','#d3bfdb','#472e5b','بنفش','Purple'],['pink','#f6e2dd','#6c394f','صورتی','Pink'],['sand','#e9e3d4','#4b443a','شنی','Sand'],['gray','#efeff1','#232427','خاکستری','Gray']];
+    function mkIsDark() { var t = root.getAttribute('data-mxe-theme'); if (t) return t === 'dark'; try { return window.matchMedia('(prefers-color-scheme: dark)').matches; } catch (_) { return false; } }
+    function mkApplyColor(box, key) { if (!box) return; if (key) box.setAttribute('data-mk-color', key); else box.removeAttribute('data-mk-color'); }
+    function openColorSheet(id, box) {
+        var it = itemOf(id); if (!it || it.isDecoy || !box) return;
+        var old = box.querySelector('#mkColorSheet'); if (old) old.remove();
+        var dark = mkIsDark(), cur = (typeof it.color === 'string') ? it.color : '';
+        var ov = D.createElement('div'); ov.id = 'mkColorSheet'; ov.className = 'mkcs-ov';
+        var h = '<div class="mkcs-box" role="dialog"><div class="mkcs-hd"><span>' + (fa() ? 'رنگ یادداشت' : 'Colour') + '</span><button type="button" class="mkcs-x" data-mkcs="x" aria-label="close">✕</button></div><div class="mkcs-grid">';
+        h += '<button type="button" class="mkcs-sw def' + (cur ? '' : ' on') + '" data-mkcs="c" data-c="" title="' + (fa() ? 'پیش‌فرض' : 'Default') + '"></button>';
+        MK_PAL.forEach(function (p) {
+            h += '<button type="button" class="mkcs-sw' + (cur === p[0] ? ' on' : '') + '" data-mkcs="c" data-c="' + p[0] + '" style="--mkc:' + (dark ? p[2] : p[1]) + '" title="' + (fa() ? p[3] : p[4]) + '"></button>';
+        });
+        ov.innerHTML = h + '</div></div>';
+        ov.addEventListener('click', function (e) {
+            var b = e.target && e.target.closest ? e.target.closest('[data-mkcs]') : null;
+            if (!b) { if (e.target === ov) ov.remove(); return; }
+            e.preventDefault(); e.stopPropagation();
+            if (b.getAttribute('data-mkcs') === 'x') { ov.remove(); return; }
+            var key = b.getAttribute('data-c') || '';
+            if (!/^[a-z]*$/.test(key)) return;
+            var it2 = itemOf(id); if (!it2) return;
+            it2.color = key;
+            try { callFn('ensureItem', it2); } catch (_) {}
+            try { window.mu_touchMeta(it2); } catch (_) {}
+            try { saveToLocalStorage(); } catch (_) {}
+            mkApplyColor(box, key);
+            ov.querySelectorAll('.mkcs-sw').forEach(function (s) { s.classList.toggle('on', (s.getAttribute('data-c') || '') === key); });
+            msg(key ? 'رنگ یادداشت تغییر کرد' : 'رنگ یادداشت برداشته شد', key ? 'Note colour changed' : 'Note colour removed');
+        });
+        box.appendChild(ov);
+    }
     var MORE = {
+        color: function (id, box) { return openColorSheet(id, box); },
         hide: function (id) { callFn('toggleVisibility', id); },
         link: function (id, box) {
             callFn('toggleLinkPreview', id);
@@ -34357,6 +34467,7 @@ window.muTabSelect = function (id, i, btn) {
         },
         view: function (id) { callFn('mu_openNoteViewer', id); },
         dna: function (id) { callFn('openNoteDNA', id); },
+        find: function (id, box) { try { if (window.mxeFind) window.mxeFind.open(box); } catch (e) { console.error(e); } },
         hint: function (id) { callFn('changeHint', id); },
         fake: function (id) { callFn('editFake', id); },
 vault: function (id) { callFn('mkVaultAddNote', id); },
@@ -34434,7 +34545,7 @@ vault: function (id) { callFn('mkVaultAddNote', id); },
             if (!p) return;
             var willOpen = !p.classList.contains('open');
             closePops();
-            if (willOpen && (arg === 'more' || arg === 'trash')) {
+            if (willOpen && (arg === 'more' || arg === 'trash' || arg === 'write')) {
                 try { var ae = D.activeElement; if (ae && ae !== D.body && ae.blur && (ae.isContentEditable || /^(INPUT|TEXTAREA)$/.test(ae.tagName))) ae.blur(); } catch (_) {}
             }
             if (willOpen) {
@@ -34702,6 +34813,7 @@ vault: function (id) { callFn('mkVaultAddNote', id); },
 'more:toen': ['ترجمه به انگلیسی', 'متن یادداشت را از فارسی به انگلیسی ترجمه می‌کند.', 'Translate to EN', 'Translates the note text from Persian to English.'],
     'more:tofa': ['ترجمه به فارسی', 'متن یادداشت را از انگلیسی به فارسی ترجمه می‌کند.', 'Translate to FA', 'Translates the note text from English to Persian.'],
     'more:dup': ['تکثیر یادداشت', 'یک کپی از این یادداشت می‌سازد.', 'Duplicate note', 'Makes a copy of this note.'],
+    'more:color': ['رنگ یادداشت', 'یکی از رنگ‌های ساده را برای یادداشت انتخاب می‌کنی.', 'Colour', 'Pick one of the basic colours for this note.'],
     'more:tags': ['برچسب‌ها', 'برچسب‌های یادداشت را ویرایش می‌کند.', 'Tags', 'Edits the tags of the note.'],
     'more:folder': ['افزودن / حذف پوشه', 'یادداشت را به پوشه‌ها اضافه می‌کند یا از آن‌ها برمی‌دارد.', 'Add / remove folder', 'Adds the note to folders or removes it from them.'],
     'more:capsule': ['کپسول زمان', 'یادداشت را تا تاریخ و ساعتی که تعیین می‌کنی بسته نگه می‌دارد.', 'Time capsule', 'Keeps the note sealed until the date and time you choose.'],
@@ -35124,7 +35236,7 @@ vault: function (id) { callFn('mkVaultAddNote', id); },
     var body=noPv ? '' : (previewText(c).match(/^[\s\S]{0,900}/u)||[''])[0];
     var flags=(locked?'🔒 ':'')+(c.pinned?'📌 ':'')+(c.favorite?'⭐ ':'');
     var media=(noPv || S.lines<=0) ? null : mediaOf(c);
-    return {id:c.id, media:media, title:title, body:body, flags:flags, locked:locked, fl:noteFolders(c), pin:!!c.pinned, fav:!!c.favorite, searchable: (locked||c.titleHidden) ? '' : searchText(c,title)};
+    return {id:c.id, media:media, title:title, body:body, flags:flags, locked:locked, fl:noteFolders(c), pin:!!c.pinned, fav:!!c.favorite, col:(/^[a-z]+$/.test(c.color||'')?c.color:''), searchable: (locked||c.titleHidden) ? '' : searchText(c,title)};
   }
   /* Perf: the normalized full text of every note used to be rebuilt on EVERY render (each search pause, sort,
      view switch, coming back from a note) - norm() over all note bodies. It only changes when the note does. */
@@ -35404,7 +35516,7 @@ vault: function (id) { callFn('mkVaultAddNote', id); },
   }
   function cardHtml(inf){
     hlPrep(inf);
-    return '<button type="button" class="mu-nfs-card'+(inf.pin&&inf.fav?' mu-nfs-both':inf.pin?' mu-nfs-pinned':inf.fav?' mu-nfs-faved':'')+(isSel(inf.id)?' mu-nfs-sel':'')+'" data-id="'+esc(inf.id)+'" data-g="'+(inf.pin?1:0)+(inf.fav?1:0)+'">'
+    return '<button type="button" class="mu-nfs-card'+(inf.pin&&inf.fav?' mu-nfs-both':inf.pin?' mu-nfs-pinned':inf.fav?' mu-nfs-faved':'')+(isSel(inf.id)?' mu-nfs-sel':'')+'" data-id="'+esc(inf.id)+'" data-g="'+(inf.pin?1:0)+(inf.fav?1:0)+(inf.col?'" data-mk-color="'+esc(inf.col):'')+'">'
       +'<div class="mu-nfs-ttl" dir="auto">'+((inf.locked||!inf.title)?esc((inf.locked?'🔒 ':'')+(inf.title||(fa()?'بدون عنوان':'Untitled'))):hl(inf.title))+'</div>'
       +((inf.body && S.lines>0)?'<div class="mu-nfs-txt">'+bodyLines(inf).map(function(l){ l=l.trim(); return '<span class="mu-nfs-ln" dir="auto">'+(l?(inf.locked?esc(l):hl(l)):'&#8203;')+'</span>'; }).join('')+'</div>':'')
       +mediaHtml(inf)
@@ -35996,9 +36108,14 @@ vault: function (id) { callFn('mkVaultAddNote', id); },
       if(!S.q.trim()) go(); else api.__sqt=setTimeout(go,150);
     },
     onScroll:function(){
-      if(S.page!=='notes') return;
-      var body=$('muNfsBody'); if(!body) return;
-      if(S.shown<S.list.length && body.scrollHeight-body.scrollTop-body.clientHeight<600) paint(S.shown);
+      if(S.page!=='notes' || api.__scRaf) return;
+      /* one check per frame instead of one per scroll event (avoids repeated layout reads while flinging) */
+      api.__scRaf=requestAnimationFrame(function(){
+        api.__scRaf=0;
+        if(S.page!=='notes' || S.shown>=S.list.length) return;
+        var body=$('muNfsBody'); if(!body) return;
+        if(body.scrollHeight-body.scrollTop-body.clientHeight<600) paint(S.shown);
+      });
     },
     toggleView:function(){
       S.view=(S.view==='grid')?'list':'grid'; lsSet(KEY_VIEW,S.view);
@@ -36315,6 +36432,7 @@ vault: function (id) { callFn('mkVaultAddNote', id); },
             +'<span class="mu-sel-ttl" dir="auto">'+esc(ttl)+'</span>'
             +btn('pin',ICONS.pin,c.pinned?(f?'برداشتن پین':'Unpin'):(f?'پین کردن':'Pin'),!!c.pinned)
             +btn('fav',ICONS.star,c.favorite?(f?'حذف از علاقه‌مندی‌ها':'Remove from favorites'):(f?'افزودن به علاقه‌مندی‌ها':'Add to favorites'),!!c.favorite)
+            +btn('color',PALETTE_ICON,f?'رنگ یادداشت':'Colour',false)
             +btn('dup',ICONS.dup,f?'\u062a\u06a9\u062b\u06cc\u0631 \u06cc\u0627\u062f\u062f\u0627\u0634\u062a':'Duplicate',false)
             +btn('view',VIEW_ICON,f?'نمایش یادداشت':'View note',false)
             +btn('lock',locked?ICONS.lock:ICONS.unlock,locked?(f?'برداشتن قفل':'Remove lock'):(f?'قفل کردن':'Lock'),locked)
@@ -36328,6 +36446,7 @@ vault: function (id) { callFn('mkVaultAddNote', id); },
             +'<span class="mu-sel-ttl" dir="auto">'+items.length+(f?' یادداشت انتخاب شد':' selected')+'</span>'
             +btn('pin',ICONS.pin,allPin?(f?'برداشتن پین':'Unpin'):(f?'پین کردن':'Pin'),allPin)
             +btn('fav',ICONS.star,allFav?(f?'حذف از علاقه‌مندی‌ها':'Remove from favorites'):(f?'افزودن به علاقه‌مندی‌ها':'Add to favorites'),allFav)
+            +btn('color',PALETTE_ICON,f?'رنگ یادداشت':'Colour',false)
             +btn('dup',ICONS.dup,f?'\u062a\u06a9\u062b\u06cc\u0631 \u06cc\u0627\u062f\u062f\u0627\u0634\u062a':'Duplicate',false)
             +(anyLocked?'':btn('lock',ICONS.unlock,f?'قفل کردن':'Lock',false))
             +btn('del',ICONS.trash,f?'حذف':'Delete',false);
@@ -36374,6 +36493,39 @@ vault: function (id) { callFn('mkVaultAddNote', id); },
     Promise.resolve(p).then(done,done);
   }
   // actions on two or more selected notes (reuse the app's bulk helpers, which read MarkhinSelectedNoteIds)
+  /* note colour from the selection bar: same basic colours as the editor, applied to every selected note */
+  var MK_PAL2=[['red','#faafa8','#77172e','قرمز','Red'],['orange','#f39f76','#692b17','نارنجی','Orange'],['yellow','#fff8b8','#7c4a03','زرد','Yellow'],['green','#e2f6d3','#264d3b','سبز','Green'],['teal','#b4ddd3','#0c625d','فیروزه‌ای','Teal'],['sky','#d4e4ed','#256377','آبی روشن','Sky'],['blue','#aeccdc','#284255','آبی','Blue'],['purple','#d3bfdb','#472e5b','بنفش','Purple'],['pink','#f6e2dd','#6c394f','صورتی','Pink'],['sand','#e9e3d4','#4b443a','شنی','Sand'],['gray','#efeff1','#232427','خاکستری','Gray']];
+  var PALETTE_ICON='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3a9 9 0 100 18c1.2 0 1.9-.9 1.6-1.9-.3-1 .3-2.1 1.4-2.1H17a4 4 0 004-4c0-5-4.3-10-9-10z"/><circle cx="7.6" cy="11.2" r="1" fill="currentColor"/><circle cx="10.4" cy="7.2" r="1" fill="currentColor"/><circle cx="15.2" cy="7.6" r="1" fill="currentColor"/></svg>';
+  function selColorSheet(){
+    var root=$('muNotesFs'); if(!root) return;
+    var items=selItems(); if(!items.length) return;
+    var old=$('mkColorSheet'); if(old) old.remove();
+    var f=fa(), dark=(root.getAttribute('data-theme')==='dark');
+    var cols=items.map(function(c){ return (typeof c.color==='string')?c.color:''; });
+    var cur=cols.every(function(x){ return x===cols[0]; })?cols[0]:null;
+    var ov=document.createElement('div'); ov.id='mkColorSheet'; ov.className='mkcs-ov';
+    var h='<div class="mkcs-box" role="dialog"><div class="mkcs-hd"><span>'+(f?'رنگ یادداشت':'Colour')+'</span><button type="button" class="mkcs-x" data-mkcs="x" aria-label="close">\u2715</button></div><div class="mkcs-grid">';
+    h+='<button type="button" class="mkcs-sw def'+(cur===''?' on':'')+'" data-mkcs="c" data-c="" title="'+(f?'پیش‌فرض':'Default')+'"></button>';
+    MK_PAL2.forEach(function(p){ h+='<button type="button" class="mkcs-sw'+(cur===p[0]?' on':'')+'" data-mkcs="c" data-c="'+p[0]+'" style="--mkc:'+(dark?p[2]:p[1])+'" title="'+(f?p[3]:p[4])+'"></button>'; });
+    ov.innerHTML=h+'</div></div>';
+    ov.addEventListener('click',function(e){
+      var b=e.target&&e.target.closest?e.target.closest('[data-mkcs]'):null;
+      if(!b){ if(e.target===ov) ov.remove(); return; }
+      e.preventDefault(); e.stopPropagation();
+      if(b.getAttribute('data-mkcs')==='x'){ ov.remove(); return; }
+      var key=b.getAttribute('data-c')||''; if(!/^[a-z]*$/.test(key)) return;
+      selItems().forEach(function(i){
+        i.color=key;
+        try{ if(window.ensureItem) window.ensureItem(i); }catch(e2){}
+        try{ if(window.mu_touchMeta) window.mu_touchMeta(i); }catch(e2){}
+      });
+      try{ saveToLocalStorage(); }catch(e2){}
+      ov.remove();
+      selRefresh();
+      try{ showToast(key?(f?'🎨 رنگ یادداشت تغییر کرد':'🎨 Colour changed'):(f?'🎨 رنگ یادداشت برداشته شد':'🎨 Colour removed')); }catch(e2){}
+    });
+    root.appendChild(ov);
+  }
   function selActMulti(act,items){
     var ids=items.map(function(c){ return c.id; });
     var f=fa();
@@ -36422,6 +36574,7 @@ vault: function (id) { callFn('mkVaultAddNote', id); },
     }
   }
   function selAct(act){
+    if(act==='color'){ selColorSheet(); return; }
     var items=selItems();
     if(items.length>1){ selActMulti(act,items); return; }
     var c=selNote(); if(!c){ clearSel(); return; }
@@ -36731,7 +36884,7 @@ html.mu-nfs-open:not(#_nfs) #advancedCard.mdx{
   background:var(--nfs-bg) !important;color:var(--nfs-text) !important;
 }
 /* head: same as Settings in the new version (start-aligned title, round bar-coloured close button, thin rule) */
-html.mu-nfs-open:not(#_nfs) #advancedCard.mdx>.advanced-head{display:flex;align-items:center;justify-content:space-between;background:transparent !important;border-bottom:1px solid var(--nfs-border) !important}
+html.mu-nfs-open:not(#_nfs) #advancedCard.mdx>.advanced-head{display:flex;align-items:center;justify-content:space-between;position:sticky !important;top:0 !important;z-index:50 !important;background:var(--nfs-bg) !important;-webkit-backdrop-filter:none !important;backdrop-filter:none !important;border-bottom:1px solid var(--nfs-border) !important}
 html.mu-nfs-open:not(#_nfs) #advancedCard.mdx>.advanced-head h3{color:var(--nfs-text) !important;font-size:20px !important;font-weight:700;letter-spacing:0;text-align:start}
 html.mu-nfs-open:not(#_nfs) #advancedCard.mdx>.advanced-head .btn-main{width:38px;height:38px;padding:0 !important;border-radius:50% !important;background:var(--nfs-bar) !important;color:var(--nfs-text) !important;border:0 !important;box-shadow:0 1px 4px rgba(0,0,0,.25) !important}
 html.mu-nfs-open:not(#_nfs) #advancedCard.mdx>.advanced-head .btn-main:active{background:var(--nfs-active) !important;color:var(--nfs-active-ink) !important}
@@ -36940,6 +37093,7 @@ html.mu-tg-fs .mklk .mklk-col{padding-top:14px}
       close:function(el){ var b = closeBtnIn(el); if (b) b.click(); else el.remove(); } },
     { name:'moveMenu', find:function(){ return document.querySelector('.markhin-move-menu'); }, z:2147483000,
       close:function(){ try{ document.body.dispatchEvent(new Event('pointerdown', { bubbles:true })); }catch(e){} var m=document.querySelector('.markhin-move-menu'); if(m) m.remove(); } },
+    { name:'noteColor', find:function(){ return $('mkColorSheet'); }, z:60, close:function(el){ el.remove(); } },
     { name:'editorPop', find:function(){ var b=openEditorBox(); return b ? b.querySelector('.mxe-pop.open') : null; }, z:50,
       close:function(){ document.querySelectorAll('.mxe-pop.open').forEach(function(p){ p.classList.remove('open'); }); } },
     { name:'folderPicker', find:function(){ return $('muFolderPickerOverlay'); }, close:function(el){ el.remove(); } },
@@ -37498,14 +37652,27 @@ async function restore(id){
   if(!items) return screenUnlock();
   var c=items.filter(function(x){ return String(x.id)===String(id); })[0]; if(!c) return;
   var cc=JSON.parse(JSON.stringify(c));
-  try{ await MU_IndexedDB.migrateNoteMediaToBlobs(cc); }catch(e){}
-  if(!categories.some(function(x){ return String(x.id)===String(c.id); })) categories.push(cc);
-  flushApp();
-  var next=items.filter(function(x){ return x!==c; }), ok=false;
-  try{ ok=await persist(next); }catch(e){}
-  if(ok) items=next;
-  try{ renderApp(); }catch(e){}
-  toast(T('بازگردانده شد','Restored')); screenList();
+  if(window.__mkvRestoring) return; window.__mkvRestoring=true;
+  try{
+    try{ await MU_IndexedDB.migrateNoteMediaToBlobs(cc); }catch(e){}
+    /* Atomic restore: (1) put the note back in the normal list, (2) remove it from the vault and confirm that save,
+       (3) only then report success. If the vault save fails, the normal-list copy is rolled back, so the note never
+       exists in both places and the success message is never shown for a half-done restore. */
+    var added=false;
+    if(!categories.some(function(x){ return String(x.id)===String(c.id); })){ categories.push(cc); added=true; }
+    flushApp();
+    var next=items.filter(function(x){ return x!==c; }), ok=false;
+    try{ ok=await persist(next); }catch(e){ ok=false; }
+    if(!ok){
+      if(added){ for(var i=categories.length-1;i>=0;i--){ if(categories[i]===cc){ categories.splice(i,1); break; } } }
+      flushApp(); try{ renderApp(); }catch(e){}
+      toast(T('بازگردانی ناموفق بود؛ یادداشت همچنان در گاوصندوق است','Restore failed; the note is still in the vault'));
+      return screenList();
+    }
+    items=next;
+    try{ renderApp(); }catch(e){}
+    toast(T('بازگردانده شد','Restored')); screenList();
+  } finally { window.__mkvRestoring=false; }
 }
 var lastOpen=0;
 async function open(){
@@ -38097,5 +38264,636 @@ html.mu-nfs-dark:not(#_x) body:not(#_y) .mk-textonly-row{background:#2b2b2b !imp
 html body .io-pane[data-io-pane="export"] > .mk-textonly-row{grid-column:1 / -1 !important;flex:1 1 100% !important;width:100% !important;max-width:100% !important;box-sizing:border-box !important;order:-1 !important;margin:0 !important}
 html body .io-pane[data-io-pane="export"] > .mk-textonly-row > span{flex:1 1 auto;min-width:0}
 </style>
+<style id="mxeFindCss">
+/* ===== In-note search (Google Keep style): bottom bar + highlights inside the text ===== */
+::highlight(mxe-find){background-color:#ffe08a;color:#000}
+::highlight(mxe-find-cur){background-color:#ff9800;color:#000}
+html body #contentsContainer .mxe.mxe-finding .mxe-bottom{display:none !important}
+html body #contentsContainer .mxe .mxe-find{
+  flex:0 0 auto;display:flex;align-items:center;gap:4px;box-sizing:border-box;width:100%;
+  padding:10px 10px calc(10px + var(--mu-sab, env(safe-area-inset-bottom,0px)));
+  background:var(--mx-pop,var(--mx-bg,#f4f4f4));border-top:1px solid var(--mx-line,rgba(127,127,127,.25));
+  border-radius:18px 18px 0 0;color:var(--mx-icon,inherit);position:relative;z-index:6;
+}
+html.mu-kb body #contentsContainer .mxe .mxe-find,html.mu-kbo body #contentsContainer .mxe .mxe-find{padding-bottom:10px}
+html body #contentsContainer .mxe .mxe-find-in{
+  flex:1 1 auto;min-width:0;display:flex;align-items:center;gap:8px;height:46px;box-sizing:border-box;padding:0 12px;
+  border-radius:14px;background:var(--mx-chip,rgba(127,127,127,.15));border:2px solid var(--mx-icon,#222);
+}
+html body #contentsContainer .mxe .mxe-find-in svg{width:21px;height:21px;flex:0 0 auto;fill:none;stroke:currentColor;stroke-width:1.9;stroke-linecap:round;stroke-linejoin:round;opacity:.85}
+html body #contentsContainer .mxe .mxe-find-in input{
+  all:unset;flex:1 1 auto;min-width:0;box-sizing:border-box;font-size:16px;line-height:1.3;color:var(--mx-note,inherit);
+  caret-color:var(--mx-note,currentColor);-webkit-user-select:text !important;user-select:text !important;
+}
+html body #contentsContainer .mxe .mxe-find-in input::placeholder{color:var(--mx-note-ph,rgba(127,127,127,.8));opacity:1}
+html body #contentsContainer .mxe .mxe-find-n{flex:0 0 auto;font-size:13px;opacity:.75;direction:ltr;unicode-bidi:isolate;font-variant-numeric:tabular-nums;white-space:nowrap}
+html body #contentsContainer .mxe .mxe-find-n.none{color:var(--mx-danger,#c62828);opacity:1}
+html body #contentsContainer .mxe .mxe-find-b{
+  all:unset;box-sizing:border-box;flex:0 0 auto;width:44px;height:44px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;
+  cursor:pointer;color:var(--mx-icon,inherit);-webkit-tap-highlight-color:transparent;touch-action:manipulation;
+}
+html body #contentsContainer .mxe .mxe-find-b:active{background:var(--mx-chip-on,rgba(127,127,127,.25))}
+html body #contentsContainer .mxe .mxe-find-b[disabled]{opacity:.35;pointer-events:none}
+html body #contentsContainer .mxe .mxe-find-b svg{width:24px;height:24px;fill:none;stroke:currentColor;stroke-width:2.1;stroke-linecap:round;stroke-linejoin:round;pointer-events:none}
+html body #contentsContainer .mxe .mxe-find-b.x{background:var(--mx-chip,rgba(127,127,127,.15))}
+/* readable colours, whatever the note theme: dark text on a light bar, light text on a dark bar */
+html body #contentsContainer .mxe .mxe-find{--fb-fg:#111;--fb-chip:rgba(0,0,0,.07);color:var(--fb-fg) !important}
+html body #contentsContainer .mxe .mxe-find.fb-dark{--fb-fg:#f2f2f2;--fb-chip:rgba(255,255,255,.14)}
+html body #contentsContainer .mxe .mxe-find .mxe-find-in{background:var(--fb-chip) !important;border-color:var(--fb-fg) !important;color:var(--fb-fg) !important}
+html body #contentsContainer .mxe .mxe-find .mxe-find-in input{color:var(--fb-fg) !important;-webkit-text-fill-color:var(--fb-fg) !important;caret-color:var(--fb-fg) !important;opacity:1 !important}
+html body #contentsContainer .mxe .mxe-find .mxe-find-in input::placeholder{color:var(--fb-fg) !important;-webkit-text-fill-color:var(--fb-fg) !important;opacity:.5 !important}
+html body #contentsContainer .mxe .mxe-find .mxe-find-n,html body #contentsContainer .mxe .mxe-find .mxe-find-b{color:var(--fb-fg) !important}
+html body #contentsContainer .mxe .mxe-find .mxe-find-b.x{background:transparent !important}
+/* fallback highlight layer (only used when the browser has no CSS Custom Highlight API) */
+html body #contentsContainer .mxe .mxe-find-ov{position:absolute;left:0;top:0;right:0;bottom:0;pointer-events:none;z-index:5;overflow:hidden}
+html body #contentsContainer .mxe .mxe-find-ov i{position:absolute;display:block;border-radius:3px;background:rgba(255,205,60,.5)}
+html body #contentsContainer .mxe .mxe-find-ov i.c{background:rgba(255,140,0,.62)}
+</style>
+<script id="mxeFindJs">
+(function(){
+  'use strict';
+  if (window.mxeFind) return;
+  var D = document, st = null;
+  var HAS = (typeof CSS !== 'undefined') && CSS.highlights && (typeof Highlight === 'function');
+  function fa(){ try { return currentLang === 'fa'; } catch (_) { return D.documentElement.dir === 'rtl'; } }
+  var MAP = {'ي':'ی','ك':'ک','ى':'ی','ۀ':'ه','ة':'ه','أ':'ا','إ':'ا','ٱ':'ا','٠':'0','١':'1','٢':'2','٣':'3','٤':'4','٥':'5','٦':'6','٧':'7','٨':'8','٩':'9','۰':'0','۱':'1','۲':'2','۳':'3','۴':'4','۵':'5','۶':'6','۷':'7','۸':'8','۹':'9'};
+  /* length-preserving normalisation, so offsets in the normalised text are offsets in the real text */
+  function norm(s){
+    var out = '', i, c, l;
+    for (i = 0; i < s.length; i++){
+      c = s.charAt(i);
+      if (MAP[c]) { out += MAP[c]; continue; }
+      l = c.toLowerCase();
+      out += (l.length === 1) ? l : c;
+    }
+    return out;
+  }
+  var BLOCK = {DIV:1,P:1,LI:1,UL:1,OL:1,H1:1,H2:1,H3:1,H4:1,H5:1,H6:1,BLOCKQUOTE:1,PRE:1,TD:1,TH:1,TR:1,TABLE:1};
+  function blockOf(n, root){
+    var p = n.parentNode;
+    while (p && p !== root){ if (p.nodeType === 1 && BLOCK[p.tagName]) return p; p = p.parentNode; }
+    return root;
+  }
+  function collect(tb){
+    var segs = [], text = '', lastBlk = null, n, v, blk;
+    var w = D.createTreeWalker(tb, NodeFilter.SHOW_ELEMENT | NodeFilter.SHOW_TEXT, { acceptNode: function(x){
+      if (x.nodeType === 1){
+        var t = x.tagName;
+        if (t === 'SCRIPT' || t === 'STYLE' || t === 'IMG' || t === 'SVG' || t === 'svg' || t === 'CANVAS') return NodeFilter.FILTER_REJECT;
+        if (x.getAttribute && x.getAttribute('contenteditable') === 'false') return NodeFilter.FILTER_REJECT;
+      }
+      return NodeFilter.FILTER_ACCEPT;
+    }});
+    while ((n = w.nextNode())){
+      if (n.nodeType === 1){
+        if (n.tagName === 'BR' && text && text.charAt(text.length - 1) !== '\n') text += '\n';
+        continue;
+      }
+      v = n.nodeValue; if (!v) continue;
+      blk = blockOf(n, tb);
+      if (lastBlk && blk !== lastBlk && text && text.charAt(text.length - 1) !== '\n') text += '\n';
+      lastBlk = blk;
+      segs.push({ n: n, s: text.length, l: v.length });
+      text += norm(v);
+    }
+    return { segs: segs, text: text };
+  }
+  function segAt(segs, idx){
+    var lo = 0, hi = segs.length - 1, mid;
+    while (lo < hi){ mid = (lo + hi + 1) >> 1; if (segs[mid].s <= idx) lo = mid; else hi = mid - 1; }
+    return segs[lo];
+  }
+  function num(n){ try { return n.toLocaleString(fa() ? 'fa-IR' : 'en'); } catch (_) { return String(n); } }
+  function clearHl(){ if (!HAS) return; try { CSS.highlights.delete('mxe-find'); CSS.highlights.delete('mxe-find-cur'); } catch (_) {} }
+
+  function drawFallback(){
+    if (!st) return;
+    var s = st, ov = s.ov, r = s.ranges, n = r.length, i, j, rs, rc, ob, cb, top, bot, x, y, w, h, html = '';
+    if (!ov){
+      ov = s.ov = D.createElement('div');
+      ov.className = 'mxe-find-ov'; ov.setAttribute('aria-hidden', 'true');
+      s.box.appendChild(ov);
+    }
+    if (!n){ ov.innerHTML = ''; return; }
+    ob = ov.getBoundingClientRect();
+    cb = (s.body || s.tb).getBoundingClientRect();
+    top = cb.top; bot = Math.min(cb.bottom, s.bar.getBoundingClientRect().top);
+    for (i = 0; i < n; i++){
+      try { rs = r[i].getClientRects(); } catch (_) { continue; }
+      for (j = 0; j < rs.length; j++){
+        rc = rs[j];
+        if (rc.width < 1 || rc.bottom < top || rc.top > bot) continue;
+        y = Math.max(rc.top, top); h = Math.min(rc.bottom, bot) - y;
+        if (h < 1) continue;
+        x = rc.left - ob.left; w = rc.width;
+        html += '<i' + (i === s.idx ? ' class="c"' : '') + ' style="left:' + x.toFixed(1) + 'px;top:' + (y - ob.top).toFixed(1) + 'px;width:' + w.toFixed(1) + 'px;height:' + h.toFixed(1) + 'px"></i>';
+      }
+    }
+    ov.innerHTML = html;
+  }
+  function paint(){
+    if (!st) return;
+    var r = st.ranges, n = r.length;
+    if (HAS){
+      try {
+        if (!n){ clearHl(); }
+        else {
+          var all = new Highlight(), i;
+          for (i = 0; i < n; i++) all.add(r[i]);
+          CSS.highlights.set('mxe-find', all);
+          var cur = new Highlight(r[st.idx]); cur.priority = 1;
+          CSS.highlights.set('mxe-find-cur', cur);
+        }
+      } catch (_) {}
+    } else { drawFallback(); }
+    var q = st.input.value;
+    st.count.classList.toggle('none', !!q && !n);
+    try { st.count.style.setProperty('color', (q && !n) ? '#c62828' : (st.bar._fg || '#111'), 'important'); } catch (_) {}
+    st.count.textContent = !q ? '' : (n ? (num(st.idx + 1) + '/' + num(n)) : num(0));
+    st.prev.disabled = st.next.disabled = n < 2;
+  }
+  function reveal(smooth){
+    if (!st || !st.ranges.length) return;
+    var rg = st.ranges[st.idx], rect;
+    try { rect = rg.getBoundingClientRect(); } catch (_) { return; }
+    if (!rect || (!rect.width && !rect.height)) return;
+    var body = st.body;
+    if (!body){ try { rg.startContainer.parentElement.scrollIntoView({ block: 'center' }); } catch (_) {} return; }
+    var br = body.getBoundingClientRect(), bar = st.bar.getBoundingClientRect();
+    var top = br.top + 14, bottom = Math.min(br.bottom, bar.top) - 14;
+    if (rect.top < top || rect.bottom > bottom){
+      var delta = (rect.top + rect.height / 2) - ((top + bottom) / 2);
+      try { body.scrollBy({ top: delta, behavior: smooth ? 'smooth' : 'auto' }); } catch (_) { body.scrollTop += delta; }
+    }
+  }
+  function run(mode){            /* mode: 'type' (query changed) | 'edit' (note text changed) */
+    if (!st) return;
+    if (!st.tb.isConnected){ close(); return; }
+    var qRaw = st.input.value, q = norm(qRaw);
+    st.ranges = []; st.starts = [];
+    if (q.replace(/\s+/g, '') && q.indexOf('\n') < 0){
+      var c = collect(st.tb), pos = 0, i, a, b, s1, s2, rg;
+      if (c.segs.length){
+        while ((i = c.text.indexOf(q, pos)) >= 0 && st.ranges.length < 3000){
+          a = i; b = i + q.length;
+          s1 = segAt(c.segs, a); s2 = segAt(c.segs, b - 1);
+          if (a - s1.s < s1.l && b - s2.s <= s2.l){
+            try { rg = D.createRange(); rg.setStart(s1.n, a - s1.s); rg.setEnd(s2.n, b - s2.s); st.ranges.push(rg); st.starts.push(a); } catch (_) {}
+          }
+          pos = b;
+        }
+      }
+    }
+    /* keep the position near where the reader already was */
+    var n = st.ranges.length, k = 0;
+    if (n){
+      for (k = 0; k < n; k++) if (st.starts[k] >= st.curStart) break;
+      if (k >= n) k = 0;
+    }
+    st.idx = k;
+    if (n) st.curStart = st.starts[k];
+    paint();
+    if (n && mode === 'type') reveal(false);
+  }
+  function go(dir){
+    if (!st || !st.ranges.length) return;
+    var n = st.ranges.length;
+    st.idx = (st.idx + dir + n) % n;
+    st.curStart = st.starts[st.idx];
+    paint(); reveal(true);
+  }
+  function close(){
+    if (!st) return;
+    var s = st; st = null;
+    clearHl();
+    try { s.tb.removeEventListener('input', s.onEdit); } catch (_) {}
+    try { s.box.classList.remove('mxe-finding'); } catch (_) {}
+    try { s.bar.remove(); } catch (_) {}
+    try { if (s.ov) s.ov.remove(); } catch (_) {}
+    if (s.onScr){
+      try { cancelAnimationFrame(s.raf); s.box.removeEventListener('scroll', s.onScr, true); window.removeEventListener('resize', s.onScr); if (window.visualViewport) window.visualViewport.removeEventListener('resize', s.onScr); } catch (_) {}
+    }
+  }
+  var IC_SEARCH = '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="6.5"/><path d="M16 16l4.5 4.5"/></svg>';
+  var IC_UP = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 15l6-6 6 6"/></svg>';
+  var IC_DOWN = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg>';
+  var IC_X = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg>';
+
+  function fbDark(el){
+    var c, m, a, x = el;
+    while (x && x.nodeType === 1){
+      c = getComputedStyle(x).backgroundColor;
+      m = c && c.match(/[\d.]+/g);
+      if (m && m.length >= 3){
+        a = m.length > 3 ? parseFloat(m[3]) : 1;
+        if (a > 0.5) return (0.2126 * m[0] + 0.7152 * m[1] + 0.0722 * m[2]) < 128;
+      }
+      x = x.parentElement;
+    }
+    return false;
+  }
+  function paintBar(bar, ref){
+    var dark = false; try { dark = fbDark(ref); } catch (_) {}
+    var fg = dark ? '#f2f2f2' : '#111111', bg = dark ? '#262626' : '#ffffff', chip = dark ? 'rgba(255,255,255,.14)' : 'rgba(0,0,0,.07)';
+    function sp(el, k, v){ if (el) el.style.setProperty(k, v, 'important'); }
+    bar._fg = fg;
+    bar.classList.toggle('fb-dark', dark);
+    sp(bar, 'background', bg); sp(bar, 'color', fg);
+    var inb = bar.querySelector('.mxe-find-in'); sp(inb, 'background', chip); sp(inb, 'border-color', fg); sp(inb, 'color', fg);
+    var inp = bar.querySelector('input'); sp(inp, '-webkit-text-fill-color', fg); sp(inp, 'color', fg); sp(inp, 'caret-color', fg);
+    sp(bar.querySelector('.mxe-find-n'), 'color', fg); sp(bar.querySelector('.mxe-find-n'), 'opacity', '1');
+    sp(inb && inb.querySelector('svg'), 'stroke', fg);
+    var bs = bar.querySelectorAll('.mxe-find-b'), i, sv;
+    for (i = 0; i < bs.length; i++){
+      sp(bs[i], 'color', fg); sp(bs[i], 'background', 'transparent');
+      sv = bs[i].querySelector('svg'); sp(sv, 'stroke', fg);
+    }
+  }
+  function open(box){
+    if (!box) return;
+    if (st && st.box === box){ try { st.input.focus(); st.input.select(); } catch (_) {} return; }
+    close();
+    var tb = box.querySelector('.text-box'); if (!tb) return;
+    var F = fa();
+    var bar = D.createElement('div');
+    bar.className = 'mxe-find'; bar.setAttribute('role', 'search');
+    bar.innerHTML =
+      '<div class="mxe-find-in">' + IC_SEARCH +
+      '<input type="text" inputmode="search" enterkeyhint="search" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" dir="auto" ' +
+      'placeholder="' + (F ? 'جستجو در این یادداشت' : 'Search in this note') + '" aria-label="' + (F ? 'جستجو در این یادداشت' : 'Search in this note') + '">' +
+      '<span class="mxe-find-n"></span></div>' +
+      '<button type="button" class="mxe-find-b" data-ff="prev" disabled aria-label="' + (F ? 'قبلی' : 'Previous') + '">' + IC_UP + '</button>' +
+      '<button type="button" class="mxe-find-b" data-ff="next" disabled aria-label="' + (F ? 'بعدی' : 'Next') + '">' + IC_DOWN + '</button>' +
+      '<button type="button" class="mxe-find-b x" data-ff="close" aria-label="' + (F ? 'بستن جستجو' : 'Close search') + '">' + IC_X + '</button>';
+    box.appendChild(bar);
+    box.classList.add('mxe-finding');
+    try { paintBar(bar, tb); } catch (_) {}
+    st = {
+      box: box, tb: tb, bar: bar, body: box.querySelector('.mxe-body'),
+      input: bar.querySelector('input'), count: bar.querySelector('.mxe-find-n'),
+      prev: bar.querySelector('[data-ff="prev"]'), next: bar.querySelector('[data-ff="next"]'),
+      ranges: [], starts: [], idx: 0, curStart: 0, t: 0, te: 0
+    };
+    var s = st;
+    s.onEdit = function(){ clearTimeout(s.te); s.te = setTimeout(function(){ if (st === s) run('edit'); }, 220); };
+    tb.addEventListener('input', s.onEdit);
+    if (!HAS){
+      s.onScr = function(){ if (st !== s) return; cancelAnimationFrame(s.raf); s.raf = requestAnimationFrame(function(){ if (st === s) drawFallback(); }); };
+      box.addEventListener('scroll', s.onScr, true);
+      window.addEventListener('resize', s.onScr);
+      try { if (window.visualViewport) window.visualViewport.addEventListener('resize', s.onScr); } catch (_) {}
+    }
+    s.input.addEventListener('input', function(){ s.dirty = true; clearTimeout(s.t); s.t = setTimeout(function(){ s.dirty = false; if (st === s) run('type'); }, 90); });
+    s.input.addEventListener('keydown', function(e){
+      if (e.key === 'Enter'){
+        e.preventDefault();
+        if (s.dirty){ clearTimeout(s.t); s.dirty = false; run('type'); }   /* first Enter after typing = confirm */
+        else go(e.shiftKey ? -1 : 1);
+      }
+      else if (e.key === 'Escape'){ e.preventDefault(); close(); }
+    });
+    /* buttons must not steal focus from the field, so the keyboard stays up while stepping through matches */
+    bar.addEventListener('pointerdown', function(e){ if (e.target.closest && e.target.closest('.mxe-find-b')) e.preventDefault(); });
+    bar.addEventListener('mousedown', function(e){ if (e.target.closest && e.target.closest('.mxe-find-b')) e.preventDefault(); });
+    bar.addEventListener('click', function(e){
+      var b = e.target.closest ? e.target.closest('[data-ff]') : null; if (!b) return;
+      var a = b.getAttribute('data-ff');
+      if (a === 'next') go(1); else if (a === 'prev') go(-1); else close();
+    });
+    setTimeout(function(){ try { if (st === s) s.input.focus(); } catch (_) {} }, 70);
+  }
+  window.mxeFind = { open: open, close: close };
+})();
+</script>
+<style id="muBackFixCss">
+/* ===== Back / close buttons: no frame, arrow always points to the side the button sits on ===== */
+html body .mu-fl.mu-fl.mu-fl.mu-fl.mu-fl,
+html body .mu-fl.mu-fl.mu-fl.mu-fl.mu-fl:hover,
+html body .mu-fl.mu-fl.mu-fl.mu-fl.mu-fl:active,
+html body .mu-fl.mu-fl.mu-fl.mu-fl.mu-fl:focus{
+  background:transparent !important;background-image:none !important;border:0 !important;border-radius:0 !important;
+  box-shadow:none !important;outline:none !important;-webkit-backdrop-filter:none !important;backdrop-filter:none !important;
+  -webkit-tap-highlight-color:transparent;
+}
+html body .mu-fl.mu-fl.mu-fl.mu-fl.mu-fl:active{opacity:.55}
+html body .mu-x.mu-x svg{width:22px !important;height:22px !important;fill:none !important;stroke:currentColor !important;stroke-width:2.3 !important;stroke-linecap:round !important;stroke-linejoin:round !important;display:block;margin:auto;pointer-events:none}
+html body .mu-x.mu-x{display:inline-flex;align-items:center;justify-content:center;padding:0 !important;line-height:1;font-size:0 !important}
+html body .mu-bk-l.mu-bk-l svg{transform:none !important}
+html body .mu-bk-r.mu-bk-r svg{transform:scaleX(-1) !important}
+
+/* close (✕) buttons: no circle/square frame — only the glyph */
+html body:not(#_x1):not(#_x2):not(#_x3) #advancedModal:not(#_x1):not(#_x2):not(#_x3) .advanced-head > .btn-main:last-child:not(.mkf-back),
+html body:not(#_x1):not(#_x2):not(#_x3) #advancedModal:not(#_x1):not(#_x2):not(#_x3) .advanced-head .mcx-hbtn.mcx-x,
+html body:not(#_x1):not(#_x2):not(#_x3) #advancedModal:not(#_x1):not(#_x2):not(#_x3) .advanced-head .kg-hbtn.kg-x,
+html body:not(#_x1):not(#_x2):not(#_x3) #advancedModal:not(#_x1):not(#_x2):not(#_x3) .advanced-head .dl-hbtn.dl-x,
+html body:not(#_x1):not(#_x2):not(#_x3) #advancedModal:not(#_x1):not(#_x2):not(#_x3) .mkc-x:not(.mkc-xb),
+html body:not(#_x1):not(#_x2):not(#_x3) .theme-picker-close,
+html body:not(#_x1):not(#_x2):not(#_x3) .mkl-close,
+html body:not(#_x1):not(#_x2):not(#_x3) #advancedModal:not(#_x1):not(#_x2):not(#_x3) .advanced-head > .btn-main:last-child:not(.mkf-back):hover,
+html body:not(#_x1):not(#_x2):not(#_x3) #advancedModal:not(#_x1):not(#_x2):not(#_x3) .advanced-head > .btn-main:last-child:not(.mkf-back):focus,
+html body:not(#_x1):not(#_x2):not(#_x3) #advancedModal:not(#_x1):not(#_x2):not(#_x3) .advanced-head > .btn-main:last-child:not(.mkf-back):active,
+html body:not(#_x1):not(#_x2):not(#_x3) #advancedModal:not(#_x1):not(#_x2):not(#_x3) .advanced-head .mcx-hbtn.mcx-x:hover,
+html body:not(#_x1):not(#_x2):not(#_x3) #advancedModal:not(#_x1):not(#_x2):not(#_x3) .advanced-head .mcx-hbtn.mcx-x:focus,
+html body:not(#_x1):not(#_x2):not(#_x3) #advancedModal:not(#_x1):not(#_x2):not(#_x3) .advanced-head .mcx-hbtn.mcx-x:active,
+html body:not(#_x1):not(#_x2):not(#_x3) #advancedModal:not(#_x1):not(#_x2):not(#_x3) .advanced-head .kg-hbtn.kg-x:hover,
+html body:not(#_x1):not(#_x2):not(#_x3) #advancedModal:not(#_x1):not(#_x2):not(#_x3) .advanced-head .kg-hbtn.kg-x:focus,
+html body:not(#_x1):not(#_x2):not(#_x3) #advancedModal:not(#_x1):not(#_x2):not(#_x3) .advanced-head .kg-hbtn.kg-x:active,
+html body:not(#_x1):not(#_x2):not(#_x3) #advancedModal:not(#_x1):not(#_x2):not(#_x3) .advanced-head .dl-hbtn.dl-x:hover,
+html body:not(#_x1):not(#_x2):not(#_x3) #advancedModal:not(#_x1):not(#_x2):not(#_x3) .advanced-head .dl-hbtn.dl-x:focus,
+html body:not(#_x1):not(#_x2):not(#_x3) #advancedModal:not(#_x1):not(#_x2):not(#_x3) .advanced-head .dl-hbtn.dl-x:active,
+html body:not(#_x1):not(#_x2):not(#_x3) #advancedModal:not(#_x1):not(#_x2):not(#_x3) .mkc-x:not(.mkc-xb):hover,
+html body:not(#_x1):not(#_x2):not(#_x3) #advancedModal:not(#_x1):not(#_x2):not(#_x3) .mkc-x:not(.mkc-xb):focus,
+html body:not(#_x1):not(#_x2):not(#_x3) #advancedModal:not(#_x1):not(#_x2):not(#_x3) .mkc-x:not(.mkc-xb):active,
+html body:not(#_x1):not(#_x2):not(#_x3) .theme-picker-close:hover,
+html body:not(#_x1):not(#_x2):not(#_x3) .theme-picker-close:focus,
+html body:not(#_x1):not(#_x2):not(#_x3) .theme-picker-close:active,
+html body:not(#_x1):not(#_x2):not(#_x3) .mkl-close:hover,
+html body:not(#_x1):not(#_x2):not(#_x3) .mkl-close:focus,
+html body:not(#_x1):not(#_x2):not(#_x3) .mkl-close:active{background:transparent !important;background-image:none !important;border:0 !important;border-radius:0 !important;box-shadow:none !important;outline:0 !important;-webkit-backdrop-filter:none !important;backdrop-filter:none !important;text-shadow:none !important}
+html body:not(#_x1):not(#_x2):not(#_x3) #advancedModal:not(#_x1):not(#_x2):not(#_x3) .advanced-head > .btn-main:last-child:not(.mkf-back):active,
+html body:not(#_x1):not(#_x2):not(#_x3) #advancedModal:not(#_x1):not(#_x2):not(#_x3) .advanced-head .mcx-hbtn.mcx-x:active,
+html body:not(#_x1):not(#_x2):not(#_x3) #advancedModal:not(#_x1):not(#_x2):not(#_x3) .advanced-head .kg-hbtn.kg-x:active,
+html body:not(#_x1):not(#_x2):not(#_x3) #advancedModal:not(#_x1):not(#_x2):not(#_x3) .advanced-head .dl-hbtn.dl-x:active,
+html body:not(#_x1):not(#_x2):not(#_x3) #advancedModal:not(#_x1):not(#_x2):not(#_x3) .mkc-x:not(.mkc-xb):active,
+html body:not(#_x1):not(#_x2):not(#_x3) .theme-picker-close:active,
+html body:not(#_x1):not(#_x2):not(#_x3) .mkl-close:active{opacity:.55 !important}
+
+/* back buttons: no frame, only the arrow */
+html body:not(#_x1):not(#_x2):not(#_x3) #advancedModal:not(#_x1):not(#_x2):not(#_x3) .advanced-head .dl-hbtn.dl-back,
+html body:not(#_x1):not(#_x2):not(#_x3) #advancedModal:not(#_x1):not(#_x2):not(#_x3) .advanced-head > .btn-main.mkf-back,
+html body:not(#_x1):not(#_x2):not(#_x3) #advancedModal:not(#_x1):not(#_x2):not(#_x3) .advanced-head .kg-hbtn.kg-help-back,
+html body:not(#_x1):not(#_x2):not(#_x3) #advancedModal:not(#_x1):not(#_x2):not(#_x3) .mklk-btn[data-act="back"],
+html body:not(#_x1):not(#_x2):not(#_x3) #advancedModal:not(#_x1):not(#_x2):not(#_x3) .mkc-x.mkc-xb,
+html body:not(#_x1):not(#_x2):not(#_x3) #advancedModal:not(#_x1):not(#_x2):not(#_x3) .mxe-back,
+html body:not(#_x1):not(#_x2):not(#_x3) #advancedModal:not(#_x1):not(#_x2):not(#_x3) .advanced-head .dl-hbtn.dl-back:hover,
+html body:not(#_x1):not(#_x2):not(#_x3) #advancedModal:not(#_x1):not(#_x2):not(#_x3) .advanced-head .dl-hbtn.dl-back:focus,
+html body:not(#_x1):not(#_x2):not(#_x3) #advancedModal:not(#_x1):not(#_x2):not(#_x3) .advanced-head .dl-hbtn.dl-back:active,
+html body:not(#_x1):not(#_x2):not(#_x3) #advancedModal:not(#_x1):not(#_x2):not(#_x3) .advanced-head > .btn-main.mkf-back:hover,
+html body:not(#_x1):not(#_x2):not(#_x3) #advancedModal:not(#_x1):not(#_x2):not(#_x3) .advanced-head > .btn-main.mkf-back:focus,
+html body:not(#_x1):not(#_x2):not(#_x3) #advancedModal:not(#_x1):not(#_x2):not(#_x3) .advanced-head > .btn-main.mkf-back:active,
+html body:not(#_x1):not(#_x2):not(#_x3) #advancedModal:not(#_x1):not(#_x2):not(#_x3) .advanced-head .kg-hbtn.kg-help-back:hover,
+html body:not(#_x1):not(#_x2):not(#_x3) #advancedModal:not(#_x1):not(#_x2):not(#_x3) .advanced-head .kg-hbtn.kg-help-back:focus,
+html body:not(#_x1):not(#_x2):not(#_x3) #advancedModal:not(#_x1):not(#_x2):not(#_x3) .advanced-head .kg-hbtn.kg-help-back:active,
+html body:not(#_x1):not(#_x2):not(#_x3) #advancedModal:not(#_x1):not(#_x2):not(#_x3) .mklk-btn[data-act="back"]:hover,
+html body:not(#_x1):not(#_x2):not(#_x3) #advancedModal:not(#_x1):not(#_x2):not(#_x3) .mklk-btn[data-act="back"]:focus,
+html body:not(#_x1):not(#_x2):not(#_x3) #advancedModal:not(#_x1):not(#_x2):not(#_x3) .mklk-btn[data-act="back"]:active,
+html body:not(#_x1):not(#_x2):not(#_x3) #advancedModal:not(#_x1):not(#_x2):not(#_x3) .mkc-x.mkc-xb:hover,
+html body:not(#_x1):not(#_x2):not(#_x3) #advancedModal:not(#_x1):not(#_x2):not(#_x3) .mkc-x.mkc-xb:focus,
+html body:not(#_x1):not(#_x2):not(#_x3) #advancedModal:not(#_x1):not(#_x2):not(#_x3) .mkc-x.mkc-xb:active,
+html body:not(#_x1):not(#_x2):not(#_x3) #advancedModal:not(#_x1):not(#_x2):not(#_x3) .mxe-back:hover,
+html body:not(#_x1):not(#_x2):not(#_x3) #advancedModal:not(#_x1):not(#_x2):not(#_x3) .mxe-back:focus,
+html body:not(#_x1):not(#_x2):not(#_x3) #advancedModal:not(#_x1):not(#_x2):not(#_x3) .mxe-back:active{background:transparent !important;background-image:none !important;border:0 !important;border-radius:0 !important;box-shadow:none !important;outline:0 !important;-webkit-backdrop-filter:none !important;backdrop-filter:none !important}
+html body:not(#_x1):not(#_x2):not(#_x3) #advancedModal:not(#_x1):not(#_x2):not(#_x3) .advanced-head .dl-hbtn.dl-back:active,
+html body:not(#_x1):not(#_x2):not(#_x3) #advancedModal:not(#_x1):not(#_x2):not(#_x3) .advanced-head > .btn-main.mkf-back:active,
+html body:not(#_x1):not(#_x2):not(#_x3) #advancedModal:not(#_x1):not(#_x2):not(#_x3) .advanced-head .kg-hbtn.kg-help-back:active,
+html body:not(#_x1):not(#_x2):not(#_x3) #advancedModal:not(#_x1):not(#_x2):not(#_x3) .mklk-btn[data-act="back"]:active,
+html body:not(#_x1):not(#_x2):not(#_x3) #advancedModal:not(#_x1):not(#_x2):not(#_x3) .mkc-x.mkc-xb:active,
+html body:not(#_x1):not(#_x2):not(#_x3) #advancedModal:not(#_x1):not(#_x2):not(#_x3) .mxe-back:active{opacity:.55 !important}
+
+/* three-dots menu: "Search in note" stays a full-width row, everything else is an orderly 3-column grid of tiles */
+html body:not(#_g1):not(#_g2) #contentsContainer .mxe .mxe-pop[data-pop="more"].open{display:grid !important;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px;align-content:start;padding:8px !important;min-width:min(330px,calc(100% - 24px)) !important}
+html body:not(#_g1):not(#_g2) #contentsContainer .mxe .mxe-pop[data-pop="more"] .grp{grid-column:1 / -1;padding:12px 6px 2px !important}
+html body:not(#_g1):not(#_g2) #contentsContainer .mxe .mxe-pop[data-pop="more"] .info{grid-column:1 / -1;padding:4px 6px 6px !important}
+html body:not(#_g1):not(#_g2) #contentsContainer .mxe .mxe-pop[data-pop="more"] button{flex-direction:column !important;justify-content:center !important;align-items:center !important;gap:6px !important;width:auto !important;min-width:0 !important;min-height:78px;padding:12px 4px !important;font-size:12.5px !important;line-height:1.35 !important;text-align:center !important;border-radius:14px !important;background:var(--mx-chip) !important}
+html body:not(#_g1):not(#_g2) #contentsContainer .mxe .mxe-pop[data-pop="more"] button > span{display:block;max-width:100%;text-align:center;overflow-wrap:anywhere}
+html body:not(#_g1):not(#_g2) #contentsContainer .mxe .mxe-pop[data-pop="more"] button:active,html body:not(#_g1):not(#_g2) #contentsContainer .mxe .mxe-pop[data-pop="more"] button:hover{background:var(--mx-chip-on,var(--mx-chip)) !important;filter:brightness(.96)}
+html body:not(#_g1):not(#_g2) #contentsContainer .mxe .mxe-pop[data-pop="more"] button.on,html body:not(#_g1):not(#_g2) #contentsContainer .mxe .mxe-pop[data-pop="more"] button[data-theme-opt].on{background:var(--mx-chip-on,var(--mx-chip)) !important;box-shadow:inset 0 0 0 2px currentColor !important}
+html body:not(#_g1):not(#_g2) #contentsContainer .mxe .mxe-pop[data-pop="more"] button[data-theme-opt].on::after{display:none !important}
+html body:not(#_g1):not(#_g2) #contentsContainer .mxe .mxe-pop[data-pop="more"] button[data-mxe="more:find"]{grid-column:1 / -1;flex-direction:row !important;justify-content:flex-start !important;gap:12px !important;min-height:0;padding:11px 12px !important;font-size:15px !important;text-align:start !important;background:transparent !important;box-shadow:none !important}
+html body:not(#_g1):not(#_g2) #contentsContainer .mxe .mxe-pop[data-pop="more"] button[data-mxe="more:find"] > span{text-align:start}
+
+/* "Search in note": one wide horizontal card, label on a single line */
+html body:not(#_g1):not(#_g2) #contentsContainer .mxe .mxe-pop[data-pop="more"] button[data-mxe="more:find"]{display:flex !important;grid-column:1 / -1 !important;width:100% !important;flex-direction:row !important;align-items:center !important;justify-content:flex-start !important;gap:14px !important;min-height:54px !important;padding:12px 16px !important;font-size:15px !important;font-weight:600;text-align:start !important;border-radius:14px !important;background:var(--mx-chip) !important;box-shadow:none !important}
+html body:not(#_g1):not(#_g2) #contentsContainer .mxe .mxe-pop[data-pop="more"] button[data-mxe="more:find"] > span{display:block !important;flex:1 1 auto !important;width:auto !important;max-width:none !important;white-space:nowrap !important;overflow-wrap:normal !important;word-break:normal !important;text-align:start !important}
+html body:not(#_g1):not(#_g2) #contentsContainer .mxe .mxe-pop[data-pop="more"] button[data-mxe="more:find"] svg{width:22px !important;height:22px !important}
+
+/* three-dots menu: compact tiles (same footprint as the old list) */
+html body:not(#_g1):not(#_g2) #contentsContainer .mxe .mxe-pop[data-pop="more"].open{gap:4px !important;padding:6px !important;min-width:min(285px,calc(100% - 24px)) !important}
+html body:not(#_g1):not(#_g2) #contentsContainer .mxe .mxe-pop[data-pop="more"] .grp{padding:8px 4px 1px !important;font-size:11.5px !important}
+html body:not(#_g1):not(#_g2) #contentsContainer .mxe .mxe-pop[data-pop="more"] .info{padding:2px 4px 4px !important;font-size:12px !important}
+html body:not(#_g1):not(#_g2) #contentsContainer .mxe .mxe-pop[data-pop="more"] button{min-height:54px !important;padding:7px 2px !important;gap:3px !important;font-size:11.5px !important;line-height:1.25 !important;border-radius:11px !important}
+html body:not(#_g1):not(#_g2) #contentsContainer .mxe .mxe-pop[data-pop="more"] button svg{width:18px !important;height:18px !important}
+html body:not(#_g1):not(#_g2) #contentsContainer .mxe .mxe-pop[data-pop="more"] button[data-mxe="more:find"]{min-height:42px !important;padding:8px 12px !important;gap:10px !important;font-size:14px !important;border-radius:11px !important}
+html body:not(#_g1):not(#_g2) #contentsContainer .mxe .mxe-pop[data-pop="more"] button[data-mxe="more:find"] svg{width:19px !important;height:19px !important}
+
+/* three-dots menu: extra compact — 4 columns, small tiles */
+html body:not(#_g1):not(#_g2) #contentsContainer .mxe .mxe-pop[data-pop="more"].open{grid-template-columns:repeat(4,minmax(0,1fr)) !important;gap:3px !important;padding:5px !important;min-width:min(290px,calc(100% - 24px)) !important}
+html body:not(#_g1):not(#_g2) #contentsContainer .mxe .mxe-pop[data-pop="more"] .grp{padding:6px 3px 0 !important;font-size:10.5px !important}
+html body:not(#_g1):not(#_g2) #contentsContainer .mxe .mxe-pop[data-pop="more"] .info{padding:1px 3px 3px !important;font-size:11px !important}
+html body:not(#_g1):not(#_g2) #contentsContainer .mxe .mxe-pop[data-pop="more"] button{min-height:42px !important;padding:5px 1px !important;gap:2px !important;font-size:10px !important;line-height:1.2 !important;border-radius:9px !important}
+html body:not(#_g1):not(#_g2) #contentsContainer .mxe .mxe-pop[data-pop="more"] button svg{width:15px !important;height:15px !important}
+html body:not(#_g1):not(#_g2) #contentsContainer .mxe .mxe-pop[data-pop="more"] button[data-mxe="more:find"]{min-height:34px !important;padding:6px 10px !important;gap:8px !important;font-size:12.5px !important;border-radius:9px !important}
+html body:not(#_g1):not(#_g2) #contentsContainer .mxe .mxe-pop[data-pop="more"] button[data-mxe="more:find"] svg{width:16px !important;height:16px !important}
+
+/* three-dots menu: narrower */
+/* three-dots menu: wide, 6 columns, whole menu visible without scrolling */
+html body:not(#_g1):not(#_g2) #contentsContainer .mxe .mxe-pop[data-pop="more"].open{width:min(380px,calc(100% - 24px)) !important;min-width:0 !important;grid-template-columns:repeat(7,minmax(0,1fr)) !important;gap:3px !important;padding:5px !important;overflow-y:auto}
+@media (max-width:350px){html body:not(#_g1):not(#_g2) #contentsContainer .mxe .mxe-pop[data-pop="more"].open{grid-template-columns:repeat(6,minmax(0,1fr)) !important}}
+html body:not(#_g1):not(#_g2) #contentsContainer .mxe .mxe-pop[data-pop="more"] .grp{padding:4px 4px 0 !important;font-size:10px !important;line-height:1.2 !important}
+html body:not(#_g1):not(#_g2) #contentsContainer .mxe .mxe-pop[data-pop="more"] .info{padding:1px 4px 2px !important;font-size:10.5px !important}
+html body:not(#_g1):not(#_g2) #contentsContainer .mxe .mxe-pop[data-pop="more"] button{min-height:40px !important;padding:4px 1px !important;gap:2px !important;font-size:9.5px !important;line-height:1.15 !important}
+html body:not(#_g1):not(#_g2) #contentsContainer .mxe .mxe-pop[data-pop="more"] button svg{width:15px !important;height:15px !important}
+html body:not(#_g1):not(#_g2) #contentsContainer .mxe .mxe-pop[data-pop="more"] button[data-mxe="more:find"]{min-height:32px !important;padding:5px 10px !important}
+/* ===== Note colour (Google-Keep style basic colours): editor page + notes-list cards + picker sheet ===== */
+html body #contentsContainer .content-container.mxe[data-mk-color="red"]{--mx-bg:#faafa8;--mx-pop:#faafa8;--mx-chip:rgba(0,0,0,.08);--mx-chip-on:rgba(0,0,0,.16);--mx-line:rgba(0,0,0,.14)}
+html body #contentsContainer .content-container.mxe[data-mk-color="orange"]{--mx-bg:#f39f76;--mx-pop:#f39f76;--mx-chip:rgba(0,0,0,.08);--mx-chip-on:rgba(0,0,0,.16);--mx-line:rgba(0,0,0,.14)}
+html body #contentsContainer .content-container.mxe[data-mk-color="yellow"]{--mx-bg:#fff8b8;--mx-pop:#fff8b8;--mx-chip:rgba(0,0,0,.08);--mx-chip-on:rgba(0,0,0,.16);--mx-line:rgba(0,0,0,.14)}
+html body #contentsContainer .content-container.mxe[data-mk-color="green"]{--mx-bg:#e2f6d3;--mx-pop:#e2f6d3;--mx-chip:rgba(0,0,0,.08);--mx-chip-on:rgba(0,0,0,.16);--mx-line:rgba(0,0,0,.14)}
+html body #contentsContainer .content-container.mxe[data-mk-color="teal"]{--mx-bg:#b4ddd3;--mx-pop:#b4ddd3;--mx-chip:rgba(0,0,0,.08);--mx-chip-on:rgba(0,0,0,.16);--mx-line:rgba(0,0,0,.14)}
+html body #contentsContainer .content-container.mxe[data-mk-color="sky"]{--mx-bg:#d4e4ed;--mx-pop:#d4e4ed;--mx-chip:rgba(0,0,0,.08);--mx-chip-on:rgba(0,0,0,.16);--mx-line:rgba(0,0,0,.14)}
+html body #contentsContainer .content-container.mxe[data-mk-color="blue"]{--mx-bg:#aeccdc;--mx-pop:#aeccdc;--mx-chip:rgba(0,0,0,.08);--mx-chip-on:rgba(0,0,0,.16);--mx-line:rgba(0,0,0,.14)}
+html body #contentsContainer .content-container.mxe[data-mk-color="purple"]{--mx-bg:#d3bfdb;--mx-pop:#d3bfdb;--mx-chip:rgba(0,0,0,.08);--mx-chip-on:rgba(0,0,0,.16);--mx-line:rgba(0,0,0,.14)}
+html body #contentsContainer .content-container.mxe[data-mk-color="pink"]{--mx-bg:#f6e2dd;--mx-pop:#f6e2dd;--mx-chip:rgba(0,0,0,.08);--mx-chip-on:rgba(0,0,0,.16);--mx-line:rgba(0,0,0,.14)}
+html body #contentsContainer .content-container.mxe[data-mk-color="sand"]{--mx-bg:#e9e3d4;--mx-pop:#e9e3d4;--mx-chip:rgba(0,0,0,.08);--mx-chip-on:rgba(0,0,0,.16);--mx-line:rgba(0,0,0,.14)}
+html body #contentsContainer .content-container.mxe[data-mk-color="gray"]{--mx-bg:#efeff1;--mx-pop:#efeff1;--mx-chip:rgba(0,0,0,.08);--mx-chip-on:rgba(0,0,0,.16);--mx-line:rgba(0,0,0,.14)}
+html[data-mxe-theme="dark"] body #contentsContainer .content-container.mxe[data-mk-color="red"]{--mx-bg:#77172e;--mx-pop:#77172e;--mx-chip:rgba(255,255,255,.12);--mx-chip-on:rgba(255,255,255,.22);--mx-line:rgba(255,255,255,.16)}
+html[data-mxe-theme="dark"] body #contentsContainer .content-container.mxe[data-mk-color="orange"]{--mx-bg:#692b17;--mx-pop:#692b17;--mx-chip:rgba(255,255,255,.12);--mx-chip-on:rgba(255,255,255,.22);--mx-line:rgba(255,255,255,.16)}
+html[data-mxe-theme="dark"] body #contentsContainer .content-container.mxe[data-mk-color="yellow"]{--mx-bg:#7c4a03;--mx-pop:#7c4a03;--mx-chip:rgba(255,255,255,.12);--mx-chip-on:rgba(255,255,255,.22);--mx-line:rgba(255,255,255,.16)}
+html[data-mxe-theme="dark"] body #contentsContainer .content-container.mxe[data-mk-color="green"]{--mx-bg:#264d3b;--mx-pop:#264d3b;--mx-chip:rgba(255,255,255,.12);--mx-chip-on:rgba(255,255,255,.22);--mx-line:rgba(255,255,255,.16)}
+html[data-mxe-theme="dark"] body #contentsContainer .content-container.mxe[data-mk-color="teal"]{--mx-bg:#0c625d;--mx-pop:#0c625d;--mx-chip:rgba(255,255,255,.12);--mx-chip-on:rgba(255,255,255,.22);--mx-line:rgba(255,255,255,.16)}
+html[data-mxe-theme="dark"] body #contentsContainer .content-container.mxe[data-mk-color="sky"]{--mx-bg:#256377;--mx-pop:#256377;--mx-chip:rgba(255,255,255,.12);--mx-chip-on:rgba(255,255,255,.22);--mx-line:rgba(255,255,255,.16)}
+html[data-mxe-theme="dark"] body #contentsContainer .content-container.mxe[data-mk-color="blue"]{--mx-bg:#284255;--mx-pop:#284255;--mx-chip:rgba(255,255,255,.12);--mx-chip-on:rgba(255,255,255,.22);--mx-line:rgba(255,255,255,.16)}
+html[data-mxe-theme="dark"] body #contentsContainer .content-container.mxe[data-mk-color="purple"]{--mx-bg:#472e5b;--mx-pop:#472e5b;--mx-chip:rgba(255,255,255,.12);--mx-chip-on:rgba(255,255,255,.22);--mx-line:rgba(255,255,255,.16)}
+html[data-mxe-theme="dark"] body #contentsContainer .content-container.mxe[data-mk-color="pink"]{--mx-bg:#6c394f;--mx-pop:#6c394f;--mx-chip:rgba(255,255,255,.12);--mx-chip-on:rgba(255,255,255,.22);--mx-line:rgba(255,255,255,.16)}
+html[data-mxe-theme="dark"] body #contentsContainer .content-container.mxe[data-mk-color="sand"]{--mx-bg:#4b443a;--mx-pop:#4b443a;--mx-chip:rgba(255,255,255,.12);--mx-chip-on:rgba(255,255,255,.22);--mx-line:rgba(255,255,255,.16)}
+html[data-mxe-theme="dark"] body #contentsContainer .content-container.mxe[data-mk-color="gray"]{--mx-bg:#232427;--mx-pop:#232427;--mx-chip:rgba(255,255,255,.12);--mx-chip-on:rgba(255,255,255,.22);--mx-line:rgba(255,255,255,.16)}
+@media (prefers-color-scheme:dark){
+html:not([data-mxe-theme]) body #contentsContainer .content-container.mxe[data-mk-color="red"]{--mx-bg:#77172e;--mx-pop:#77172e;--mx-chip:rgba(255,255,255,.12);--mx-chip-on:rgba(255,255,255,.22);--mx-line:rgba(255,255,255,.16)}
+html:not([data-mxe-theme]) body #contentsContainer .content-container.mxe[data-mk-color="orange"]{--mx-bg:#692b17;--mx-pop:#692b17;--mx-chip:rgba(255,255,255,.12);--mx-chip-on:rgba(255,255,255,.22);--mx-line:rgba(255,255,255,.16)}
+html:not([data-mxe-theme]) body #contentsContainer .content-container.mxe[data-mk-color="yellow"]{--mx-bg:#7c4a03;--mx-pop:#7c4a03;--mx-chip:rgba(255,255,255,.12);--mx-chip-on:rgba(255,255,255,.22);--mx-line:rgba(255,255,255,.16)}
+html:not([data-mxe-theme]) body #contentsContainer .content-container.mxe[data-mk-color="green"]{--mx-bg:#264d3b;--mx-pop:#264d3b;--mx-chip:rgba(255,255,255,.12);--mx-chip-on:rgba(255,255,255,.22);--mx-line:rgba(255,255,255,.16)}
+html:not([data-mxe-theme]) body #contentsContainer .content-container.mxe[data-mk-color="teal"]{--mx-bg:#0c625d;--mx-pop:#0c625d;--mx-chip:rgba(255,255,255,.12);--mx-chip-on:rgba(255,255,255,.22);--mx-line:rgba(255,255,255,.16)}
+html:not([data-mxe-theme]) body #contentsContainer .content-container.mxe[data-mk-color="sky"]{--mx-bg:#256377;--mx-pop:#256377;--mx-chip:rgba(255,255,255,.12);--mx-chip-on:rgba(255,255,255,.22);--mx-line:rgba(255,255,255,.16)}
+html:not([data-mxe-theme]) body #contentsContainer .content-container.mxe[data-mk-color="blue"]{--mx-bg:#284255;--mx-pop:#284255;--mx-chip:rgba(255,255,255,.12);--mx-chip-on:rgba(255,255,255,.22);--mx-line:rgba(255,255,255,.16)}
+html:not([data-mxe-theme]) body #contentsContainer .content-container.mxe[data-mk-color="purple"]{--mx-bg:#472e5b;--mx-pop:#472e5b;--mx-chip:rgba(255,255,255,.12);--mx-chip-on:rgba(255,255,255,.22);--mx-line:rgba(255,255,255,.16)}
+html:not([data-mxe-theme]) body #contentsContainer .content-container.mxe[data-mk-color="pink"]{--mx-bg:#6c394f;--mx-pop:#6c394f;--mx-chip:rgba(255,255,255,.12);--mx-chip-on:rgba(255,255,255,.22);--mx-line:rgba(255,255,255,.16)}
+html:not([data-mxe-theme]) body #contentsContainer .content-container.mxe[data-mk-color="sand"]{--mx-bg:#4b443a;--mx-pop:#4b443a;--mx-chip:rgba(255,255,255,.12);--mx-chip-on:rgba(255,255,255,.22);--mx-line:rgba(255,255,255,.16)}
+html:not([data-mxe-theme]) body #contentsContainer .content-container.mxe[data-mk-color="gray"]{--mx-bg:#232427;--mx-pop:#232427;--mx-chip:rgba(255,255,255,.12);--mx-chip-on:rgba(255,255,255,.22);--mx-line:rgba(255,255,255,.16)}
+}
+#muNotesFs[data-theme="light"] .mu-nfs-card[data-mk-color="red"]{--nfs-card:#faafa8;background-color:#faafa8}
+#muNotesFs[data-theme="dark"] .mu-nfs-card[data-mk-color="red"]{--nfs-card:#77172e;background-color:#77172e}
+#muNotesFs[data-theme="light"] .mu-nfs-card[data-mk-color="orange"]{--nfs-card:#f39f76;background-color:#f39f76}
+#muNotesFs[data-theme="dark"] .mu-nfs-card[data-mk-color="orange"]{--nfs-card:#692b17;background-color:#692b17}
+#muNotesFs[data-theme="light"] .mu-nfs-card[data-mk-color="yellow"]{--nfs-card:#fff8b8;background-color:#fff8b8}
+#muNotesFs[data-theme="dark"] .mu-nfs-card[data-mk-color="yellow"]{--nfs-card:#7c4a03;background-color:#7c4a03}
+#muNotesFs[data-theme="light"] .mu-nfs-card[data-mk-color="green"]{--nfs-card:#e2f6d3;background-color:#e2f6d3}
+#muNotesFs[data-theme="dark"] .mu-nfs-card[data-mk-color="green"]{--nfs-card:#264d3b;background-color:#264d3b}
+#muNotesFs[data-theme="light"] .mu-nfs-card[data-mk-color="teal"]{--nfs-card:#b4ddd3;background-color:#b4ddd3}
+#muNotesFs[data-theme="dark"] .mu-nfs-card[data-mk-color="teal"]{--nfs-card:#0c625d;background-color:#0c625d}
+#muNotesFs[data-theme="light"] .mu-nfs-card[data-mk-color="sky"]{--nfs-card:#d4e4ed;background-color:#d4e4ed}
+#muNotesFs[data-theme="dark"] .mu-nfs-card[data-mk-color="sky"]{--nfs-card:#256377;background-color:#256377}
+#muNotesFs[data-theme="light"] .mu-nfs-card[data-mk-color="blue"]{--nfs-card:#aeccdc;background-color:#aeccdc}
+#muNotesFs[data-theme="dark"] .mu-nfs-card[data-mk-color="blue"]{--nfs-card:#284255;background-color:#284255}
+#muNotesFs[data-theme="light"] .mu-nfs-card[data-mk-color="purple"]{--nfs-card:#d3bfdb;background-color:#d3bfdb}
+#muNotesFs[data-theme="dark"] .mu-nfs-card[data-mk-color="purple"]{--nfs-card:#472e5b;background-color:#472e5b}
+#muNotesFs[data-theme="light"] .mu-nfs-card[data-mk-color="pink"]{--nfs-card:#f6e2dd;background-color:#f6e2dd}
+#muNotesFs[data-theme="dark"] .mu-nfs-card[data-mk-color="pink"]{--nfs-card:#6c394f;background-color:#6c394f}
+#muNotesFs[data-theme="light"] .mu-nfs-card[data-mk-color="sand"]{--nfs-card:#e9e3d4;background-color:#e9e3d4}
+#muNotesFs[data-theme="dark"] .mu-nfs-card[data-mk-color="sand"]{--nfs-card:#4b443a;background-color:#4b443a}
+#muNotesFs[data-theme="light"] .mu-nfs-card[data-mk-color="gray"]{--nfs-card:#efeff1;background-color:#efeff1}
+#muNotesFs[data-theme="dark"] .mu-nfs-card[data-mk-color="gray"]{--nfs-card:#232427;background-color:#232427}
+.mkcs-ov{position:absolute;inset:0;z-index:30;display:flex;align-items:flex-end;background:rgba(0,0,0,.35)}
+.mkcs-box{width:100%;box-sizing:border-box;background:var(--mx-pop,#fff);color:var(--mx-icon,#222);border-radius:22px 22px 0 0;padding:16px 16px calc(18px + var(--mu-sab, env(safe-area-inset-bottom, 0px)));box-shadow:0 -10px 40px rgba(0,0,0,.3);border-top:1px solid var(--mx-line,rgba(127,127,127,.25))}
+html body #contentsContainer .mxe .mkcs-box,html body #contentsContainer .mxe .mkcs-box *{color:#222 !important;-webkit-text-fill-color:#222 !important}
+html[data-mxe-theme="dark"] body #contentsContainer .mxe .mkcs-box,html[data-mxe-theme="dark"] body #contentsContainer .mxe .mkcs-box *{color:#eee !important;-webkit-text-fill-color:#eee !important}
+.mkcs-hd{display:flex;align-items:center;justify-content:space-between;margin:0 2px 14px;font-size:16px;font-weight:700}
+.mkcs-x{all:unset;cursor:pointer;width:34px;height:34px;display:grid;place-items:center;border-radius:50%;font-size:18px;background:var(--mx-chip,rgba(127,127,127,.15))}
+.mkcs-grid{display:grid;grid-template-columns:repeat(6,1fr);gap:12px 6px;justify-items:center}
+.mkcs-sw{all:unset;cursor:pointer;box-sizing:border-box;width:44px;height:44px;border-radius:50%;border:1.5px solid rgba(127,127,127,.55);display:grid;place-items:center;font-size:20px;font-weight:700;background:var(--mkc,transparent);color:var(--mx-icon,#222);-webkit-tap-highlight-color:transparent}
+.mkcs-sw.def{background:transparent}
+.mkcs-sw.def::before{content:"";width:22px;height:2px;background:currentColor;opacity:.55;transform:rotate(-45deg);position:absolute}
+.mkcs-sw{position:relative}
+.mkcs-sw.on{border:2.5px solid var(--mx-icon,#222)}
+.mkcs-sw.on::after{content:"\2713"}
+.mkcs-sw.def.on::before{display:none}
+#muNotesFs .mkcs-ov{z-index:12;--mx-icon:var(--nfs-ink);--mx-pop:var(--nfs-sheet);--mx-chip:rgba(127,127,127,.2);--mx-line:var(--nfs-border)}
+#muNotesFs .mkcs-box,#muNotesFs .mkcs-box *{color:var(--nfs-ink) !important;-webkit-text-fill-color:var(--nfs-ink) !important}
+#muNotesFs .mu-nfs-selbar{gap:0}
+#muNotesFs .mu-nfs-selbar button{width:38px;height:38px}
+#muNotesFs .mu-nfs-selbar svg{width:22px;height:22px}
+</style>
+<script id="muBackFix">
+(function(){
+  'use strict';
+  var D = document;
+  var BACK_PATHS = ['M15 5l-7 7 7 7','M20 12H5M11.5 5.5L5 12l6.5 6.5','M20 12H5M11 5l-7 7 7 7'];   /* all of them point LEFT */
+  var X_PATHS = ['M6 6l12 12M18 6L6 18','M5 5l14 14M19 5L5 19'];
+  var BACK_SEL = ['.mu-viewer-close','.mxe-back','.mkf-back','.dl-back','.mklk-btn[data-act="back"]','.mkv-close','svg.mk-bi','svg.mkf-backico']
+    .concat(BACK_PATHS.map(function(d){ return 'path[d="' + d + '"]'; })).join(',');
+  var X_SEL = ['.mkl-close','[data-ff="close"]','.theme-picker-close','.mu-img-lightbox-close','[aria-label="Close"]','[aria-label="\u0628\u0633\u062A\u0646"]']
+    .concat(X_PATHS.map(function(d){ return 'path[d="' + d + '"]'; })).join(',');
+  var XCH = {'\u00D7':1,'\u2715':1,'\u2716':1,'\u2717':1,'\u2A2F':1,'\u274C':1,'x':1,'X':1};
+  var BTN = 'button,[role="button"],a';
+  var X_SVG = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg>';
+  var XG = {'\u00D7':1,'\u2715':1,'\u2716':1,'\u2717':1,'\u2718':1,'\u2A2F':1,'\u274C':1,'\u2573':1};
+  var timer = 0;
+
+  function holder(el){
+    if (!el || el.nodeType !== 1) return null;
+    var tag = el.tagName.toLowerCase();
+    if (tag === 'svg' || tag === 'path') return el.closest ? el.closest(BTN) : null;
+    return el;
+  }
+  function iconOnly(b){ return (b.textContent || '').replace(/\s+/g, '').length <= 2; }
+  function retro(b){ return !!(b.closest && b.closest('.mu-vs-retro')); }
+  function sideOf(b){
+    var r = b.getBoundingClientRect();
+    if (!r.width && !r.height) return null;
+    var cx = r.left + r.width / 2, box = null, p = b.parentElement, pr;
+    while (p && p !== D.body && p !== D.documentElement){
+      pr = p.getBoundingClientRect();
+      if (pr.width >= 140 && pr.width > r.width * 2.5){ box = pr; break; }
+      p = p.parentElement;
+    }
+    var mid = box ? box.left + box.width / 2 : (D.documentElement.clientWidth || window.innerWidth) / 2;
+    return cx < mid ? 'l' : 'r';
+  }
+  function setCls(b, add, remove){
+    var i;
+    for (i = 0; i < remove.length; i++) if (b.classList.contains(remove[i])) b.classList.remove(remove[i]);
+    for (i = 0; i < add.length; i++) if (!b.classList.contains(add[i])) b.classList.add(add[i]);
+  }
+  function scan(){
+    timer = 0;
+    var seen = [], list, i, b, s;
+    list = D.querySelectorAll(BACK_SEL);
+    for (i = 0; i < list.length; i++){
+      b = holder(list[i]);
+      if (!b || seen.indexOf(b) >= 0 || retro(b) || !iconOnly(b)) continue;
+      seen.push(b);
+      s = sideOf(b);
+      if (s) setCls(b, ['mu-fl', s === 'l' ? 'mu-bk-l' : 'mu-bk-r'], [s === 'l' ? 'mu-bk-r' : 'mu-bk-l']);
+      else setCls(b, ['mu-fl'], []);
+    }
+    list = D.querySelectorAll(X_SEL + ',' + BTN.split(',').map(function(t){ return t + '[class*="close"],' + t + '[class*="Close"]'; }).join(','));
+    for (i = 0; i < list.length; i++){
+      b = holder(list[i]);
+      if (!b || seen.indexOf(b) >= 0 || retro(b)) continue;
+      if (!iconOnly(b)) continue;
+      var t = (b.textContent || '').trim();
+      var isX = !!b.querySelector('path[d="' + X_PATHS[0] + '"],path[d="' + X_PATHS[1] + '"]') || XCH[t] || /close/i.test(b.getAttribute('aria-label') || '') || /close/i.test(b.className && b.className.baseVal === undefined ? String(b.className) : '');
+      if (!isX) continue;
+      seen.push(b);
+      setCls(b, ['mu-fl'], []);
+      if (b.querySelector('svg')) setCls(b, ['mu-x'], []);
+    }
+    /* every plain-glyph X button (x, cross mark ...) -> frameless button with one clean SVG cross */
+    list = D.querySelectorAll('button:not([data-mux]),[role="button"]:not([data-mux])');
+    for (i = 0; i < list.length; i++){
+      b = list[i];
+      var tx = (b.textContent || '').replace(/[\s\uFE0E\uFE0F]/g, '');
+      if (!tx || tx.length > 1 || !XG[tx] || b.querySelector('svg') || retro(b)) continue;
+      if (/format/i.test(b.getAttribute('title') || '') || (b.classList && b.classList.contains('ms-chip'))) continue;
+      b.setAttribute('data-mux', '1');
+      b.innerHTML = X_SVG;
+      setCls(b, ['mu-fl', 'mu-x'], []);
+    }
+  }
+  function later(){ if (!timer) timer = setTimeout(scan, 120); }
+  function boot(){
+    scan();
+    try {
+      new MutationObserver(later).observe(D.documentElement, { childList: true, subtree: true, attributes: true, attributeFilter: ['dir', 'class', 'style', 'hidden', 'lang'] });
+    } catch (_) {}
+    window.addEventListener('resize', later);
+    window.addEventListener('orientationchange', later);
+    D.addEventListener('transitionend', later, true);
+  }
+  if (D.readyState === 'loading') D.addEventListener('DOMContentLoaded', boot); else boot();
+})();
+</script>
+
+<script id="mkSoftFocus">
+/* Tapping a formatting tool must not pop the on-screen keyboard up. If the editor is not focused yet, it is focused
+   with inputmode="none" (caret + selection work, no keyboard); a moment later it is blurred again and inputmode is
+   removed, so the keyboard only appears when the person taps the text themselves. If the keyboard is already open
+   nothing changes. */
+(function(){
+  'use strict';
+  if (window.mkSoftFocus) return;
+  function release(t){
+    try { t.__mkSoftT = 0; if (document.activeElement === t) t.blur(); t.removeAttribute('inputmode'); } catch (_) {}
+  }
+  window.mkSoftFocus = function(t){
+    if (!t) return;
+    try {
+      if (document.activeElement === t && !t.__mkSoftT) { t.focus({ preventScroll: true }); return; }
+      if (!t.__mkSoftT) t.setAttribute('inputmode', 'none');
+      t.focus({ preventScroll: true });
+      clearTimeout(t.__mkSoftT);
+      t.__mkSoftT = setTimeout(function(){ release(t); }, 450);
+    } catch (_) { try { t.focus(); } catch (__) {} }
+  };
+  /* the person taps the text themselves => they want the keyboard */
+  function userTap(e){
+    var t = e.target && e.target.closest ? e.target.closest('.text-box[contenteditable="true"]') : null;
+    if (!t || !t.__mkSoftT) return;
+    clearTimeout(t.__mkSoftT); t.__mkSoftT = 0; t.removeAttribute('inputmode');
+    if (document.activeElement === t) { try { t.blur(); } catch (_) {} }
+  }
+  document.addEventListener('pointerdown', userTap, true);
+  document.addEventListener('touchstart', userTap, true);
+})();
+</script>
 </body>
 </html>
