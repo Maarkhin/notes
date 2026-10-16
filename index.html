@@ -443,7 +443,7 @@ window.__mkReveal=function(){if(!s){finish();return}if(!painted){wantReveal=true
 setTimeout(finish,HARD)})();</script>
 
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover, interactive-widget=resizes-content">
     <meta name="theme-color" content="#03101c" id="mkThemeColorMeta">
     <meta name="color-scheme" content="dark">
     <!-- Anti-flash for collapsible home sections: hide collapsed sections' content from the very first paint.
@@ -24579,7 +24579,44 @@ function addFeatureTools(item,box){
  const restoreSel=()=>{ (window.mkSoftFocus||function(x){x.focus();})(text); const s=window.getSelection(); if(lastRange&&!(s.rangeCount&&text.contains(s.anchorNode))){ try{ s.removeAllRanges(); s.addRange(lastRange); }catch(_){} } };
  // keep the editor focused (and the selection alive) when a toolbar button is pressed
  row.addEventListener('mousedown',e=>{ if(e.target.closest&&e.target.closest('button')) e.preventDefault(); });
- const cmd=(c,v=null)=>{restoreSel();document.execCommand(c,false,v);autosaveCategory(item.id)};
+ const mkCaretFmt=(c)=>{
+  /* Nothing selected: a zero-width marker inside <b>/<i>/<u>/<s> holds the caret, so the NEXT typed text keeps the format
+     (execCommand's pending style is dropped by phone keyboards / IMEs as soon as the first letter is typed). */
+  const TAG={bold:'b',italic:'i',underline:'u',strikeThrough:'s'}[c]; if(!TAG) return false;
+  const sel=window.getSelection(); if(!sel||!sel.rangeCount||!sel.isCollapsed||!text.contains(sel.anchorNode)) return false;
+  const rg=sel.getRangeAt(0), an=rg.startContainer, el0=an.nodeType===1?an:an.parentElement;
+  const MATCH={b:'b,strong',i:'i,em',u:'u',s:'s,strike,del'}[TAG];
+  let h=el0&&el0.closest?el0.closest(MATCH):null; if(h&&(!text.contains(h)||h===text)) h=null;
+  const zw=document.createTextNode('\u200b'), nr=document.createRange();
+  if(h){
+    const tail=document.createRange(); tail.selectNodeContents(h); tail.setStart(rg.startContainer,rg.startOffset);
+    const more=tail.toString().replace(/\u200b/g,'')!==''||!!tail.cloneContents().querySelector('img,br,canvas,audio,video,table');
+    if(more){const fr=tail.extractContents(),h2=h.cloneNode(false);h2.appendChild(fr);h.parentNode.insertBefore(h2,h.nextSibling)}
+    h.parentNode.insertBefore(zw,h.nextSibling);
+    if(h.textContent.replace(/\u200b/g,'')===''&&!h.querySelector('img,br,canvas,audio,video,table')) h.parentNode.removeChild(h);
+  } else {
+    const sp=document.createElement(TAG); sp.appendChild(zw); rg.insertNode(sp);
+  }
+  nr.setStart(zw,1); nr.collapse(true); sel.removeAllRanges(); sel.addRange(nr);
+  try{text.dispatchEvent(new Event('input',{bubbles:true}))}catch(_){}
+  return true;
+};
+ const cmd=(c,v=null)=>{let keepPos=-1;
+  if(c==='insertUnorderedList'||c==='insertOrderedList'){try{
+    const kk=window.__mkKeep;window.__mkKeep=null;
+    let kn=null,ko=0;
+    if(kk&&kk.n&&kk.n.isConnected&&text.contains(kk.n)){kn=kk.n;ko=kk.o}
+    else{const s0=window.getSelection();if(s0&&s0.rangeCount&&s0.isCollapsed&&s0.anchorNode&&text.contains(s0.anchorNode)){kn=s0.anchorNode;ko=s0.anchorOffset}}
+    if(kn){const pr=document.createRange();pr.selectNodeContents(text);pr.setEnd(kn,Math.min(ko,kn.nodeType===3?kn.nodeValue.length:kn.childNodes.length));keepPos=pr.toString().length}
+  }catch(_){}}
+  restoreSel();let done=false;try{done=mkCaretFmt(c)}catch(_){}
+  if(!done)document.execCommand(c,false,v);
+  if(keepPos>=0){try{
+    const w=document.createTreeWalker(text,NodeFilter.SHOW_TEXT);let n,acc=0,tn=null,to=0;
+    while((n=w.nextNode())){const L=n.nodeValue.length;if(acc+L>=keepPos){tn=n;to=keepPos-acc;break}acc+=L}
+    if(tn){const s1=window.getSelection(),r1=document.createRange();r1.setStart(tn,to);r1.collapse(true);s1.removeAllRanges();s1.addRange(r1)}
+  }catch(_){}}
+  autosaveCategory(item.id)};
  btns[0].onclick=()=>cmd('bold');btns[1].onclick=()=>cmd('italic');btns[2].onclick=()=>cmd('underline');btns[3].onclick=()=>{if(window.mkToggleQuote&&window.mkToggleQuote(item.id))return;restoreSel();const s0=window.getSelection();const a0=s0&&s0.anchorNode&&(s0.anchorNode.nodeType===1?s0.anchorNode:s0.anchorNode.parentElement);const inQ=a0&&a0.closest&&a0.closest('blockquote')&&text.contains(a0.closest('blockquote'));cmd('formatBlock',inQ?'div':'blockquote')};btns[4].onclick=()=>cmd('insertUnorderedList');btns[5].onclick=()=>{restoreSel();try{if(window.mkTableMenuOpen){if(window.mkTableMenuOpen(text,()=>autosaveCategory(item.id)))return}}catch(_){}try{if(window.mkTableOpen&&window.mkTableOpen(text,restoreSel,()=>autosaveCategory(item.id)))return}catch(_){}const fa0=currentLang==='fa';const table='<table><tbody><tr><td>'+(fa0?'سلول 1':'Cell 1')+'</td><td>'+(fa0?'سلول 2':'Cell 2')+'</td></tr><tr><td>'+(fa0?'سلول 3':'Cell 3')+'</td><td>'+(fa0?'سلول 4':'Cell 4')+'</td></tr></tbody></table>';restoreSel();
   // Inserting via execCommand('insertHTML') while the caret sits inside a
   // checklist item or quote nests the whole <table> INSIDE that <li>/
@@ -24599,12 +24636,7 @@ function addFeatureTools(item,box){
   } else {
     document.execCommand('insertHTML',false,table);
   }
-  autosaveCategory(item.id)};btns[6].onclick=async()=>{const u=await promptStyledText({title:currentLang==='fa'?'🔗 افزودن لینک':'🔗 Add link',placeholder:currentLang==='fa'?'آدرس لینک:':'Link URL:',defaultValue:'https://',type:'url',okText:currentLang==='fa'?'✔️ افزودن':'✔️ Add'});if(!u)return;let url=String(u).trim();if(!url)return;
-  if(/^\s*(javascript|data|vbscript):/i.test(url)){showToast(currentLang==='fa'?'⚠️ این لینک مجاز نیست.':'⚠️ This link is not allowed.');return}
-  if(!/^(https?:|mailto:|tel:)/i.test(url)) url='https://'+url.replace(/^\/+/,'');
-  restoreSel();const sl=window.getSelection();
-  if(sl&&sl.rangeCount&&sl.isCollapsed){const sa=url.replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;');document.execCommand('insertHTML',false,'<a href="'+sa+'">'+sa+'</a>&nbsp;');autosaveCategory(item.id)}
-  else cmd('createLink',url)};
+  autosaveCategory(item.id)};btns[6].onclick=()=>{try{window.mkLinkOpenDialog({item:item,text:text,restoreSel:restoreSel,getRange:()=>lastRange,cmd:cmd,save:()=>autosaveCategory(item.id)})}catch(err){console.error(err)}};
  btns[7].onclick=()=>cmd('strikeThrough');btns[8].onclick=()=>cmd('insertOrderedList');btns[9].onclick=()=>{restoreSel();let _ok=false;try{_ok=window.mkClearFormat&&window.mkClearFormat(text)}catch(_){}if(!_ok)document.execCommand('removeFormat');autosaveCategory(item.id)};btns[10].onclick=()=>{restoreSel();if(window.mkToggleHighlight)window.mkToggleHighlight(item.id)};
  const selects=row.querySelectorAll('select');selects[0].value=String(item.fontSize||13);selects[0].onchange=()=>{item.fontSize=Number(selects[0].value)||13;text.style.fontSize=item.fontSize+'px';saveToLocalStorage()};
  {
@@ -30226,6 +30258,7 @@ document.addEventListener('click', function(e){
     // outside the note, which instantly closed/re-rendered the note out
     // from under whatever the person just tapped.
     if(e.target.closest('.mu-img-lightbox')) return;
+    if(e.target.closest('.mkl-ov')) return; // link dialog (appended to <body>): its buttons are not taps on empty space, they used to close the note and lose the link
     if(e.target.closest('[data-mu-download-anchor]')) return; // programmatic file-download click, not a real outside tap
     const activeBox = document.getElementById('container-'+activeOpenId);
     const focused = mu_focusedBeforeTap;
@@ -32747,8 +32780,8 @@ window.muIcon = function (name) {
      never lets the browser zoom the page underneath it. */
   var ZKEY = 'app_page_zoom_v1';
   var VP_HEAD = 'width=device-width, initial-scale=1.0, ';
-  var VP_OFF = VP_HEAD + 'minimum-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover';
-  var VP_ON  = VP_HEAD + 'minimum-scale=1.0, maximum-scale=5.0, user-scalable=yes, viewport-fit=cover';
+  var VP_OFF = VP_HEAD + 'minimum-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover, interactive-widget=resizes-content';
+  var VP_ON  = VP_HEAD + 'minimum-scale=1.0, maximum-scale=5.0, user-scalable=yes, viewport-fit=cover, interactive-widget=resizes-content';
   var zTimer = 0;
   /* Default (nothing saved yet): ON in a normal browser / app, OFF inside Telegram. Once the user flips the switch, their choice wins. */
   function inTelegram() {
@@ -34399,8 +34432,56 @@ window.muTabSelect = function (id, i, btn) {
         var w = D.createTreeWalker(node, NodeFilter.SHOW_TEXT);
         return w.nextNode();
     }
+    /* text selected: only the selected part becomes a heading line (the text before / after stays normal) */
+    function headingSelection(t) {
+        var s = window.getSelection();
+        if (!s.rangeCount || s.isCollapsed || !t.contains(s.anchorNode) || !t.contains(s.focusNode)) return false;
+        var rg = s.getRangeAt(0);
+        var elOf = function (n) { return n && (n.nodeType === 1 ? n : n.parentElement); };
+        var a = elOf(rg.startContainer), b = elOf(rg.endContainer);
+        if ((a && a.closest('.mxe-h')) || (b && b.closest('.mxe-h'))) return false;          /* already a heading: old toggle-off */
+        if ((a && a.closest('ul,ol,blockquote,table,pre')) || (b && b.closest('ul,ol,blockquote,table,pre'))) return false;
+        if (rg.toString().replace(/[\u200b\s]/g, '') === '' && !rg.cloneContents().querySelector('img,canvas,video,audio')) return false;
+        var frag = rg.extractContents();
+        /* the point where the selection used to be */
+        var node = rg.startContainer, off = rg.startOffset, top = node;
+        while (top !== t && top.parentNode !== t) top = top.parentNode;
+        var h = D.createElement('div'); h.className = 'mxe-h';
+        /* flatten block children of the extracted part into inline text with line breaks */
+        Array.prototype.slice.call(frag.childNodes).forEach(function (c, i, all) {
+            if (c.nodeType === 1 && /^(DIV|P)$/.test(c.tagName)) {
+                if (h.childNodes.length) h.appendChild(D.createElement('br'));
+                while (c.firstChild) h.appendChild(c.firstChild);
+            } else h.appendChild(c);
+        });
+        if (!h.childNodes.length) return false;
+        if (top === t) {                                   /* caret point is directly inside the note */
+            var ref = t.childNodes[off] || null;
+            t.insertBefore(h, ref);
+        } else {
+            var tr = D.createRange();
+            tr.setStart(node, off);
+            if (top.nodeType === 3) tr.setEnd(top, top.nodeValue.length); else tr.setEnd(top, top.childNodes.length);
+            var tail = tr.extractContents();
+            var hasTail = tail.textContent.replace(/\u200b/g, '') !== '' || !!tail.querySelector('img,canvas,video,audio,table,br');
+            var isBlk = top.nodeType === 1 && /^(DIV|P)$/.test(top.tagName), ins = top.nextSibling;
+            if (hasTail) {
+                if (isBlk) { var nd = top.cloneNode(false); nd.appendChild(tail); t.insertBefore(nd, ins); ins = nd; }
+                else { var ft = tail.firstChild; t.insertBefore(tail, ins); ins = ft; }
+            }
+            t.insertBefore(h, ins);
+            var headBlank = top.textContent.replace(/\u200b/g, '') === '' && !(top.nodeType === 1 && top.querySelector('img,canvas,video,audio,table,br'));
+            if (headBlank && top.parentNode === t) t.removeChild(top);
+        }
+        var nr = D.createRange(); nr.selectNodeContents(h); s.removeAllRanges(); s.addRange(nr);
+        try { t.dispatchEvent(new Event('input', { bubbles: true })); } catch (_) {}
+        return true;
+    }
     function toggleHeading(id) {
         var t = restoreText(id); if (!t) return;
+        var hs0 = window.getSelection(), hN = null, hO = 0;
+        if (hs0.rangeCount && hs0.isCollapsed && hs0.anchorNode && hs0.anchorNode.nodeType === 3 && t.contains(hs0.anchorNode)) { hN = hs0.anchorNode; hO = hs0.anchorOffset; }
+        try { if (headingSelection(t)) { lastRange = window.getSelection().getRangeAt(0).cloneRange(); lastId = id; saved(id); return; } } catch (_) {}
         var r = lineRun(t); if (!r) return;
         var host = null;
         if (r.block) {
@@ -34429,7 +34510,10 @@ window.muTabSelect = function (id, i, btn) {
             t.replaceChild(d2, r.empty);
             host = d2;
         }
-        if (host) caretEnd(host);
+        if (host) {
+            if (hN && hN.isConnected && host.contains(hN)) { try { var hr = D.createRange(); hr.setStart(hN, Math.min(hO, hN.nodeValue.length)); hr.collapse(true); var hs = window.getSelection(); hs.removeAllRanges(); hs.addRange(hr); } catch (_) { caretEnd(host); } }
+            else caretEnd(host);
+        }
         saved(id);
     }
     /* ---------- checklist: a real checkbox <span class="mk-cb" contenteditable="false">☐ </span> (glyph text kept for exports / old notes) ---------- */
@@ -34507,11 +34591,15 @@ window.muTabSelect = function (id, i, btn) {
             for (var n = r.from, stop = r.to.nextSibling; n && n !== stop; n = n.nextSibling) { if (n.nodeType === 1 && n.classList.contains('mk-cb')) { cb = n; break; } }
         } else if (r.empty) { parent = t; before = r.empty; }
         var s = window.getSelection();
-        if (cb) { cb.parentNode.removeChild(cb); }
+        var kN = null, kO = 0;
+        if (s.rangeCount && s.isCollapsed && s.anchorNode && s.anchorNode.nodeType === 3 && t.contains(s.anchorNode)) { kN = s.anchorNode; kO = s.anchorOffset; }
+        if (cb) { cb.parentNode.removeChild(cb); if (kN && kN.isConnected) { try { var rk = D.createRange(); rk.setStart(kN, Math.min(kO, kN.nodeValue.length)); rk.collapse(true); s.removeAllRanges(); s.addRange(rk); } catch (_) {} } }
         else if (parent) {
             var nc = cbMake(false);
             parent.insertBefore(nc, before);
-            var rg = D.createRange(); rg.setStartAfter(nc); rg.collapse(true); s.removeAllRanges(); s.addRange(rg);
+            var rg = D.createRange();
+            if (kN && kN.isConnected && !nc.contains(kN)) rg.setStart(kN, Math.min(kO, kN.nodeValue.length)); else rg.setStartAfter(nc);
+            rg.collapse(true); s.removeAllRanges(); s.addRange(rg);
         }
         try { t.dispatchEvent(new Event('input', { bubbles: true })); } catch (_) {}
         saved(id);
@@ -35085,6 +35173,8 @@ window.muTabSelect = function (id, i, btn) {
         lastRange = r.cloneRange(); lastId = id;
     }
     function fmt0(id, box, k) {
+        window.__mkKeep = null;
+        try { var ks = window.getSelection(); if (ks.rangeCount && ks.isCollapsed && ks.anchorNode && ks.anchorNode.nodeType === 3 && ks.anchorNode.parentElement && ks.anchorNode.parentElement.closest('.text-box[contenteditable="true"]')) window.__mkKeep = { n: ks.anchorNode, o: ks.anchorOffset }; else if (lastRange && lastId === id && lastRange.collapsed && lastRange.startContainer.nodeType === 3) window.__mkKeep = { n: lastRange.startContainer, o: lastRange.startOffset }; } catch (_) {}
         if (k === 'normal') { try { var nt = restoreText(id); if (nt && window.mkNormalText) window.mkNormalText(nt); saved(id); } catch (_) {} return true; }
         if (k === 'ul' || k === 'ol' || k === 'todo') ensureLine(id, k);
         if (k === 'quote' && toggleQuote(id)) return true;
@@ -35494,7 +35584,7 @@ vault: function (id) { callFn('mkVaultAddNote', id); },
         if (!v || v.scale > 1.01) return;
         var top = Math.round(v.offsetTop), bottom = top + Math.round(v.height);
         var VK = mxeVK();
-        if (VK) {
+        if (VK && !window.__mxeVKStale) {
             try {
                 var r = VK.boundingRect;
                 if (r && r.height > 0) {
@@ -35506,7 +35596,7 @@ vault: function (id) { callFn('mkVaultAddNote', id); },
         var h = bottom - top;
         __mxeLastH = h;
         /* page really resized with the keyboard (Telegram)? then CSS alone keeps the panel exact; otherwise use the JS height */
-        root.classList.toggle('mxe-lay', root.classList.contains('mxe-tg') && Math.abs((window.innerHeight || 0) - bottom) < 4);
+        root.classList.toggle('mxe-lay', Math.abs((window.innerHeight || 0) - bottom) < 4);
         root.style.setProperty('--mxe-vh', h + 'px');
         root.style.setProperty('--mxe-top', top + 'px');
         /* safety net: if the panel still ends lower than intended, pull it up by the difference */
@@ -35532,7 +35622,7 @@ vault: function (id) { callFn('mkVaultAddNote', id); },
                 st.textContent =
                     /* Telegram: let the panel follow the real page size by CSS alone (bottom:0) so it resizes in the very same frame
                        as the webview, with no JS round trip (that one-frame gap is what flashed the dark page behind it) */
-                    'html.mxe-tg.mxe-lay body #contentsContainer .content-container.mxe.show{height:auto !important;bottom:0 !important}' +
+                    'html.mxe-lay body #contentsContainer .content-container.mxe.show{height:auto !important;bottom:0 !important}' +
                     'html.mxe-tg[data-mxe-theme="light"].mxe-open,html.mxe-tg[data-mxe-theme="light"].mxe-open body{background:#f9f9f9 !important}' +
                     'html.mxe-tg[data-mxe-theme="dark"].mxe-open,html.mxe-tg[data-mxe-theme="dark"].mxe-open body{background:#1d1d1f !important}';
                 D.head.appendChild(st);
@@ -35544,7 +35634,7 @@ vault: function (id) { callFn('mkVaultAddNote', id); },
             try { if (VK && VK.overlaysContent) VK.overlaysContent = false; } catch (_) {}
             return;
         }
-        try { if (VK && !VK.overlaysContent) VK.overlaysContent = true; } catch (_) {}
+        /* plain browsers: the viewport meta (interactive-widget=resizes-content) makes the page itself shrink with the keyboard, like in Telegram, so the panel follows it by CSS in the same frame; no keyboard overlay needed */
         root.setAttribute('data-mxe-theme', getTheme());
         vv();
         updUR(idOf(open));
@@ -35556,9 +35646,18 @@ vault: function (id) { callFn('mkVaultAddNote', id); },
     window.addEventListener('resize', vv);
     D.addEventListener('focusin', function (e) { if (e.target && e.target.closest && e.target.closest('.content-container.mxe')) vvSoon(); }, true);
     D.addEventListener('focusout', function (e) { if (e.target && e.target.closest && e.target.closest('.content-container.mxe')) vvSoon(); }, true);
-    try { var _vk = mxeVK(); if (_vk) _vk.addEventListener('geometrychange', vv); } catch (_) {}
+    try { var _vk = mxeVK(); if (_vk) _vk.addEventListener('geometrychange', function () { window.__mxeVKStale = false; vv(); }); } catch (_) {}
     try { var _T = window.Telegram && window.Telegram.WebApp; if (_T && _T.onEvent) _T.onEvent('viewportChanged', vv); } catch (_) {}
     window.addEventListener('orientationchange', function () { setTimeout(vv, 250); });
+    /* Coming back from a tapped link (another tab / in-app browser) the visual viewport can still be the stale, smaller one and
+       no resize event follows, so the editor panel stayed short with the main page showing under it. Re-measure on return. */
+    /* the keyboard rectangle the browser remembers from before we left is stale (the keyboard is gone on return): ignore it until a real geometrychange */
+    document.addEventListener('visibilitychange', function () { if (document.hidden) window.__mxeVKStale = true; });
+    window.addEventListener('pagehide', function () { window.__mxeVKStale = true; });
+    function mxeBack() { if (!document.hidden) { try { vvSoon(); setTimeout(vv, 1000); setTimeout(vv, 1600); } catch (_) {} } }
+    document.addEventListener('visibilitychange', mxeBack);
+    window.addEventListener('pageshow', mxeBack);
+    window.addEventListener('focus', mxeBack);
     (function () {
         var orig = window.renderContents;
         if (typeof orig !== 'function') return;
@@ -36627,8 +36726,8 @@ vault: function (id) { callFn('mkVaultAddNote', id); },
     var cur=curPage();
     p.classList.toggle('mu-nav-paired',pairOn());
     p.innerHTML='<div class="mu-nav-head">'
-      +'<button type="button" class="mu-nav-layout" data-nav="layout" aria-label="'+(fa()?'تغییر نمایش منو':'Change menu layout')+'" title="'+(fa()?'تغییر نمایش منو':'Change menu layout')+'">'+(pairOn()?ICONS.rows:ICONS.grid)+'<span>'+(fa()?'نمایش':'Layout')+'</span></button>'
       +'<button type="button" class="mu-nav-set'+(cur==='settings'?' on':'')+'" data-nav="settings" aria-label="'+(fa()?'تنظیمات':'Settings')+'" title="'+(fa()?'تنظیمات':'Settings')+'">'+ICONS.gear+'</button>'
+      +'<button type="button" class="mu-nav-layout" data-nav="layout" aria-label="'+(fa()?'تغییر نمایش منو':'Change menu layout')+'" title="'+(fa()?'تغییر نمایش منو':'Change menu layout')+'">'+(pairOn()?ICONS.rows:ICONS.grid)+'<span>'+(fa()?'نمایش':'Layout')+'</span></button>'
       +'<button type="button" class="mu-nav-old" data-nav="exit">'+(fa()?'بازگشت به ورژن قدیمی':'Back to old version')+'</button>'
       +'<button type="button" class="mu-nav-lang" data-nav="lang" aria-label="'+(fa()?'تغییر زبان':'Change language')+'">'+ICONS.globe+'<span dir="auto">'+(fa()?'English':'فارسی')+'</span></button></div>'
       +NAV_GROUPS.map(function(g,gi){
@@ -41823,6 +41922,293 @@ window.mkNormalText=function(text){
     st.textContent = css(['.image-export-body', '.mu-print-body']);   /* PDF / image cards and the print fallback live in this document */
     document.head.appendChild(st);
   } catch (_) {}
+})();
+</script>
+<style id="mkLinkUpgradeCss">
+/* ===== Links inside a note: clearly marked, tap/click opens them ===== */
+html body #contentsContainer .text-box a[href],
+html body .text-box a[href]{
+  --mkl-c:#6db3ff;
+  color:var(--mkl-c) !important;-webkit-text-fill-color:var(--mkl-c) !important;
+  text-decoration:underline !important;text-decoration-thickness:1.5px !important;text-underline-offset:3px;
+  background:rgba(109,179,255,.14);border-radius:5px;padding:0 2px;
+  cursor:pointer;-webkit-tap-highlight-color:rgba(109,179,255,.28);
+  overflow-wrap:anywhere;word-break:break-word;
+}
+html[data-mxe-theme="light"] body #contentsContainer .text-box a[href],
+html[data-mxe-theme="light"] body .text-box a[href]{--mkl-c:#0a58d6;background:rgba(10,88,214,.10)}
+html body #contentsContainer .text-box a[href] *,
+html body .text-box a[href] *{color:inherit !important;-webkit-text-fill-color:inherit !important}
+html body .text-box a[href]:hover{background:rgba(109,179,255,.26)}
+html[data-mxe-theme="light"] body .text-box a[href]:hover{background:rgba(10,88,214,.18)}
+
+/* ===== Link dialog (fixed look, same in every theme) ===== */
+html body .mkl-ov{position:fixed;inset:0;z-index:2147483200;display:flex;align-items:center;justify-content:center;padding:14px;box-sizing:border-box;
+  background:rgba(0,0,0,.45);-webkit-backdrop-filter:blur(3px);backdrop-filter:blur(3px);
+  font-family:Vazirmatn,-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Tahoma,sans-serif;color-scheme:light}
+html body .mkl-card{width:100%;max-width:400px;max-height:100%;overflow:auto;box-sizing:border-box;background:#F2F2F7;color:#111;
+  border-radius:18px;padding:14px 14px 12px;box-shadow:0 18px 50px rgba(0,0,0,.35);animation:mklIn .16s ease-out}
+@keyframes mklIn{from{opacity:0;transform:translateY(10px) scale(.98)}to{opacity:1;transform:none}}
+html body .mkl-hd{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:10px}
+html body .mkl-ttl{font-size:16px;font-weight:800;color:#111}
+html body .mkl-x{width:32px;height:32px;border:0;border-radius:50%;background:#E5E5EA;color:#444;font-size:15px;line-height:1;cursor:pointer;padding:0;display:flex;align-items:center;justify-content:center}
+html body .mkl-lb{display:block;margin:10px 2px 5px;font-size:12px;font-weight:700;color:#6C6C70}
+html body .mkl-card .mkl-in{display:block;width:100%;box-sizing:border-box;height:44px;padding:0 12px;border-radius:12px;border:1.5px solid #E5E5EA;
+  background:#fff !important;color:#111 !important;-webkit-text-fill-color:#111 !important;caret-color:#007AFF;font-size:15px;outline:none;font-family:inherit !important;
+  unicode-bidi:plaintext;text-align:start}
+html body .mkl-card .mkl-url{direction:ltr;text-align:left;unicode-bidi:isolate}
+html body .mkl-card .mkl-in:focus{border-color:#007AFF;box-shadow:0 0 0 3px rgba(0,122,255,.18)}
+html body .mkl-card .mkl-in:disabled{background:#EAEAEF !important;color:#8E8E93 !important;-webkit-text-fill-color:#8E8E93 !important}
+html body .mkl-card .mkl-in::placeholder{color:#A0A0A8;-webkit-text-fill-color:#A0A0A8}
+html body .mkl-st{min-height:18px;margin:6px 2px 0;font-size:12px;line-height:1.5;color:#8E8E93}
+html body .mkl-st.good{color:#1B8A3A}
+html body .mkl-st.bad{color:#D70015}
+html body .mkl-row{display:flex;gap:8px;margin-top:12px}
+html body .mkl-row2{margin-top:8px}
+html body .mkl-card .mkl-b{flex:1 1 0;min-width:0;height:44px;border:0;border-radius:12px;font-size:14px;font-weight:800;cursor:pointer;padding:0 10px;font-family:inherit !important;
+  background:#E5E5EA;color:#111 !important;-webkit-text-fill-color:#111 !important}
+html body .mkl-card .mkl-ok{background:#007AFF;color:#fff !important;-webkit-text-fill-color:#fff !important}
+html body .mkl-card .mkl-op{background:#E8F1FF;color:#0A58D6 !important;-webkit-text-fill-color:#0A58D6 !important}
+html body .mkl-card .mkl-rm{background:#FFE9EA;color:#D70015 !important;-webkit-text-fill-color:#D70015 !important}
+html body .mkl-card .mkl-b:disabled{opacity:.45;cursor:default}
+html body .mkl-card .mkl-b:active:not(:disabled){transform:scale(.97)}
+</style>
+<script id="mkLinkUpgradeJs">
+(function(){
+'use strict';
+if (window.mkLinkOpenDialog) return;
+var D = document;
+
+function isFa(){
+  try { if (typeof currentLang !== 'undefined') return currentLang === 'fa'; } catch (e) {}
+  return (D.documentElement.getAttribute('lang') || 'fa') !== 'en';
+}
+function esc(s){ return String(s == null ? '' : s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+function toast(m){ try { if (typeof showToast === 'function') showToast(m); } catch (e) {} }
+
+/* ---------- URL check / normalise (only http(s) and mailto survive the note sanitiser) ---------- */
+function hostOk(h){ return !!h && (h === 'localhost' || (h.indexOf('.') > 0 && h.charAt(h.length - 1) !== '.') || /^\[[0-9a-f:]+\]$/i.test(h)); }
+function normUrl(raw){
+  var s = String(raw == null ? '' : raw).trim();
+  if (!s) return { err: 'empty' };
+  if (/\s/.test(s)) return { err: 'space' };
+  if (/^(javascript|data|vbscript|file|blob|about):/i.test(s)) return { err: 'unsafe' };
+  if (/^mailto:/i.test(s)) {
+    var addr = s.slice(7).split('?')[0];
+    return /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(addr) ? { url: s, kind: 'mail', shown: addr } : { err: 'bad' };
+  }
+  if (/^https?:\/\//i.test(s)) {
+    try { var u = new URL(s); if (/^https?:$/.test(u.protocol) && hostOk(u.hostname)) return { url: s, kind: 'web', shown: u.hostname.replace(/^www\./, '') }; } catch (e) {}
+    return { err: 'bad' };
+  }
+  if (/^[a-z][a-z0-9+.\-]*:/i.test(s) && !/^[^\s\/:]+:\d+(\/|$)/.test(s)) return { err: 'scheme' };
+  if (/^[^\s@\/]+@[^\s@\/]+\.[^\s@\/]{2,}$/.test(s)) return { url: 'mailto:' + s, kind: 'mail', shown: s };
+  var cand = 'https://' + s.replace(/^\/+/, '');
+  try { var u2 = new URL(cand); if (hostOk(u2.hostname)) return { url: cand, kind: 'web', shown: u2.hostname.replace(/^www\./, '') }; } catch (e2) {}
+  return { err: 'bad' };
+}
+
+/* ---------- open a link (Telegram / in-app browsers / normal browsers) ---------- */
+function openUrl(url){
+  try {
+    url = String(url || '');
+    if (!/^(https?:|mailto:)/i.test(url)) return;
+    if (/^mailto:/i.test(url)) { location.href = url; return; }
+    var tg = window.Telegram && window.Telegram.WebApp;
+    if (tg && tg.initData && typeof tg.openLink === 'function') { tg.openLink(url); return; }
+    var w = window.open(url, '_blank');   /* no 'noopener' feature: it makes open() return null even on success, which opened every link twice */
+    if (w) { try { w.opener = null; } catch (e) {} }
+    else {
+      var a = D.createElement('a'); a.href = url; a.target = '_blank'; a.rel = 'noopener noreferrer'; a.style.display = 'none';
+      D.body.appendChild(a); a.click(); setTimeout(function(){ if (a.parentNode) a.parentNode.removeChild(a); }, 0);
+    }
+  } catch (e) {}
+}
+window.mkOpenLink = openUrl;
+
+/* ---------- tap / click a link in a note: it opens ---------- */
+var openTimer = 0;
+D.addEventListener('click', function(e){
+  var a = e.target && e.target.closest ? e.target.closest('.text-box a[href]') : null;
+  if (!a) return;
+  var tb = a.closest('.text-box');
+  if (!tb || !tb.contains(a)) return;
+  e.preventDefault();
+  var s = window.getSelection();
+  if (s && s.rangeCount && !s.isCollapsed && tb.contains(s.anchorNode)) return;   /* the person is selecting text, not tapping */
+  if (e.detail > 1) { clearTimeout(openTimer); return; }
+  var href = a.getAttribute('href') || '';
+  var fine = false;
+  try { fine = !!(window.matchMedia && matchMedia('(pointer:fine)').matches && tb.isContentEditable); } catch (e2) {}
+  clearTimeout(openTimer);
+  if (fine) openTimer = setTimeout(function(){ openUrl(href); }, 280);   /* a double-click selects the word instead */
+  else openUrl(href);
+}, true);
+
+/* ---------- the dialog ---------- */
+function anchorOf(node, text){
+  var el = node && (node.nodeType === 1 ? node : node.parentElement);
+  var a = el && el.closest ? el.closest('a') : null;
+  return a && a !== text && text.contains(a) ? a : null;
+}
+var BLOCKS = 'div,p,li,ul,ol,table,img,br,canvas,audio,video,blockquote,pre,h1,h2,h3,h4,h5,h6';
+
+window.mkLinkOpenDialog = function(ctx){
+  var text = ctx.text, fa = isFa();
+  var old = D.getElementById('mkLinkDlg'); if (old && old.parentNode) old.parentNode.removeChild(old);
+
+  var rng = null;
+  try { var s0 = window.getSelection(); if (s0 && s0.rangeCount && text.contains(s0.anchorNode)) rng = s0.getRangeAt(0).cloneRange(); } catch (e) {}
+  if (!rng) { try { var lr = ctx.getRange && ctx.getRange(); if (lr && text.contains(lr.startContainer)) rng = lr.cloneRange(); } catch (e) {} }
+  if (!rng) { rng = D.createRange(); rng.selectNodeContents(text); rng.collapse(false); }
+
+  var existing = anchorOf(rng.startContainer, text) || anchorOf(rng.endContainer, text);
+  var selTxt = existing ? existing.textContent : rng.toString();
+  selTxt = selTxt.replace(/[\u200b\u00a0]/g, ' ');
+  var complex = false;
+  if (!existing && !rng.collapsed) { try { complex = !!rng.cloneContents().querySelector(BLOCKS); } catch (e) {} }
+  if (complex) selTxt = '';
+  var startUrl = '';
+  if (existing) startUrl = existing.getAttribute('href') || '';
+  else if (selTxt && !/\s{2,}/.test(selTxt.trim())) { var pre = normUrl(selTxt.trim()); if (pre.url) startUrl = selTxt.trim(); }
+  var startLabel = complex ? '' : selTxt.replace(/\s+/g, ' ').trim();
+
+  var T = fa ? {
+    add: 'افزودن لینک', edit: 'ویرایش لینک', textLbl: 'متن لینک‌شده', urlLbl: 'آدرس لینک',
+    textPh: 'خالی بماند، خودِ آدرس نوشته می‌شود', keep: 'متن انتخاب‌شده همان‌طور می‌ماند',
+    ok: '✔️ افزودن لینک', save: '✔️ ذخیره تغییرات', open: '↗ باز کردن', rm: '🗑 حذف لینک', cancel: 'انصراف', close: 'بستن',
+    e_empty: 'آدرس را وارد کن.', e_space: 'آدرس نباید فاصله داشته باشد.', e_unsafe: 'این نوع لینک مجاز نیست.',
+    e_scheme: 'فقط لینک وب (http/https) یا ایمیل پشتیبانی می‌شود.', e_bad: 'آدرس معتبر نیست؛ مثلاً example.com',
+    hint: 'می‌توانی فقط example.com یا یک ایمیل بنویسی.', mail: 'ایمیل', web: 'وب'
+  } : {
+    add: 'Add link', edit: 'Edit link', textLbl: 'Link text', urlLbl: 'Link address',
+    textPh: 'Leave empty to use the address itself', keep: 'The selected text stays as it is',
+    ok: '✔️ Add link', save: '✔️ Save changes', open: '↗ Open', rm: '🗑 Remove link', cancel: 'Cancel', close: 'Close',
+    e_empty: 'Enter an address.', e_space: 'The address cannot contain spaces.', e_unsafe: 'This kind of link is not allowed.',
+    e_scheme: 'Only web (http/https) links and e-mail addresses are supported.', e_bad: 'Not a valid address, e.g. example.com',
+    hint: 'You can type just example.com or an e-mail address.', mail: 'E-mail', web: 'Web'
+  };
+
+  var ov = D.createElement('div');
+  ov.id = 'mkLinkDlg'; ov.className = 'mkl-ov'; ov.setAttribute('role', 'dialog'); ov.setAttribute('aria-modal', 'true');
+  ov.setAttribute('dir', fa ? 'rtl' : 'ltr');
+  ov.innerHTML =
+    '<div class="mkl-card">' +
+      '<div class="mkl-hd"><span class="mkl-ttl">' + (existing ? '✏️ ' + esc(T.edit) : '🔗 ' + esc(T.add)) + '</span>' +
+      '<button type="button" class="mkl-x" data-k="x" aria-label="' + esc(T.close) + '">✕</button></div>' +
+      '<label class="mkl-lb" for="mklUrl">' + esc(T.urlLbl) + '</label>' +
+      '<input id="mklUrl" class="mkl-in mkl-url" type="text" dir="ltr" inputmode="url" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" placeholder="https://example.com" maxlength="2000" value="' + esc(startUrl) + '">' +
+      '<div class="mkl-st" id="mklSt" aria-live="polite">' + esc(T.hint) + '</div>' +
+      '<label class="mkl-lb" for="mklTxt">' + esc(T.textLbl) + '</label>' +
+      '<input id="mklTxt" class="mkl-in" type="text" dir="auto" autocomplete="off" spellcheck="false" maxlength="500" placeholder="' + esc(complex ? T.keep : T.textPh) + '" value="' + esc(startLabel) + '"' + (complex ? ' disabled' : '') + '>' +
+      '<div class="mkl-row">' +
+        '<button type="button" class="mkl-b mkl-ok" data-k="ok">' + esc(existing ? T.save : T.ok) + '</button>' +
+        '<button type="button" class="mkl-b mkl-op" data-k="open" disabled>' + esc(T.open) + '</button>' +
+      '</div>' +
+      '<div class="mkl-row mkl-row2">' +
+        (existing ? '<button type="button" class="mkl-b mkl-rm" data-k="rm">' + esc(T.rm) + '</button>' : '') +
+        '<button type="button" class="mkl-b mkl-cn" data-k="x">' + esc(T.cancel) + '</button>' +
+      '</div>' +
+    '</div>';
+  D.body.appendChild(ov);
+
+  var urlIn = ov.querySelector('#mklUrl'), txtIn = ov.querySelector('#mklTxt'), st = ov.querySelector('#mklSt'), opBtn = ov.querySelector('.mkl-op');
+  var closed = false;
+
+  function check(){
+    var v = urlIn.value, r = normUrl(v);
+    if (!v.trim()) { st.className = 'mkl-st'; st.textContent = T.hint; opBtn.disabled = true; return r; }
+    if (r.err) { st.className = 'mkl-st bad'; st.textContent = '⚠️ ' + T['e_' + r.err]; opBtn.disabled = true; }
+    else { st.className = 'mkl-st good'; st.textContent = '✓ ' + (r.kind === 'mail' ? T.mail : T.web) + ': ' + r.shown; opBtn.disabled = false; }
+    return r;
+  }
+  function close(){
+    if (closed) return; closed = true;
+    D.removeEventListener('keydown', onKey, true);
+    if (ov.parentNode) ov.parentNode.removeChild(ov);
+  }
+  function refocus(){
+    try { (window.mkSoftFocus || function(x){ x.focus(); })(text); } catch (e) {}
+  }
+  function setCaret(r){ try { var s = window.getSelection(); s.removeAllRanges(); s.addRange(r); } catch (e) {} }
+  function after(node){ var r = D.createRange(); r.setStartAfter(node); r.collapse(true); setCaret(r); }
+  function decorate(a, url){ a.setAttribute('href', url); a.setAttribute('target', '_blank'); a.setAttribute('rel', 'noopener noreferrer'); }
+  function fireInput(){
+    try { text.dispatchEvent(new Event('input', { bubbles: true })); } catch (e) {}
+    try { ctx.save && ctx.save(); } catch (e) {}
+  }
+  function shownText(r){ return r.kind === 'mail' ? r.shown : r.url; }
+
+  function apply(){
+    var r = check();
+    if (r.err) { urlIn.focus(); try { urlIn.select(); } catch (e) {} return; }
+    var url = r.url, label = txtIn.disabled ? '' : txtIn.value.replace(/\s+/g, ' ').trim();
+    close(); refocus();
+
+    if (existing && existing.isConnected) {
+      decorate(existing, url);
+      if (label && label !== existing.textContent.replace(/\s+/g, ' ').trim()) existing.textContent = label;
+      after(existing); fireInput(); return;
+    }
+
+    setCaret(rng);
+    if (rng.collapsed) {
+      var shown = label || shownText(r);
+      var html = '<a href="' + esc(url) + '" target="_blank" rel="noopener noreferrer">' + esc(shown) + '</a>&nbsp;';
+      var ok = false;
+      try { ok = D.execCommand('insertHTML', false, html); } catch (e) {}
+      if (!ok) {
+        var a0 = D.createElement('a'); decorate(a0, url); a0.textContent = shown;
+        rng.insertNode(D.createTextNode('\u00a0')); rng.insertNode(a0); after(a0.nextSibling || a0); fireInput();
+      } else { try { ctx.save && ctx.save(); } catch (e) {} }
+      return;
+    }
+
+    var sameText = !label || complex || label === selTxt.replace(/\s+/g, ' ').trim();
+    if (sameText) {
+      var done = false;
+      try { done = D.execCommand('createLink', false, url); } catch (e) {}
+      text.querySelectorAll('a[href]').forEach(function(a){ if (!a.getAttribute('target')) decorate(a, a.getAttribute('href')); });
+      try { var s1 = window.getSelection(); if (s1 && s1.rangeCount) s1.collapseToEnd(); } catch (e) {}
+      if (done) { try { ctx.save && ctx.save(); } catch (e) {} } else fireInput();
+    } else {
+      rng.deleteContents();
+      var a1 = D.createElement('a'); decorate(a1, url); a1.textContent = label;
+      rng.insertNode(a1); after(a1); fireInput();
+    }
+  }
+  function remove(){
+    if (!existing || !existing.isConnected) { close(); return; }
+    close(); refocus();
+    var par = existing.parentNode, first = existing.firstChild, last = existing.lastChild;
+    while (existing.firstChild) par.insertBefore(existing.firstChild, existing);
+    par.removeChild(existing);
+    try { var r = D.createRange(); if (last) { r.setStartAfter(last); r.collapse(true); setCaret(r); } } catch (e) {}
+    fireInput();
+  }
+  function onKey(e){
+    if (e.key === 'Escape') { e.preventDefault(); e.stopPropagation(); close(); refocus(); }
+  }
+  D.addEventListener('keydown', onKey, true);
+
+  ov.addEventListener('click', function(e){
+    if (e.target === ov) { close(); refocus(); return; }
+    var b = e.target.closest ? e.target.closest('[data-k]') : null;
+    if (!b) return;
+    e.preventDefault(); e.stopPropagation();
+    var k = b.getAttribute('data-k');
+    if (k === 'x') { close(); refocus(); }
+    else if (k === 'ok') apply();
+    else if (k === 'rm') remove();
+    else if (k === 'open') { var r = check(); if (r.url) openUrl(r.url); }
+  });
+  ov.addEventListener('keydown', function(e){
+    if (e.key === 'Enter' && !e.isComposing && (e.target === urlIn || e.target === txtIn)) { e.preventDefault(); apply(); }
+  });
+  urlIn.addEventListener('input', check);
+  check();
+  setTimeout(function(){ try { urlIn.focus(); if (existing) urlIn.select(); } catch (e) {} }, 30);
+};
 })();
 </script>
 </body>
