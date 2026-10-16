@@ -35959,88 +35959,167 @@ vault: function (id) { callFn('mkVaultAddNote', id); },
 
 
 
+<style id="muFabFadeCss">
+/* "+" button (home) and editor toolbar: they never slide with the keyboard.
+   Keyboard moving -> they vanish where they are (quick fade + shrink); keyboard settled -> they appear right above it. */
+html.mu-kbhide #muNfsFab,
+html.mu-kbhide .content-container.mxe .mxe-bottom,
+html.mu-kbhide .mu-viewer:not(.mu-vs-retro) .mu-viewer-tools,
+html.mu-kbhide .mAi-inputbar,
+html.mu-kbhide .mxe-find,
+html.mu-kbhide .dl-bar,
+html.mu-kbhide .markhin-note-select-bar{opacity:0 !important;pointer-events:none !important;transition:opacity .09s linear,scale .09s ease-in !important;animation:none !important}
+html.mu-kbhide #muNfsFab{scale:.82}
+html.mu-kbshow #muNfsFab{animation:muKbPop .28s cubic-bezier(.2,.9,.25,1.2) both !important}
+html.mu-kbshow .content-container.mxe .mxe-bottom,
+html.mu-kbshow .mu-viewer:not(.mu-vs-retro) .mu-viewer-tools,
+html.mu-kbshow .mAi-inputbar,
+html.mu-kbshow .mxe-find,
+html.mu-kbshow .dl-bar,
+html.mu-kbshow .markhin-note-select-bar{animation:muKbFade .2s ease-out both !important}
+@keyframes muKbPop{from{opacity:0;scale:.6}to{opacity:1;scale:1}}
+@keyframes muKbFade{from{opacity:0}to{opacity:1}}
+@media (prefers-reduced-motion:reduce){html.mu-kbshow #muNfsFab,html.mu-kbshow .content-container.mxe .mxe-bottom,html.mu-kbshow .mu-viewer:not(.mu-vs-retro) .mu-viewer-tools,html.mu-kbshow .mAi-inputbar,html.mu-kbshow .mxe-find,html.mu-kbshow .dl-bar,html.mu-kbshow .markhin-note-select-bar{animation:muKbFade .12s linear both !important}}
+/* Home page: while the keyboard is up (or moving) the page keeps its full height, so it never resizes, jumps or shows a
+   strip behind it. The keyboard simply covers it, and the "+" is placed right above the keyboard. */
+html.mu-lockh #muNotesFs{height:var(--mu-fullh, 100%) !important;bottom:auto !important}
+html.mu-lockh .mu-nfs-body{padding-bottom:calc(110px + var(--mu-kbf, 0px)) !important}
+html.mu-kbf-on #muNfsFab{translate:0 calc(var(--mu-kbf, 0px) * -1)}
+</style>
 <script id="muFabGlide">
-/* Smooth glide for bottom-anchored controls: the "+" add button and the editor's bottom toolbar.
-   When the keyboard opens/closes (or the viewport changes) they glide to their new spot instead of jumping.
-   FLIP: measure the viewport position before/after layout, then animate only the difference using the independent
-   `translate` property (so the :active press-scale, layout and popovers are untouched). */
+/* Keyboard-proof "+" button and editor toolbar (replaces the old sliding glide).
+   1. A text field is about to show the keyboard (focus / tap) or the visible height changes a lot
+      -> the controls vanish instantly, exactly where they are.
+   2. The home page is frozen at its full height meanwhile, so nothing reflows or jumps.
+   3. When the viewport has been calm for a moment (and the keyboard is really there) the controls fade in at their
+      final spot: the "+" right above the keyboard, the toolbar at the bottom of the editor panel (which the editor's own
+      layout code already ends exactly above the keyboard).
+   Safety nets: a watchdog repairs any stuck state, rotation resets everything, desktop (no touch) is left untouched. */
 (function () {
   'use strict';
   if (window.__muFabGlide) return;
   window.__muFabGlide = true;
-  var DUR = 280, EASE = 'cubic-bezier(.22,.9,.3,1)';
-  var state = new WeakMap();          /* element -> { top, anim } */
-  var reduce = false;
-  try { reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches; } catch (_) {}
-  function targets() {
-    var list = [], fab = document.getElementById('muNfsFab');
-    if (fab) list.push(fab);
-    var bars = document.querySelectorAll('.content-container.mxe .mxe-bottom');
-    for (var i = 0; i < bars.length; i++) list.push(bars[i]);
-    return list;
+  var root = document.documentElement, vv = window.visualViewport;
+  var touch = false;
+  try { touch = matchMedia('(pointer: coarse)').matches || ('ontouchstart' in window); } catch (_) {}
+  if (!touch) return;
+
+  var SETTLE = 140, WAIT_KB = 1000, WAIT_CLOSE = 520, THRESH_IDLE = 90, THRESH_KB = 24, MIN_HIDE = 120;
+  var t = 0, seq = 0, hiding = false, hideAt = 0, expectKb = false, stableH = 0, lastW = 0, base = 0, fullBase = 0, wasShowing = false;
+
+  function vh() { return Math.round((vv && vv.height) || window.innerHeight || 0); }
+  function isEditable(el) {
+    if (!el || el.nodeType !== 1) return false;
+    if (el.isContentEditable || el.tagName === 'TEXTAREA') return true;
+    return el.tagName === 'INPUT' && /^(text|search|url|email|password|number|tel|)$/i.test(el.type || '');
   }
-  function curShift(el, st) {
-    if (!st.anim) return 0;
-    try {
-      var tr = getComputedStyle(el).translate;            /* "0px 37.5px" or "none" */
-      if (!tr || tr === 'none') return 0;
-      var y = parseFloat(tr.split(/\s+/)[1]);
-      return isFinite(y) ? y : 0;
-    } catch (_) { return 0; }
+  function inHome(el) { return !!(el && el.closest && el.closest('#muNotesFs')); }
+  /* the keyboard is really showing: visible height shrank by more than 120px (same rule the app uses elsewhere) */
+  function kbShowing() {
+    var h = vh(), w = window.innerWidth || 0;
+    if (w !== lastW) { lastW = w; base = 0; }
+    if (!isEditable(document.activeElement)) base = h; else base = Math.max(base, h, window.innerHeight || 0);
+    return h < base - 120;
   }
-  function stop(st) { if (st.anim) { try { st.anim.cancel(); } catch (_) {} st.anim = null; } }
-  function one(el) {
-    var st = state.get(el);
-    if (!st) { st = { top: null, anim: null }; state.set(el, st); }
-    if (el.offsetParent === null) { stop(st); st.top = null; return; }   /* hidden / not shown */
-    var r = el.getBoundingClientRect();
-    if (!r.height) { stop(st); st.top = null; return; }
-    var shift = curShift(el, st);
-    var top = r.top - shift;                               /* where it belongs now (layout position) */
-    if (st.top === null) { st.top = top; return; }
-    var delta = (st.top + shift) - top;                    /* where it visually was, minus where it belongs */
-    st.top = top;
-    if (Math.abs(delta) < 2 || reduce || !el.animate) return;
-    stop(st);
-    var a;
-    try {
-      a = el.animate([{ translate: '0px ' + delta + 'px' }, { translate: '0px 0px' }], { duration: DUR, easing: EASE });
-    } catch (_) { return; }
-    st.anim = a;
-    var done = function () { if (st.anim === a) st.anim = null; };
-    a.onfinish = done; a.oncancel = done;
+  function lock() {
+    if (root.classList.contains('mu-lockh')) return;
+    fullBase = kbShowing() ? Math.max(base, window.innerHeight || 0) : Math.max(vh(), window.innerHeight || 0);
+    root.style.setProperty('--mu-fullh', fullBase + 'px');
+    root.classList.add('mu-lockh');
   }
-  function check() {
-    var list = targets();
-    for (var i = 0; i < list.length; i++) one(list[i]);
+  function unlock() {
+    root.classList.remove('mu-lockh', 'mu-kbf-on');
+    root.style.removeProperty('--mu-fullh'); root.style.removeProperty('--mu-kbf');
   }
-  window.addEventListener('resize', check);                /* resize runs before paint: no one-frame flash */
-  if (window.visualViewport) window.visualViewport.addEventListener('resize', check);
-  document.addEventListener('focusout', function () { setTimeout(check, 0); setTimeout(check, 160); }, true);
-  window.addEventListener('load', function () { setTimeout(check, 0); });
-  try {
-    new MutationObserver(check).observe(document.documentElement, { attributes: true, attributeFilter: ['class', 'style'] });
-  } catch (_) {}
-  try {
-    /* class changes on the editor / notes screen / toolbar (opening, hiding, keyboard classes) */
-    new MutationObserver(function (recs) {
-      for (var i = 0; i < recs.length; i++) {
-        var t = recs[i].target;
-        if (t && t.classList && (t.classList.contains('mxe') || t.classList.contains('mxe-bottom') || t.id === 'muNotesFs')) { check(); return; }
+  function hide(ms) {
+    if (!hiding) hideAt = Date.now();
+    hiding = true; seq++;
+    root.classList.remove('mu-kbshow');
+    root.classList.add('mu-kbhide');
+    clearTimeout(t);
+    t = setTimeout(reveal, ms);
+  }
+  function reveal() {
+    clearTimeout(t);
+    var showing = kbShowing(), a = document.activeElement;
+    /* we expect a keyboard but it has not appeared yet: keep waiting (up to WAIT_KB) instead of showing the controls behind it */
+    if (expectKb && !showing && Date.now() - hideAt < WAIT_KB) { t = setTimeout(reveal, 100); return; }
+    expectKb = false;
+    if (showing) {
+      if (inHome(a) && root.classList.contains('mu-lockh') && fullBase) {
+        var k = Math.round(Math.max(0, fullBase - vh() - ((vv && vv.offsetTop) || 0)));
+        if (k < 60) k = 0;
+        root.style.setProperty('--mu-kbf', k + 'px'); root.classList.toggle('mu-kbf-on', !!k);
       }
-    }).observe(document.documentElement, { attributes: true, attributeFilter: ['class'], subtree: true });
-  } catch (_) {}
+    } else unlock();
+    stableH = vh(); wasShowing = showing; hiding = false;
+    var my = seq, wait = Math.max(0, MIN_HIDE - (Date.now() - hideAt));
+    setTimeout(function () {
+      if (my !== seq || hiding) return;                          /* another cycle started meanwhile */
+      void root.offsetHeight;                                    /* position is applied while still invisible */
+      root.classList.add('mu-kbshow');
+      root.classList.remove('mu-kbhide');
+      setTimeout(function () { if (my === seq) root.classList.remove('mu-kbshow'); }, 320);
+    }, wait);
+  }
+  function onViewport() {
+    var w = window.innerWidth || 0;
+    if (w !== lastW) {                                           /* rotation / split screen: reset, nothing to animate */
+      lastW = w; base = 0; fullBase = 0; unlock(); stableH = vh();
+      if (!hiding) return;
+    }
+    var h = vh(), showing = kbShowing();
+    if (hiding) { hide(SETTLE); return; }                        /* still moving: wait until it calms down */
+    var thr = (wasShowing || showing) ? THRESH_KB : THRESH_IDLE;
+    if (Math.abs(h - stableH) >= thr) hide(SETTLE + 40);         /* keyboard started opening / closing / changing height */
+  }
+
+  document.addEventListener('focusin', function (e) {
+    if (!isEditable(e.target)) return;
+    if (inHome(e.target)) lock();                                /* freeze the page height before the keyboard moves it */
+    if (kbShowing()) return;                                     /* keyboard already up: just moving between fields */
+    expectKb = true; hide(300);                                  /* keyboard is about to open */
+  }, true);
+  /* tapping a field that kept focus after the keyboard was dismissed shows the keyboard again without a focus event */
+  document.addEventListener('pointerup', function (e) {
+    var el = e.target;
+    if (el && el.closest && isEditable(document.activeElement) && el.closest('input,textarea,[contenteditable="true"]') && !kbShowing()) {
+      if (inHome(el)) lock();
+      expectKb = true; hide(300);
+    }
+  }, true);
+  document.addEventListener('focusout', function (e) {
+    if (!kbShowing()) return;
+    var rt = e.relatedTarget;
+    setTimeout(function () {
+      if (isEditable(document.activeElement)) return;            /* focus just moved to another field */
+      if (rt && rt.closest && rt.closest('.mxe-bottom,.mu-viewer-tools,.mAi-inputbar,.mxe-find,.dl-bar,.markhin-note-select-bar')) return; /* a toolbar button: the keyboard may stay */
+      expectKb = false; hide(WAIT_CLOSE);                        /* keyboard is about to close */
+    }, 0);
+  }, true);
+  document.addEventListener('visibilitychange', function () {
+    if (document.hidden) return;
+    if (!hiding) root.classList.remove('mu-kbhide', 'mu-kbshow');
+    setTimeout(onViewport, 0); setTimeout(onViewport, 300);
+  });
+
+  window.addEventListener('resize', onViewport);
+  if (vv) vv.addEventListener('resize', onViewport);
+  try { if (navigator.virtualKeyboard) navigator.virtualKeyboard.addEventListener('geometrychange', onViewport); } catch (_) {}
   try {
-    var fsEl = null;
-    setInterval(function () {
-      var el = document.getElementById('muNotesFs');
-      if (el && el !== fsEl) {
-        fsEl = el;
-        try { if (window.ResizeObserver) new ResizeObserver(check).observe(el); } catch (_) {}
-        check();
-      }
-    }, 600);
+    var tg = window.Telegram && window.Telegram.WebApp;
+    if (tg && tg.onEvent) tg.onEvent('viewportChanged', onViewport);
   } catch (_) {}
+
+  /* watchdog: whatever happens, never leave the controls invisible or the home page frozen */
+  setInterval(function () {
+    if (hiding) return;
+    var a = document.activeElement, ed = isEditable(a);
+    if (!ed) base = vh();
+    if (root.classList.contains('mu-kbhide')) root.classList.remove('mu-kbhide');
+    if (root.classList.contains('mu-lockh') && !(ed && inHome(a) && kbShowing())) unlock();
+  }, 1000);
+  stableH = vh(); lastW = window.innerWidth || 0;
 })();
 </script>
 
