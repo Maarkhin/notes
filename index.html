@@ -8271,8 +8271,10 @@ html body #contentsContainer .content-container.mxe .text-box .mk-hl *::selectio
 <style id="muKbLiftCss">
 /* While the keyboard is really open the editor's bottom bar sits right on top of it: the bottom safe-area inset
    (navigation bar) is hidden behind the keyboard, so neither it nor the old extra lift is added any more. */
+html.mu-kb body #contentsContainer .content-container.mxe.show{padding-bottom:0 !important}
 html.mu-kb body #contentsContainer .mxe .mxe-bottom{padding-bottom:10px !important}
-html.mu-kbo .mu-nfs-body{padding-bottom:calc(110px + var(--mu-kbh, 0) * 1px) !important}
+html.mu-kbo .mu-nfs-fab{bottom:22px !important}
+html.mu-kbo .mu-nfs-body{padding-bottom:110px !important}
 html.mu-kbo .mu-nfs-sheetbox{padding-bottom:18px !important}
 html.mu-kbo .mu-nav-panel{padding-bottom:18px !important}
 html.mu-kbo .theme-picker-sheet{padding-bottom:16px !important}
@@ -9492,6 +9494,25 @@ html.mu-nfs-open:not(.mu-nfs-dark):not(#_nfs) .mklk .mklk-cell,html.mu-nfs-open:
 html.mu-nfs-open:not(.mu-nfs-dark):not(#_nfs) .mklk .mklk-dial::before{background:#ffffff}
 </style>
 <style id="mkBackDirCss">html:not([dir="rtl"]) .mkc-xb svg,html:not([dir="rtl"]) svg.mk-bi{transform:scaleX(-1)}</style>
+<style id="muKbStripFix">
+/* Keyboard-close navy flash fix (new-version Notes home + note editor).
+   #muNotesFs is position:fixed; inset:0. While the keyboard slides away, the viewport grows a few frames before the
+   layout catches up, so the strip it uncovers showed <html>/<body>'s theme gradient (dark navy) and the theme's
+   decorative fixed layers. While the new page / editor is open, <html> and <body> are now painted with the page's
+   own flat colour and those decorative layers are not drawn, so the strip is simply the page continuing downwards. */
+html.mu-nfs-open.mu-nfs-dark:not(#_nfs),html.mu-nfs-open.mu-nfs-dark:not(#_nfs) body{background:#1c1c1c !important;background-image:none !important}
+html.mu-nfs-open.mu-nfs-light:not(#_nfs),html.mu-nfs-open.mu-nfs-light:not(#_nfs) body{background:#eeeeee !important;background-image:none !important}
+html.mxe-open:not([data-mxe-theme="light"]):not(#_nfs),html.mxe-open:not([data-mxe-theme="light"]):not(#_nfs) body{background:#1d1d1f !important;background-image:none !important}
+html.mxe-open[data-mxe-theme="light"]:not(#_nfs),html.mxe-open[data-mxe-theme="light"]:not(#_nfs) body{background:#f9f9f9 !important;background-image:none !important}
+html.mu-nfs-open:not(#_nfs) body::before,html.mu-nfs-open:not(#_nfs) body::after,
+html.mu-nfs-open:not(#_nfs) body>.mu-anon-beam,html.mu-nfs-open:not(#_nfs) body>.mu-darkweb-rain,html.mu-nfs-open:not(#_nfs) body>.mu-darkweb-scanlines,
+html.mu-nfs-open:not(#_nfs) body>.mu-ha-footprints,html.mu-nfs-open:not(#_nfs) body>.mu-ha-paintcan,html.mu-nfs-open:not(#_nfs) body>.mu-ha-street,
+html.mu-nfs-open:not(#_nfs) body>.mu-halloween-branches,html.mu-nfs-open:not(#_nfs) body>.mu-halloween-fog,html.mu-nfs-open:not(#_nfs) body>.mu-halloween-pumpkin,
+html.mu-nfs-open:not(#_nfs) body>.mu-hogwarts-castle,html.mu-nfs-open:not(#_nfs) body>.mu-hogwarts-forest,html.mu-nfs-open:not(#_nfs) body>.mu-interstellar-hole,
+html.mu-nfs-open:not(#_nfs) body>.mu-phantom-graveyard,html.mu-nfs-open:not(#_nfs) body>.mu-redhorizon-mountains,html.mu-nfs-open:not(#_nfs) body>.mu-redhorizon-stars,
+html.mu-nfs-open:not(#_nfs) body>.mu-spider-web,html.mu-nfs-open:not(#_nfs) body>.mu-st-portal,html.mu-nfs-open:not(#_nfs) body>.mu-st-static,
+html.mu-nfs-open:not(#_nfs) body>.mu-terminal-cursor,html.mu-nfs-open:not(#_nfs) body>.mu-vampire-branches{display:none !important}
+</style>
 </head>
 <body class="theme-oceanic">
 <script>
@@ -35620,6 +35641,7 @@ vault: function (id) { callFn('mkVaultAddNote', id); },
                 st.textContent =
                     /* Telegram: let the panel follow the real page size by CSS alone (bottom:0) so it resizes in the very same frame
                        as the webview, with no JS round trip (that one-frame gap is what flashed the dark page behind it) */
+                    'html.mxe-lay body #contentsContainer .content-container.mxe.show{height:auto !important;bottom:0 !important}' +
                     'html.mxe-tg[data-mxe-theme="light"].mxe-open,html.mxe-tg[data-mxe-theme="light"].mxe-open body{background:#f9f9f9 !important}' +
                     'html.mxe-tg[data-mxe-theme="dark"].mxe-open,html.mxe-tg[data-mxe-theme="dark"].mxe-open body{background:#1d1d1f !important}';
                 D.head.appendChild(st);
@@ -35896,106 +35918,6 @@ vault: function (id) { callFn('mkVaultAddNote', id); },
 </script>
 
 
-<style id="muKbSmoothCss">
-/* ===== Keyboard open / close: no layout snap, no dark band (same feel as Notepher) =====
-   Telegram resizes the WebView only once the keyboard animation has ended, so for a few frames the page and the
-   keyboard disagree. Three rules remove every visible symptom of that:
-   1) the Notes list page keeps its full height (--mu-fullh) while the keyboard is up, so nothing is re-laid out;
-   2) the area that can be uncovered during the animation is painted with the page's own colour, not the theme navy;
-   3) elements that must follow the keyboard (add button, editor panel) glide there instead of jumping. */
-.mu-nfs{bottom:auto !important;height:var(--mu-fullh,100%) !important}
-html:has(#muNotesFs.mu-open[data-theme="dark"]),html:has(#muNotesFs.mu-open[data-theme="dark"]) body{background:#1c1c1c !important}
-html:has(#muNotesFs.mu-open[data-theme="light"]),html:has(#muNotesFs.mu-open[data-theme="light"]) body{background:#eeeeee !important}
-html:has(#muNotesFs.mu-open) body::before,html:has(#muNotesFs.mu-open) body::after{display:none !important}
-.mu-nfs-fab{transform:translateY(min(0px, calc(var(--mu-kbh, 0) * -1px + var(--mu-sab, env(safe-area-inset-bottom, 0px)))));transition:transform .22s cubic-bezier(.2,.8,.2,1)}
-.mu-nfs-fab:active{transform:translateY(min(0px, calc(var(--mu-kbh, 0) * -1px + var(--mu-sab, env(safe-area-inset-bottom, 0px))))) scale(.95)}
-html body #contentsContainer .content-container.mxe.show{top:0 !important;height:var(--mu-fullh,var(--mxe-vh,100%)) !important;padding-bottom:max(calc(var(--mu-kbh, 0) * 1px), var(--mu-sab, env(safe-area-inset-bottom, 0px))) !important}
-html.mu-kbg body #contentsContainer .content-container.mxe.show{transition:padding-bottom .2s cubic-bezier(.2,.8,.2,1) !important}
-.mu-viewer{top:0 !important;height:var(--mu-fullh,100%) !important;padding-bottom:calc(14px + max(calc(var(--mu-kbh, 0) * 1px), var(--mu-sab, env(safe-area-inset-bottom, 0px)))) !important}
-html.mu-kbg .mu-viewer{transition:padding-bottom .2s cubic-bezier(.2,.8,.2,1)}
-html.mu-kbg #markhinAiChatOverlay{transition:top .18s ease-out,height .18s ease-out}
-</style>
-<script id="muKbSmooth">
-(function () {
-  'use strict';
-  if (window.__muKbSmooth) return;
-  window.__muKbSmooth = true;
-  var root = document.documentElement, full = 0, lastW = 0, raf = 0, settleT = 0, gT = 0, last = '', closing = 0, closeT = 0;
-  function isEd(el) {
-    return !!el && (el.isContentEditable || el.tagName === 'TEXTAREA' ||
-      (el.tagName === 'INPUT' && /^(text|search|url|email|password|number|tel|)$/i.test(el.type || '')));
-  }
-  /* bottom edge of what is really visible right now (0 = pinch-zoomed, ignore) */
-  function cur() {
-    var v = window.visualViewport, ih = Math.round(window.innerHeight || 0);
-    if (!v) return ih;
-    if (Math.abs((v.scale || 1) - 1) > 0.02) return 0;
-    return Math.round(Math.min(ih || 1e5, v.height + v.offsetTop)) || ih;
-  }
-  function apply(c) {
-    var kb = Math.max(0, full - c); if (kb < 80 || closing) kb = 0;
-    var key = full + '|' + kb + '|' + c;
-    if (key === last) return; last = key;
-    root.style.setProperty('--mu-fullh', full + 'px');
-    root.style.setProperty('--mu-kbh', String(kb));
-    root.style.setProperty('--mu-curh', c + 'px');
-  }
-  function measure() {
-    raf = 0;
-    var c = cur(), w = window.innerWidth || 0;
-    if (c < 200) return;
-    if (w !== lastW) { lastW = w; full = 0; }
-    if (!full || c > full) full = c;
-    else if (!isEd(document.activeElement)) {
-      /* no field focused: the keyboard is closed or closing. Only follow a smaller size once it has stayed put, so a
-         closing keyboard never shrinks the frozen full height half-way through its animation. */
-      clearTimeout(settleT);
-      settleT = setTimeout(function () {
-        if (isEd(document.activeElement)) return;
-        var c2 = cur(); if (c2 >= 200) { full = c2; apply(c2); }
-      }, 900);
-    }
-    apply(c);
-  }
-  /* Notes page open: Telegram's own background (what shows if the keyboard moves before the page) is the page's colour, never the theme navy */
-  var nfsCol = '';
-  function nfsPaint() {
-    try {
-      var n = document.getElementById('muNotesFs'), T = window.Telegram && window.Telegram.WebApp;
-      if (!T || !n || !n.classList.contains('mu-open')) { nfsCol = ''; return; }
-      var col = n.getAttribute('data-theme') === 'light' ? '#eeeeee' : '#1c1c1c';
-      if (col === nfsCol) return; nfsCol = col;
-      if (T.setBackgroundColor) T.setBackgroundColor(col);
-      if (T.setBottomBarColor) T.setBottomBarColor(col);
-    } catch (_) {}
-  }
-  function schedule() { nfsPaint(); if (!raf) raf = requestAnimationFrame(measure); }
-  /* while a field gains / loses focus, let the keyboard-following panels glide (class removed again afterwards) */
-  function glide(e) {
-    if (!isEd(e && e.target)) return;
-    root.classList.add('mu-kbg'); clearTimeout(gT);
-    gT = setTimeout(function () { root.classList.remove('mu-kbg'); }, 900);
-    schedule();
-  }
-  document.addEventListener('focusin', glide, true);
-  /* keyboard is going away: don't wait for the WebView to report it, drop the bars at once (they slide out of sight behind the keyboard) */
-  document.addEventListener('focusin', function (e) { if (isEd(e.target)) { closing = 0; clearTimeout(closeT); } }, true);
-  document.addEventListener('focusout', function (e) {
-    glide(e);
-    if (!isEd(e.target)) return;
-    setTimeout(function () {
-      if (isEd(document.activeElement)) return;
-      closing = 1; last = ''; apply(cur() || full);
-      clearTimeout(closeT); closeT = setTimeout(function () { closing = 0; schedule(); }, 900);
-    }, 60);
-  }, true);
-  window.addEventListener('resize', schedule);
-  window.addEventListener('orientationchange', function () { full = 0; setTimeout(schedule, 200); });
-  try { if (window.visualViewport) { window.visualViewport.addEventListener('resize', schedule); window.visualViewport.addEventListener('scroll', schedule); } } catch (_) {}
-  try { var T = window.Telegram && window.Telegram.WebApp; if (T && T.onEvent) T.onEvent('viewportChanged', schedule); } catch (_) {}
-  measure();
-})();
-</script>
 <script id="muKbLift">
 (function () {
   'use strict';
