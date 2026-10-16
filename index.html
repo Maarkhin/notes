@@ -9320,6 +9320,29 @@ html.mu-nfs-open:not(#_nfs) body .advanced-card:has(.markhin-filename-input) .ma
 #muNav .mu-nav-panel.mu-nav-paired .mu-nav-pair .mu-nav-row .mu-nav-item{padding-inline-start:6px;padding-inline-end:26px}
 #muNav .mu-nav-panel.mu-nav-paired .mu-nav-pair .mu-nav-help{inset-inline-end:4px;width:18px;height:18px;min-width:18px;font-size:11px;line-height:16px}
 </style>
+<style id="muNavLogoCss">
+#muNav[data-theme="light"],#muNav[data-theme="dark"]{--mnl-d:color-mix(in srgb,#7f7f7f 11%,var(--nfs-nav-bg));--mnl-l:var(--nfs-text)}
+#muNav .mu-nav-logo{flex:0 0 auto;margin-top:auto;padding:18px 0 6px;display:flex;flex-direction:column;align-items:center;gap:8px;-webkit-tap-highlight-color:transparent;user-select:none;-webkit-user-select:none}
+#muNav .mu-nav-logo-btn{appearance:none;-webkit-appearance:none;background:none;border:0;padding:0;margin:0;cursor:pointer;width:104px;height:108px;display:block;outline:none;filter:drop-shadow(0 0 6px rgba(0,0,0,.55))}
+#muNav .mu-nav-logo-btn{position:relative;touch-action:manipulation}
+#muNav .mu-nav-logo-btn svg.mnl-ring-svg{position:absolute;inset:0;width:100%;height:100%;pointer-events:none;will-change:transform;backface-visibility:hidden;animation:mnlSpin 38s linear infinite}
+#muNav .mu-nav-logo-btn svg{width:100%;height:100%;overflow:visible;display:block}
+#muNav .mnl-ring{transform-box:fill-box;transform-origin:center;animation:mnlSpin 38s linear infinite}
+#muNav .mnl-ring2{transform-origin:60px 60px;animation:mnlSpin 55s linear infinite reverse}
+#muNav .mnl-pupil{transform-box:fill-box;transform-origin:center;animation:mnlPupil 4.2s ease-in-out infinite}
+#muNav .mnl-drip{transform-box:fill-box;transform-origin:top center;animation:mnlDrip 5s ease-in-out infinite}
+#muNav .mnl-drip:nth-of-type(2){animation-delay:-1.7s}
+#muNav .mnl-drip:nth-of-type(3){animation-delay:-3.1s}
+@keyframes mnlSpin{to{transform:rotate(360deg)}}
+@keyframes mnlPupil{0%,100%{transform:scaleX(1)}50%{transform:scaleX(.45)}}
+@keyframes mnlDrip{0%,100%{transform:scaleY(.7)}50%{transform:scaleY(1.25)}}
+@keyframes mnlGlitch{0%{transform:translate(0,0) skewX(0)}20%{transform:translate(-3px,1px) skewX(-6deg);filter:invert(1)}40%{transform:translate(3px,-1px) skewX(5deg);filter:none}60%{transform:translate(-2px,0) skewX(-3deg);filter:invert(1)}80%{transform:translate(2px,1px);filter:none}100%{transform:translate(0,0)}}
+#muNav .mu-nav-logo-txt{contain:layout style;direction:ltr;unicode-bidi:isolate;text-align:center;min-height:19px;font:600 12.5px/19px ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;letter-spacing:.8px;color:var(--nfs-text);opacity:.88;white-space:nowrap}
+#muNav .mu-nav-logo-txt.mnl-on::after{content:"";display:inline-block;width:7px;height:13px;margin-inline-start:2px;vertical-align:-2px;background:currentColor;animation:mnlCur .8s steps(1) infinite}
+@keyframes mnlCur{50%{opacity:0}}
+#muNav .mu-nav-panel:not(.mu-nav-paired) .mu-nav-logo{display:none}
+@media (prefers-reduced-motion:reduce){#muNav .mnl-ring,#muNav .mnl-ring-svg,#muNav .mnl-ring2,#muNav .mnl-eye,#muNav .mnl-pupil,#muNav .mnl-drip{animation:none}}
+</style>
 <style id="muNavPortalHelp">
 #muNav .mu-nav-row{position:relative;display:block;flex:0 0 auto}
 #muNav .mu-nav-row .mu-nav-item{padding-inline-end:54px}
@@ -32115,7 +32138,7 @@ window.mu_setViewerStyle = function(v){
       if(!S.active||r.hidden){ return; }
       var b=vvBox();
       r.style.top=b.top+'px'; r.style.height=b.height+'px'; r.style.bottom='auto';
-      try{ r.classList.toggle('mu-kb',(window.innerHeight-b.height-b.top)>120); }catch(e){}
+      try{ r.classList.toggle('mu-kb',((window.innerHeight-b.height-b.top)>120)||document.documentElement.classList.contains('mu-kbo')); }catch(e){}
     }
     S.fit=function(){ fitOn=true; fitNow(); };
     S.unfit=function(){ fitOn=false; r.style.top=''; r.style.height=''; r.style.bottom=''; r.classList.remove('mu-kb'); };
@@ -35942,6 +35965,7 @@ vault: function (id) { callFn('mkVaultAddNote', id); },
     /* 'mu-kbo' = same, for a text field anywhere in the app (search boxes, dialogs...) */
     var any = !!a && (a.isContentEditable || a.tagName === 'TEXTAREA' || (a.tagName === 'INPUT' && /^(text|search|url|email|password|number|tel|)$/i.test(a.type || '')));
     root.classList.toggle('mu-kbo', any && shrunk);
+    try { var _vw = document.querySelector('.mu-viewer.is-editing'); if (_vw) _vw.classList.toggle('mu-kb', (any && shrunk) || ((window.innerHeight - h - ((v && v.offsetTop) || 0)) > 120)); } catch (_) {}
   }
   upd();
   document.addEventListener('focusin', function () { clearTimeout(t); upd(); }, true);
@@ -35959,6 +35983,11 @@ vault: function (id) { callFn('mkVaultAddNote', id); },
 
 
 
+<style id="muKbSabCss">
+/* Keyboard up: the bottom safe-area (navigation bar) is covered by the keyboard. Drop it in the same frame the keyboard
+   state changes, so bars never sit a little too high and then slide down when Telegram reports new insets later. */
+html.mu-kbo,html.mu-kb{--mu-sab:0px !important}
+</style>
 <style id="muFabFadeCss">
 /* "+" button (home) and editor toolbar: they never slide with the keyboard.
    Keyboard moving -> they vanish where they are (quick fade + shrink); keyboard settled -> they appear right above it. */
@@ -36005,6 +36034,7 @@ html.mu-kbf-on #muNfsFab{translate:0 calc(var(--mu-kbf, 0px) * -1)}
   if (!touch) return;
 
   var SETTLE = 140, WAIT_KB = 1000, WAIT_CLOSE = 520, THRESH_IDLE = 90, THRESH_KB = 24, MIN_HIDE = 120;
+  var lastEvt = 0, kickSeq = 0, quieting = false;
   var t = 0, seq = 0, hiding = false, hideAt = 0, expectKb = false, stableH = 0, lastW = 0, base = 0, fullBase = 0, wasShowing = false;
 
   function vh() { return Math.round((vv && vv.height) || window.innerHeight || 0); }
@@ -36031,6 +36061,43 @@ html.mu-kbf-on #muNfsFab{translate:0 calc(var(--mu-kbf, 0px) * -1)}
     root.classList.remove('mu-lockh', 'mu-kbf-on');
     root.style.removeProperty('--mu-fullh'); root.style.removeProperty('--mu-kbf');
   }
+  /* bars are revealed only when viewport events AND the bars' own position have been quiet for a moment, so a late
+     Telegram viewportChanged / safe-area update can no longer shift them after they are already visible */
+  function barSig() {
+    var sg = '', els = document.querySelectorAll('.content-container.mxe .mxe-bottom,.mu-viewer .mu-viewer-tools,.mAi-inputbar,.mxe-find,.dl-bar,.markhin-note-select-bar');
+    for (var i = 0; i < els.length; i++) { var r = els[i].getBoundingClientRect(); sg += Math.round(r.top) + ',' + Math.round(r.bottom) + ';'; }
+    return sg + vh();
+  }
+  function whenQuiet(my, cb) {
+    var t0 = Date.now(), last = barSig(), since = t0;
+    quieting = true;
+    (function tick() {
+      if (my !== seq || hiding) { quieting = false; return; }
+      var now = Date.now(), sg = barSig();
+      if (sg !== last) { last = sg; since = now; }
+      if ((now - since >= 120 && now - lastEvt >= 200) || now - t0 >= 700) { quieting = false; cb(); return; }
+      setTimeout(tick, 30);
+    })();
+  }
+  /* tapping a field that kept focus after the keyboard was dismissed does not always bring the keyboard back
+     (Telegram / Android WebView): if nothing happened shortly after the tap, re-focus the field to force it up */
+  function kick(el) {
+    var my = ++kickSeq, t0 = Date.now();
+    setTimeout(function () {
+      if (my !== kickSeq || kbShowing() || document.activeElement !== el || lastEvt > t0) return;
+      try {
+        if (el.tagName === 'INPUT' || el.tagName === 'TEXTAREA') {
+          var a = el.selectionStart, b = el.selectionEnd;
+          el.blur(); el.focus({ preventScroll: true });
+          if (a != null) el.setSelectionRange(a, b);
+        } else if (el.isContentEditable) {          /* note body / titles: keep the caret exactly where it was */
+          var sl = window.getSelection(), rg = (sl && sl.rangeCount) ? sl.getRangeAt(0).cloneRange() : null;
+          el.blur(); el.focus({ preventScroll: true });
+          if (rg && sl) { sl.removeAllRanges(); sl.addRange(rg); }
+        }
+      } catch (_) {}
+    }, 380);
+  }
   function hide(ms) {
     if (!hiding) hideAt = Date.now();
     hiding = true; seq++;
@@ -36054,15 +36121,16 @@ html.mu-kbf-on #muNfsFab{translate:0 calc(var(--mu-kbf, 0px) * -1)}
     } else unlock();
     stableH = vh(); wasShowing = showing; hiding = false;
     var my = seq, wait = Math.max(0, MIN_HIDE - (Date.now() - hideAt));
-    setTimeout(function () {
+    setTimeout(function () { whenQuiet(my, function () {
       if (my !== seq || hiding) return;                          /* another cycle started meanwhile */
       void root.offsetHeight;                                    /* position is applied while still invisible */
       root.classList.add('mu-kbshow');
       root.classList.remove('mu-kbhide');
       setTimeout(function () { if (my === seq) root.classList.remove('mu-kbshow'); }, 320);
-    }, wait);
+    }); }, wait);
   }
   function onViewport() {
+    lastEvt = Date.now();
     var w = window.innerWidth || 0;
     if (w !== lastW) {                                           /* rotation / split screen: reset, nothing to animate */
       lastW = w; base = 0; fullBase = 0; unlock(); stableH = vh();
@@ -36083,9 +36151,10 @@ html.mu-kbf-on #muNfsFab{translate:0 calc(var(--mu-kbf, 0px) * -1)}
   /* tapping a field that kept focus after the keyboard was dismissed shows the keyboard again without a focus event */
   document.addEventListener('pointerup', function (e) {
     var el = e.target;
-    if (el && el.closest && isEditable(document.activeElement) && el.closest('input,textarea,[contenteditable="true"]') && !kbShowing()) {
+    if (el && el.closest && isEditable(document.activeElement) && el.closest('input,textarea,[contenteditable]:not([contenteditable="false"])') && !kbShowing()) {
       if (inHome(el)) lock();
       expectKb = true; hide(300);
+      kick(document.activeElement);
     }
   }, true);
   document.addEventListener('focusout', function (e) {
@@ -36113,7 +36182,7 @@ html.mu-kbf-on #muNfsFab{translate:0 calc(var(--mu-kbf, 0px) * -1)}
 
   /* watchdog: whatever happens, never leave the controls invisible or the home page frozen */
   setInterval(function () {
-    if (hiding) return;
+    if (hiding || quieting) return;
     var a = document.activeElement, ed = isEditable(a);
     if (!ed) base = vh();
     if (root.classList.contains('mu-kbhide')) root.classList.remove('mu-kbhide');
@@ -36123,6 +36192,33 @@ html.mu-kbf-on #muNfsFab{translate:0 calc(var(--mu-kbf, 0px) * -1)}
 })();
 </script>
 
+<style id="muNfsSearchBackCss">
+/* Back / cancel button inside the home search box: visible only while the search field is focused */
+.mu-nfs-bar>button.mu-nfs-sback{display:none !important}
+.mu-nfs-bar.mu-sfocus>button.mu-nfs-sback{display:flex !important;width:40px}
+.mu-nfs-sback svg{width:22px;height:22px;pointer-events:none}
+#muNotesFs[dir="rtl"] .mu-nfs-sback svg{transform:scaleX(-1)}
+.mu-nfs-bar.mu-sfocus .mu-nfs-input{padding:0 6px}
+</style>
+<script>
+/* the menu button sits exactly where the back button was: a click right after cancelling must never reach it */
+document.addEventListener('click', function (e) {
+  if (window.__muNfsSbAt2 && Date.now() - window.__muNfsSbAt2 < 700 && e.target && e.target.closest && e.target.closest('#muNfsMenuBtn')) { e.preventDefault(); e.stopPropagation(); e.stopImmediatePropagation(); }
+}, true);
+/* cancel search: clear the text, restore the full list, drop focus (keyboard closes) */
+window.muNfsSearchCancel = function (e) {
+  try { if (e) { e.preventDefault(); e.stopPropagation(); } } catch (_) {}
+  var now = Date.now();
+  if (window.__muNfsSbAt && now - window.__muNfsSbAt < 500) return;   /* pointerdown + click: run once */
+  window.__muNfsSbAt = now;
+  window.__muNfsSbAt2 = now;
+  var inp = document.getElementById('muNfsSearch'); if (!inp) return;
+  var had = !!inp.value;
+  inp.value = '';
+  try { if (had && window.muNotesFs && muNotesFs.onSearch) muNotesFs.onSearch(); } catch (_) {}
+  try { inp.blur(); } catch (_) {}
+};
+</script>
 <style id="muNfsSearchFit">
 /* Search field in the notes bar: the placeholder used to be hard-clipped mid-letter on narrow phones (Persian "جستجوی یادداشت‌ها").
    Keep it on one line, slightly smaller, and end it with a clean ellipsis if it still does not fit. */
@@ -36133,6 +36229,7 @@ html.mu-kbf-on #muNfsFab{translate:0 calc(var(--mu-kbf, 0px) * -1)}
 <div id="muNotesFs" class="mu-nfs" data-theme="dark" role="dialog" aria-modal="true" aria-label="Notes Manager (New version – Home)">
   <div class="mu-nfs-top">
     <div class="mu-nfs-bar">
+      <button type="button" id="muNfsSearchBack" class="mu-nfs-sback" aria-label="بازگشت" onmousedown="event.preventDefault()" onclick="muNfsSearchCancel(event)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M19 12H5M11 6l-6 6 6 6"/></svg></button>
       <button type="button" id="muNfsMenuBtn" onclick="muNotesFs.menu()"></button>
       <input type="search" id="muNfsSearch" class="mu-nfs-input" autocomplete="off" dir="rtl" oninput="muNotesFs.onSearch()" onfocus="this.parentNode.classList.add('mu-sfocus')" onblur="this.parentNode.classList.remove('mu-sfocus')">
       <button type="button" id="muNfsListBtn" onclick="muNotesFs.openList()"></button>
@@ -36764,6 +36861,7 @@ html.mu-kbf-on #muNfsFab{translate:0 calc(var(--mu-kbf, 0px) * -1)}
     var nav=$('muNav'); if(nav){ nav.setAttribute('data-theme',S.theme); nav.setAttribute('dir',fa()?'rtl':'ltr'); }
     var inp=$('muNfsSearch'); if(inp){ inp.placeholder=fa()?'جستجو…':'Search notes'; setInputDir(); }
     var mb=$('muNfsMenuBtn'); if(mb){ mb.innerHTML=ICONS.menu; mb.setAttribute('aria-label',fa()?'منو':'Menu'); }
+    var sbk=$('muNfsSearchBack'); if(sbk){ sbk.setAttribute('aria-label',fa()?'بازگشت':'Back'); sbk.title=fa()?'لغو جستجو':'Cancel search'; }
     var sb=$('muNfsSortBtn'); if(sb){ sb.innerHTML=ICONS.sort; sb.setAttribute('aria-label',fa()?'ترتیب نمایش':'Sort order'); sb.title=fa()?'ترتیب نمایش':'Sort order'; }
     var db=$('muNfsDashBtn'); if(db){ db.innerHTML=ICONS.dash; db.setAttribute('aria-label',fa()?'داشبورد':'Dashboard'); db.title=fa()?'داشبورد':'Dashboard'; }
     var lb=$('muNfsListBtn'); if(lb){ lb.innerHTML=ICONS.list; lb.setAttribute('aria-label',fa()?'لیست':'List'); lb.title=fa()?'لیست':'List'; }
@@ -36927,6 +37025,44 @@ html.mu-kbf-on #muNfsFab{translate:0 calc(var(--mu-kbf, 0px) * -1)}
       }).join('');
   }
   (function(){ var _b=buildNav; buildNav=function(){ var r=_b.apply(this,arguments); try{ fitOld(); setTimeout(fitOld,60); }catch(e){} return r; }; })();
+  /* Markhin sigil: a black & white emblem at the bottom of the menu (grid layout only). Tap it and it types a line. */
+  (function(){
+    var _bn=buildNav, MNL_TXT='Nothing Lasts Forever ..', mnlT=0;
+    function mnlStop(){ clearTimeout(mnlT); mnlT=0; }
+    function mnlType(el){
+      mnlStop();
+      var i=0, tn=document.createTextNode('');
+      el.textContent=''; el.appendChild(tn); el.classList.add('mnl-on');
+      (function step(){
+        if(!el.isConnected){ mnlStop(); return; }
+        i++;
+        tn.nodeValue=MNL_TXT.slice(0,i);
+        if(i>=MNL_TXT.length){ mnlT=0; return; }
+        var ch=MNL_TXT.charAt(i-1), d=55+Math.random()*95;
+        if(ch===' ') d+=70; if(ch==='.') d+=140;
+        mnlT=setTimeout(step,d);
+      })();
+    }
+    buildNav=function(){
+      var r=_bn.apply(this,arguments);
+      try{
+        mnlStop();
+        var p=document.getElementById('muNavPanel');
+        if(p && p.classList.contains('mu-nav-paired') && !p.querySelector('.mu-nav-logo')){
+          var w=document.createElement('div'); w.className='mu-nav-logo';
+          w.innerHTML='<button type="button" class="mu-nav-logo-btn" aria-label="MARKHIN">'+'<svg viewBox="-8 -14 136 148" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><circle cx="60" cy="60" r="56" style="fill:var(--mnl-d);stroke:var(--nfs-border)" stroke-width="2"/><polygon points="60,100 36.5,27.6 98,72.4 22,72.4 83.5,27.6" fill="none" style="stroke:var(--mnl-l)" stroke-width="2.4" stroke-linejoin="miter"/><g class="mnl-eye"><clipPath id="mnlClipB"><path d="M24 60Q60 30 96 60Q60 90 24 60Z"/></clipPath><path d="M24 60Q60 30 96 60Q60 90 24 60Z" style="fill:var(--mnl-d)"/><g clip-path="url(#mnlClipB)"><circle cx="60" cy="60" r="13" style="fill:var(--mnl-l)"/><ellipse class="mnl-pupil" cx="60" cy="60" rx="3.2" ry="12" style="fill:var(--mnl-d)"/></g><path d="M24 60Q60 30 96 60Q60 90 24 60Z" fill="none" style="stroke:var(--mnl-l)" stroke-width="3"/></g></svg><svg class="mnl-ring-svg" viewBox="-8 -14 136 148" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><circle cx="60" cy="60" r="47" fill="none" style="stroke:var(--mnl-l)" stroke-width="2.6" stroke-dasharray="13.03 4.34 13.03 13.03 4.34 4.34 13.03 13.03 4.34 4.34 13.03 4.34 4.34 13.03 13.03 4.34 4.34 4.34 13.03 13.03 4.34 4.34 4.34 4.34 4.34 4.34 4.34 13.03 4.34 4.34 4.34 13.03 13.03 4.34 4.34 30.40" transform="rotate(-90 60 60)"/></svg>'+'</button><div class="mu-nav-logo-txt" aria-live="polite"></div>';
+          var txt=w.querySelector('.mu-nav-logo-txt');
+          w.querySelector('.mu-nav-logo-btn').addEventListener('click',function(e){
+            e.stopPropagation();
+            mnlType(txt);
+          });
+          p.appendChild(w);
+        }
+      }catch(e){}
+      return r;
+    };
+  })();
+
   function navOpen(){
     var nav=$('muNav'); if(!nav) return;
     if(!fsOpen()) loadPrefs();
