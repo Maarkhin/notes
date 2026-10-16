@@ -35989,31 +35989,45 @@ vault: function (id) { callFn('mkVaultAddNote', id); },
 html.mu-kbo,html.mu-kb{--mu-sab:0px !important}
 </style>
 <style id="muFabFadeCss">
-/* "+" button (home) and editor toolbar: they never slide with the keyboard.
-   Keyboard moving -> they vanish where they are (quick fade + shrink); keyboard settled -> they appear right above it. */
+/* Smooth toolbar / "+" button appearance around the keyboard (v2 — no bounce, no overshoot, no scale pops).
+   The bars never slide with the keyboard: while the keyboard moves they fade out where they are (very short, no movement),
+   and once the keyboard has settled they fade in right at their final spot with a tiny, calm rise.
+   Only opacity + translate are animated (compositor friendly, no layout work), with ease-out curves that never overshoot. */
 html.mu-kbhide #muNfsFab,
 html.mu-kbhide .content-container.mxe .mxe-bottom,
 html.mu-kbhide .mu-viewer:not(.mu-vs-retro) .mu-viewer-tools,
 html.mu-kbhide .mAi-inputbar,
 html.mu-kbhide .mxe-find,
 html.mu-kbhide .dl-bar,
-html.mu-kbhide .markhin-note-select-bar{opacity:0 !important;pointer-events:none !important;transition:opacity .09s linear,scale .09s ease-in !important;animation:none !important}
-html.mu-kbhide #muNfsFab{scale:.82}
-html.mu-kbshow #muNfsFab{animation:muKbPop .28s cubic-bezier(.2,.9,.25,1.2) both !important}
+html.mu-kbhide .markhin-note-select-bar{opacity:0 !important;pointer-events:none !important;translate:0 9px;transition:opacity .17s cubic-bezier(.4,0,.6,1),translate .24s cubic-bezier(.4,0,.2,1) !important;animation:none !important}
+/* "+" button: sinks a little as it fades; when the keyboard offset is active it keeps that offset (no jump) */
+html.mu-kbhide #muNfsFab{translate:0 6px}
+html.mu-kbf-on.mu-kbhide #muNfsFab{translate:0 calc(var(--mu-kbf, 0px) * -1 + 6px)}
+
+html.mu-kbshow #muNfsFab{animation:muKbOp .26s ease-out both, muKbPop .34s cubic-bezier(.22,1,.36,1) both !important;will-change:opacity,translate}
 html.mu-kbshow .content-container.mxe .mxe-bottom,
 html.mu-kbshow .mu-viewer:not(.mu-vs-retro) .mu-viewer-tools,
 html.mu-kbshow .mAi-inputbar,
 html.mu-kbshow .mxe-find,
 html.mu-kbshow .dl-bar,
-html.mu-kbshow .markhin-note-select-bar{animation:muKbFade .2s ease-out both !important}
-@keyframes muKbPop{from{opacity:0;scale:.6}to{opacity:1;scale:1}}
-@keyframes muKbFade{from{opacity:0}to{opacity:1}}
-@media (prefers-reduced-motion:reduce){html.mu-kbshow #muNfsFab,html.mu-kbshow .content-container.mxe .mxe-bottom,html.mu-kbshow .mu-viewer:not(.mu-vs-retro) .mu-viewer-tools,html.mu-kbshow .mAi-inputbar,html.mu-kbshow .mxe-find,html.mu-kbshow .dl-bar,html.mu-kbshow .markhin-note-select-bar{animation:muKbFade .12s linear both !important}}
+html.mu-kbshow .markhin-note-select-bar{animation:muKbOp .24s ease-out both, muKbRise .36s cubic-bezier(.22,1,.36,1) both !important;will-change:opacity,translate}
+@keyframes muKbOp{from{opacity:0}to{opacity:1}}
+@keyframes muKbRise{from{translate:0 7px}to{translate:0 0}}
+@keyframes muKbPop{from{translate:0 5px}to{translate:0 0}}
+@media (prefers-reduced-motion:reduce){
+html.mu-kbshow #muNfsFab,
+html.mu-kbshow .content-container.mxe .mxe-bottom,
+html.mu-kbshow .mu-viewer:not(.mu-vs-retro) .mu-viewer-tools,
+html.mu-kbshow .mAi-inputbar,
+html.mu-kbshow .mxe-find,
+html.mu-kbshow .dl-bar,
+html.mu-kbshow .markhin-note-select-bar{animation:muKbOp .12s linear both !important}}
 /* Home page: while the keyboard is up (or moving) the page keeps its full height, so it never resizes, jumps or shows a
    strip behind it. The keyboard simply covers it, and the "+" is placed right above the keyboard. */
 html.mu-lockh #muNotesFs{height:var(--mu-fullh, 100%) !important;bottom:auto !important}
 html.mu-lockh .mu-nfs-body{padding-bottom:calc(110px + var(--mu-kbf, 0px)) !important}
 html.mu-kbf-on #muNfsFab{translate:0 calc(var(--mu-kbf, 0px) * -1)}
+html.mu-kbf-on.mu-kbshow #muNfsFab{animation:muKbOp .26s ease-out both !important}
 </style>
 <script id="muFabGlide">
 /* Keyboard-proof "+" button and editor toolbar (replaces the old sliding glide).
@@ -36033,7 +36047,7 @@ html.mu-kbf-on #muNfsFab{translate:0 calc(var(--mu-kbf, 0px) * -1)}
   try { touch = matchMedia('(pointer: coarse)').matches || ('ontouchstart' in window); } catch (_) {}
   if (!touch) return;
 
-  var SETTLE = 140, WAIT_KB = 1000, WAIT_CLOSE = 520, THRESH_IDLE = 90, THRESH_KB = 24, MIN_HIDE = 120;
+  var SETTLE = 45, WAIT_KB = 1000, WAIT_CLOSE = 380, THRESH_IDLE = 90, THRESH_KB = 24, MIN_HIDE = 150;
   var lastEvt = 0, kickSeq = 0, quieting = false;
   var t = 0, seq = 0, hiding = false, hideAt = 0, expectKb = false, stableH = 0, lastW = 0, base = 0, fullBase = 0, wasShowing = false;
 
@@ -36075,12 +36089,26 @@ html.mu-kbf-on #muNfsFab{translate:0 calc(var(--mu-kbf, 0px) * -1)}
       if (my !== seq || hiding) { quieting = false; return; }
       var now = Date.now(), sg = barSig();
       if (sg !== last) { last = sg; since = now; }
-      if ((now - since >= 120 && now - lastEvt >= 200) || now - t0 >= 700) { quieting = false; cb(); return; }
-      setTimeout(tick, 30);
+      if ((now - since >= 24 && now - lastEvt >= 40) || now - t0 >= 280) { quieting = false; cb(); return; }
+      (window.requestAnimationFrame || setTimeout)(tick, 16);
     })();
   }
   /* tapping a field that kept focus after the keyboard was dismissed does not always bring the keyboard back
      (Telegram / Android WebView): if nothing happened shortly after the tap, re-focus the field to force it up */
+  /* refocus inside the tap itself (a real user gesture) so Android / Telegram WebView raises the keyboard at once */
+  function refocusNow(el) {
+    try {
+      if (el.tagName === 'INPUT' || el.tagName === 'TEXTAREA') {
+        var a = el.selectionStart, b = el.selectionEnd;
+        el.blur(); el.focus();
+        if (a != null) { try { el.setSelectionRange(a, b); } catch (_) {} }
+      } else if (el.isContentEditable) {
+        var sl = window.getSelection(), rg = (sl && sl.rangeCount) ? sl.getRangeAt(0).cloneRange() : null;
+        el.blur(); el.focus();
+        if (rg && sl) { sl.removeAllRanges(); sl.addRange(rg); }
+      }
+    } catch (_) {}
+  }
   function kick(el) {
     var my = ++kickSeq, t0 = Date.now();
     setTimeout(function () {
@@ -36126,7 +36154,7 @@ html.mu-kbf-on #muNfsFab{translate:0 calc(var(--mu-kbf, 0px) * -1)}
       void root.offsetHeight;                                    /* position is applied while still invisible */
       root.classList.add('mu-kbshow');
       root.classList.remove('mu-kbhide');
-      setTimeout(function () { if (my === seq) root.classList.remove('mu-kbshow'); }, 320);
+      setTimeout(function () { if (my === seq) root.classList.remove('mu-kbshow'); }, 460);
     }); }, wait);
   }
   function onViewport() {
@@ -36139,7 +36167,7 @@ html.mu-kbf-on #muNfsFab{translate:0 calc(var(--mu-kbf, 0px) * -1)}
     var h = vh(), showing = kbShowing();
     if (hiding) { hide(SETTLE); return; }                        /* still moving: wait until it calms down */
     var thr = (wasShowing || showing) ? THRESH_KB : THRESH_IDLE;
-    if (Math.abs(h - stableH) >= thr) hide(SETTLE + 40);         /* keyboard started opening / closing / changing height */
+    if (Math.abs(h - stableH) >= thr) hide(SETTLE + 20);         /* keyboard started opening / closing / changing height */
   }
 
   document.addEventListener('focusin', function (e) {
@@ -36154,6 +36182,7 @@ html.mu-kbf-on #muNfsFab{translate:0 calc(var(--mu-kbf, 0px) * -1)}
     if (el && el.closest && isEditable(document.activeElement) && el.closest('input,textarea,[contenteditable]:not([contenteditable="false"])') && !kbShowing()) {
       if (inHome(el)) lock();
       expectKb = true; hide(300);
+      refocusNow(document.activeElement);
       kick(document.activeElement);
     }
   }, true);
@@ -36203,7 +36232,7 @@ html.mu-kbf-on #muNfsFab{translate:0 calc(var(--mu-kbf, 0px) * -1)}
 <script>
 /* the menu button sits exactly where the back button was: a click right after cancelling must never reach it */
 document.addEventListener('click', function (e) {
-  if (window.__muNfsSbAt2 && Date.now() - window.__muNfsSbAt2 < 700 && e.target && e.target.closest && e.target.closest('#muNfsMenuBtn')) { e.preventDefault(); e.stopPropagation(); e.stopImmediatePropagation(); }
+  if (window.__muNfsSbAt2 && Date.now() - window.__muNfsSbAt2 < 250 && e.target && e.target.closest && e.target.closest('#muNfsMenuBtn')) { e.preventDefault(); e.stopPropagation(); e.stopImmediatePropagation(); }
 }, true);
 /* cancel search: clear the text, restore the full list, drop focus (keyboard closes) */
 window.muNfsSearchCancel = function (e) {
