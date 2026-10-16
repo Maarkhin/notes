@@ -9308,6 +9308,8 @@ html.mu-nfs-open:not(#_nfs) body .advanced-card:has(.markhin-filename-input) .ma
 #muNav .mu-nav-panel .mu-nav-head .mu-nav-set.on,#muNav .mu-nav-panel .mu-nav-head .mu-nav-set.on *{color:var(--nfs-active-ink) !important}
 #muNav .mu-nav-panel.mu-nav-paired .mu-nav-head .mu-nav-set{flex:0 0 34px;width:34px;height:34px;border-radius:11px}
 #muNav .mu-nav-panel.mu-nav-paired .mu-nav-head .mu-nav-set svg{width:17px;height:17px}
+#muNav .mu-nav-panel .mu-nav-head .mu-nav-old{white-space:normal;display:flex;align-items:center;justify-content:center;text-align:center;line-height:1.2;font-size:10.5px;padding:2px 3px;overflow:hidden;text-overflow:clip}
+#muNav .mu-nav-panel.mu-nav-paired .mu-nav-head .mu-nav-old{font-size:10px;padding:1px 3px}
 #muNav .mu-nav-panel .mu-nav-head .mu-nav-old{font-size:11px;padding:0 4px}
 #muNav .mu-nav-panel.mu-nav-paired .mu-nav-head .mu-nav-old{font-size:11.5px}
 #muNav .mu-nav-panel.mu-nav-paired .mu-nav-sec{padding:3px 8px 2px;font-size:10.5px}
@@ -10254,9 +10256,6 @@ html body #themePickerOverlay .tp-check{
                 <div class="structure-cards">
                     <button class="btn-main structure-add" id="btnNewCategory" onclick="addNewCategory()">📝 افزودن یادداشت</button>
                     <button class="btn-main structure-add" id="btnNewFolder" onclick="addNewFolder()">📁 افزودن پوشه</button>
-                </div>
-                <div class="mu-notes-row">
-                    <button class="btn-main structure-add mu-notes-struct-btn" id="muNotesStructBtn" type="button" onclick="muNotesFs.open('notes')" aria-label="Notes"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="5" y="3.5" width="14" height="17" rx="3"/><path d="M9 9h6M9 13h6M9 17h3"/></svg><span class="mu-nb-fa">ورود به مدیریت یادداشت‌ها (ورژن جدید)</span><span class="mu-nb-en">Enter Notes Manager (New version)</span></button>
                 </div>
                 <div class="mu-notes-row"><button class="btn-main structure-add mu-notes-struct-btn" id="mkVaultBtnOld" type="button" onclick="mkVault.open()">🔐 <span id="mkVaultBtnLbl">گاوصندوق</span></button></div>
                 <div class="structure-store">
@@ -33185,17 +33184,28 @@ window.muIcon = function (name) {
     var fa = isFa(), on = isOn(), nw = isNewUi();
     if (notice !== true) notice = false;
     var card = document.getElementById('advancedCard');
-    showAdvanced(
-      '<div class="advanced-head"><h3>' + (fa ? 'تنظیمات' : 'Settings') + '</h3>' + closeBtn() + '</div>' +
-      (notice ? '<div class="mu-set-notice" role="alert">' + (fa
-        ? 'برای تغییر تم باید اول «نسخه سبک» را خاموش کنید. کلید زیر را خاموش کنید و دوباره تم را عوض کنید.'
-        : 'To change the theme you need to turn “Lite version” off first. Switch it off below, then change the theme again.') + '</div>' : '') +
+    var verRow =
       '<div class="mu-set-row mu-set-ver" role="button" tabindex="0" onclick="MU_Lite.switchVersion()" onkeydown="if(event.key===\'Enter\'||event.key===\' \'){event.preventDefault();MU_Lite.switchVersion();}">' +
         '<div class="mu-set-text">' +
           '<div class="mu-set-title">' + (nw ? (fa ? 'ورود به مدیریت یادداشت‌ها (ورژن قدیمی)' : 'Old Notes Manager') : (fa ? 'ورود به مدیریت یادداشت‌ها (ورژن جدید)' : 'Enter Notes Manager (New version)')) + '</div>' +
         '</div>' +
         '<span class="mu-set-ver-go" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M14.5 5.5L8 12l6.5 6.5"/></svg></span>' +
-      '</div>' +
+      '</div>';
+    var skinRow =
+      '<div class="mu-set-row" style="flex-direction:column;align-items:stretch">' +
+        '<div class="mu-set-text">' +
+          '<div class="mu-set-title">' + (fa ? 'تم ورژن جدید' : 'New version theme') + '</div>' +
+          '<div class="mu-set-desc">' + (fa ? 'یکی از تم‌های ورژن قدیمی را برای ورژن جدید انتخاب کنید. با زدن دکمه روز/شب در صفحه یادداشت‌ها دوباره به حالت روز و شب برمی‌گردد.' : 'Pick one of the old version themes for the new version. Tapping the day / night button on the Notes page goes back to plain day / night.') + '</div>' +
+        '</div>' +
+        (window.muNfsSkin ? window.muNfsSkin.chipsHtml(fa) : '') +
+      '</div>';
+    showAdvanced(
+      '<div class="advanced-head"><h3>' + (fa ? 'تنظیمات' : 'Settings') + '</h3>' + closeBtn() + '</div>' +
+      (notice ? '<div class="mu-set-notice" role="alert">' + (fa
+        ? 'برای تغییر تم باید اول «نسخه سبک» را خاموش کنید. کلید زیر را خاموش کنید و دوباره تم را عوض کنید.'
+        : 'To change the theme you need to turn “Lite version” off first. Switch it off below, then change the theme again.') + '</div>' : '') +
+      (nw ? '' : verRow) +
+      (nw ? skinRow : '') +
  (nw ? '' :
       '<div class="mu-set-row">' +
         '<div class="mu-set-text">' +
@@ -33241,6 +33251,7 @@ window.muIcon = function (name) {
       + (window.MK_Bio ? MK_Bio.settingsHtml(fa) : '')
       + ((window.MU_ScrollPause && !nw) ? MU_ScrollPause.html(fa) : '')
       + (window.MU_Eco ? MU_Eco.html(fa, nw ? ['all', 'viewer'] : null) : '')
+      + (nw ? verRow : '')
     );
     try { if (window.MU_ScrollPause && MU_ScrollPause.sync) MU_ScrollPause.sync(); } catch (e) {}
     if (card) card.classList.remove('kg-wide');
@@ -37047,10 +37058,10 @@ window.muNfsSearchCancel = function (e) {
   }
   function fitOld(){
     var b=document.querySelector('#muNavPanel .mu-nav-old'); if(!b) return;
-    var paired=pairOn(), fs=paired?11.5:11;
+    var paired=pairOn(), fs=paired?10.5:11;
     b.style.fontSize=fs+'px';
     if(!b.clientWidth) return;
-    while(b.scrollWidth>b.clientWidth && fs>8){ fs-=0.25; b.style.fontSize=fs+'px'; }
+    while((b.scrollHeight>b.clientHeight+1 || b.scrollWidth>b.clientWidth+1) && fs>7){ fs-=0.25; b.style.fontSize=fs+'px'; }
   }
   function buildNav(){
     var p=$('muNavPanel'); if(!p) return;
@@ -37059,7 +37070,7 @@ window.muNfsSearchCancel = function (e) {
     p.innerHTML='<div class="mu-nav-head">'
       +'<button type="button" class="mu-nav-set'+(cur==='settings'?' on':'')+'" data-nav="settings" aria-label="'+(fa()?'تنظیمات':'Settings')+'" title="'+(fa()?'تنظیمات':'Settings')+'">'+ICONS.gear+'</button>'
       +'<button type="button" class="mu-nav-layout" data-nav="layout" aria-label="'+(fa()?'تغییر نمایش منو':'Change menu layout')+'" title="'+(fa()?'تغییر نمایش منو':'Change menu layout')+'">'+(pairOn()?ICONS.rows:ICONS.grid)+'<span>'+(fa()?'نمایش':'Layout')+'</span></button>'
-      +'<button type="button" class="mu-nav-old" data-nav="exit">'+(fa()?'بازگشت به ورژن قدیمی':'Back to old version')+'</button>'
+      +'<button type="button" class="mu-nav-old" data-nav="fileviewer">'+(fa()?'نمایشگر و رمزگشایی فایل\u200cها':'File Viewer & Decryptor')+'</button>'
       +'<button type="button" class="mu-nav-lang" data-nav="lang" aria-label="'+(fa()?'تغییر زبان':'Change language')+'">'+ICONS.globe+'<span dir="auto">'+(fa()?'English':'فارسی')+'</span></button></div>'
       +NAV_GROUPS.map(function(g,gi){
         return (gi?'<div class="mu-nav-sep"></div>':'')
@@ -37100,12 +37111,6 @@ window.muNfsSearchCancel = function (e) {
             mnlType(txt);
           });
           p.appendChild(w);
-        }
-        if(p && !p.querySelector('.mu-nav-fv')){
-          var fvw=document.createElement('div');
-          fvw.className=(p.classList.contains('mu-nav-paired')?'mu-nav-pair mu-nav-solo':'mu-nav-grp')+' mu-nav-fvw';
-          fvw.innerHTML='<button type="button" class="mu-nav-item mu-nav-fv" data-nav="fileviewer">'+"<svg viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><path d=\"M6 3h8l4 4v14H6z\"/><path d=\"M14 3v4h4\"/><rect x=\"9\" y=\"12.5\" width=\"6\" height=\"4.5\" rx=\"1\"/><path d=\"M10.2 12.5v-1.2a1.8 1.8 0 0 1 3.6 0v1.2\"/></svg>"+'<span>'+(fa()?'نمایشگر و رمزگشایی فایل‌ها':'File Viewer & Decryptor')+'</span></button>';
-          p.appendChild(fvw);
         }
       }catch(e){}
       return r;
@@ -37518,7 +37523,14 @@ window.muNfsSearchCancel = function (e) {
       applyChrome(); render();
     },
     toggleTheme:function(){
+      try{ if(window.muNfsSkin) window.muNfsSkin.clear(); }catch(e){}
       S.theme=(S.theme==='dark')?'light':'dark'; lsSet(KEY_THEME,S.theme);
+      applyChrome();
+      syncEditorTheme(true);
+    },
+    setBase:function(th){
+      th=(th==='dark')?'dark':'light'; if(S.theme===th) return;
+      S.theme=th; lsSet(KEY_THEME,S.theme);
       applyChrome();
       syncEditorTheme(true);
     },
@@ -39584,7 +39596,7 @@ setInterval(function(){ var s=document.getElementById('mkVaultBtnLbl'); if(s){ v
     try{
       var root=document.documentElement;
       if(root.getAttribute('data-mxe-theme')!=='light'){ try{ localStorage.setItem('mxe_theme','light'); }catch(e){} root.setAttribute('data-mxe-theme','light'); }
-      if(localStorage.getItem('mu_notesfs_theme_v1')==='dark' && window.muNotesFs && typeof window.muNotesFs.toggleTheme==='function') window.muNotesFs.toggleTheme();
+      if(localStorage.getItem('mu_notesfs_theme_v1')==='dark' && !(window.muNfsSkin && window.muNfsSkin.get()) && window.muNotesFs && typeof window.muNotesFs.toggleTheme==='function') window.muNotesFs.toggleTheme();
     }catch(e){}
     busy=false;
   }
@@ -42638,6 +42650,238 @@ window.mkLinkOpenDialog = function(ctx){
     close(); return true;
   }
   window.muFileViewer={open:open,close:close,back:back,isOpen:isOpen};
+})();
+</script>
+<style id="muNfsSkinCss">
+html[data-mu-skin] .mu-nfs[data-theme="dark"],html[data-mu-skin] .mu-nav[data-theme="dark"]{--nfs-bg:var(--sk-bg);--nfs-bar:var(--sk-bar);--nfs-card:var(--sk-card);--nfs-border:var(--sk-border);--nfs-text:var(--sk-text);--nfs-muted:var(--sk-muted);--nfs-fab:var(--sk-fab);--nfs-fab-ico:var(--sk-fabico);--nfs-sheet:var(--sk-sheet);--nfs-nav-bg:var(--sk-navbg);--nfs-active:var(--sk-active);--nfs-active-ink:var(--sk-ink);--nfs-ink:var(--sk-ink)}
+html[data-mu-skin].mu-nfs-open.mu-nfs-dark:not(#_nfs) body #advancedModal.advanced-modal:has(.advanced-head[data-mkcloud]){--k-bg0:var(--nfs-bg);--k-card:var(--nfs-bg);--k-head:var(--nfs-bar);--k-notch:var(--nfs-bg);--k-s1:var(--nfs-card);--k-s2:var(--nfs-sheet);--k-l1:var(--nfs-border);--k-l2:var(--nfs-border);--k-tr:var(--nfs-border);--k-ink:var(--nfs-text);--k-ink2:var(--nfs-text);--k-ink3:var(--nfs-muted);--k-dim:var(--nfs-muted);--k-mut:var(--nfs-muted);--k-a:var(--nfs-fab);--k-argb:217,217,217;--k-ad:var(--nfs-text);--k-af:var(--nfs-fab-ico);--k-b:var(--nfs-fab);--k-bf:var(--nfs-fab-ico);--k-v:var(--nfs-muted);--k-tint:var(--nfs-bar);--k-ok:#6fcf97;--k-okbg:rgba(111,207,151,.14);--k-bad:#ff8f8f;--k-badl:#ff8f8f;--k-warn:#ffd166;--nfs-bg:var(--sk-bg);--nfs-bar:var(--sk-bar);--nfs-card:var(--sk-card);--nfs-border:var(--sk-border);--nfs-text:var(--sk-text);--nfs-muted:var(--sk-muted);--nfs-fab:var(--sk-fab);--nfs-fab-ico:var(--sk-fabico);--nfs-sheet:var(--sk-sheet);--nfs-active:var(--sk-active);--nfs-active-ink:var(--sk-ink);--mk-fs-bg:var(--nfs-bg);color-scheme:dark}
+html[data-mu-skin].mu-nfs-open.mu-nfs-dark:not(#_nfs) #advancedModal,html[data-mu-skin].mu-nfs-open.mu-nfs-dark:not(#_nfs) #muFolderPickerOverlay{--nfs-bg:var(--sk-bg);--nfs-bar:var(--sk-bar);--nfs-card:var(--sk-card);--nfs-border:var(--sk-border);--nfs-text:var(--sk-text);--nfs-muted:var(--sk-muted);--nfs-fab:var(--sk-fab);--nfs-fab-ico:var(--sk-fabico);--nfs-sheet:var(--sk-sheet);--nfs-active:var(--sk-active);--nfs-active-ink:var(--sk-ink);--nfs-ink:var(--sk-ink);--nx-bad:#ff8f8f;color-scheme:dark}
+html[data-mu-skin].mu-nfs-open.mu-nfs-dark:not(#_nfs) .advanced-modal:has(.advanced-card.kg-card){--nfs-bg:var(--sk-bg);--nfs-bar:var(--sk-bar);--nfs-card:var(--sk-card);--nfs-border:var(--sk-border);--nfs-text:var(--sk-text);--nfs-muted:var(--sk-muted);--nfs-fab:var(--sk-fab);--nfs-fab-ico:var(--sk-fabico);--nfs-sheet:var(--sk-sheet);--nfs-active:var(--sk-active);--nfs-active-ink:var(--sk-ink);--nfs-ink:var(--sk-ink);color-scheme:dark}
+html[data-mu-skin].mu-nfs-open.mu-nfs-dark:not(#_nfs) .advanced-modal:has(.mu-set-row, .mu-lite-warn-list){--nfs-bg:var(--sk-bg);--nfs-bar:var(--sk-bar);--nfs-card:var(--sk-card);--nfs-border:var(--sk-border);--nfs-text:var(--sk-text);--nfs-muted:var(--sk-muted);--nfs-fab:var(--sk-fab);--nfs-fab-ico:var(--sk-fabico);--nfs-sheet:var(--sk-sheet);--nfs-active:var(--sk-active);--nfs-active-ink:var(--sk-ink);--nfs-ink:var(--sk-ink);color-scheme:dark}
+html[data-mu-skin].mu-nfs-open.mu-nfs-dark:not(#_nfs) .advanced-modal:has(.advanced-card.xp-card, .markhin-filename-input){--nfs-bg:var(--sk-bg);--nfs-bar:var(--sk-bar);--nfs-card:var(--sk-card);--nfs-border:var(--sk-border);--nfs-text:var(--sk-text);--nfs-muted:var(--sk-muted);--nfs-fab:var(--sk-fab);--nfs-fab-ico:var(--sk-fabico);--nfs-sheet:var(--sk-sheet);--nfs-active:var(--sk-active);--nfs-active-ink:var(--sk-ink);--nfs-ink:var(--sk-ink);color-scheme:dark}
+html[data-mu-skin] #advancedCard[data-nfs-theme="dark"]{--card-bg:var(--sk-sheet);--panel-border:var(--sk-border);--text-color:var(--sk-text)}
+html[data-mu-skin] #advancedCard[data-nfs-theme="dark"] .image-export-choice{background:var(--sk-bar) !important;border:1px solid var(--sk-border) !important;box-shadow:none !important;color:var(--sk-text) !important}
+html[data-mu-skin].mu-nfs-open.mu-nfs-dark:not(#_nfs) #toast,html[data-mu-skin].mu-nfs-open.mu-nfs-dark:not(#_nfs) #muHelpBubble,html[data-mu-skin].mu-nfs-open.mu-nfs-dark:not(#_nfs) #muLpTip,html[data-mu-skin].mu-nfs-open.mu-nfs-dark:not(#_nfs) .markhin-move-menu{background:var(--sk-bar) !important;color:var(--sk-text) !important;border:1px solid var(--sk-border) !important;box-shadow:0 4px 14px rgba(0,0,0,.28) !important;-webkit-backdrop-filter:none !important;backdrop-filter:none !important}
+html[data-mu-skin].mu-nfs-open.mu-nfs-dark:not(#_nfs) #toast *,html[data-mu-skin].mu-nfs-open.mu-nfs-dark:not(#_nfs) #muHelpBubble *,html[data-mu-skin].mu-nfs-open.mu-nfs-dark:not(#_nfs) #muLpTip *{color:var(--sk-text) !important;-webkit-text-fill-color:var(--sk-text) !important}
+html[data-mu-skin].mu-nfs-open.mu-nfs-dark:not(#_nfs) .markhin-move-menu .markhin-move-menu-btn{background:rgba(255,255,255,.08) !important;color:var(--sk-text) !important;border:1px solid var(--sk-border) !important}
+html[data-mu-skin].mu-nfs-dark:not(#_nfs) .mk-textonly-row{background:var(--sk-sheet) !important;border-color:var(--sk-mute) !important}
+html[data-mu-skin].mu-nfs-open.mu-nfs-dark:not(#_nfs) .mklk{--bg:var(--sk-bg);--s1:var(--sk-card);--s2:var(--sk-sheet);--ln:var(--sk-border);--ln2:var(--sk-border2);--ink:var(--sk-text);--soft:var(--sk-muted);--mute:var(--sk-mute);--ac:var(--sk-text);--key:var(--sk-text);color-scheme:dark}
+html[data-mu-skin].mu-nfs-open.mu-nfs-dark:not(#_nfs) body .advanced-modal:has(.mklk),html[data-mu-skin].mu-nfs-open.mu-nfs-dark:not(#_nfs) body .advanced-card.mk-fs:has(.mklk){background:var(--sk-bg) !important;color:var(--sk-text) !important;color-scheme:dark}
+html[data-mu-skin].mu-nfs-open.mu-nfs-dark:not(#_nfs),html[data-mu-skin].mu-nfs-open.mu-nfs-dark:not(#_nfs) body{background:var(--sk-bg) !important;background-image:none !important}
+html[data-mu-skin].mu-nfs-open.mu-nfs-dark:not(#_nfs) .advanced-modal:has(.advanced-card.mcx-card, #advancedCard.mdx){--nfs-bg:var(--sk-bg);--nfs-bar:var(--sk-bar);--nfs-card:var(--sk-card);--nfs-border:var(--sk-border);--nfs-text:var(--sk-text);--nfs-muted:var(--sk-muted);--nfs-fab:var(--sk-fab);--nfs-fab-ico:var(--sk-fabico);--nfs-sheet:var(--sk-sheet);--nfs-active:var(--sk-active);--nfs-active-ink:var(--sk-ink);--nfs-ink:var(--sk-ink);--nx-ok:#6fcf97;--nx-bad:#ff8f8f;color-scheme:dark}
+html[data-mu-skin].mu-nfs-dark:not(#_x) body:not(#_y) .mk-textonly-row{background:var(--sk-sheet) !important;border-color:var(--sk-mute) !important}
+
+html[data-mu-skin].mu-nfs-open.mu-nfs-dark:not(#_s1):not(#_s2) #muNotesFs.mu-nfs{background:var(--sk-grad,var(--sk-bg))}
+.mu-skin-wrap{margin-top:12px;display:block}
+.mu-skin-wrap .mu-sk-head{all:unset;box-sizing:border-box;display:flex;align-items:center;gap:12px;width:100%;padding:10px 12px;border-radius:16px;cursor:pointer;-webkit-tap-highlight-color:transparent;background:var(--nfs-sheet,rgba(127,127,127,.12)) !important;border:1px solid var(--nfs-border,rgba(127,127,127,.35)) !important;color:var(--nfs-text,inherit) !important;transition:background .2s,border-color .2s}
+.mu-skin-wrap .mu-sk-head:active{background:var(--nfs-active,rgba(127,127,127,.2)) !important}
+.mu-skin-wrap .mu-sk-head:focus-visible{outline:2px solid var(--nfs-fab,currentColor);outline-offset:2px}
+.mu-skin-wrap .mu-sk-thumb{flex:0 0 auto;width:58px;height:38px;border-radius:10px;overflow:hidden;position:relative;box-shadow:0 0 0 1px rgba(127,127,127,.35)}
+.mu-skin-wrap .mu-sk-ht{flex:1 1 auto;min-width:0;display:flex;flex-direction:column;gap:2px;text-align:start}
+.mu-skin-wrap .mu-sk-ht small{font-size:11.5px;font-weight:600;color:var(--nfs-muted,inherit) !important;opacity:.95}
+.mu-skin-wrap .mu-sk-ht b{font-size:15px;font-weight:800;color:var(--nfs-text,inherit) !important;line-height:1.35;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.mu-skin-wrap .mu-sk-count{flex:0 0 auto;font-size:11.5px;font-weight:700;padding:3px 9px;border-radius:999px;background:var(--nfs-active,rgba(127,127,127,.25)) !important;color:var(--nfs-active-ink,var(--nfs-text,inherit)) !important}
+.mu-skin-wrap .mu-sk-chev{flex:0 0 auto;width:20px;height:20px;color:var(--nfs-muted,currentColor);transition:transform .28s ease}
+.mu-skin-wrap .mu-sk-head[aria-expanded="true"] .mu-sk-chev{transform:rotate(180deg)}
+.mu-skin-wrap .mu-sk-panel{display:grid;grid-template-rows:0fr;transition:grid-template-rows .3s ease}
+.mu-skin-wrap .mu-sk-panel.open{grid-template-rows:1fr}
+.mu-skin-wrap .mu-sk-inner{overflow:hidden;min-height:0;visibility:hidden;transition:visibility 0s .3s}
+.mu-skin-wrap .mu-sk-panel.open .mu-sk-inner{visibility:visible;transition:visibility 0s}
+.mu-skin-wrap .mu-sk-body{padding-top:14px}
+.mu-skin-wrap .mu-sk-gt{display:flex;align-items:center;gap:10px;margin:16px 2px 10px;font-size:12.5px;font-weight:800;letter-spacing:.2px;color:var(--nfs-muted,inherit) !important}
+.mu-skin-wrap .mu-sk-gt:first-child{margin-top:0}
+.mu-skin-wrap .mu-sk-gt::after{content:"";flex:1;height:1px;background:var(--nfs-border,rgba(127,127,127,.35))}
+.mu-skin-wrap .mu-sk-gt em{font-style:normal;font-weight:700;font-size:11px;opacity:.85}
+.mu-skin-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px 10px}
+.mu-skin-wrap .mu-skin-tile{all:unset;box-sizing:border-box;position:relative;display:flex;flex-direction:column;align-items:stretch;gap:7px;cursor:pointer;-webkit-tap-highlight-color:transparent;border-radius:14px;padding:5px 5px 7px;background:transparent !important;border:1.5px solid transparent !important;transition:background .15s,border-color .15s,transform .12s}
+.mu-skin-wrap .mu-skin-tile:active{transform:scale(.96)}
+.mu-skin-wrap .mu-skin-tile:focus-visible{outline:2px solid var(--nfs-fab,currentColor);outline-offset:1px}
+.mu-skin-wrap .mu-skin-tile.on{background:var(--nfs-sheet,rgba(127,127,127,.14)) !important;border-color:var(--nfs-fab,currentColor) !important}
+.mu-skin-wrap .mu-sk-sw{position:relative;display:block;width:100%;aspect-ratio:16/10;border-radius:10px;overflow:hidden;box-shadow:inset 0 0 0 1px rgba(255,255,255,.1),0 0 0 1px rgba(127,127,127,.3);background-size:cover}
+.mu-skin-wrap .mu-sk-card{position:absolute;top:20%;inset-inline-start:11%;width:56%;height:58%;border-radius:6px;border:1px solid transparent;padding:6px 6px;display:flex;flex-direction:column;gap:4px;box-sizing:border-box}
+.mu-skin-wrap .mu-sk-card u{display:block;height:3px;border-radius:3px;text-decoration:none;width:100%}
+.mu-skin-wrap .mu-sk-card u+u{width:62%;opacity:.8}
+.mu-skin-wrap .mu-sk-dot{position:absolute;bottom:14%;inset-inline-end:12%;width:13px;height:13px;border-radius:50%;box-shadow:0 0 0 2px rgba(255,255,255,.18)}
+.mu-skin-wrap .mu-sk-thumb .mu-sk-sw{aspect-ratio:auto;height:100%;border-radius:0;box-shadow:none}
+.mu-skin-wrap .mu-sk-thumb .mu-sk-card{padding:4px;gap:3px;border-radius:4px}
+.mu-skin-wrap .mu-sk-thumb .mu-sk-card u{height:2px}
+.mu-skin-wrap .mu-sk-thumb .mu-sk-dot{width:8px;height:8px;box-shadow:none}
+.mu-skin-wrap .mu-sk-lb{display:block;text-align:center;font-size:12px;font-weight:600;line-height:1.35;color:var(--nfs-text,inherit) !important;overflow-wrap:anywhere;padding:0 2px}
+.mu-skin-wrap .mu-skin-tile.on .mu-sk-lb{font-weight:800}
+.mu-skin-wrap .mu-skin-tile.on::after{content:"\2713";position:absolute;top:9px;inset-inline-end:9px;width:18px;height:18px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:900;line-height:1;background:var(--nfs-fab,#fff) !important;color:var(--nfs-fab-ico,#000) !important;box-shadow:0 1px 4px rgba(0,0,0,.45)}
+.mu-skin-wrap .mu-skin-none{all:unset;box-sizing:border-box;display:flex;align-items:center;gap:12px;width:100%;padding:8px 10px;margin-bottom:6px;border-radius:14px;cursor:pointer;-webkit-tap-highlight-color:transparent;background:transparent !important;border:1.5px solid var(--nfs-border,rgba(127,127,127,.35)) !important;color:var(--nfs-text,inherit) !important;font-size:13.5px;font-weight:700}
+.mu-skin-wrap .mu-skin-none.on{background:var(--nfs-sheet,rgba(127,127,127,.14)) !important;border-color:var(--nfs-fab,currentColor) !important}
+.mu-skin-wrap .mu-skin-none:active{transform:scale(.98)}
+.mu-skin-wrap .mu-skin-none .mu-sk-dn{flex:0 0 auto;position:relative;display:block;overflow:hidden;width:64px;height:40px;border-radius:10px;box-shadow:0 0 0 1px rgba(127,127,127,.4)}
+.mu-skin-wrap .mu-sk-dnsw{display:block}
+.mu-skin-wrap .mu-sk-ly{position:absolute;inset:0;display:block}
+.mu-skin-wrap .mu-sk-ly.d{z-index:1;background:linear-gradient(165deg,#fafafa 0%,#eeeeee 50%,#e0e0e0 100%);-webkit-clip-path:polygon(62% 0,100% 0,100% 100%,42% 100%);clip-path:polygon(62% 0,100% 0,100% 100%,42% 100%)}
+.mu-skin-wrap .mu-sk-ly.n{background:linear-gradient(165deg,#2b2b2b 0%,#1c1c1c 50%,#121212 100%)}
+.mu-skin-wrap .mu-sk-cut{position:absolute;inset:0;display:block;pointer-events:none;background:rgba(127,127,127,.5);-webkit-clip-path:polygon(61% 0,63% 0,43% 100%,41% 100%);clip-path:polygon(61% 0,63% 0,43% 100%,41% 100%);z-index:2}
+.mu-skin-wrap .mu-sk-dn .mu-sk-card{padding:4px;gap:3px;border-radius:4px}
+.mu-skin-wrap .mu-sk-dn .mu-sk-card u{height:2px}
+.mu-skin-wrap .mu-sk-dn .mu-sk-dot{width:8px;height:8px;box-shadow:none}
+.mu-skin-wrap .mu-skin-none span{flex:1 1 auto;color:var(--nfs-text,inherit) !important;text-align:start}
+.mu-skin-wrap .mu-skin-none.on::after{content:"\2713";width:18px;height:18px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:900;background:var(--nfs-fab,#fff) !important;color:var(--nfs-fab-ico,#000) !important}
+.mu-skin-wrap .mu-skin-none{position:relative;overflow:hidden;height:54px;padding:0 !important;justify-content:center;background:linear-gradient(90deg,#f1f1f1 50%,#1c1c1c 50%) !important}
+.mu-skin-wrap .mu-skin-none.on{background:linear-gradient(90deg,#f1f1f1 50%,#1c1c1c 50%) !important}
+.mu-skin-wrap .mu-dnh{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;pointer-events:none}
+.mu-skin-wrap .mu-dnh.d{background:linear-gradient(165deg,#fafafa,#e6e6e6);color:#111;-webkit-clip-path:inset(0 50% 0 0);clip-path:inset(0 50% 0 0)}
+.mu-skin-wrap .mu-dnh.n{background:linear-gradient(165deg,#2b2b2b,#141414);color:#f2f2f2;-webkit-clip-path:inset(0 0 0 50%);clip-path:inset(0 0 0 50%)}
+.mu-skin-wrap .mu-dnh .t{font-style:normal;font-size:14px;font-weight:800;white-space:nowrap}
+.mu-skin-wrap .mu-skin-none::before{content:"";position:absolute;top:0;bottom:0;left:calc(50% - .5px);width:1px;background:rgba(127,127,127,.55);z-index:1}
+.mu-skin-wrap .mu-skin-none.on::after{position:absolute;top:50%;margin-top:-9px;inset-inline-start:12px;z-index:2}
+.mu-skin-wrap .mu-dn2-cap{font-size:12.5px;font-weight:800;margin:0 2px 8px;color:var(--nfs-muted,inherit) !important}
+.mu-skin-wrap .mu-dn2{direction:ltr;display:flex;gap:0;margin-bottom:6px;border-radius:16px;overflow:hidden;box-shadow:0 0 0 1px rgba(127,127,127,.45)}
+.mu-skin-wrap .mu-dn2-h{all:unset;box-sizing:border-box;position:relative;flex:1 1 50%;height:58px;display:flex;align-items:center;justify-content:center;gap:8px;cursor:pointer;-webkit-tap-highlight-color:transparent;transition:filter .15s,transform .12s}
+.mu-skin-wrap .mu-dn2-h:active{transform:scale(.97)}
+.mu-skin-wrap .mu-dn2-h:focus-visible{outline:2px solid var(--nfs-fab,currentColor);outline-offset:-4px}
+.mu-skin-wrap .mu-dn2-h.n{background:linear-gradient(165deg,#2b2b2b,#141414) !important;color:#f2f2f2 !important}
+.mu-skin-wrap .mu-dn2-h.d{background:linear-gradient(165deg,#fafafa,#e4e4e4) !important;color:#111 !important}
+.mu-skin-wrap .mu-dn2-h .t{font-style:normal;font-size:15px;font-weight:800;color:inherit !important}
+.mu-skin-wrap .mu-dn2-h.n .t::before{content:"\263E\FE0E  "}
+.mu-skin-wrap .mu-dn2-h.d .t::before{content:"\2600\FE0E  "}
+.mu-skin-wrap .mu-dn2-h:not(.on){filter:saturate(.7) brightness(.92)}
+.mu-skin-wrap .mu-dn2-h.on{box-shadow:inset 0 0 0 2.5px var(--nfs-fab,#888)}
+.mu-skin-wrap .mu-dn2-h.on::after{content:"\2713";position:absolute;top:6px;inset-inline-end:8px;width:18px;height:18px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:900;background:var(--nfs-fab,#fff);color:var(--nfs-fab-ico,#000);box-shadow:0 1px 4px rgba(0,0,0,.45)}
+@media (min-width:520px){.mu-skin-grid{grid-template-columns:repeat(4,minmax(0,1fr))}}
+@media (max-width:340px){.mu-skin-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media (prefers-reduced-motion:reduce){.mu-skin-wrap *{transition:none !important}}
+</style>
+<script id="muNfsSkin">
+/* New-version skins: every theme of the old version can be applied to the full-screen Notes page (menu, cards, settings,
+   dashboard, list, knowledge graph...). Chosen from the new version's Settings. Tapping the day / night button on the Notes
+   page clears the skin and goes back to plain day / night. The skin only recolors the new version; the old version keeps its own theme. */
+(function(){
+  var KEY='mu_nfs_skin_v1', root=document.documentElement;
+  var VARS=['bg','bar','card','border','border2','text','muted','mute','fab','fabico','sheet','navbg','active','ink','grad'];
+  function h2r(h){ h=String(h).replace('#',''); if(h.length===3) h=h.charAt(0)+h.charAt(0)+h.charAt(1)+h.charAt(1)+h.charAt(2)+h.charAt(2); return [parseInt(h.substr(0,2),16),parseInt(h.substr(2,2),16),parseInt(h.substr(4,2),16)]; }
+  function mix(a,b,t){ var x=h2r(a),y=h2r(b),o='#'; for(var i=0;i<3;i++){ var v=Math.round(x[i]+(y[i]-x[i])*t); o+=('0'+Math.max(0,Math.min(255,v)).toString(16)).slice(-2); } return o; }
+  function lum(h){ var c=h2r(h); return (0.2126*c[0]+0.7152*c[1]+0.0722*c[2])/255; }
+  function info(id){ try{ return MU_ThemeInfo[id]||null; }catch(e){ return null; } }
+  function prev(id){ try{ return MU_ThemePreview[id]||null; }catch(e){ return null; } }
+  function list(){ try{ return MU_Theme.list||[]; }catch(e){ return []; } }
+  function palette(id){
+    var i=info(id); if(!i||!i.c) return null;
+    var bg=i.c[0], sf=i.c[1], ac=i.c[2], ink=i.c[3], pv=prev(id);
+    return { bg:bg, bar:sf, card:mix(bg,'#000000',.38), border:mix(sf,ink,.2), border2:mix(sf,ink,.34), text:ink,
+      muted:mix(ink,bg,.28), mute:mix(ink,bg,.5), fab:ac, fabico:(lum(ac)>.55?'#111111':'#ffffff'),
+      sheet:mix(bg,sf,.55), navbg:mix(bg,'#000000',.45), active:mix(sf,ac,.3), ink:ink,
+      grad:(pv&&pv.bg)?pv.bg:bg };
+  }
+  function get(){ try{ return localStorage.getItem(KEY)||''; }catch(e){ return ''; } }
+  function apply(){
+    var id=get(), P=id?palette(id):null, i;
+    for(i=0;i<VARS.length;i++) root.style.removeProperty('--sk-'+VARS[i]);
+    if(!P){ root.removeAttribute('data-mu-skin'); return; }
+    for(i=0;i<VARS.length;i++) root.style.setProperty('--sk-'+VARS[i],P[VARS[i]]);
+    root.setAttribute('data-mu-skin',id);
+  }
+  function setBase(th){ try{ if(window.muNotesFs && typeof muNotesFs.setBase==='function') muNotesFs.setBase(th); else localStorage.setItem('mu_notesfs_theme_v1',th); }catch(e){} }
+  var KEY_PB='mu_nfs_skin_prevbase_v1';
+  function curBase(){ try{ return localStorage.getItem('mu_notesfs_theme_v1')==='dark'?'dark':'light'; }catch(e){ return 'light'; } }
+  /* clear(true) = user picked "Day / Night (default)": go back to whichever of day / night was active before the first skin was chosen.
+     clear() = the day / night button was tapped: just drop the skin (the caller flips the theme itself). */
+  function clear(restore){
+    var pb=null;
+    try{ pb=localStorage.getItem(KEY_PB); localStorage.removeItem(KEY_PB); }catch(e){}
+    try{ localStorage.removeItem(KEY); }catch(e){}
+    apply();
+    if(restore===true) setBase(pb==='dark'?'dark':'light');
+    mark();
+  }
+  function mark(){
+    try{
+      var bsn=curBase();
+      Array.prototype.forEach.call(document.querySelectorAll('.mu-dn2-h'),function(b){ var on=!get() && b.getAttribute('data-dn')===bsn; b.classList.toggle('on',on); b.setAttribute('aria-pressed',on?'true':'false'); });
+      var cur=get(), els=document.querySelectorAll('.mu-skin-tile,.mu-skin-none');
+      for(var i=0;i<els.length;i++){ var on=(els[i].getAttribute('data-skin')||'')===cur; els[i].classList.toggle('on',on); els[i].setAttribute('aria-pressed',on?'true':'false'); }
+      var w=document.querySelector('.mu-skin-wrap');
+      if(w){
+        var fa=w.getAttribute('data-fa')==='1', th=w.querySelector('[data-sk-thumb]'), nm=w.querySelector('[data-sk-name]');
+        if(th) th.innerHTML=thumbHtml(cur);
+        if(nm) nm.textContent=cur?nameOf(cur,fa):(fa?'روز / شب (پیش‌فرض)':'Day / Night (default)');
+      }
+    }catch(e){}
+  }
+  function pickBase(th){
+    th=(th==='dark')?'dark':'light';
+    clear(false); setBase(th); mark();
+  }
+  function pick(id){
+    id=id||'';
+    if(!id){ clear(true); return; }
+    if(!info(id)) return;
+    try{ if(!get()) localStorage.setItem(KEY_PB,curBase()); }catch(e){}
+    try{ localStorage.setItem(KEY,id); }catch(e){}
+    setBase('dark'); apply(); mark();
+  }
+  function esc(s){ return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/"/g,'&quot;'); }
+  var GROUPS=[
+    {fa:'رنگی و روشن‌تر',en:'Vivid & bright',ids:['yourname-original','yourname','anime','dreamy','oceanic','onepiece','love']},
+    {fa:'تیره و سینمایی',en:'Dark & cinematic',ids:['hugo','darkweb','terminal','interstellar','strangerthings','homealone','hogwarts','vampire','phantom','halloween','spider','redhorizon','anonymous']},
+    {fa:'شب و شفق',en:'Night & aurora',ids:['midnightblue','aurora','aurora-phantom']}
+  ];
+  function nameOf(id,fa){ var l=list(); for(var i=0;i<l.length;i++) if(l[i].id===id) return fa?l[i].nameFa:l[i].nameEn; return id; }
+  function swatch(id){
+    var P=palette(id), i=info(id), pv=prev(id)||{};
+    var bg=pv.bg||i.c[0];
+    return '<span class="mu-sk-sw" style="background:'+esc(bg)+'"><i class="mu-sk-card" style="background:'+P.card+';border-color:'+P.border2+'"><u style="background:'+P.text+'"></u><u style="background:'+P.mute+'"></u></i><i class="mu-sk-dot" style="background:'+P.fab+'"></i></span>';
+  }
+  function dnSwatch(cls){
+    return '<i class="'+cls+'">'
+      +'<i class="mu-sk-ly d"><i class="mu-sk-card" style="background:#f8f8f8;border-color:#c4c4c4"><u style="background:#1f1f1f"></u><u style="background:#777"></u></i><i class="mu-sk-dot" style="background:#3a3a3a"></i></i>'
+      +'<i class="mu-sk-ly n"><i class="mu-sk-card" style="background:#121212;border-color:#454545"><u style="background:#e8e8e8"></u><u style="background:#9a9a9a"></u></i><i class="mu-sk-dot" style="background:#d9d9d9"></i></i>'
+      +'<i class="mu-sk-cut"></i></i>';
+  }
+  function thumbHtml(id){
+    if(id && info(id)) return swatch(id);
+    return dnSwatch('mu-sk-sw mu-sk-dnsw');
+  }
+  function tile(t,fa,cur){
+    var on=(cur===t.id);
+    return '<button type="button" class="mu-skin-tile'+(on?' on':'')+'" data-skin="'+esc(t.id)+'" aria-pressed="'+(on?'true':'false')+'" onclick="muNfsSkin.pick(\''+esc(t.id)+'\')">'+swatch(t.id)+'<span class="mu-sk-lb">'+esc(fa?t.nameFa:t.nameEn)+'</span></button>';
+  }
+  function toggle(btn){
+    try{
+      var p=btn.nextElementSibling, open=!p.classList.contains('open');
+      p.classList.toggle('open',open); btn.setAttribute('aria-expanded',open?'true':'false');
+      if(open){ setTimeout(function(){ try{ var on=p.querySelector('.mu-skin-tile.on'); if(on&&on.scrollIntoView) on.scrollIntoView({block:'nearest',behavior:'smooth'}); }catch(e){} },320); }
+    }catch(e){}
+  }
+  function chipsHtml(fa){
+    var cur=get(), all={}, used={}, avail=[], n=0;
+    list().forEach(function(t){ if(t.id==='bw'||!info(t.id)) return; all[t.id]=t; avail.push(t.id); n++; });
+    var cnt=n.toLocaleString(fa?'fa':'en');
+    var out='<div class="mu-skin-wrap" data-fa="'+(fa?'1':'0')+'">';
+    out+='<button type="button" class="mu-sk-head" aria-expanded="false" onclick="muNfsSkin.toggle(this)"><span class="mu-sk-thumb" data-sk-thumb>'+thumbHtml(cur)+'</span>'
+      +'<span class="mu-sk-ht"><small>'+(fa?'تم فعلی':'Current theme')+'</small><b data-sk-name>'+esc(cur?nameOf(cur,fa):(fa?'روز / شب (پیش‌فرض)':'Day / Night (default)'))+'</b></span>'
+      +'<span class="mu-sk-count">'+cnt+(fa?' تم':' themes')+'</span>'
+      +'<svg class="mu-sk-chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg></button>';
+    out+='<div class="mu-sk-panel"><div class="mu-sk-inner"><div class="mu-sk-body">';
+    var dnT=(fa?'روز / شب (پیش‌فرض)':'Day / Night (default)'), bs=curBase(), dnOn=!cur;
+    out+='<div class="mu-dn2-cap">'+dnT+'</div><div class="mu-dn2" role="group" aria-label="'+dnT+'">'
+      +'<button type="button" class="mu-dn2-h n'+(dnOn&&bs==='dark'?' on':'')+'" data-dn="dark" aria-pressed="'+(dnOn&&bs==='dark'?'true':'false')+'" onclick="muNfsSkin.pickBase(\'dark\')"><i class="t">'+(fa?'شب':'Night')+'</i></button>'
+      +'<button type="button" class="mu-dn2-h d'+(dnOn&&bs==='light'?' on':'')+'" data-dn="light" aria-pressed="'+(dnOn&&bs==='light'?'true':'false')+'" onclick="muNfsSkin.pickBase(\'light\')"><i class="t">'+(fa?'روز':'Day')+'</i></button></div>';
+    GROUPS.forEach(function(g){
+      var ts=g.ids.filter(function(id){ return all[id]; });
+      if(!ts.length) return;
+      out+='<div class="mu-sk-gt">'+(fa?g.fa:g.en)+'<em>'+ts.length.toLocaleString(fa?'fa':'en')+'</em></div><div class="mu-skin-grid" role="group">';
+      ts.forEach(function(id){ used[id]=1; out+=tile(all[id],fa,cur); });
+      out+='</div>';
+    });
+    var rest=avail.filter(function(id){ return !used[id]; });
+    if(rest.length){
+      out+='<div class="mu-sk-gt">'+(fa?'سایر':'Other')+'</div><div class="mu-skin-grid" role="group">';
+      rest.forEach(function(id){ out+=tile(all[id],fa,cur); });
+      out+='</div>';
+    }
+    return out+'</div></div></div></div>';
+  }
+  window.muNfsSkin={ get:get, set:pick, pick:pick, clear:clear, apply:apply, chipsHtml:chipsHtml, toggle:toggle, pickBase:pickBase, palette:palette };
+  apply();
+  document.addEventListener('DOMContentLoaded',apply);
+  window.addEventListener('load',apply);
 })();
 </script>
 </body>
