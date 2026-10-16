@@ -35959,6 +35959,98 @@ vault: function (id) { callFn('mkVaultAddNote', id); },
 
 
 
+<script id="muFabGlide">
+/* Smooth glide for bottom-anchored controls: the "+" add button and the editor's bottom toolbar.
+   When the keyboard opens/closes (or the viewport changes) they glide to their new spot instead of jumping.
+   FLIP: measure the viewport position before/after layout, then animate only the difference using the independent
+   `translate` property (so the :active press-scale, layout and popovers are untouched). */
+(function () {
+  'use strict';
+  if (window.__muFabGlide) return;
+  window.__muFabGlide = true;
+  var DUR = 280, EASE = 'cubic-bezier(.22,.9,.3,1)';
+  var state = new WeakMap();          /* element -> { top, anim } */
+  var reduce = false;
+  try { reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches; } catch (_) {}
+  function targets() {
+    var list = [], fab = document.getElementById('muNfsFab');
+    if (fab) list.push(fab);
+    var bars = document.querySelectorAll('.content-container.mxe .mxe-bottom');
+    for (var i = 0; i < bars.length; i++) list.push(bars[i]);
+    return list;
+  }
+  function curShift(el, st) {
+    if (!st.anim) return 0;
+    try {
+      var tr = getComputedStyle(el).translate;            /* "0px 37.5px" or "none" */
+      if (!tr || tr === 'none') return 0;
+      var y = parseFloat(tr.split(/\s+/)[1]);
+      return isFinite(y) ? y : 0;
+    } catch (_) { return 0; }
+  }
+  function stop(st) { if (st.anim) { try { st.anim.cancel(); } catch (_) {} st.anim = null; } }
+  function one(el) {
+    var st = state.get(el);
+    if (!st) { st = { top: null, anim: null }; state.set(el, st); }
+    if (el.offsetParent === null) { stop(st); st.top = null; return; }   /* hidden / not shown */
+    var r = el.getBoundingClientRect();
+    if (!r.height) { stop(st); st.top = null; return; }
+    var shift = curShift(el, st);
+    var top = r.top - shift;                               /* where it belongs now (layout position) */
+    if (st.top === null) { st.top = top; return; }
+    var delta = (st.top + shift) - top;                    /* where it visually was, minus where it belongs */
+    st.top = top;
+    if (Math.abs(delta) < 2 || reduce || !el.animate) return;
+    stop(st);
+    var a;
+    try {
+      a = el.animate([{ translate: '0px ' + delta + 'px' }, { translate: '0px 0px' }], { duration: DUR, easing: EASE });
+    } catch (_) { return; }
+    st.anim = a;
+    var done = function () { if (st.anim === a) st.anim = null; };
+    a.onfinish = done; a.oncancel = done;
+  }
+  function check() {
+    var list = targets();
+    for (var i = 0; i < list.length; i++) one(list[i]);
+  }
+  window.addEventListener('resize', check);                /* resize runs before paint: no one-frame flash */
+  if (window.visualViewport) window.visualViewport.addEventListener('resize', check);
+  document.addEventListener('focusout', function () { setTimeout(check, 0); setTimeout(check, 160); }, true);
+  window.addEventListener('load', function () { setTimeout(check, 0); });
+  try {
+    new MutationObserver(check).observe(document.documentElement, { attributes: true, attributeFilter: ['class', 'style'] });
+  } catch (_) {}
+  try {
+    /* class changes on the editor / notes screen / toolbar (opening, hiding, keyboard classes) */
+    new MutationObserver(function (recs) {
+      for (var i = 0; i < recs.length; i++) {
+        var t = recs[i].target;
+        if (t && t.classList && (t.classList.contains('mxe') || t.classList.contains('mxe-bottom') || t.id === 'muNotesFs')) { check(); return; }
+      }
+    }).observe(document.documentElement, { attributes: true, attributeFilter: ['class'], subtree: true });
+  } catch (_) {}
+  try {
+    var fsEl = null;
+    setInterval(function () {
+      var el = document.getElementById('muNotesFs');
+      if (el && el !== fsEl) {
+        fsEl = el;
+        try { if (window.ResizeObserver) new ResizeObserver(check).observe(el); } catch (_) {}
+        check();
+      }
+    }, 600);
+  } catch (_) {}
+})();
+</script>
+
+<style id="muNfsSearchFit">
+/* Search field in the notes bar: the placeholder used to be hard-clipped mid-letter on narrow phones (Persian "جستجوی یادداشت‌ها").
+   Keep it on one line, slightly smaller, and end it with a clean ellipsis if it still does not fit. */
+.mu-nfs-input{text-overflow:ellipsis;white-space:nowrap;overflow:hidden}
+.mu-nfs-input::placeholder{font-size:14px;text-overflow:ellipsis;white-space:nowrap}
+@media (max-width:380px){.mu-nfs-input::placeholder{font-size:13px}}
+</style>
 <div id="muNotesFs" class="mu-nfs" data-theme="dark" role="dialog" aria-modal="true" aria-label="Notes Manager (New version – Home)">
   <div class="mu-nfs-top">
     <div class="mu-nfs-bar">
@@ -36591,7 +36683,7 @@ vault: function (id) { callFn('mkVaultAddNote', id); },
     root.setAttribute('dir',fa()?'rtl':'ltr');
     root.style.setProperty('--nfs-lines', String(Math.max(1,S.lines)));
     var nav=$('muNav'); if(nav){ nav.setAttribute('data-theme',S.theme); nav.setAttribute('dir',fa()?'rtl':'ltr'); }
-    var inp=$('muNfsSearch'); if(inp){ inp.placeholder=fa()?'جستجوی یادداشت‌ها':'Search notes'; setInputDir(); }
+    var inp=$('muNfsSearch'); if(inp){ inp.placeholder=fa()?'جستجو…':'Search notes'; setInputDir(); }
     var mb=$('muNfsMenuBtn'); if(mb){ mb.innerHTML=ICONS.menu; mb.setAttribute('aria-label',fa()?'منو':'Menu'); }
     var sb=$('muNfsSortBtn'); if(sb){ sb.innerHTML=ICONS.sort; sb.setAttribute('aria-label',fa()?'ترتیب نمایش':'Sort order'); sb.title=fa()?'ترتیب نمایش':'Sort order'; }
     var db=$('muNfsDashBtn'); if(db){ db.innerHTML=ICONS.dash; db.setAttribute('aria-label',fa()?'داشبورد':'Dashboard'); db.title=fa()?'داشبورد':'Dashboard'; }
