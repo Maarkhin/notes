@@ -35078,6 +35078,7 @@ body.mu-nfsbk-on #mkBackupBar { display:none!important; }
     }
     function waitOther() {
         // the same job was already started from the Cloud panel: follow it and finish when it ends
+        stopPoll();
         pollT = setInterval(function () { mirror(); if (!window.__mkFixAutoSyncBusy) { clearInterval(pollT); pollT = null; setTimeout(function () { finish(); }, 350); } }, 250);
     }
     async function start() {
