@@ -1453,7 +1453,7 @@ html.mu-host img,html.mu-host canvas,html.mu-host video,html.mu-host svg {
 <script id="mkBootGateJs">
 // Splash: shown for at least MIN ms, hidden once the app reports ready, never longer than MAX ms (weak
 // network). Set to false to disable only the loading screen.
-(function () { var d = document.documentElement; d.classList.add("mk-boot"); var SPLASH = !0, MIN = (/Telegram/i.test(navigator.userAgent||"")||!!window.TelegramWebviewProxy||/tgWebApp(Data|Version|Platform)/.test(String(location.hash||"")+"&"+String(location.search||""))) ? 400 : 1200, MAX = 2000, HARD = 15e3, t0 = Date.now(), done = !1, s2 = null, painted = !1, tp = t0, wantReveal = !1; try {
+(function () { var d = document.documentElement; d.classList.add("mk-boot"); var SPLASH = !0, MIN = (/Telegram/i.test(navigator.userAgent||"")||!!window.TelegramWebviewProxy||/tgWebApp(Data|Version|Platform)/.test(String(location.hash||"")+"&"+String(location.search||""))) ? 650 : 1500, MAX = 2500, HARD = 15e3, t0 = Date.now(), done = !1, s2 = null, painted = !1, tp = t0, wantReveal = !1; try {
     if (!SPLASH)
         throw 0;
     var TH = "light";
@@ -19024,7 +19024,7 @@ catch { } window.mu_syncHtmlBg(); })();
         var meta = document.getElementById("mkThemeColorMeta");
         meta && meta.getAttribute("content") !== c.top && meta.setAttribute("content", c.top);
         try {
-            document.documentElement.style.setProperty("--mu-tg-strip", c.top), document.documentElement.style.setProperty("--mu-tg-strip-t", c.top + "00");
+            document.documentElement.style.setProperty("--mu-tg-strip", c.top), document.documentElement.style.setProperty("--mu-tg-strip-t", c.top + "00"), document.documentElement.style.setProperty("--mu-kb-solid", c.bottom);
         }
         catch { }
         try {
@@ -25179,15 +25179,7 @@ try {
 catch { }
 // Moving between Dashboard pages (or back to it) must not replay the modal's fade/pop-in; it showed as a
 // ~1 s flash.
-const _tg = !!(window.__mkTg || document.documentElement.classList.contains("mk-tg"));
-const _keepQuiet = _tg || m.style.display === "flex" || window.__mkDashOpen || window.__mkNoAnimNext;
-window.__mkNoAnimNext = !1;
-_keepQuiet ? m.classList.add("mu-no-anim") : m.classList.remove("mu-no-anim");
-m.style.display = "flex";
-// Telegram: skip double-rAF repaint nudge (extra layout cost for little gain)
-if (!_tg && !_keepQuiet) requestAnimationFrame(() => { requestAnimationFrame(() => mu_nudgeRepaint(card)); });
-else if (_tg) { try { card && (card.style.willChange = "auto"); } catch(_) {} }
-}
+const _keepQuiet = m.style.display === "flex" || window.__mkDashOpen || window.__mkNoAnimNext; window.__mkNoAnimNext = !1, _keepQuiet ? m.classList.add("mu-no-anim") : m.classList.remove("mu-no-anim"), m.style.display = "flex", _keepQuiet || requestAnimationFrame(() => { requestAnimationFrame(() => mu_nudgeRepaint(card)); }); }
     // ---- legacy global names ----
     function pubf(n, v) { Object.defineProperty(window, n, { value: v, writable: !0, enumerable: !0, configurable: !1 }); }
     function pubc(n, v) { Object.defineProperty(window, n, { value: v, writable: !1, enumerable: !1, configurable: !1 }); }
@@ -31681,7 +31673,7 @@ HX().scheduleCloudBackup(!1, !0), HX().showToast(fa ? `✅ ذخیره شد — �
         return !1; var n = t2.nodeName; return n === "INPUT" || n === "TEXTAREA" || t2.isContentEditable === !0; }
     var st = 0;
     function soon() { clearTimeout(st), st = setTimeout(run, 120); }
-    document.addEventListener("focusin", function (e) { isEditableTarget(e.target) && (run(), setTimeout(run, 120), setTimeout(run, 360)); }, !0), document.addEventListener("focusout", function (e) { isEditableTarget(e.target) && (run(), setTimeout(run, 16), setTimeout(run, 80), setTimeout(run, 220)); }, !0);
+    document.addEventListener("focusin", function (e) { isEditableTarget(e.target) && (run(), setTimeout(run, 200), setTimeout(run, 520)); }, !0), document.addEventListener("focusout", function (e) { isEditableTarget(e.target) && (run(), setTimeout(run, 80)); }, !0);
     try {
         window.visualViewport && window.visualViewport.addEventListener("resize", soon);
     }
@@ -35310,7 +35302,11 @@ catch { } };
         }
     } }
     // Coalesce viewport events into one vv3() per frame
-    function vv2() { vv || (vv = requestAnimationFrame(function () { vv = 0; vv3(); })); }
+    function vv2() { try {
+        var _v = window.visualViewport;
+        _v && __mxeLastH && Math.round(_v.height) > __mxeLastH + 24 && vv3();
+    }
+    catch { } vv || (vv = requestAnimationFrame(function () { vv = 0; vv3(); })); }
     // Fit the open editor to the visible viewport (visualViewport top / height, minus the keyboard when it overlays) so the bottom bar sits right above the keyboard. Skipped while pinch-zoomed
     function vv3() { var container = D2.querySelector(".content-container.mxe.show"); if (container) {
         var v = window.visualViewport;
@@ -35333,10 +35329,6 @@ catch { } };
                 }
                 catch { }
             var h = bottom - top;
-            // Always re-apply height when the visible area changes (keyboard open OR close) — never lag a frame behind
-            if (Math.abs(h - (__mxeLastH || 0)) > 2) {
-                try { container.__mxeK = null; } catch (_) {}
-            }
             // page really resized with the keyboard (Telegram)? then CSS alone keeps the panel exact;
             // otherwise use the JS height safety net: if the panel still ends lower than intended, pull it
             // up by the difference
@@ -35496,26 +35488,17 @@ catch { } };
         _vw && _vw.classList.toggle("mu-kb", any && shrunk || window.innerHeight - h - (v && v.offsetTop || 0) > 120);
     }
     catch { } }
-    function paintBg() {
-        try {
-            var dark = rootElement.classList.contains("mu-nfs-dark") || (rootElement.classList.contains("mxe-open") && rootElement.getAttribute("data-mxe-theme") !== "light");
-            var light = rootElement.classList.contains("mu-nfs-light") || rootElement.getAttribute("data-mxe-theme") === "light";
-            var col = dark ? "#1c1c1c" : light ? "#eee" : "";
-            if (!col) {
-                try {
-                    var cs = getComputedStyle(document.body), bg = cs.backgroundColor;
-                    if (bg && bg !== "rgba(0, 0, 0, 0)" && bg !== "transparent") col = bg;
-                } catch (_) {}
-            }
-            if (col) {
-                rootElement.style.backgroundColor = col;
-                if (document.body) document.body.style.backgroundColor = col;
-                rootElement.style.setProperty("--mk-kb-bg", col);
-            }
-        } catch (_) {}
-        try { window.mu_syncHtmlBg && window.mu_syncHtmlBg(); } catch (_) {}
+    // keyboard just closed -> keep the solid theme colour (html.mu-kbclosing) for 450ms and re-send the Telegram colours early
+    var __kbOn = !1, __kbcT = 0;
+    function kbSync() { try {
+        [16, 80, 220].forEach(function (ms, i) { setTimeout(function () { window.mu_tgHeaderSync && window.mu_tgHeaderSync(i === 0); }, ms); });
     }
-    upd(), document.addEventListener("focusin", function () { clearTimeout(t2), upd(), paintBg(); }, !0), document.addEventListener("focusout", function () { clearTimeout(t2), paintBg(), t2 = setTimeout(function () { upd(); paintBg(); }, 40); }, !0), window.addEventListener("resize", function () { upd(); paintBg(); }), window.visualViewport && (window.visualViewport.addEventListener("resize", function () { upd(); paintBg(); }));
+    catch { } }
+    var __upd0 = upd;
+    upd = function () { __upd0(); var on = rootElement.classList.contains("mu-kb") || rootElement.classList.contains("mu-kbo"); if (__kbOn && !on) {
+        rootElement.classList.add("mu-kbclosing"), clearTimeout(__kbcT), __kbcT = setTimeout(function () { rootElement.classList.remove("mu-kbclosing"); }, 450), kbSync();
+    } on && (clearTimeout(__kbcT), rootElement.classList.remove("mu-kbclosing")); __kbOn = on; };
+    upd(), document.addEventListener("focusin", function () { clearTimeout(t2), upd(); }, !0), document.addEventListener("focusout", function () { clearTimeout(t2), t2 = setTimeout(upd, 40), kbSync(); }, !0), window.addEventListener("resize", function () { upd(); }), window.visualViewport && window.visualViewport.addEventListener("resize", upd);
     try {
         navigator.virtualKeyboard && navigator.virtualKeyboard.addEventListener("geometrychange", upd);
     }
@@ -35536,153 +35519,36 @@ catch { } };
 html.mu-kbo,html.mu-kb {
     --mu-sab:0px !important;
 }
-/* Solid underlay so keyboard close never reveals browser white */
-html.mu-kbo,html.mu-kb,html.mu-lockh,html.mu-kbanim {
-    background-color:var(--mk-kb-bg,var(--pp-bg2,#00121f))!important;
-}
-html.mu-kbo body,html.mu-kb body,html.mu-lockh body,html.mu-kbanim body {
-    background-color:var(--mk-kb-bg,var(--pp-bg2,#00121f))!important;
-}
-html.mu-nfs-open.mu-nfs-dark.mu-kbo,
-html.mu-nfs-open.mu-nfs-dark.mu-kb,
-html.mu-nfs-open.mu-nfs-dark.mu-lockh,
-html.mu-nfs-open.mu-nfs-dark.mu-kbanim,
-html.mu-nfs-open.mu-nfs-dark.mu-kbo body,
-html.mu-nfs-open.mu-nfs-dark.mu-kb body,
-html.mu-nfs-open.mu-nfs-dark.mu-lockh body,
-html.mu-nfs-open.mu-nfs-dark.mu-kbanim body {
-    background-color:#1c1c1c!important;
-    background-image:none!important;
-}
-html.mu-nfs-open.mu-nfs-light.mu-kbo,
-html.mu-nfs-open.mu-nfs-light.mu-kb,
-html.mu-nfs-open.mu-nfs-light.mu-lockh,
-html.mu-nfs-open.mu-nfs-light.mu-kbanim,
-html.mu-nfs-open.mu-nfs-light.mu-kbo body,
-html.mu-nfs-open.mu-nfs-light.mu-kb body,
-html.mu-nfs-open.mu-nfs-light.mu-lockh body,
-html.mu-nfs-open.mu-nfs-light.mu-kbanim body {
-    background-color:#eee!important;
-    background-image:none!important;
-}
-html.mxe-open.mu-kbo:not([data-mxe-theme=light]),
-html.mxe-open.mu-kb:not([data-mxe-theme=light]),
-html.mxe-open.mu-kbanim:not([data-mxe-theme=light]),
-html.mxe-open.mu-kbo:not([data-mxe-theme=light]) body,
-html.mxe-open.mu-kb:not([data-mxe-theme=light]) body,
-html.mxe-open.mu-kbanim:not([data-mxe-theme=light]) body {
-    background-color:#1d1d1f!important;
-    background-image:none!important;
-}
-html.mxe-open[data-mxe-theme=light].mu-kbo,
-html.mxe-open[data-mxe-theme=light].mu-kb,
-html.mxe-open[data-mxe-theme=light].mu-kbanim,
-html.mxe-open[data-mxe-theme=light].mu-kbo body,
-html.mxe-open[data-mxe-theme=light].mu-kb body,
-html.mxe-open[data-mxe-theme=light].mu-kbanim body {
-    background-color:#f9f9f9!important;
-    background-image:none!important;
-}
-/* Keep notes shell covering the whole visual viewport while height is locked */
+/* ===== muFabFadeCss ===== */
 html.mu-lockh #muNotesFs {
     height:var(--mu-fullh,100%)!important;
-    min-height:var(--mu-fullh,100%)!important;
     bottom:auto!important;
-    background:inherit!important;
 }
 html.mu-lockh .mu-nfs-body {
     padding-bottom:calc(110px + var(--mu-kbf,0px))!important;
 }
-/* Editor panel must always paint its own bg to the bottom edge while keyboard moves */
-html.mu-kbo body #contentsContainer .content-container.mxe.show,
-html.mu-kb body #contentsContainer .content-container.mxe.show,
-html.mu-kbanim body #contentsContainer .content-container.mxe.show {
-    background:var(--mx-bg,var(--mk-kb-bg,#1d1d1f))!important;
+/* ===== muKbNoFlash: solid theme colour behind the page while the keyboard moves (no white flash) ===== */
+html.mu-kb,html.mu-kbo,html.mu-lockh,html.mu-kbanim,html.mu-kbclosing {
+    background-color:var(--mu-kb-solid,#000814)!important;
 }
-/* === Hard anti white-flash (keyboard, modals, nav, viewer, theme switch) === */
-html,body{
-  background-color:var(--mk-kb-bg,var(--pp-bg2,#00121f));
+html.mu-kb body,html.mu-kbo body,html.mu-lockh body,html.mu-kbanim body,html.mu-kbclosing body {
+    background-color:var(--mu-kb-solid,#000814)!important;
 }
-html.mu-nfs-open.mu-nfs-dark,html.mu-nfs-open.mu-nfs-dark body{
-  background-color:#1c1c1c!important;
-  background-image:none!important;
-}
-html.mu-nfs-open.mu-nfs-light,html.mu-nfs-open.mu-nfs-light body{
-  background-color:#eee!important;
-  background-image:none!important;
-}
-html.mxe-open:not([data-mxe-theme=light]),html.mxe-open:not([data-mxe-theme=light]) body{
-  background-color:#1d1d1f!important;
-  background-image:none!important;
-}
-html.mxe-open[data-mxe-theme=light],html.mxe-open[data-mxe-theme=light] body{
-  background-color:#f9f9f9!important;
-  background-image:none!important;
-}
-/* Fixed underlay sits behind every overlay so expanding areas never show browser white */
-html::before{
-  content:"";
-  position:fixed;
-  inset:0;
-  z-index:-1;
-  pointer-events:none;
-  background:var(--mk-kb-bg,var(--pp-bg2,#00121f));
-}
-html.mu-nfs-open.mu-nfs-dark::before{background:#1c1c1c!important}
-html.mu-nfs-open.mu-nfs-light::before{background:#eee!important}
-html.mxe-open:not([data-mxe-theme=light])::before{background:#1d1d1f!important}
-html.mxe-open[data-mxe-theme=light]::before{background:#f9f9f9!important}
-#muNotesFs,#advancedModal,.mu-viewer,.mu-nav,#muFolderPickerOverlay,.markhin-ai-chat-overlay{
-  background-color:inherit;
-}
-#advancedModal.advanced-modal{
-  background:rgba(0,0,0,.72)!important;
-}
-html.mu-nfs-open.mu-nfs-light #advancedModal.advanced-modal{
-  background:rgba(0,0,0,.45)!important;
-}
-html.mu-nfs-open.mu-nfs-dark #advancedModal.advanced-modal{
-  background:rgba(0,0,0,.72)!important;
-}
-/* Theme switch / page change: no transparent frames */
-html.mu-ti,html.mu-ti body{
-  background-color:var(--mk-kb-bg,var(--pp-bg2,#00121f))!important;
+/* the editor panel keeps painting its own background below its bottom edge while the keyboard animates */
+html.mu-kbanim body #contentsContainer .content-container.mxe.show,html.mu-kbclosing body #contentsContainer .content-container.mxe.show {
+    box-shadow:0 160px 0 0 var(--mx-bg)!important;
 }
 /* the "+" and the bars are moved frame by frame by the keyboard engine (muFabGlide): no CSS transition may fight it */
-#muNfsFab,
-html.mu-kbanim .mxe-bottom,
-html.mu-kbanim .mu-viewer-tools,
-html.mu-kbanim .mAi-inputbar,
-html.mu-kbanim .mxe-find,
-html.mu-kbanim .dl-bar,
-html.mu-kbanim .markhin-note-select-bar,
-html.mu-kb .mxe-bottom,
-html.mu-kb .mu-viewer-tools,
-html.mu-kbo .mxe-bottom,
-html.mu-kbo .mAi-inputbar {
+#muNfsFab {
     transition:none!important;
-    animation:none!important;
 }
-#muNfsFab,
-html.mu-kbanim .mxe-bottom,
-html.mu-kbanim .mu-viewer-tools,
-html.mu-kbanim .mAi-inputbar {
-    will-change:transform;
-    backface-visibility:hidden;
+/* while the keyboard is still opening (predicted move) the "+" already uses its final keyboard-open bottom, so prediction and final spot are identical */
+html.mu-kbpre .mu-nfs-fab {
+    bottom:22px!important;
 }
 /* while a bar glides below its layout spot (iOS keyboard) its panel must not clip it */
 html.mu-kbanim body #contentsContainer .content-container.mxe.show,html.mu-kbanim .mu-viewer:not(.mu-vs-retro) .mu-viewer-card {
     overflow:visible!important;
-}
-/* Kill height transitions on the locked notes shell so unlock never animates a white gap */
-html.mu-lockh #muNotesFs,
-html.mu-kbanim #muNotesFs,
-html.mu-kbo #muNotesFs {
-    transition:none!important;
-}
-/* Editor height must track the keyboard in the same frame */
-html body #contentsContainer .content-container.mxe.show {
-    transition:none!important;
 }
 </style>
 <script id="muFabGlide">
@@ -35718,7 +35584,7 @@ html body #contentsContainer .content-container.mxe.show {
     }
     catch (_) { }
     var BARS = ".content-container.mxe .mxe-bottom,.mu-viewer:not(.mu-vs-retro) .mu-viewer-tools,.mAi-inputbar,.mxe-find,.dl-bar,.markhin-note-select-bar", HOLDERS = ".content-container.mxe,.mu-viewer-card,#markhinAiChatOverlay,#muNotesFs", MIN = 30, base = 0, lockedHeight = 0, lastW = 0, lastH = 0, lockAt = 0, fullInner = 0;
-    var items = new Map, snapL = new WeakMap, raf = 0, until = 0, pred = null, winDvh = 0, evtFlag = !1, learnedK = 0, animCls = !1, ro = null;
+    var items = new Map, snapL = new WeakMap, raf = 0, until = 0, pred = null, winDvh = 0, evtFlag = !1, learnedK = 0, learnedF = 0, animCls = !1, ro = null;
     function nowMs() { return window.performance && performance.now ? performance.now() : Date.now(); }
     function vh() { return Math.round(vv && vv.height || window.innerHeight || 0); }
     function isEditable(el) { return !el || el.nodeType !== 1 ? !1 : el.isContentEditable || el.tagName === "TEXTAREA" ? !0 : el.tagName === "INPUT" && /^(text|search|url|email|password|number|tel|)$/i.test(el.type || ""); }
@@ -35757,64 +35623,27 @@ html body #contentsContainer .content-container.mxe.show {
     catch (_) { }
     return !(/iP(hone|ad|od)/.test(navigator.userAgent || "") || navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1); })();
     function kKey() { return "mu_kb_h_" + ((window.innerWidth || 0) > (window.innerHeight || 0) ? "l" : "p"); }
-    function loadK() { learnedK = 0; try {
+    function fKey() { return kKey() + "_fab"; }
+    function loadK() { learnedK = 0; learnedF = 0; try {
         learnedK = +localStorage.getItem(kKey()) || 0;
+        learnedF = +localStorage.getItem(fKey()) || 0;
     }
     catch (_) { } }
     function defK() { return Math.round(Math.min(340, Math.max(220, (window.innerHeight || 700) * .32))); }
     /* قفل ارتفاع لیست یادداشت‌ها هنگام کیبورد */
-    function lock() {
-        var full = Math.max(base || 0, vh(), window.innerHeight || 0, lockedHeight || 0);
-        if (full < 200) full = Math.max(vh(), window.innerHeight || 0);
-        lockedHeight = full;
-        lockAt = Date.now();
-        rootElement.style.setProperty("--mu-fullh", lockedHeight + "px");
-        rootElement.classList.add("mu-lockh");
-        // Paint solid theme bg the moment the keyboard is about to rise — no white strip under the shell
-        try {
-            var dark = rootElement.classList.contains("mu-nfs-dark");
-            var light = rootElement.classList.contains("mu-nfs-light");
-            var col = dark ? "#1c1c1c" : light ? "#eeeeee" : "";
-            if (!col) {
-                try {
-                    var bg = getComputedStyle(document.body).backgroundColor;
-                    if (bg && bg !== "rgba(0, 0, 0, 0)" && bg !== "transparent") col = bg;
-                } catch (_) {}
-            }
-            if (col) {
-                rootElement.style.backgroundColor = col;
-                if (document.body) document.body.style.backgroundColor = col;
-                rootElement.style.setProperty("--mk-kb-bg", col);
-            }
-        } catch (_) {}
-        try { window.mu_syncHtmlBg && window.mu_syncHtmlBg(); } catch (_) {}
-        try { MK.tgHeaderSync && MK.tgHeaderSync(!1); } catch (_) {}
-    }
-    function unlock() {
-        if (!rootElement.classList.contains("mu-lockh") && !lockedHeight) return;
-        // Expand first so the expanding viewport never shows a white gap under a short locked height
-        try {
-            var full = Math.max(vh(), window.innerHeight || 0, lockedHeight || 0);
-            if (full > 0) rootElement.style.setProperty("--mu-fullh", full + "px");
-        } catch (_) {}
-        // Two frames: first paints the tall shell, second drops the lock without a white flash
-        requestAnimationFrame(function () {
-            requestAnimationFrame(function () {
-                rootElement.classList.remove("mu-lockh", "mu-kbf-on");
-                rootElement.style.removeProperty("--mu-fullh");
-                rootElement.style.removeProperty("--mu-kbf");
-                rootElement.__muKbf = null;
-                lockedHeight = 0;
-                try {
-                    var col = rootElement.style.getPropertyValue("--mk-kb-bg");
-                    if (col) {
-                        rootElement.style.backgroundColor = col;
-                        if (document.body) document.body.style.backgroundColor = col;
-                    }
-                } catch (_) {}
-            });
-        });
-    }
+    function lock() { ulRaf && (cancelAnimationFrame(ulRaf), ulRaf = 0); if (rootElement.classList.contains("mu-lockh"))
+        return; lockedHeight = kbShowing() ? Math.max(base, window.innerHeight || 0) : Math.max(vh(), window.innerHeight || 0); lockAt = Date.now(); rootElement.style.setProperty("--mu-fullh", lockedHeight + "px"); rootElement.classList.add("mu-lockh"); }
+    var ulRaf = 0;
+    // keyboard closing: the locked height may be shorter than the new viewport -> grow it at once so no empty strip shows below the page
+    function growLock() { if (!rootElement.classList.contains("mu-lockh"))
+        return; var f = Math.max(vh() + Math.round(vv && vv.offsetTop || 0), window.innerHeight || 0, fullInner || 0); f > lockedHeight && (lockedHeight = f, rootElement.style.setProperty("--mu-fullh", f + "px")); }
+    // release in two steps: first expand to the full viewport, drop the lock in the next frame (no sudden jump)
+    function unlock() { if (!rootElement.classList.contains("mu-lockh")) {
+        doUnlock();
+        return;
+    } growLock(); ulRaf || (ulRaf = requestAnimationFrame(function () { ulRaf = 0; var a = document.activeElement; if (Date.now() - lockAt < 600 && isEditable(a) && inHome(a))
+        return; doUnlock(); })); }
+    function doUnlock() { rootElement.classList.remove("mu-lockh", "mu-kbf-on"); rootElement.style.removeProperty("--mu-fullh"); rootElement.style.removeProperty("--mu-kbf"); rootElement.__muKbf = null; }
     // how far the "+" must rise: the real value once the keyboard is up, the predicted one while it is still opening
     function realFabK() { var a = document.activeElement; if (!(kbShowing() && inHome(a) && rootElement.classList.contains("mu-lockh") && lockedHeight))
         return 0; var k = Math.round(Math.max(0, lockedHeight - vh() - (vv && vv.offsetTop || 0))); if (k < 60)
@@ -35829,7 +35658,7 @@ html body #contentsContainer .content-container.mxe.show {
             g = window.__muKbGap();
         }
         catch (_) { }
-        return pred.amt + g;
+        return pred.famt != null ? pred.famt : pred.amt + g;
     } return 0; }
     // keeps the Notes list body padding in step with the real keyboard height; releases the height lock once it is gone
     function barSig() { if (kbShowing()) {
@@ -35841,7 +35670,7 @@ html body #contentsContainer .content-container.mxe.show {
     }
     else {
         var ae = document.activeElement;
-        if (!(Date.now() - lockAt < 180 && isEditable(ae) && inHome(ae)))
+        if (!(Date.now() - lockAt < 600 && isEditable(ae) && inHome(ae)))
             unlock();
     } }
     /* ---------- the engine ---------- */
@@ -35956,17 +35785,10 @@ html body #contentsContainer .content-container.mxe.show {
                 }
             }
             else if (Math.abs(d) >= 14 && st.cont < 3) {
-                // Closing keyboard: snap for small gaps, short tween only for big jumps
-                var closing = !kbShowing() || d < 0;
-                if (closing && Math.abs(d) < 48) {
-                    st.S = tgt;
-                    st.dur = 0;
-                } else {
-                    st.from = st.S;
-                    st.to = tgt;
-                    st.t0 = ts;
-                    st.dur = durFor(Math.abs(d), closing || (!!list[i][1] && d > 0 && !fk));
-                }
+                st.from = st.S;
+                st.to = tgt;
+                st.t0 = ts;
+                st.dur = durFor(Math.abs(d), !!list[i][1] && d > 0 && !fk);
             }
             else
                 st.S = tgt;
@@ -35983,9 +35805,16 @@ html body #contentsContainer .content-container.mxe.show {
         return busy;
     }
     function wake(ms) { until = Math.max(until, nowMs() + (ms || 900)); raf || (raf = requestAnimationFrame(tick)); }
-    function resetAll() { items.forEach(function (it, key) { apply(key, it, 0); }); items.clear(); winDvh = 0; pred = null; setAnim(!1); }
+    function resetAll() { items.forEach(function (it, key) { apply(key, it, 0); }); items.clear(); winDvh = 0; pred = null; rootElement.classList.remove("mu-kbpre"); setAnim(!1); }
     function endPred(learn) { if (!pred)
-        return; var k = Math.max(0, base - vh()), wasSeen = pred.seen; pred = null; if (learn && wasSeen) {
+        return; var k = Math.max(0, base - vh()), wasSeen = pred.seen, fr = pred.fabReal || 0, hadFab = pred.fab; pred = null; hadFab && rootElement.classList.remove("mu-kbpre"); if (learn && wasSeen) {
+        if (fr >= 150 && fr <= 650 && fr !== learnedF) {
+            learnedF = fr;
+            try {
+                localStorage.setItem(fKey(), String(fr));
+            }
+            catch (_) { }
+        }
         if (k >= 150 && k <= 650 && k !== learnedK) {
             learnedK = k;
             try {
@@ -36001,13 +35830,15 @@ html body #contentsContainer .content-container.mxe.show {
             }
         }
         catch (_) { }
-    } wake(220); }
+    } wake(400); }
     function stepPred(ts) { if (!pred)
         return; if (kbShowing()) {
         pred.seen = !0;
         pred.amt = Math.max(0, base - vh());
+        var rf = realFabK();
+        rf && (pred.fabReal = rf);
     } if (pred.seen) {
-        ts - pred.lastEvt > 120 && endPred(!0);
+        ts - pred.lastEvt > 200 && endPred(!0);
     }
     else if (ts - pred.t0 > 480)
         endPred(!1); pred && ts - pred.t0 > 1100 && endPred(!1); }
@@ -36022,10 +35853,20 @@ html body #contentsContainer .content-container.mxe.show {
         st = items.get(nl[i]);
         L0.set(nl[i], r.top - (st ? st.tr : 0));
         ok.set(nl[i], r.bottom - (st ? st.tr : 0) > lim - 120);
-    } pred = { amt: learnedK ? Math.max(0, learnedK - 4) : defK(), t0: ls, lastEvt: ls, seen: !1, fab: inHome(t), L0: L0, ok: ok };
-        setAnim(!0);
-        wake(1000);
+    } var g0 = 0; try {
+        g0 = window.__muKbGap();
     }
+    catch (_) { } pred = { amt: learnedK ? Math.max(0, learnedK - 6) : defK(), famt: learnedF ? learnedF : (learnedK ? Math.max(0, learnedK - 2) : defK()) + g0, t0: ls, lastEvt: ls, seen: !1, fab: inHome(t), L0: L0, ok: ok };
+    // the "+" gets its keyboard-open bottom NOW (class) and is pinned to its current spot (translate), so it neither jumps nor aims at a different spot than the final one
+    if (pred.fab) {
+        var fe = document.getElementById("muNfsFab"), fr0;
+        if (fe && !items.get(fe) && (fr0 = fe.getBoundingClientRect()) && (fr0.width || fr0.height)) {
+            items.set(fe, { tr: 0, S: fr0.top, from: fr0.top, to: fr0.top, t0: 0, dur: 0, lastT: fr0.top, cont: 0, applied: !1 });
+            watch(fe);
+        }
+        rootElement.classList.add("mu-kbpre");
+        pass(nowMs());
+    } }
     function settle() { items.forEach(function (it, key) { apply(key, it, 0); }); items.clear(); winDvh = 0; setAnim(!1); snap(); }
     function tick(ts) { raf = 0; ts = ts || nowMs(); var width = window.innerWidth || 0; if (width !== lastW) {
         lastW = width;
@@ -36042,35 +35883,7 @@ html body #contentsContainer .content-container.mxe.show {
         evtFlag = !1;
         barSig();
     } kbShowing() || (fullInner = window.innerHeight || 0); stepPred(ts); var busy = pass(ts); busy || ts < until ? raf || (raf = requestAnimationFrame(tick)) : settle(); }
-    function onViewport() {
-        var ts = nowMs(), h = vh(), grew = h > lastH + 8, shrank = h < lastH - 8;
-        winDvh += h - lastH;
-        lastH = h;
-        evtFlag = !0;
-        pred && (pred.lastEvt = ts);
-        if (rootElement.classList.contains("mu-lockh")) {
-            if (grew) {
-                // Keyboard closing: grow the locked shell immediately so no white strip appears under a short lock
-                var fullUp = Math.max(h, window.innerHeight || 0, lockedHeight || 0);
-                if (fullUp > lockedHeight) {
-                    lockedHeight = fullUp;
-                    rootElement.style.setProperty("--mu-fullh", fullUp + "px");
-                }
-                if (!kbShowing()) lockAt = Date.now() - 1400;
-            } else if (shrank) {
-                // Keyboard opening: never shrink the locked shell — keep the pre-keyboard full height
-                var fullKeep = Math.max(lockedHeight || 0, base || 0, window.innerHeight || 0);
-                if (fullKeep > lockedHeight) {
-                    lockedHeight = fullKeep;
-                    rootElement.style.setProperty("--mu-fullh", fullKeep + "px");
-                }
-            }
-        } else if (shrank && isEditable(document.activeElement) && inHome(document.activeElement)) {
-            // Late lock if focus beat the first resize frame
-            lock();
-        }
-        wake(grew ? 500 : shrank ? 1000 : 700);
-    }
+    function onViewport() { var ts = nowMs(), h = vh(); h > lastH && growLock(); winDvh += h - lastH; lastH = h; evtFlag = !0; pred && (pred.lastEvt = ts); wake(900); }
     try {
         typeof ResizeObserver == "function" && (ro = new ResizeObserver(function () { (raf || nowMs() < until) && pass(nowMs()); }));
     }
@@ -36108,32 +35921,9 @@ html body #contentsContainer .content-container.mxe.show {
         catch (SETTLE) { } }, 380); }
     // freeze the page height before the keyboard moves it keyboard already up: just moving between fields
     // keyboard started opening / closing / changing height
-    document.addEventListener("focusin", function (e) {
-        var t = e.target;
-        if (!isEditable(t)) return;
-        // Keyboard about to rise: solid bg + height lock BEFORE the OS animation paints a white gap
-        try {
-            var dark = rootElement.classList.contains("mu-nfs-dark") || (rootElement.classList.contains("mxe-open") && rootElement.getAttribute("data-mxe-theme") !== "light");
-            var light = rootElement.classList.contains("mu-nfs-light") || rootElement.getAttribute("data-mxe-theme") === "light";
-            var col = dark ? "#1c1c1c" : light ? "#eeeeee" : "#00121f";
-            rootElement.style.backgroundColor = col;
-            if (document.body) document.body.style.backgroundColor = col;
-            rootElement.style.setProperty("--mk-kb-bg", col);
-        } catch (_) {}
-        try { window.mu_syncHtmlBg && window.mu_syncHtmlBg(); } catch (_) {}
-        try { MK.tgHeaderSync && MK.tgHeaderSync(!1); } catch (_) {}
-        if (inHome(t)) lock();
-        else {
-            // Editor / other fields: still remember full height so unlock never flashes white
-            base = Math.max(base || 0, vh(), window.innerHeight || 0);
-        }
-        snap();
-        startPred(t);
-        setAnim(!0);
-        wake(1100);
-    }, !0);
+    document.addEventListener("focusin", function (e) { var t = e.target; isEditable(t) && inHome(t) && lock(); snap(); startPred(t); wake(900); }, !0);
     // keyboard is about to open
-    document.addEventListener("focusout", function () { snap(); wake(700); }, !0);
+    document.addEventListener("focusout", function () { snap(); wake(900); }, !0);
     // Tapping a field that kept focus after the keyboard was dismissed does not always bring the keyboard back
     // (Telegram / Android WebView) and fires no focus event: if nothing happened shortly after the tap, the
     // field is refocused. The in-note search bar is excluded here: its click handler below handles it (a real
@@ -36165,18 +35955,9 @@ html body #contentsContainer .content-container.mxe.show {
     catch (_) { }
     rootElement.classList.remove("mu-kbhide", "mu-kbshow");
     // watchdog: whatever happens, never leave the controls invisible or the home page frozen
+    var wdTick = 0;
     setInterval(function () { if (document.hidden || raf)
-        return; var a = document.activeElement, ed = isEditable(a); ed || (base = vh());
-        // grow lock if viewport already taller than locked shell (keyboard closed but lock lagged)
-        if (rootElement.classList.contains("mu-lockh")) {
-            var full = Math.max(vh(), window.innerHeight || 0);
-            if (full > (lockedHeight || 0) + 4) {
-                lockedHeight = full;
-                rootElement.style.setProperty("--mu-fullh", full + "px");
-            }
-            if (!(ed && inHome(a) && kbShowing()) && Date.now() - lockAt > 400) unlock();
-        }
-        snap(); }, 400);
+        return; var a = document.activeElement, ed = isEditable(a); ed || (base = vh()); rootElement.classList.contains("mu-lockh") && !(ed && inHome(a) && kbShowing()) && Date.now() - lockAt > (ed && inHome(a) ? 900 : 400) && unlock(); ++wdTick % 3 || snap(); }, 350);
     lastH = vh();
     lastW = window.innerWidth || 0;
     fullInner = window.innerHeight || 0;
@@ -47247,152 +47028,6 @@ html.mk-tg #muNotesFs,html.mk-tg #muNav{-webkit-font-smoothing:antialiased}
 html.mk-tg .mu-nav-panel{box-shadow:none!important}
 html.mk-tg *{scroll-behavior:auto!important}
 
-/* 6) Global snappier chrome (all platforms): shorter UI motion, GPU-friendly overlays */
-html body .mu-nav .mu-nav-panel,html body .mu-nav.mu-show .mu-nav-panel{
-  transition:transform .16s cubic-bezier(.2,.8,.2,1)!important;
-}
-html body .mu-nav:not(.mu-show) .mu-nav-panel{transition-duration:.11s!important}
-html body .mu-nav .mu-nav-bg,html body .mu-nav.mu-show .mu-nav-bg{transition:opacity .12s linear!important}
-/* Modal / sheet open-close: no fade lag, instant paint */
-html body .advanced-modal,
-html body .advanced-modal .advanced-card,
-html body .theme-picker-overlay,
-html body .mu-img-lightbox,
-html body #muHostDlg{
-  animation:none!important;
-  transition:none!important;
-}
-html body .advanced-modal{
-  -webkit-backdrop-filter:none!important;
-  backdrop-filter:none!important;
-}
-/* Cards & buttons: shorter press feedback */
-html body .mu-nfs-card,
-html body .note-btn-wrap,
-html body .btn-main,
-html body .custom-btn,
-html body .image-export-choice{
-  transition-duration:.12s!important;
-  transition-property:transform,opacity,background-color,border-color,box-shadow,color!important;
-}
-html body .mu-nfs-card:active,
-html body .note-btn-wrap:active,
-html body .btn-main:active{
-  transition-duration:0s!important;
-}
-/* Contain heavy scroll regions */
-html body #muNotesFs .mu-nfs-body,
-html body #muNfsBody,
-html body .mu-nfs-list,
-html body #advancedModal .advanced-card,
-html body .mu-viewer-body,
-html body .mxe-body{
-  contain:layout style;
-  -webkit-overflow-scrolling:touch;
-  overscroll-behavior:contain;
-}
-/* Theme decorations pause under any overlay (saves compositor) */
-html:is(.mu-nav-open,.mxe-open,.mu-viewer-open) body>[class^="mu-darkweb"],
-html:is(.mu-nav-open,.mxe-open,.mu-viewer-open) body>[class^="mu-hogwarts"],
-html:is(.mu-nav-open,.mxe-open,.mu-viewer-open) body>[class^="mu-st-"],
-html:is(.mu-nav-open,.mxe-open,.mu-viewer-open) body>[class^="mu-ha-"],
-html:is(.mu-nav-open,.mxe-open,.mu-viewer-open) body>[class^="mu-phantom"],
-html:is(.mu-nav-open,.mxe-open,.mu-viewer-open) body>[class^="mu-anon"],
-html:is(.mu-nav-open,.mxe-open,.mu-viewer-open) body>[class^="mu-terminal"],
-html:is(.mu-nav-open,.mxe-open,.mu-viewer-open) body>[class^="mu-halloween"],
-html:is(.mu-nav-open,.mxe-open,.mu-viewer-open) body>[class^="mu-spider"],
-html:is(.mu-nav-open,.mxe-open,.mu-viewer-open) body>[class^="mu-redhorizon"],
-html:is(.mu-nav-open,.mxe-open,.mu-viewer-open) body>[class^="mu-interstellar"]{
-  visibility:hidden!important;
-  animation:none!important;
-}
-
-/* 7) Telegram-only: push harder — WebView is single-threaded and janks on shadows/filters */
-html.mk-tg{
-  touch-action:manipulation;
-  -webkit-text-size-adjust:100%;
-  text-rendering:optimizeSpeed;
-}
-html.mk-tg body *,
-html.mk-tg body *::before,
-html.mk-tg body *::after{
-  transition-duration:.1s!important;
-  transition-delay:0s!important;
-  animation-duration:.12s!important;
-  text-shadow:none!important;
-  filter:none!important;
-  -webkit-filter:none!important;
-}
-html.mk-tg #mkSplash,
-html.mk-tg #mkSplash *{
-  /* keep splash animations readable */
-  animation-duration:revert!important;
-  transition-duration:revert!important;
-  filter:revert!important;
-}
-html.mk-tg .advanced-card,
-html.mk-tg .note-btn-wrap,
-html.mk-tg .mu-nfs-card,
-html.mk-tg .mu-nav-panel,
-html.mk-tg .btn-main,
-html.mk-tg .image-export-choice,
-html.mk-tg .mu-viewer-card,
-html.mk-tg #toast,
-html.mk-tg .markhin-move-menu{
-  box-shadow:none!important;
-}
-html.mk-tg .mu-nfs-card,
-html.mk-tg .note-btn-wrap{
-  content-visibility:auto;
-  contain-intrinsic-size:auto 160px;
-}
-html.mk-tg body .mu-nav .mu-nav-panel,
-html.mk-tg body .mu-nav.mu-show .mu-nav-panel{
-  transition:transform .14s cubic-bezier(.2,.8,.2,1)!important;
-}
-html.mk-tg body .mu-nav:not(.mu-show) .mu-nav-panel{transition-duration:.1s!important}
-html.mk-tg body .mu-nav .mu-nav-bg,
-html.mk-tg body .mu-nav.mu-show .mu-nav-bg{transition:opacity .1s linear!important}
-/* Instant modals in Telegram — display flip only */
-html.mk-tg body .advanced-modal,
-html.mk-tg body .advanced-modal .advanced-card{
-  animation:none!important;
-  transition:none!important;
-  will-change:auto!important;
-}
-html.mk-tg #advancedModal,
-html.mk-tg #muFolderPickerOverlay,
-html.mk-tg .mu-viewer,
-html.mk-tg .mu-nav{
-  transform:translateZ(0);
-}
-/* Pause decorative body layers entirely inside TG */
-html.mk-tg body>[class^="mu-darkweb"],
-html.mk-tg body>[class^="mu-hogwarts"],
-html.mk-tg body>[class^="mu-st-"],
-html.mk-tg body>[class^="mu-ha-"],
-html.mk-tg body>[class^="mu-phantom"],
-html.mk-tg body>[class^="mu-anon"],
-html.mk-tg body>[class^="mu-terminal"],
-html.mk-tg body>[class^="mu-halloween"],
-html.mk-tg body>[class^="mu-spider"],
-html.mk-tg body>[class^="mu-redhorizon"],
-html.mk-tg body>[class^="mu-interstellar"],
-html.mk-tg body:before,
-html.mk-tg body:after{
-  animation:none!important;
-  will-change:auto!important;
-}
-/* List / editor scroll smoothness */
-html.mk-tg #muNotesFs .mu-nfs-body,
-html.mk-tg #muNfsBody,
-html.mk-tg .mxe-body,
-html.mk-tg .mu-viewer-body{
-  -webkit-overflow-scrolling:touch;
-  overscroll-behavior:contain;
-  scroll-behavior:auto!important;
-}
-
 /* ===== mkDayNightText: modal / toast text follows the Notes page day-night mode (black on day, white on night) ===== */
 html.mu-nfs-open.mu-nfs-light:not(#_dn) #advancedModal,html.mu-nfs-open.mu-nfs-light:not(#_dn) #toast {
     --text-color:#111111!important;
@@ -47410,7 +47045,7 @@ html.mu-nfs-open.mu-nfs-dark:not(#_dn) #advancedModal,html.mu-nfs-open.mu-nfs-da
     --mk-dn-surface2:#2a2a2a;
     --mk-dn-line:rgba(255,255,255,.22);
 }
-html.mu-nfs-open:not(#_dn) #advancedModal #advancedCard.mk-page:not(.xp-card):not([data-nfs-theme]) :is(h1,h2,h3,h4,h5,p,span,div,label,small,b,strong,i,em,li,summary,td,th,a,.image-export-choice,.image-export-choice-name,.image-export-choice-icon,.image-export-choice-action,.image-export-choice-folder,.zip-export-option-name,.zip-export-option-desc,.image-export-count,.markhin-filename-hint,.btn-main:not(.btn-save-prominent)):not([style*="color:"]):not(.xp-badge):not(.xp-badge *):not(.mk-kind-badge):not(.btn-save-prominent):not(.btn-save-prominent *):not(#cloudBackupBtn):not(#cloudBackupBtn *):not(#cloudFixAutoSyncBtn):not(#cloudFixAutoSyncBtn *):not(.markhin-move-menu-btn-danger):not(.markhin-move-menu-btn-danger *):not(.btn-danger):not(.btn-danger *) {
+html.mu-nfs-open:not(#_dn) #advancedModal #advancedCard.mk-page:not(.xp-card):not([data-nfs-theme]) :is(h1,h2,h3,h4,h5,p,span,div,label,small,b,strong,i,em,li,summary,td,th,a,.image-export-choice,.image-export-choice-name,.image-export-choice-icon,.image-export-choice-action,.image-export-choice-folder,.zip-export-option-name,.zip-export-option-desc,.image-export-count,.markhin-filename-hint,.btn-main:not(.btn-save-prominent)):not([style*="color:"]):not(.xp-badge):not(.xp-badge *):not(.mk-kind-badge):not(.btn-save-prominent):not(.btn-save-prominent *):not(.markhin-move-menu-btn-danger):not(.markhin-move-menu-btn-danger *):not(.btn-danger):not(.btn-danger *) {
     color:var(--mk-dn-ink)!important;
     -webkit-text-fill-color:var(--mk-dn-ink)!important;
     text-shadow:none!important;
@@ -47424,66 +47059,14 @@ html.mu-nfs-open:not(#_dn) #advancedModal #advancedCard.mk-page:not(.xp-card):no
     stroke:currentColor;
 }
 /* generic text-only buttons in modal pages (e.g. "Close") */
-html.mu-nfs-open:not(#_dn) #advancedModal #advancedCard.mk-page:not([data-nfs-theme]) .btn-main:not(.btn-save-prominent):not(#cloudBackupBtn):not(#cloudFixAutoSyncBtn) {
+html.mu-nfs-open:not(#_dn) #advancedModal #advancedCard.mk-page:not([data-nfs-theme]) .btn-main:not(.btn-save-prominent) {
     background:var(--mk-dn-surface2)!important;
     border:1px solid var(--mk-dn-line)!important;
-    color:var(--mk-dn-ink)!important;
-    -webkit-text-fill-color:var(--mk-dn-ink)!important;
 }
 html.mu-nfs-open:not(#_dn) #advancedModal #advancedCard.mk-page:not(.xp-card):not([data-nfs-theme]) .image-export-choice {
     background:var(--mk-dn-surface2)!important;
     border:1px solid var(--mk-dn-line)!important;
     box-shadow:none!important;
-}
-
-/* === Contrast fix: dark primary buttons must keep LIGHT text (day + night) === */
-html.mu-nfs-open:not(#_dn) #advancedModal #advancedCard :is(.btn-save-prominent,#cloudBackupBtn,#cloudFixAutoSyncBtn),
-html.mu-nfs-open:not(#_dn) #advancedModal #advancedCard :is(.btn-save-prominent,#cloudBackupBtn,#cloudFixAutoSyncBtn) * {
-    color:#ffffff!important;
-    -webkit-text-fill-color:#ffffff!important;
-    text-shadow:none!important;
-}
-html.mu-nfs-open.mu-nfs-light:not(#_dn) #advancedModal #advancedCard :is(.btn-save-prominent,#cloudBackupBtn,#cloudFixAutoSyncBtn) {
-    background:#2a2a2a!important;
-    border-color:#2a2a2a!important;
-}
-html.mu-nfs-open.mu-nfs-dark:not(#_dn) #advancedModal #advancedCard :is(.btn-save-prominent,#cloudBackupBtn,#cloudFixAutoSyncBtn) {
-    background:#e8e8e8!important;
-    border-color:#e8e8e8!important;
-    color:#111111!important;
-    -webkit-text-fill-color:#111111!important;
-}
-html.mu-nfs-open.mu-nfs-dark:not(#_dn) #advancedModal #advancedCard :is(.btn-save-prominent,#cloudBackupBtn,#cloudFixAutoSyncBtn) * {
-    color:#111111!important;
-    -webkit-text-fill-color:#111111!important;
-}
-/* Cloud page (data-mkcloud): primary actions always readable */
-html body .advanced-card.mk-page.mk-paper:has(>.advanced-head[data-mkcloud]) :is(.btn-save-prominent,#cloudBackupBtn,#cloudFixAutoSyncBtn),
-html body .advanced-card.mk-page.mk-paper:has(>.advanced-head[data-mkcloud]) :is(.btn-save-prominent,#cloudBackupBtn,#cloudFixAutoSyncBtn) * {
-    color:var(--k-af,#fff)!important;
-    -webkit-text-fill-color:var(--k-af,#fff)!important;
-}
-html.mu-nfs-open.mu-nfs-light body .advanced-card.mk-page.mk-paper:has(>.advanced-head[data-mkcloud]) :is(.btn-save-prominent,#cloudBackupBtn,#cloudFixAutoSyncBtn) {
-    background:#2a2a2a!important;
-}
-html.mu-nfs-open.mu-nfs-light body .advanced-card.mk-page.mk-paper:has(>.advanced-head[data-mkcloud]) :is(.btn-save-prominent,#cloudBackupBtn,#cloudFixAutoSyncBtn),
-html.mu-nfs-open.mu-nfs-light body .advanced-card.mk-page.mk-paper:has(>.advanced-head[data-mkcloud]) :is(.btn-save-prominent,#cloudBackupBtn,#cloudFixAutoSyncBtn) * {
-    color:#ffffff!important;
-    -webkit-text-fill-color:#ffffff!important;
-}
-html.mu-nfs-open.mu-nfs-dark body .advanced-card.mk-page.mk-paper:has(>.advanced-head[data-mkcloud]) :is(.btn-save-prominent,#cloudBackupBtn,#cloudFixAutoSyncBtn) {
-    background:#e8e8e8!important;
-}
-html.mu-nfs-open.mu-nfs-dark body .advanced-card.mk-page.mk-paper:has(>.advanced-head[data-mkcloud]) :is(.btn-save-prominent,#cloudBackupBtn,#cloudFixAutoSyncBtn),
-html.mu-nfs-open.mu-nfs-dark body .advanced-card.mk-page.mk-paper:has(>.advanced-head[data-mkcloud]) :is(.btn-save-prominent,#cloudBackupBtn,#cloudFixAutoSyncBtn) * {
-    color:#111111!important;
-    -webkit-text-fill-color:#111111!important;
-}
-/* Secondary/light chips stay ink-colored */
-html.mu-nfs-open:not(#_dn) #advancedModal #advancedCard [data-limit-chip],
-html.mu-nfs-open:not(#_dn) #advancedModal #advancedCard #cloudTabs .btn-main {
-    color:var(--mk-dn-ink)!important;
-    -webkit-text-fill-color:var(--mk-dn-ink)!important;
 }
 
 /* ===== mkBwNight: Black & White theme now follows the day / night switch (night = black background, white text) ===== */
@@ -47594,5 +47177,151 @@ html.mu-nfs-dark:not(#_bw) body.theme-bw .content-container,html[data-mxe-theme=
     color:#fff!important;
 }
 </style>
+<script id="mkAutoContrast">
+/* MARKHIN auto-contrast: any text whose colour is too close to the colour behind it
+   (day / night / skins) is flipped to white or near-black so it stays readable.
+   It never touches notes the user is editing, and it re-runs on theme changes. */
+(function () {
+    if (window.__mkAutoContrast) return;
+    window.__mkAutoContrast = 1;
+    var ATTR = "data-mkc", MIN = 4.2, DARK = [15, 15, 15], LIGHT = [255, 255, 255];
+    var css = document.createElement("style");
+    css.id = "mkAutoContrastCss";
+    css.textContent =
+        'html:not(#_mkc1):not(#_mkc2):not(#_mkc3) body [data-mkc="w"]{color:#fff!important;caret-color:#fff}' +
+        'html:not(#_mkc1):not(#_mkc2):not(#_mkc3) body [data-mkc="b"]{color:#0f0f0f!important;caret-color:#0f0f0f}' +
+        'html:not(#_mkc1):not(#_mkc2):not(#_mkc3) body [data-mkc="w"]::placeholder{color:rgba(255,255,255,.65)!important}' +
+        'html:not(#_mkc1):not(#_mkc2):not(#_mkc3) body [data-mkc="b"]::placeholder{color:rgba(15,15,15,.6)!important}';
+    (document.head || document.documentElement).appendChild(css);
+
+    function parse(s) {
+        if (!s || s === "transparent") return [0, 0, 0, 0];
+        var m = s.match(/^rgba?\(([^)]+)\)$/);
+        if (m) {
+            var p = m[1].split(/[\s,\/]+/).filter(Boolean).map(parseFloat);
+            return [p[0], p[1], p[2], p.length > 3 ? p[3] : 1];
+        }
+        m = s.match(/^color\(srgb\s+([^)]+)\)$/);
+        if (m) {
+            var q = m[1].split(/[\s\/]+/).filter(Boolean).map(parseFloat);
+            return [q[0] * 255, q[1] * 255, q[2] * 255, q.length > 3 ? q[3] : 1];
+        }
+        return null;
+    }
+    function over(top, bot) {
+        var a = top[3];
+        return [top[0] * a + bot[0] * (1 - a), top[1] * a + bot[1] * (1 - a), top[2] * a + bot[2] * (1 - a), 1];
+    }
+    function lum(c) {
+        var f = function (v) { v /= 255; return v <= .03928 ? v / 12.92 : Math.pow((v + .055) / 1.055, 2.4); };
+        return .2126 * f(c[0]) + .7152 * f(c[1]) + .0722 * f(c[2]);
+    }
+    function ratio(a, b) {
+        var x = lum(a), y = lum(b);
+        return (Math.max(x, y) + .05) / (Math.min(x, y) + .05);
+    }
+    function bgOf(el) {
+        var layers = [], n = el, base = document.documentElement.classList.contains("mu-nfs-dark") ? [28, 28, 28, 1] : [255, 255, 255, 1];
+        while (n && n.nodeType === 1) {
+            var cs = getComputedStyle(n);
+            if (cs.backgroundImage && cs.backgroundImage !== "none") {
+                /* gradient / picture behind the text: can't judge it, leave alone */
+                if (cs.backgroundClip === "text" || cs.webkitBackgroundClip === "text") return null;
+                var c0 = parse(cs.backgroundColor);
+                if (!c0 || c0[3] < .99) return null;
+            }
+            var c = parse(cs.backgroundColor);
+            if (c && c[3] > 0) { layers.push(c); if (c[3] >= .99) break; }
+            n = n.parentElement;
+        }
+        var out = base;
+        for (var i = layers.length - 1; i >= 0; i--) out = over(layers[i], out);
+        return out;
+    }
+    function skip(el) {
+        if (!el || el.nodeType !== 1) return true;
+        var t = el.tagName;
+        if (t === "SCRIPT" || t === "STYLE" || t === "NOSCRIPT" || t === "SVG" || t === "CANVAS" || t === "OPTION" || t === "HEAD") return true;
+        if (el.closest && el.closest('[contenteditable="true"],[contenteditable=""],.mu-viewer-body,.mkv-view,#mkAutoContrastCss')) return true;
+        if (el.checkVisibility) {
+            try { if (!el.checkVisibility({ checkOpacity: true, checkVisibilityCSS: true })) return true; }
+            catch (e) { if (!el.checkVisibility()) return true; }
+        } else if (el.offsetParent === null && getComputedStyle(el).position !== "fixed") return true;
+        return false;
+    }
+    function evalEl(el) {
+        if (skip(el)) return;
+        var had = el.hasAttribute(ATTR);
+        if (had) el.removeAttribute(ATTR);
+        var cs = getComputedStyle(el), fg = parse(cs.color);
+        if (!fg) return;
+        if (cs.webkitTextFillColor === "rgba(0, 0, 0, 0)" && cs.backgroundClip === "text") return;
+        var bg = bgOf(el);
+        if (!bg) return;
+        if (fg[3] < 1) fg = over(fg, bg);
+        if (ratio(fg, bg) >= MIN) return;
+        var useWhite = ratio(LIGHT, bg) >= ratio(DARK, bg);
+        el.setAttribute(ATTR, useWhite ? "w" : "b");
+    }
+    function scan(root) {
+        if (!root || !document.body) return;
+        var done = new Set();
+        if (root.nodeType === 1) {
+            if (root.matches && root.matches("button,[role=button],input,select,textarea,summary,label")) { evalEl(root); done.add(root); }
+            var ctrls = root.querySelectorAll ? root.querySelectorAll("button,[role=button],input,select,textarea,summary") : [];
+            for (var i = 0; i < ctrls.length; i++) { evalEl(ctrls[i]); done.add(ctrls[i]); }
+        }
+        var w = document.createTreeWalker(root, 4, null), nd, count = 0;
+        while ((nd = w.nextNode())) {
+            if (!nd.nodeValue || !/\S/.test(nd.nodeValue)) continue;
+            var p = nd.parentElement;
+            if (!p || done.has(p)) continue;
+            done.add(p);
+            evalEl(p);
+            if (++count > 6000) break;
+        }
+    }
+    var dirty = new Set(), full = false, timer = 0;
+    function flush() {
+        timer = 0;
+        try {
+            if (full || dirty.size > 40) scan(document.body);
+            else dirty.forEach(function (r) { if (r.isConnected) scan(r); });
+        } catch (e) { }
+        dirty.clear(); full = false;
+    }
+    function queue(root, delay) {
+        if (!root || root === document.body || root === document.documentElement) full = true; else dirty.add(root);
+        if (timer) clearTimeout(timer);
+        timer = setTimeout(flush, delay == null ? 160 : delay);
+    }
+    function burst() { queue(document.body, 40); setTimeout(function () { queue(document.body, 0); }, 450); setTimeout(function () { queue(document.body, 0); }, 1300); setTimeout(function () { queue(document.body, 0); }, 2800); }
+    try {
+        new MutationObserver(function (ms) {
+            for (var i = 0; i < ms.length; i++) {
+                var m = ms[i];
+                if (m.type === "childList") { for (var j = 0; j < m.addedNodes.length; j++) { var a = m.addedNodes[j]; if (a.nodeType === 1) queue(a); else if (a.nodeType === 3 && a.parentElement) queue(a.parentElement); } }
+                else if (m.target === document.documentElement || m.target === document.body) burst();
+                else queue(m.target, 200);
+            }
+        }).observe(document.documentElement, { childList: true, subtree: true, attributes: true, attributeFilter: ["class", "style", "hidden", "open", "data-theme", "data-mu-skin"] });
+    } catch (e) { }
+    /* hover / press / focus can swap colours too: re-check the control that was touched */
+    ["pointerover", "pointerout", "pointerdown", "pointerup", "pointercancel", "touchend", "focusin", "focusout", "click"].forEach(function (ev) {
+        document.addEventListener(ev, function (e) {
+            var t = e.target && e.target.closest ? e.target.closest("button,[role=button],.btn-main,summary,select,input,label") : null;
+            if (!t) { if (ev === "click") queue(document.body, 350); return; }
+            setTimeout(function () { try { evalEl(t); } catch (x) { } }, 40);
+            setTimeout(function () { try { evalEl(t); } catch (x) { } }, 380);
+            if (ev === "click") queue(document.body, 350);
+        }, true);
+    });
+    window.addEventListener("storage", burst);
+    window.addEventListener("load", burst);
+    document.addEventListener("visibilitychange", function () { if (!document.hidden) burst(); });
+    window.mkAutoContrastRun = burst;
+    if (document.readyState !== "loading") burst(); else document.addEventListener("DOMContentLoaded", burst);
+})();
+</script>
 </body>
 </html>
