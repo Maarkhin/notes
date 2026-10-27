@@ -22041,7 +22041,15 @@ try {
 catch { } const local = categories.find(c => c.id === cloudItem.id); if (local) {
     // Two independent "newer wins" comparisons instead of one
     const cloudTextNewer = (Date.parse(cloudItem.lastEdited) || 0) > (Date.parse(local.lastEdited) || 0), cloudMetaNewer = (Date.parse(cloudItem.metaEditedAt) || 0) > (Date.parse(local.metaEditedAt) || Date.parse(local.lastEdited) || 0);
-    if (cloudTextNewer)
+    // Lock conflict: the other device locked this note after our last metadata change, but we edited the text meanwhile.
+    // The lock wins (never silently drop a lock and leave plaintext in the Cloud); our newer edit is replaced.
+    const lockWins = !cloudTextNewer && cloudMetaNewer && isNoteLocked(cloudItem) && !isNoteLocked(local);
+    if (lockWins)
+        try {
+            showToast(currentLang === "fa" ? "🔒 قفل یادداشت از دستگاه دیگر اعمال شد" : "🔒 Note lock from another device applied", 3000);
+        }
+        catch { }
+    if (cloudTextNewer || lockWins)
         if (local.name = cloudItem.name, cloudItem.order != null && (local.order = Number(cloudItem.order) || 0), cloudItem.fontFamily && (local.fontFamily = cloudItem.fontFamily), cloudItem.fontSize && (local.fontSize = Number(cloudItem.fontSize) || local.fontSize), typeof cloudItem.fakeContent == "string" && (local.fakeContent = cloudItem.fakeContent), cloudItem.unlockAt !== void 0 && (local.unlockAt = cloudItem.unlockAt), cloudItem.ghostUntil !== void 0 && (local.ghostUntil = cloudItem.ghostUntil), local.lastEdited = cloudItem.lastEdited, isNoteLocked(cloudItem))
             local.encrypted = { ...cloudItem.encrypted }, local.hint = cloudItem.hint || "", local.text = "", local.html = "", local.isDecoy = !1, noteSessionKeys.delete(local.id);
         else {
@@ -22059,7 +22067,7 @@ catch { } const local = categories.find(c => c.id === cloudItem.id); if (local) 
             else
                 local.html = cloudHtml;
         }
-    cloudMetaNewer && (cloudItem.order != null && (local.order = Number(cloudItem.order) || 0), local.folder = cloudItem.folder, local.extraFolders = Array.isArray(cloudItem.extraFolders) ? cloudItem.extraFolders.filter(f => typeof f == "string" && f) : [], local.tags = Array.isArray(cloudItem.tags) ? cloudItem.tags.filter(Boolean).map(String) : local.tags || [], local.pinned = !!cloudItem.pinned, local.favorite = !!cloudItem.favorite, local.archived = !!cloudItem.archived, typeof cloudItem.color == "string" && /^[a-z]*$/.test(cloudItem.color) && (local.color = cloudItem.color), local.metaEditedAt = cloudItem.metaEditedAt), (cloudTextNewer || cloudMetaNewer) && updated++;
+    cloudMetaNewer && (cloudItem.order != null && (local.order = Number(cloudItem.order) || 0), local.folder = cloudItem.folder, local.extraFolders = Array.isArray(cloudItem.extraFolders) ? cloudItem.extraFolders.filter(f => typeof f == "string" && f) : [], local.tags = Array.isArray(cloudItem.tags) ? cloudItem.tags.filter(Boolean).map(String) : local.tags || [], local.pinned = !!cloudItem.pinned, local.favorite = !!cloudItem.favorite, local.archived = !!cloudItem.archived, typeof cloudItem.color == "string" && /^[a-z]*$/.test(cloudItem.color) && (local.color = cloudItem.color), typeof cloudItem.fontFamily == "string" && (local.fontFamily = cloudItem.fontFamily), cloudItem.fontSize && (local.fontSize = Number(cloudItem.fontSize) || local.fontSize), cloudItem.unlockAt !== void 0 && (local.unlockAt = cloudItem.unlockAt), cloudItem.ghostUntil !== void 0 && (local.ghostUntil = cloudItem.ghostUntil), local.metaEditedAt = cloudItem.metaEditedAt), (cloudTextNewer || cloudMetaNewer) && updated++;
 }
 else {
     let forceRestoredFromTombstone = !1;
@@ -22679,6 +22687,10 @@ function mu_sanitizeNoteId(s, index) { return (s == null ? "" : String(s)).repla
 function normalizeCategory(item, index) { const src = item && typeof item == "object" ? item : {}; return { id: mu_sanitizeNoteId(src.id, index), name: String(src.name ?? `Note ${index + 1}`), folder: typeof src.folder == "string" ? src.folder : "", extraFolders: Array.isArray(src.extraFolders) ? [...new Set(src.extraFolders.filter(f => typeof f == "string" && f && f !== src.folder))] : [], text: String(src.text ?? ""), html: String(src.html ?? src.text ?? ""), lastEdited: src.lastEdited ? String(src.lastEdited) : "", metaEditedAt: src.metaEditedAt ? String(src.metaEditedAt) : src.lastEdited ? String(src.lastEdited) : "", password: typeof src.password == "string" ? src.password : "", encrypted: src.encrypted && typeof src.encrypted == "object" ? { ...src.encrypted } : null, hint: typeof src.hint == "string" ? src.hint : "", isDecoy: !1, unlockAt: src.unlockAt ?? "", ghostUntil: src.ghostUntil ?? "", tags: Array.isArray(src.tags) ? src.tags.filter(Boolean).map(String) : [], pinned: !!src.pinned, favorite: !!src.favorite, archived: !!src.archived, order: Number(src.order) || 0, fakeContent: typeof src.fakeContent == "string" ? src.fakeContent : "", fontFamily: typeof src.fontFamily == "string" ? src.fontFamily : "", fontSize: Number(src.fontSize) || 13, color: typeof src.color == "string" && /^[a-z]*$/.test(src.color) ? src.color : "" }; }
 // Stamps a note's metadata-only edit time
 function mu_touchMeta(item) { item && (item.metaEditedAt = new Date().toUTCString()); }
+// Lock / unlock / hint changes must travel to other devices: stamp BOTH lastEdited and metaEditedAt, strictly newer
+// than anything already on the note, so the cloud merge (cloudTextNewer) applies the new lock state on the other device.
+function mu_touchLock(item) { if (!item) return; var prev = Math.max(Date.parse(item.lastEdited) || 0, Date.parse(item.metaEditedAt) || 0), s = new Date(Math.max(Date.now(), prev + 1000)).toUTCString(); item.lastEdited = s; item.metaEditedAt = s; }
+window.mu_touchLock = mu_touchLock;
 window.mu_touchMeta = mu_touchMeta;
 // Multi-folder notes: `folder` stays the primary folder (backward compatible), `extraFolders` holds any
 // additional folders
@@ -24017,14 +24029,14 @@ async function setLock(id) { const fa = currentLang === "fa", r2 = await mu_askN
     if (item)
         try {
             const sourceHtml = item.html || "", sourceText = item.text || "";
-            item.encrypted = await encryptNotePayload(password, sourceHtml, sourceText), item.hint = hint.trim(), item.isDecoy = !1, noteSessionKeys.set(item.id, password), saveToLocalStorage(), renderApp(id);
+            item.encrypted = await encryptNotePayload(password, sourceHtml, sourceText), item.hint = hint.trim(), item.isDecoy = !1, noteSessionKeys.set(item.id, password), mu_touchLock(item), saveToLocalStorage(), renderApp(id);
         }
         catch (error) {
             console.error(error), alert(currentLang === "fa" ? "رمزگذاری یادداشت انجام نشد." : "The note could not be encrypted.");
         }
 } }
 async function changeHint(id) { const item = categories.find(c => c.id === id); if (!item)
-    return; const fa = currentLang === "fa", newHint = await promptStyledText({ title: fa ? "💡 راهنمای رمز" : "💡 Password hint", placeholder: i18n[currentLang].promptHint, autoDir: !0, defaultValue: item.hint || "", okText: fa ? "✔️ ذخیره" : "✔️ Save" }); newHint !== null && (item.hint = newHint.trim(), saveToLocalStorage(), renderApp(id), alert(currentLang === "fa" ? "راهنمای رمز با موفقیت تغییر کرد." : "Password hint updated successfully.")); }
+    return; const fa = currentLang === "fa", newHint = await promptStyledText({ title: fa ? "💡 راهنمای رمز" : "💡 Password hint", placeholder: i18n[currentLang].promptHint, autoDir: !0, defaultValue: item.hint || "", okText: fa ? "✔️ ذخیره" : "✔️ Save" }); newHint !== null && (item.hint = newHint.trim(), mu_touchLock(item), saveToLocalStorage(), renderApp(id), alert(currentLang === "fa" ? "راهنمای رمز با موفقیت تغییر کرد." : "Password hint updated successfully.")); }
 async function removeLock(id) { const t = i18n[currentLang], item = categories.find(c => c.id === id); if (item) {
     const currentPass = await promptNotePassword(item, currentLang === "fa" ? "برای حذف رمز، رمز فعلی را وارد کنید." : "Enter the current password to remove the lock.");
     if (currentPass === null)
@@ -24035,7 +24047,7 @@ async function removeLock(id) { const t = i18n[currentLang], item = categories.f
             window.MK_Bio && MK_Bio.forget(id);
         }
         catch { }
-        item.hint = "", item.isDecoy = !1, saveToLocalStorage(), renderApp(id);
+        item.hint = "", item.isDecoy = !1, mu_touchLock(item), saveToLocalStorage(), renderApp(id);
     }
     else
         alert(t.wrongPass);
@@ -26966,7 +26978,7 @@ async function setTimeCapsule(id) { const item = categories.find(c => c.id === i
     defDate = `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`, defTime = `${pad(d.getHours())}:${pad(d.getMinutes())}`;
 } const result = await promptFieldsModal({ title: fa ? "⏳ کپسول زمانی" : "⏳ Time Capsule", message: active ? fa ? `الان فعال است تا ${new Date(Number(item.unlockAt)).toLocaleString()}. می‌توانی زمان جدید تنظیم کنی یا غیرفعالش کنی.` : `Currently active until ${new Date(Number(item.unlockAt)).toLocaleString()}. Set a new time, or disable it.` : fa ? "تاریخ و ساعت باز شدن یادداشت را وارد کن:" : "Enter the date and time this note unlocks:", fields: [{ id: "date", type: "date", label: fa ? "تاریخ (میلادی)" : "Date (Gregorian)", defaultValue: defDate }, { id: "time", type: "time", label: fa ? "ساعت (ساعت:دقیقه)" : "Time (hour:minute)", defaultValue: defTime }], okText: fa ? "⏳ فعال کن" : "⏳ Arm", extraButton: active ? { label: `🚫 ${fa ? "غیرفعال کردن" : "Disable"}`, style: "color:#ff6b6b" } : null }); if (result === null)
     return; if (result.action === "extra") {
-    item.unlockAt = "", saveToLocalStorage(), mu_refreshNoteBadgeRow(id), showToast(fa ? "🚫 کپسول زمانی غیرفعال شد." : "🚫 Time Capsule disabled.");
+    item.unlockAt = "", mu_touchMeta(item), saveToLocalStorage(), mu_refreshNoteBadgeRow(id), showToast(fa ? "🚫 کپسول زمانی غیرفعال شد." : "🚫 Time Capsule disabled.");
     return;
 } const { date: date, time: time } = result.values; if (!date || !time) {
     showToast(fa ? "تاریخ و ساعت را کامل وارد کن." : "Enter both date and time.");
@@ -26974,18 +26986,18 @@ async function setTimeCapsule(id) { const item = categories.find(c => c.id === i
 } const ts = new Date(`${date}T${time}:00`).getTime(); if (!Number.isFinite(ts) || ts <= Date.now()) {
     showToast(fa ? "زمان باید در آینده باشد." : "Time must be in the future.");
     return;
-} item.unlockAt = ts, saveToLocalStorage(), mu_refreshNoteBadgeRow(id), showToast(fa ? "کپسول زمان فعال شد." : "Time Capsule armed."); }
+} item.unlockAt = ts, mu_touchMeta(item), saveToLocalStorage(), mu_refreshNoteBadgeRow(id), showToast(fa ? "کپسول زمان فعال شد." : "Time Capsule armed."); }
 // Ghost Note: same edit/disable pattern as Time Capsule — clicking this on a note that already has an
 // active ghost timer pre-fills the remaining hours (so entering a new number re-arms it from now) and
 async function setGhostNote(id) { const item = categories.find(c => c.id === id); if (!item)
     return; const fa = currentLang === "fa", active = !!item.ghostUntil && Date.now() < Number(item.ghostUntil), remainHours = active ? Math.max(1, Math.ceil((Number(item.ghostUntil) - Date.now()) / 36e5)) : "", result = await promptFieldsModal({ title: "👻 Ghost Note", message: active ? fa ? `الان فعال است تا ${new Date(Number(item.ghostUntil)).toLocaleString()}. عدد جدید یعنی تنظیم دوباره از همین الان.` : `Currently active until ${new Date(Number(item.ghostUntil)).toLocaleString()}. A new number re-arms it starting from now.` : fa ? "یادداشت بعد از این تعداد ساعت خودکار محو می‌شود:" : "The note will automatically disappear after this many hours:", fields: [{ id: "hours", type: "number", label: fa ? "چند ساعت دیگر؟" : "Hours from now", placeholder: fa ? "مثلاً 24" : "e.g. 24", defaultValue: remainHours, min: .1, step: "any" }], okText: fa ? "👻 فعال کن" : "👻 Arm", extraButton: active ? { label: `🚫 ${fa ? "غیرفعال کردن" : "Disable"}`, style: "color:#ff6b6b" } : null }); if (result === null)
     return; if (result.action === "extra") {
-    item.ghostUntil = "", saveToLocalStorage(), mu_refreshNoteBadgeRow(id), showToast(fa ? "🚫 Ghost Note غیرفعال شد." : "🚫 Ghost Note disabled.");
+    item.ghostUntil = "", mu_touchMeta(item), saveToLocalStorage(), mu_refreshNoteBadgeRow(id), showToast(fa ? "🚫 Ghost Note غیرفعال شد." : "🚫 Ghost Note disabled.");
     return;
 } const hours = Number(result.values.hours); if (!Number.isFinite(hours) || hours <= 0) {
     showToast(fa ? "عدد نامعتبر است." : "Invalid duration.");
     return;
-} item.ghostUntil = Date.now() + hours * 36e5, saveToLocalStorage(), mu_refreshNoteBadgeRow(id), showToast(fa ? "Ghost Note فعال شد." : "Ghost Note armed."); }
+} item.ghostUntil = Date.now() + hours * 36e5, mu_touchMeta(item), saveToLocalStorage(), mu_refreshNoteBadgeRow(id), showToast(fa ? "Ghost Note فعال شد." : "Ghost Note armed."); }
 function noteAgeDays(item) { return Math.max(0, (Date.now() - (Date.parse(item.lastEdited) || Date.now())) / 864e5); }
 function openNoteDNA(id) { const item = categories.find(c => c.id === id); if (!item)
     return; const fa = currentLang === "fa", rawText = (item.text || item.html || "").replace(/<[^>]*>/g, " "), trimmed = rawText.replace(/\s+/g, " ").trim(), stats = computeTextStats(rawText), words = stats.words, chars = trimmed.replace(/\s/g, "").length, images = (item.html || "").match(/<img\b/gi)?.length || 0, links = (item.html || "").match(/<a\b/gi)?.length || 0,
@@ -27980,7 +27992,7 @@ document.addEventListener("DOMContentLoaded", () => { initAdvancedSystems(); });
     } }, btns[7].onclick = () => cmd("strikeThrough"), btns[8].onclick = () => cmd("insertOrderedList"), btns[9].onclick = () => { restoreSel(); let _ok = !1; try {
         _ok = window.mkClearFormat && window.mkClearFormat(text);
     }
-    catch { } _ok || document.execCommand("removeFormat"), HX().autosaveCategory(item.id); }, btns[10].onclick = () => { restoreSel(), window.mkToggleHighlight && window.mkToggleHighlight(item.id); }; const selects = row.querySelectorAll("select"); selects[0].value = String(item.fontSize || 13), selects[0].onchange = () => { item.fontSize = Number(selects[0].value) || 13, text.style.fontSize = item.fontSize + "px", HX().saveToLocalStorage(); }; {
+    catch { } _ok || document.execCommand("removeFormat"), HX().autosaveCategory(item.id); }, btns[10].onclick = () => { restoreSel(), window.mkToggleHighlight && window.mkToggleHighlight(item.id); }; const selects = row.querySelectorAll("select"); selects[0].value = String(item.fontSize || 13), selects[0].onchange = () => { item.fontSize = Number(selects[0].value) || 13, text.style.fontSize = item.fontSize + "px", window.mu_touchMeta && window.mu_touchMeta(item), HX().saveToLocalStorage(); }; {
         // Writing tools: mark the toolbar buttons whose format is ON at the caret / selection (Bold, Italic, Underline,
         // Quote, List, Link...). The full-screen editor drives this row through FM and marks its own popover (syncFmt)
         const fmtBtns = row.querySelectorAll("button"), inText = () => { const sel = window.getSelection(); return !!(sel && sel.rangeCount && text.contains(sel.anchorNode)); };
@@ -28117,7 +28129,7 @@ document.addEventListener("DOMContentLoaded", () => { initAdvancedSystems(); });
         if (result.action === "disable") {
             if (!confirm(fa ? "فیک‌نوت این یادداشت غیرفعال شود؟ محتوای فیک پاک خواهد شد." : "Disable the fake note for this item? The fake content will be cleared."))
                 return;
-            item.fakeContent = "", HX().saveToLocalStorage(), HX().renderApp(id), HX().showToast(fa ? "🚫 فیک‌نوت غیرفعال شد" : "🚫 Fake note disabled");
+            item.fakeContent = "", window.mu_touchLock && window.mu_touchLock(item), HX().saveToLocalStorage(), HX().renderApp(id), HX().showToast(fa ? "🚫 فیک‌نوت غیرفعال شد" : "🚫 Fake note disabled");
             return;
         }
         const v = result.value;
@@ -28130,7 +28142,7 @@ document.addEventListener("DOMContentLoaded", () => { initAdvancedSystems(); });
                 return;
             const pass = fkRes.password;
             try {
-                item.fakeContent = v, item.encrypted = await HX().encryptNotePayload(pass.trim(), item.html || "", item.text || ""), fkRes.hint && (item.hint = fkRes.hint), HX().noteSessionKeys.set(item.id, pass.trim()), HX().saveToLocalStorage(), HX().renderApp(id);
+                item.fakeContent = v, item.encrypted = await HX().encryptNotePayload(pass.trim(), item.html || "", item.text || ""), fkRes.hint && (item.hint = fkRes.hint), HX().noteSessionKeys.set(item.id, pass.trim()), window.mu_touchLock && window.mu_touchLock(item), HX().saveToLocalStorage(), HX().renderApp(id);
             }
             catch (e) {
                 console.error(e), alert(fa ? "رمزگذاری انجام نشد." : "Encryption failed.");
@@ -28139,7 +28151,7 @@ document.addEventListener("DOMContentLoaded", () => { initAdvancedSystems(); });
         }
         // Editing an already-locked note's fake content: a single step, so the Cancel handled above
         // already covers it fully
-        item.fakeContent = v, HX().saveToLocalStorage(), HX().renderApp(id);
+        item.fakeContent = v, window.mu_touchLock && window.mu_touchLock(item), HX().saveToLocalStorage(), HX().renderApp(id);
     };
     // Scroll to a just-unlocked note's text. Only called when the note was closed and is now being opened
     // (never on wrong password, never when closing an already-open note)
@@ -29172,7 +29184,7 @@ window.__mkFixAutoSyncBusy = !0, window.__mkFixProgHold = !0; const btn = docume
             <p>اگر یادداشت‌هایت از سقف حجم یک بکاپ بزرگ‌تر باشد، در بکاپ خودکار کم‌تازه‌ترین یادداشت‌ها جا نمی‌گیرند (کنار بکاپ «⚠️ رد شد» می‌بینی؛ روی گوشی می‌مانند). برای جای بیشتر، تعداد بکاپ دستی را در «⚙️ تنظیمات بکاپ» کم کن.</p>
 
             <h4 style="margin:14px 0 6px">💾 ذخیره خودکار پس از هر تغییر</h4>
-            <p>در تب «بکاپ خودکار» یک کلید روشن/خاموش با همین نام هست و به‌طور پیش‌فرض روشن است. اگر خاموشش کنی، هیچ نوشتن خودکاری (بعد از تغییرها، تلاش دوباره‌ی خودکار، برگشتن اینترنت، تغییرات لیست) انجام نمی‌شود؛ فقط وقتی خودت «🔄 فعال‌سازی / تعمیر سینک»، «🔁 تلاش دوباره» یا «?? ذخیره‌ی یک بکاپ جدید» را بزنی چیزی در Cloud نوشته می‌شود. یعنی تغییرات تازه فقط روی همین دستگاه می‌مانند و اگر اطلاعات دستگاه از بین برود، چیزی برای بازیابی نیست و دستگاه‌های دیگر هم تغییرات این دستگاه را نمی‌بینند. با روشن‌کردن دوباره، تغییرات مانده چند ثانیه بعد ذخیره می‌شوند. این کلید فقط برای همین دستگاه است (جایی هم‌گام نمی‌شود) و دریافت تغییرات دستگاه‌های دیگر را قطع نمی‌کند.</p>
+            <p>در تب «بکاپ خودکار» یک کلید روشن/خاموش با همین نام هست و به‌طور پیش‌فرض روشن است. اگر خاموشش کنی، هیچ نوشتن خودکاری (بعد از تغییرها، تلاش دوباره‌ی خودکار، برگشتن اینترنت، تغییرات لیست) انجام نمی‌شود؛ فقط وقتی خودت «🔄 فعال‌سازی / تعمیر سینک»، «🔁 تلاش دوباره» یا «📤 ذخیره‌ی یک بکاپ جدید» را بزنی چیزی در Cloud نوشته می‌شود. یعنی تغییرات تازه فقط روی همین دستگاه می‌مانند و اگر اطلاعات دستگاه از بین برود، چیزی برای بازیابی نیست و دستگاه‌های دیگر هم تغییرات این دستگاه را نمی‌بینند. با روشن‌کردن دوباره، تغییرات مانده چند ثانیه بعد ذخیره می‌شوند. این کلید فقط برای همین دستگاه است (جایی هم‌گام نمی‌شود) و دریافت تغییرات دستگاه‌های دیگر را قطع نمی‌کند.</p>
 
             <h4 style="margin:14px 0 6px">🔗 سینک بین دستگاه‌ها (دریافت)</h4>
             <p>ذخیره‌ی خودکار (Push) فقط نیمی از کار است؛ نیمه‌ی دیگر <b>دریافت</b> خودکار تغییرات دستگاه‌های دیگر (یادداشت‌های جدید، ویرایش‌ها و حذف‌ها) بدون Restore دستی است. تلگرام راهی برای اعلان زنده ندارد، پس برنامه هنگام باز شدن و بعد هر حدود 45 ثانیه (تا وقتی برنامه باز و روی صفحه است) نسخه‌ی ابری را چک می‌کند؛ فقط وقتی نسخه‌ی ابری عوض شده باشد دانلود می‌کند و با همان قاعده‌ی بازیابی ادغام می‌کند (جدیدتر برنده است).</p>
@@ -30677,7 +30689,7 @@ HX().scheduleCloudBackup(!1, !0), HX().showToast(fa ? `✅ ذخیره شد — �
     } const askRes = await HX().mu_askNewPassword({ title: fa ? targets.length > 1 ? "رمزگذاری " + targets.length + " یادداشت" : "رمزگذاری یادداشت" : targets.length > 1 ? "Lock " + targets.length + " notes" : "Lock note", okText: fa ? "قفل کن" : "Lock" }); if (!askRes || askRes.password === "")
         return; const password = askRes.password, hint = askRes.hint || ""; let done = 0, failed = 0; for (const item of targets)
         try {
-            item.encrypted = await HX().encryptNotePayload(password, item.html || "", item.text || ""), item.hint = hint.trim(), item.isDecoy = !1, HX().noteSessionKeys.set(item.id, password), window.mu_touchMeta && window.mu_touchMeta(item), done++;
+            item.encrypted = await HX().encryptNotePayload(password, item.html || "", item.text || ""), item.hint = hint.trim(), item.isDecoy = !1, HX().noteSessionKeys.set(item.id, password), window.mu_touchLock && window.mu_touchLock(item), done++;
         }
         catch (err) {
             console.error(err), failed++;
