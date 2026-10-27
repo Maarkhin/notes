@@ -18698,6 +18698,7 @@ html.mu-nfs-open:not(#_nfs) body:before,html.mu-nfs-open:not(#_nfs) body:after,h
 catch (mu_openSmartSearchModal) { } })();
 </script></head>
 <body class="theme-oceanic">
+<script id="mkPerfEarly">(function(){try{var d=document.documentElement,u=navigator.userAgent||"",h=String(location.hash||"");var tg=/Telegram/i.test(u)||!!window.TelegramWebviewProxy||/tgWebApp(Data|Platform|Version)/.test(h)||!!(window.Telegram&&window.Telegram.WebApp&&window.Telegram.WebApp.initData);try{tg=tg||!!sessionStorage.getItem("__telegram__initParams")}catch(e){}if(tg){d.classList.add("mk-tg");var keep=function(){try{d.classList.contains("mk-tg")||d.classList.add("mk-tg")}catch(e){}};document.addEventListener("DOMContentLoaded",keep);window.addEventListener("load",keep)}}catch(e){}})();</script>
 <script id="mkThemeBoot">
 // Apply the saved theme class immediately, before the rest of the page renders
 window.mu_syncHtmlBg = function () { try {
@@ -36657,9 +36658,17 @@ body.mu-nfsbk-on #mkBackupBar { display:none!important; }
         return;
     } if (button.id) {
         S2.fopen = !S2.fopen;
-        lsSet("mu_nfs_fopen", S2.fopen ? "1" : "0");
-        build2();
-        !S2.fopen && S2.fsel && setTimeout(function () { S2.fopen || (S2.fsel = null, render()); }, 330);
+        var mkF2 = document.getElementById("muNfsFStrip");
+        if (mkF2 && mkF2.firstChild) {
+            mkF2.classList.toggle("open", S2.page === "notes" && !!S2.fopen);
+            tb();
+            setTimeout(function () { lsSet("mu_nfs_fopen", S2.fopen ? "1" : "0"); S2.fopen && build2(); }, 90);
+        }
+        else {
+            lsSet("mu_nfs_fopen", S2.fopen ? "1" : "0");
+            build2();
+        }
+        !S2.fopen && S2.fsel && setTimeout(function () { S2.fopen || (S2.fsel = null, render()); }, 120);
         return;
     } var folderIndex = button.getAttribute("data-i"), stripElement = document.getElementById("muNfsFStrip"); S2.fsel = folderIndex === "" ? null : stripElement.__n[+folderIndex] || null; render(); var bodyElement = document.getElementById("muNfsBody"); bodyElement && (bodyElement.scrollTop = 0); var activeChip = stripElement.querySelector(".mu-fc.mu-on"); activeChip && activeChip.scrollIntoView({ inline: "center", block: "nearest", behavior: "smooth" }); }, !0);
     S2.fopen = lsGet("mu_nfs_fopen") === "1";
@@ -37268,9 +37277,9 @@ body.mu-nfsbk-on #mkBackupBar { display:none!important; }
                 fitOld();
             }
             catch { }
-        nav.classList.add("mu-show"), H.get("muBackNav") && H.get("muBackNav").sync(), clearTimeout(window.__muNLT), window.__muNLT = setTimeout(function () { nav.classList.add("mu-live"); }, 450);
+        nav.classList.add("mu-show"), requestAnimationFrame(function () { setTimeout(function () { H.get("muBackNav") && H.get("muBackNav").sync(); }, 0); }), clearTimeout(window.__muNLT), window.__muNLT = setTimeout(function () { nav.classList.add("mu-live"); }, 450);
     } }
-    function navClose() { var nav = $2("muNav"); !nav || !navIsOpen || (navIsOpen = !1, nav.classList.remove("mu-show"), H.get("muBackNav") && H.get("muBackNav").sync(), clearTimeout(window.__muNLT), nav.classList.remove("mu-live"), nav.setAttribute("aria-hidden", "true"), clearTimeout(navTimer), navTimer = setTimeout(function () { nav.classList.remove("mu-open"), setTimeout(navWarm, 120); }, 260)); }
+    function navClose() { var nav = $2("muNav"); !nav || !navIsOpen || (navIsOpen = !1, nav.classList.remove("mu-show"), requestAnimationFrame(function () { setTimeout(function () { H.get("muBackNav") && H.get("muBackNav").sync(); }, 0); }), clearTimeout(window.__muNLT), nav.classList.remove("mu-live"), nav.setAttribute("aria-hidden", "true"), clearTimeout(navTimer), navTimer = setTimeout(function () { nav.classList.remove("mu-open"), setTimeout(navWarm, 120); }, 260)); }
     var setNoteObs = null;
     function setNoteInject() { try {
         var _c = $2("advancedCard"), _o = _c && _c.querySelector(".mu-nav-setnote");
@@ -42779,34 +42788,7 @@ catch { } return !0; } init() || (document.readyState === "loading" ? document.a
 })();
 </script>
 
-<script id="mkBwDayLock">
-// Black & White is a day-only theme: while it is active, the note editor and the modern Notes page stay on
-// their DAY look (their own day/night switches are hidden), so the app never mixes a day theme with a
-// night one
-(function () { function isBw() { return !!(document.body && document.body.classList.contains("theme-bw")); } var busy = !1; function lock() { if (!(busy || !isBw())) {
-    busy = !0;
-    try {
-        var rootElement = document.documentElement;
-        if (rootElement.getAttribute("data-mxe-theme") !== "light") {
-            try {
-                localStorage.setItem("mxe_theme", "light");
-            }
-            catch { }
-            rootElement.setAttribute("data-mxe-theme", "light");
-        }
-        localStorage.getItem("mu_notesfs_theme_v1") === "dark" && !(MK.nfsSkin && MK.nfsSkin.get()) && window.muNotesFs && typeof window.muNotesFs.toggleTheme == "function" && window.muNotesFs.toggleTheme();
-    }
-    catch { }
-    busy = !1;
-} } function start() { if (document.body) {
-    lock();
-    try {
-        new MutationObserver(lock).observe(document.body, { attributes: !0, attributeFilter: ["class"] }), new MutationObserver(lock).observe(document.documentElement, { attributes: !0, attributeFilter: ["data-mxe-theme"] });
-    }
-    catch { }
-    var e = 0, t = setInterval(function () { lock(), ++e > 20 && clearInterval(t); }, 500);
-} } document.readyState === "loading" ? document.addEventListener("DOMContentLoaded", start) : start(), window.addEventListener("load", lock); })();
-</script>
+<!-- mkBwDayLock removed: Black & White follows day/night -->
 <style id="mkCssGroup8" data-merged="3">
 /* ===== mkThemeBW ===== */
 body.theme-bw {
@@ -42905,9 +42887,7 @@ body.theme-bw .note-item * {
     color:#000!important;
     -webkit-text-fill-color:#000!important;
 }
-html body.theme-bw #contentsContainer .mxe .mxe-top .mxe-theme-btn,html body.theme-bw .mxe-theme-btn,html body.theme-bw #muNfsThemeBtn {
-    display:none!important;
-}
+/* B&W now has a night mode: the day/night buttons stay visible */
 body.theme-bw .note-item button,body.theme-bw .note-item [class*=view] {
     background:#eee!important;
     border:1px solid #c4c4c4!important;
@@ -46759,5 +46739,181 @@ catch { } if (id = id || "", !id) {
 }
 catch { } } function buildChipsHtml(fa) { var cur = get(), all = {}, used = {}, avail = [], n = 0; list().forEach(function (t) { t.id === "bw" || !info(t.id) || (all[t.id] = t, avail.push(t.id), n++); }); var cnt = n.toLocaleString(fa ? "fa" : "en"), out = '<div class="mu-skin-wrap" data-fa="' + (fa ? "1" : "0") + '">'; out += '<button type="button" class="mu-sk-head" aria-expanded="false" onclick="muNfsSkin.toggle(this)"><span class="mu-sk-thumb" data-sk-thumb>' + thumbHtml(cur) + '</span><span class="mu-sk-ht"><small>' + (fa ? "تم فعلی" : "Current theme") + "</small><b data-sk-name>" + esc(cur ? nameOf(cur, fa) : fa ? "روز / شب (پیش‌فرض)" : "Day / Night (default)") + '</b></span><span class="mu-sk-count">' + cnt + (fa ? " تم" : " themes") + '</span><svg class="mu-sk-chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg></button>', out += '<div class="mu-sk-panel"><div class="mu-sk-inner"><div class="mu-sk-body">'; var dnT = fa ? "روز / شب (پیش‌فرض)" : "Day / Night (default)", bs = curBase(), dnOn = !cur; out += '<div class="mu-dn2-cap">' + dnT + '</div><div class="mu-dn2" role="group" aria-label="' + dnT + '"><button type="button" class="mu-dn2-h n' + (dnOn && bs === "dark" ? " on" : "") + '" data-dn="dark" aria-pressed="' + (dnOn && bs === "dark" ? "true" : "false") + `" onclick="muNfsSkin.pickBase('dark')"><i class="t">` + (fa ? "شب" : "Night") + '</i></button><button type="button" class="mu-dn2-h d' + (dnOn && bs === "light" ? " on" : "") + '" data-dn="light" aria-pressed="' + (dnOn && bs === "light" ? "true" : "false") + `" onclick="muNfsSkin.pickBase('light')"><i class="t">` + (fa ? "روز" : "Day") + "</i></button></div>", GROUPS.forEach(function (g) { var ts = g.ids.filter(function (id) { return all[id]; }); ts.length && (out += '<div class="mu-sk-gt">' + (fa ? g.fa : g.en) + "<em>" + ts.length.toLocaleString(fa ? "fa" : "en") + '</em></div><div class="mu-skin-grid" role="group">', ts.forEach(function (id) { used[id] = 1, out += tile(all[id], fa, cur); }), out += "</div>"); }); var rest = avail.filter(function (id) { return !used[id]; }); return rest.length && (out += '<div class="mu-sk-gt">' + (fa ? "سایر" : "Other") + '</div><div class="mu-skin-grid" role="group">', rest.forEach(function (id) { out += tile(all[id], fa, cur); }), out += "</div>"), out + "</div></div></div></div>"; } window.muNfsSkin = { get: get, set: pick, pick: pick, clear: clear, apply: apply, chipsHtml: buildChipsHtml, toggle: toggle, pickBase: pickBase, palette: palette }, apply(), document.addEventListener("DOMContentLoaded", apply), window.addEventListener("load", apply); })();
 </script>
+<style id="mkPerfCss">
+/* ===== Markhin perf layer (dep11) ===== */
+/* 1) Folder-icon strip: no layout animation (grid-template-rows/margin re-laid-out the whole notes list every frame) */
+html body #muNfsFStrip{display:none!important;transition:none!important;grid-template-rows:1fr!important;margin:0!important;opacity:1!important}
+html body #muNfsFStrip.open{display:grid!important;margin-top:8px!important;animation:mkPerfIn .12s ease-out}
+@keyframes mkPerfIn{from{opacity:0}to{opacity:1}}
+html body #muNfsFolderBtn svg{transition:none!important}
+/* 2) Side menu: short GPU-only slide, no per-item stagger, spinner only while fully open */
+html body .mu-nav .mu-nav-panel,html body .mu-nav.mu-show .mu-nav-panel{transition:transform .2s cubic-bezier(.2,.8,.2,1)!important}
+html body .mu-nav:not(.mu-show) .mu-nav-panel{transition-duration:.14s!important}
+html body .mu-nav .mu-nav-bg,html body .mu-nav.mu-show .mu-nav-bg{transition:opacity .15s linear!important}
+html body .mu-nav .mu-nav-panel>*,html body .mu-nav.mu-show .mu-nav-panel>*{opacity:1!important;transform:none!important;transition:none!important;transition-delay:0s!important}
+html body .mu-nav:not(.mu-live) .mnl-ring-svg{animation-play-state:paused!important}
+/* 3) Long lists: skip layout/paint of off-screen cards */
+#muNotesFs .mu-nfs-card{content-visibility:auto;contain-intrinsic-size:auto 170px}
+.mu-nfs-chev{transition:none!important}
+/* 4) Home list is opaque and covers the themed body decorations: stop animating them */
+html.mu-nfs-open:not(#_p) body>[class^="mu-darkweb"],html.mu-nfs-open:not(#_p) body>[class^="mu-hogwarts"],html.mu-nfs-open:not(#_p) body>[class^="mu-st-"],html.mu-nfs-open:not(#_p) body>[class^="mu-ha-"],html.mu-nfs-open:not(#_p) body>[class^="mu-phantom"],html.mu-nfs-open:not(#_p) body>[class^="mu-anon"],html.mu-nfs-open:not(#_p) body>[class^="mu-terminal"]{visibility:hidden!important}
+html.mu-nfs-open:not(#_p) body>[class^="mu-darkweb"] *,html.mu-nfs-open:not(#_p) body>[class^="mu-hogwarts"] *{animation:none!important}
+/* 5) Telegram WebView: drop the costliest effects, shorter transitions, no tap delay/highlight */
+html.mk-tg body *,html.mk-tg body *::before,html.mk-tg body *::after{-webkit-backdrop-filter:none!important;backdrop-filter:none!important;-webkit-tap-highlight-color:transparent}
+html.mk-tg #muNotesFs *,html.mk-tg #muNotesFs *::before,html.mk-tg #muNotesFs *::after{transition-duration:.1s!important}
+html.mk-tg #muNotesFs .mu-nfs-card:active{opacity:1!important;transform:scale(.985)}
+html.mk-tg #muNotesFs,html.mk-tg #muNav{-webkit-font-smoothing:antialiased}
+html.mk-tg .mu-nav-panel{box-shadow:none!important}
+html.mk-tg *{scroll-behavior:auto!important}
+
+/* ===== mkDayNightText: modal / toast text follows the Notes page day-night mode (black on day, white on night) ===== */
+html.mu-nfs-open.mu-nfs-light:not(#_dn) #advancedModal,html.mu-nfs-open.mu-nfs-light:not(#_dn) #toast {
+    --text-color:#111111!important;
+    --mk-dn-ink:#111111;
+    --mk-dn-soft:#4a4a4a;
+    --mk-dn-surface:#ffffff;
+    --mk-dn-surface2:#f1f1f1;
+    --mk-dn-line:rgba(0,0,0,.18);
+}
+html.mu-nfs-open.mu-nfs-dark:not(#_dn) #advancedModal,html.mu-nfs-open.mu-nfs-dark:not(#_dn) #toast {
+    --text-color:#ffffff!important;
+    --mk-dn-ink:#ffffff;
+    --mk-dn-soft:#c9c9c9;
+    --mk-dn-surface:#1c1c1c;
+    --mk-dn-surface2:#2a2a2a;
+    --mk-dn-line:rgba(255,255,255,.22);
+}
+html.mu-nfs-open:not(#_dn) #advancedModal #advancedCard.mk-page:not(.xp-card):not([data-nfs-theme]) :is(h1,h2,h3,h4,h5,p,span,div,label,small,b,strong,i,em,li,summary,td,th,a,.image-export-choice,.image-export-choice-name,.image-export-choice-icon,.image-export-choice-action,.image-export-choice-folder,.zip-export-option-name,.zip-export-option-desc,.image-export-count,.markhin-filename-hint,.btn-main:not(.btn-save-prominent)):not([style*="color:"]):not(.xp-badge):not(.xp-badge *):not(.mk-kind-badge):not(.btn-save-prominent):not(.btn-save-prominent *):not(.markhin-move-menu-btn-danger):not(.markhin-move-menu-btn-danger *):not(.btn-danger):not(.btn-danger *) {
+    color:var(--mk-dn-ink)!important;
+    -webkit-text-fill-color:var(--mk-dn-ink)!important;
+    text-shadow:none!important;
+}
+html.mu-nfs-open:not(#_dn) #advancedModal #advancedCard.mk-page:not(.xp-card):not([data-nfs-theme]) :is(.image-export-choice-action,.image-export-choice-folder,.zip-export-option-desc,.markhin-filename-hint,.image-export-count,.xp-hero-t span,p) {
+    color:var(--mk-dn-soft)!important;
+    -webkit-text-fill-color:var(--mk-dn-soft)!important;
+    opacity:1!important;
+}
+html.mu-nfs-open:not(#_dn) #advancedModal #advancedCard.mk-page:not(.xp-card):not([data-nfs-theme]) :is(svg,svg *) {
+    stroke:currentColor;
+}
+/* generic text-only buttons in modal pages (e.g. "Close") */
+html.mu-nfs-open:not(#_dn) #advancedModal #advancedCard.mk-page:not([data-nfs-theme]) .btn-main:not(.btn-save-prominent) {
+    background:var(--mk-dn-surface2)!important;
+    border:1px solid var(--mk-dn-line)!important;
+}
+html.mu-nfs-open:not(#_dn) #advancedModal #advancedCard.mk-page:not(.xp-card):not([data-nfs-theme]) .image-export-choice {
+    background:var(--mk-dn-surface2)!important;
+    border:1px solid var(--mk-dn-line)!important;
+    box-shadow:none!important;
+}
+
+/* ===== mkBwNight: Black & White theme now follows the day / night switch (night = black background, white text) ===== */
+html.mu-nfs-dark:not(#_bw) body.theme-bw {
+    --bg-gradient:linear-gradient(180deg,#1c1c1c 0%,#161616 55%,#101010 100%) !important;
+    --panel-bg:rgba(255,255,255,.05) !important;
+    --panel-border:#454545 !important;
+    --card-bg:#262626 !important;
+    --text-color:#ffffff !important;
+    --btn-bg-fallback:rgba(255,255,255,.08);
+    --pp-bg:#1c1c1c;
+    --pp-bg2:#262626;
+    --pp-surface:#2b2b2b;
+    --pp-line:#454545;
+    --pp-line2:#5a5a5a;
+    --pp-hover:#363636;
+    --pp-chip:#3a3a3a;
+    --pp-warnbg:#2f2f2f;
+    --pp-warnline:#777;
+    --pp-soft:#cfcfcf;
+    --pp-ink:#ffffff;
+    --pp-mute:#aaaaaa;
+    --pp-ac:#ffffff;
+    --pp-acd:#e0e0e0;
+    --pp-onac:#000000;
+    --pp-done:#6ee7a0;
+    --pp-donebg:#1d3a2a;
+    --pp-danger:#ff6b6b;
+    --mu-eb-top:#262626;
+    --mu-eb-bot:#1c1c1c;
+    color-scheme:dark;
+    background-color:#1c1c1c;
+    color:#ffffff;
+}
+html.mu-nfs-dark:not(#_bw) body.theme-bw .btn-main {
+    color:#fff!important;
+    background:#262626!important;
+    border:1px solid #454545!important;
+}
+html.mu-nfs-dark:not(#_bw) body.theme-bw .action-bar>.mc-group>.mc-group-label,html.mu-nfs-dark:not(#_bw) body.theme-bw .action-bar .mc-row button:not(.btn-save-prominent):not(.mc-btn-danger):not([data-flag]),html.mu-nfs-dark:not(#_bw) body.theme-bw .action-bar .mc-row select,html.mu-nfs-dark:not(#_bw) body.theme-bw .action-bar .mc-row label,html.mu-nfs-dark:not(#_bw) body.theme-bw .mu-last-edited,html.mu-nfs-dark:not(#_bw) body.theme-bw .mu-last-edited .mu-last-edited-text,html.mu-nfs-dark:not(#_bw) body.theme-bw .mu-last-edited .mu-last-edited-text strong,html.mu-nfs-dark:not(#_bw) body.theme-bw .mu-last-edited .mu-last-edited-val {
+    color:#fff!important;
+}
+html.mu-nfs-dark:not(#_bw) body.theme-bw .action-bar>.mc-group:not(.mc-danger),html.mu-nfs-dark:not(#_bw) body.theme-bw .io-section-box {
+    border-color:#454545!important;
+    background:#262626!important;
+    color:#fff!important;
+}
+html.mu-nfs-dark:not(#_bw) body.theme-bw .top-btn,html.mu-nfs-dark:not(#_bw) body.theme-bw .folder-search-btn,html.mu-nfs-dark:not(#_bw) body.theme-bw #muFolderScroller,html.mu-nfs-dark:not(#_bw) body.theme-bw .mu-select-trigger,html.mu-nfs-dark:not(#_bw) body.theme-bw .folder-tab {
+    background:#262626!important;
+    border:1px solid #454545!important;
+    color:#fff!important;
+    -webkit-text-fill-color:#fff!important;
+}
+html.mu-nfs-dark:not(#_bw) body.theme-bw .folder-search-btn svg {
+    color:#fff!important;
+}
+html.mu-nfs-dark:not(#_bw) body.theme-bw .folder-tab.active {
+    background:#3a3a3a!important;
+    color:#fff!important;
+    -webkit-text-fill-color:#fff!important;
+    border-color:#8a8a8a!important;
+}
+html.mu-nfs-dark:not(#_bw) body.theme-bw .custom-btn.note-item,html.mu-nfs-dark:not(#_bw) body.theme-bw .note-item {
+    background:#262626!important;
+    border:1px solid #454545!important;
+    color:#fff!important;
+    -webkit-text-fill-color:#fff!important;
+}
+html.mu-nfs-dark:not(#_bw) body.theme-bw .note-item * {
+    color:#fff!important;
+    -webkit-text-fill-color:#fff!important;
+}
+html.mu-nfs-dark:not(#_bw) body.theme-bw .note-item button,html.mu-nfs-dark:not(#_bw) body.theme-bw .note-item [class*=view] {
+    background:#333!important;
+    border:1px solid #454545!important;
+}
+html.mu-nfs-dark:not(#_bw) body.theme-bw .note-sort-label {
+    color:#bbb!important;
+}
+html.mu-nfs-dark:not(#_bw) body.theme-bw #mkBackupBar,html.mu-nfs-dark:not(#_bw) body.theme-bw #toast {
+    background:#262626!important;
+    color:#fff!important;
+    border:1px solid #454545!important;
+}
+html.mu-nfs-dark:not(#_bw) body.theme-bw #mkBackupBar *,html.mu-nfs-dark:not(#_bw) body.theme-bw #toast * {
+    color:#fff!important;
+}
+html.mu-nfs-dark:not(#_bw) body.theme-bw .advanced-modal {
+    background:#000000b8!important;
+}
+html.mu-nfs-dark:not(#_bw) body.theme-bw .advanced-card {
+    background:#1c1c1c!important;
+    border:1px solid #454545!important;
+    color:#fff!important;
+}
+html.mu-nfs-dark:not(#_bw) body.theme-bw .advanced-card h1,html.mu-nfs-dark:not(#_bw) body.theme-bw .advanced-card h2,html.mu-nfs-dark:not(#_bw) body.theme-bw .advanced-card h3,html.mu-nfs-dark:not(#_bw) body.theme-bw .advanced-card label,html.mu-nfs-dark:not(#_bw) body.theme-bw .advanced-card p,html.mu-nfs-dark:not(#_bw) body.theme-bw .advanced-card span {
+    color:#fff;
+}
+html.mu-nfs-dark:not(#_bw) body.theme-bw .image-export-choice,html.mu-nfs-dark:not(#_bw) body.theme-bw .advanced-card button:not(.mcx-btn):not(.btn-danger) {
+    background:#2b2b2b!important;
+    border:1px solid #454545!important;
+    color:#fff!important;
+}
+html.mu-nfs-dark:not(#_bw) body.theme-bw .image-export-choice * {
+    color:#fff!important;
+}
+html.mu-nfs-dark:not(#_bw) body.theme-bw .content-container,html[data-mxe-theme=dark]:not(#_bw) body.theme-bw .content-container {
+    color:#fff!important;
+}
+</style>
 </body>
 </html>
