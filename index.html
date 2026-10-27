@@ -1440,6 +1440,128 @@ html.mu-host img,html.mu-host canvas,html.mu-host video,html.mu-host svg {
     filter:none!important;
 }
 </style>
+<style id="mkTgPerfCss">
+/* Telegram performance layer (all Telegram clients): tiny repeated blur layers are the main source of stutter in the
+   Telegram WebView, and they are barely visible at 3-7px, so they go. Purely decorative endless animations stop. */
+html.mk-tg .top-btn,html.mk-tg .action-bar button,html.mk-tg .action-bar label,html.mk-tg .action-bar select,
+html.mk-tg .mc-row button,html.mk-tg .mc-row select,html.mk-tg .mc-row label,html.mk-tg .img-toolbar,
+html.mk-tg .markhin-note-select-bar,html.mk-tg .markhin-move-menu,html.mk-tg .markhin-tag-tooltip,
+html.mk-tg .markhin-drop-zone,html.mk-tg .advanced-head,html.mk-tg #toast,html.mk-tg .mk-backup-bar,
+html.mk-tg .mu-viewer-close,html.mk-tg .mu-img-lightbox-btn {
+    -webkit-backdrop-filter:none!important;
+    backdrop-filter:none!important;
+}
+html.mk-tg #muNav .mu-nav-logo-btn svg.mnl-ring-svg,html.mk-tg #muNav .mnl-pupil,html.mk-tg .mklk .mklk-ticks,
+html.mk-tg html body .advanced-card.mk-page.xp-card .xp-all:after,html.mk-tg .xp-all:after {
+    animation-play-state:paused!important;
+}
+html.mk-tg .note-btn-wrap {
+    content-visibility:auto;
+    contain-intrinsic-size:auto 64px;
+}
+/* Low tier (weak phone, or measured jank while scrolling): everything heavy off, same recipe the embedded-host mode uses. */
+html.mk-tg-lite *:not(#mkSplash):not(#mkSplash *),html.mk-tg-lite *:before,html.mk-tg-lite *:after {
+    -webkit-backdrop-filter:none!important;
+    backdrop-filter:none!important;
+    will-change:auto!important;
+    text-shadow:none!important;
+    scroll-behavior:auto!important;
+}
+html.mk-tg-lite *:not(#mkSplash):not(#mkSplash *):not(.mu-live-caret):not(:focus):not(:focus-within),html.mk-tg-lite *:before,html.mk-tg-lite *:after {
+    box-shadow:none!important;
+}
+html.mk-tg-lite .mu-darkweb-rain-col,html.mk-tg-lite .mu-spider-web,html.mk-tg-lite .mu-darkweb-scanlines,
+html.mk-tg-lite .mu-redhorizon-stars:before,html.mk-tg-lite .mu-redhorizon-stars:after {
+    animation-play-state:paused!important;
+}
+html.mk-tg-lite body:before,html.mk-tg-lite body:after {
+    filter:none!important;
+}
+</style>
+<script id="mkTgPerf">
+/* Telegram performance tier. mkHostCompat only lightens embedded previews; inside Telegram it deliberately does nothing,
+   so this picks a tier for the real Telegram clients:
+     mk-tg       every Telegram client: drop small blur layers, stop decorative loops
+     mk-tg-lite  weak devices (<=4 GB RAM / <=4 cores) or measured scroll jank: backdrop blur, glow shadows, text shadows off
+   Override: MKPerf.set("auto" | "lite" | "mid" | "off"). Stored in localStorage key mk_tg_perf. */
+(function () {
+    var w = window, d = document, root = d.documentElement, LS = "mk_tg_perf", LA = "mk_tg_perf_auto";
+    if (w.__mkTgPerf)
+        return;
+    w.__mkTgPerf = 1;
+    function ls(k, v) { try {
+        if (v === void 0)
+            return w.localStorage.getItem(k);
+        v === null ? w.localStorage.removeItem(k) : w.localStorage.setItem(k, v);
+    }
+    catch (_) { } return null; }
+    var tg = !1, hash = "";
+    try {
+        hash = String(location.hash || "") + "&" + String(location.search || "");
+        tg = /tgWebApp(Data|Version|Platform)/.test(hash) || /Telegram/i.test(navigator.userAgent || "") || !!w.TelegramWebviewProxy || !!(w.sessionStorage && w.sessionStorage.getItem("__telegram__initParams"));
+    }
+    catch (_) { }
+    if (!tg || w.__MU_HOST)
+        return;
+    var mem = navigator.deviceMemory || 0, cores = navigator.hardwareConcurrency || 0, low = !!(mem && mem <= 4 || cores && cores <= 4);
+    function mode() { var m = ls(LS); return m === "lite" || m === "mid" || m === "off" ? m : "auto"; }
+    function apply() {
+        var m = mode(), lite = m === "lite" || m === "auto" && (low || ls(LA) === "lite");
+        root.classList.toggle("mk-tg", m !== "off");
+        root.classList.toggle("mk-tg-lite", m !== "off" && lite);
+        return lite;
+    }
+    var lite = apply();
+    w.MKPerf = { mode: mode, set: function (m) { ls(LS, m === "auto" ? null : m); ls(LA, null); apply(); return mode(); }, lite: function () { return root.classList.contains("mk-tg-lite"); } };
+    if (lite || mode() !== "auto" || ls(LA) === "ok")
+        return;
+    /* Adaptive: sample frame times only while the user scrolls. 90 samples decide; >30% slow frames -> lite for good. */
+    var n = 0, bad = 0, last = 0, run = !1, endT = 0;
+    function frame(ts) {
+        if (!run)
+            return;
+        if (last && !d.hidden) {
+            var dt = ts - last;
+            if (dt < 250) {
+                n++;
+                dt > 34 && bad++;
+            }
+        }
+        last = ts;
+        if (n >= 90) {
+            stop(!0);
+            return;
+        }
+        requestAnimationFrame(frame);
+    }
+    function onScroll() {
+        if (!run) {
+            run = !0;
+            last = 0;
+            requestAnimationFrame(frame);
+        }
+        clearTimeout(endT);
+        endT = setTimeout(function () { run = !1; }, 350);
+    }
+    function stop(decide) {
+        run = !1;
+        clearTimeout(endT);
+        w.removeEventListener("scroll", onScroll, !0);
+        d.removeEventListener("touchmove", onScroll, !0);
+        if (decide) {
+            if (bad / n > .3) {
+                ls(LA, "lite");
+                apply();
+            }
+            else
+                ls(LA, "ok");
+        }
+    }
+    w.addEventListener("scroll", onScroll, { passive: !0, capture: !0 });
+    d.addEventListener("touchmove", onScroll, { passive: !0, capture: !0 });
+})();
+</script>
+
 
 <script id="mkBootGateJs">
 // Splash: shown for at least MIN ms, hidden once the app reports ready, never longer than MAX ms (weak
@@ -15803,7 +15925,7 @@ html.mu-nfs-open:not(#_nfs) body .advanced-card.mk-page.kg-card {
     accent-color:var(--nfs-fab);
 }
 html.mu-nfs-open:not(#_nfs) body .advanced-card.mk-page.kg-card>.advanced-head {
-    background:transparent!important;
+    background:var(--nfs-bg)!important;
     border-bottom:1px solid var(--nfs-border)!important;
 }
 html.mu-nfs-open:not(#_nfs) body .advanced-card.mk-page.kg-card>.advanced-head h3 {
@@ -17428,7 +17550,7 @@ html body .advanced-modal:has(.advanced-card.xp-card) {
     --mk-fs-bg:#070a13 !important;
 }
 html body .advanced-card.mk-page.xp-card>.advanced-head {
-    background:transparent!important;
+    background:var(--mk-fs-bg,#070a13)!important;
     border-bottom:0!important;
     box-shadow:none!important;
     padding-bottom:2px;
@@ -18461,115 +18583,7 @@ html.mu-nfs-open:not(#_nfs) body .advanced-card:has(.markhin-filename-input) .ma
     line-height:16px;
 }
 </style>
-<style id="muNavLogoCss">
-#muNav[data-theme=light],#muNav[data-theme=dark] {
-    --mnl-d:color-mix(in srgb,#7f7f7f 11%,var(--nfs-nav-bg));
-    --mnl-l:var(--nfs-text);
-}
-#muNav .mu-nav-logo {
-    flex:0 0 auto;
-    margin-top:auto;
-    padding:18px 0 6px;
-    display:flex;
-    flex-direction:column;
-    align-items:center;
-    gap:8px;
-    -webkit-tap-highlight-color:transparent;
-    user-select:none;
-    -webkit-user-select:none;
-}
-#muNav .mu-nav-logo-btn {
-    appearance:none;
-    -webkit-appearance:none;
-    background:none;
-    border:0;
-    padding:0;
-    margin:0;
-    cursor:pointer;
-    width:104px;
-    height:108px;
-    display:block;
-    outline:none;
-    filter:drop-shadow(0 0 6px rgba(0,0,0,.55));
-}
-#muNav .mu-nav-logo-btn {
-    position:relative;
-    touch-action:manipulation;
-}
-#muNav .mu-nav-logo-btn svg.mnl-ring-svg {
-    position:absolute;
-    inset:0;
-    width:100%;
-    height:100%;
-    pointer-events:none;
-    will-change:transform;
-    backface-visibility:hidden;
-    animation:mnlSpin 38s linear infinite;
-}
-#muNav .mu-nav-logo-btn svg {
-    width:100%;
-    height:100%;
-    overflow:visible;
-    display:block;
-}
-#muNav .mnl-pupil {
-    transform-box:fill-box;
-    transform-origin:center;
-    animation:mnlPupil 4.2s ease-in-out infinite;
-}
-@keyframes mnlSpin {
-    to {
-        transform:rotate(360deg);
-    }
-}
-#muNav .mu-nav-logo-btn svg.mnl-ring2 {
-    animation-duration:64s;
-    animation-direction:reverse;
-}
-@keyframes mnlPupil {
-    0%,to {
-        transform:scaleX(1);
-    }
-    50% {
-        transform:scaleX(.45);
-    }
-}
-#muNav .mu-nav-logo-txt {
-    contain:layout style;
-    direction:ltr;
-    unicode-bidi:isolate;
-    text-align:center;
-    min-height:19px;
-    font:600 12.5px/19px ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
-    letter-spacing:.8px;
-    color:var(--nfs-text);
-    opacity:.88;
-    white-space:nowrap;
-}
-#muNav .mu-nav-logo-txt.mnl-on:after {
-    content:"";
-    display:inline-block;
-    width:7px;
-    height:13px;
-    margin-inline-start:2px;
-    vertical-align:-2px;
-    background:currentColor;
-    animation:mnlCur .8s steps(1) infinite;
-}
-@keyframes mnlCur {
-    50% {
-        opacity:0;
-    }
-}
-#muNav .mu-nav-panel:not(.mu-nav-paired) .mu-nav-logo {
-    display:none;
-}
-@media(prefers-reduced-motion:reduce) {
-    #muNav .mnl-ring-svg,#muNav .mnl-eye,#muNav .mnl-pupil {
-        animation:none;
-    }
-}
-</style><style id="muNavSmooth">
+<style id="muNavSmooth">
 #muNav .mu-nav-panel {
     transition:transform .22s cubic-bezier(.4,0,1,1);
 }
@@ -19143,6 +19157,20 @@ html.mu-nfs-open:not(#_nfs) body:before,html.mu-nfs-open:not(#_nfs) body:after,h
     opacity:1!important;
 }
 </style>
+<style id="muLangSwFix">
+/* Language switch: the side menu is parked off-screen on the "start" side (-104% in LTR, +104% in RTL). Changing the
+   language flips dir, which flipped that parked position while the panel still had its slide transition, so it
+   visibly swept across the whole screen (the "jump"). A closed menu never animates a position change now, and the
+   whole switch window is animation-free for the menu and the Notes page too. */
+#muNav:not(.mu-open) .mu-nav-panel,#muNav:not(.mu-open) .mu-nav-bg {
+    transition:none!important;
+}
+html.mu-lang-sw #muNav,html.mu-lang-sw #muNav *,html.mu-lang-sw #muNotesFs,html.mu-lang-sw #muNotesFs * {
+    animation:none!important;
+    transition:none!important;
+}
+</style>
+
 <script id="muNoPanelScroll">
 (function () { try {
     var originalScrollIntoView = Element.prototype.scrollIntoView;
@@ -20318,7 +20346,10 @@ catch (e) {
         const fa = /^(fa|prs|pes)(\b|-|_)/i.test(navigator.language || ""), box = document.createElement("div");
         box.style.cssText = "position:fixed;inset:0;z-index:2147483647;display:flex;align-items:center;justify-content:center;background:#03192c;color:#90e0ef;font-family:Tahoma,sans-serif;text-align:center;padding:24px;direction:" + (fa ? "rtl" : "ltr") + ";";
         const safeName = String(name).replace(/[<>&]/g, "");
-        box.innerHTML = '<div><div style="font-size:40px;margin-bottom:12px">✅</div><div style="font-size:16px;line-height:1.9">' + (fa ? "دانلود فایل «" + safeName + "» شروع شد.<br>حالا می‌توانید این تب را ببندید و به تلگرام برگردید." : "The download for “" + safeName + "” has started.<br>You can close this tab and go back to Telegram now.") + "</div></div>", document.body.appendChild(box);
+        box.innerHTML = '<div><div style="font-size:40px;margin-bottom:12px">✅</div><div style="font-size:16px;line-height:1.9">' + (fa ? "دانلود فایل «" + safeName + "» شروع شد.<br>فایل در پوشهٔ Downloads گوشی ذخیره می‌شود؛ اگر اعلانی ندیدید، از Files ← Downloads بازش کنید.<br>بعد این تب را ببندید و به تلگرام برگردید." : "The download for “" + safeName + "” has started.<br>The file is saved to your phone’s Downloads folder; if you see no notification, open it from Files → Downloads.<br>Then close this tab and go back to Telegram.") + "</div></div>", document.body.appendChild(box);
+        // This tab only exists to deliver the file: stop parsing so the rest of the app never boots here
+        // (it would start with empty storage and default theme). Verified that the download still starts.
+        setTimeout(function () { try { window.stop(); } catch { } }, 0);
     }
     catch (e) {
         console.warn("Incoming Telegram download bridge failed", e);
@@ -20981,7 +21012,7 @@ document.addEventListener("visibilitychange", () => { document.visibilityState =
 //   idle (15 s) / deep idle (45 s): when nobody touches this device for 3 / 15 min (wakes up at once on touch)
 // It never runs while hidden/offline, never while a backup is running or waiting, and never while the user
 // is typing (so an incoming change can't steal the caret). Failures back off automatically.
-const CLOUD_LIVE = { hotMs: 3e3, normalMs: 6e3, idleMs: 1e4, deepMs: 2e4, unlinkedMs: 3e4, hotWindowMs: 12e4, idleAfterMs: 18e4, deepAfterMs: 9e5, typingQuietMs: 1500, maxBackoffMs: 6e4, maxPullTries: 3 };
+const CLOUD_LIVE = { hotMs: 2e3, normalMs: 3500, idleMs: 5e3, deepMs: 1e4, unlinkedMs: 3e4, hotWindowMs: 12e4, idleAfterMs: 3e5, deepAfterMs: 18e5, typingQuietMs: 1500, maxBackoffMs: 6e4, maxPullTries: 3 };
 const CLOUD_POLL_INTERVAL_MS = CLOUD_LIVE.normalMs;
 let __cloudPollTimer = null;
 const __cloudLive = window.__mkLive = { running: !1, busy: !1, sig: null, parts: null, ids: null, pendingSig: null, tries: 0, fails: 0, lastUserAt: Date.now(), hotUntil: 0, lastOkSeen: 0, lastProbeAt: 0, lastChangeAt: 0, probes: 0, pulls: 0, tgBound: !1 };
@@ -21076,9 +21107,87 @@ window.addEventListener("focus", () => { cloudLiveKick(0); }), window.addEventLi
     ["keydown", "input", "compositionupdate", "beforeinput"].forEach(ev => document.addEventListener(ev, typed, o)), ["pointerdown", "touchstart", "keydown", "wheel"].forEach(ev => document.addEventListener(ev, touched, o));
 }
 // Small, non-blocking notice when another device's changes arrive (also a hook for other modules)
+// ===== LIVE REPAINT (v7): after another device's data is merged in, EVERYTHING visible is redrawn at once =====
+// Before this, only the legacy renderApp() ran: the Notes page (the app's main list of cards) and the open editor's
+// caret were never refreshed, so a synced change stayed invisible until a tap or a reload.
+function mkLiveStateSig() { try {
+    let h = categories.length + "#";
+    for (let i = 0; i < categories.length; i++) { const c = categories[i]; h += c.id + "|" + (c.lastEdited || "") + "|" + (c.metaEditedAt || "") + "|" + (c.name || "") + "|" + (c.folder || "") + ";"; }
+    h += "#" + folders.join("|");
+    try { window.MU_FolderPins && window.MU_FolderPins.ts && (h += "#" + window.MU_FolderPins.ts()); } catch { }
+    return h;
+}
+catch {
+    return "x" + Math.random();
+} }
+function mkLiveCaretSave() { try {
+    const ae = document.activeElement;
+    if (!ae || !ae.isContentEditable || !ae.id)
+        return null;
+    const sel = window.getSelection();
+    if (!sel || !sel.rangeCount)
+        return { id: ae.id, s: -1, e: -1 };
+    const r = sel.getRangeAt(0);
+    if (!ae.contains(r.startContainer))
+        return { id: ae.id, s: -1, e: -1 };
+    const pre = document.createRange();
+    pre.selectNodeContents(ae), pre.setEnd(r.startContainer, r.startOffset);
+    const s = pre.toString().length;
+    pre.setEnd(r.endContainer, r.endOffset);
+    return { id: ae.id, s: s, e: pre.toString().length };
+}
+catch {
+    return null;
+} }
+function mkLiveCaretRestore(st) { try {
+    if (!st || !st.id)
+        return;
+    const el = document.getElementById(st.id);
+    if (!el || !el.isContentEditable)
+        return;
+    el.focus({ preventScroll: !0 });
+    if (st.s < 0)
+        return;
+    const walker = document.createTreeWalker(el, NodeFilter.SHOW_TEXT);
+    let pos = 0, n, sN = null, sO = 0, eN = null, eO = 0;
+    for (; n = walker.nextNode();) {
+        const len = n.nodeValue.length;
+        if (!sN && pos + len >= st.s && (sN = n, sO = st.s - pos), !eN && pos + len >= st.e) {
+            eN = n, eO = st.e - pos;
+            break;
+        }
+        pos += len;
+    }
+    if (!sN)
+        return;
+    eN || (eN = sN, eO = sO);
+    const rg = document.createRange();
+    rg.setStart(sN, Math.min(sO, sN.nodeValue.length)), rg.setEnd(eN, Math.min(eO, eN.nodeValue.length));
+    const sel = window.getSelection();
+    sel.removeAllRanges(), sel.addRange(rg);
+}
+catch { } }
+function mkLiveRepaint() { const caret = mkLiveCaretSave(); try {
+    renderApp();
+}
+catch (e) {
+    console.warn("live repaint: renderApp failed", e);
+} try {
+    const api = window.muNotesFs;
+    api && typeof api.isOpen == "function" && api.isOpen() && typeof api.refresh == "function" && api.refresh();
+}
+catch (e) {
+    console.warn("live repaint: notes page failed", e);
+} if (caret) {
+    mkLiveCaretRestore(caret), setTimeout(() => { document.activeElement && document.activeElement.id === caret.id || mkLiveCaretRestore(caret); }, 220);
+} try {
+    typeof mkBkRefreshPanel == "function" && mkBkRefreshPanel();
+}
+catch { } }
+window.mkLiveRepaint = mkLiveRepaint;
 function mkLiveNotifyMerged(updated, added, retired) { try {
     const fa = currentLang === "fa", n = (updated || 0) + (added || 0) + (retired || 0);
-    showToast(fa ? `🔄 ${n} تغییر از دستگاه دیگر همگام شد` : `🔄 ${n} change${n === 1 ? "" : "s"} synced from another device`, 2200), window.dispatchEvent(new CustomEvent("mk-cloud-merged", { detail: { updated: updated || 0, added: added || 0, retired: retired || 0 } })), cloudLiveHot();
+    n > 0 && showToast(fa ? `🔄 ${n} تغییر از دستگاه دیگر همگام شد` : `🔄 ${n} change${n === 1 ? "" : "s"} synced from another device`, 2200), window.dispatchEvent(new CustomEvent("mk-cloud-merged", { detail: { updated: updated || 0, added: added || 0, retired: retired || 0 } })), cloudLiveHot();
 }
 catch { } }
 // Manual "sync now" (also usable from the console): window.mkLiveSyncNow()
@@ -21771,10 +21880,10 @@ if (window.__mkRebuildForce = !1, kind === "auto" && prevEntry) {
     else
         try {
             const remote = await cloudRestoreBackup(prevEntry.id);
-            remote && remote.data && (cloudQuiet(() => { const merged = cloudApplyMergeData(remote.data); if (merged.updated || merged.added || merged.retired) {
+            remote && remote.data && (cloudQuiet(() => { const __sb = mkLiveStateSig(), merged = cloudApplyMergeData(remote.data); if (merged.updated || merged.added || merged.retired || mkLiveStateSig() !== __sb) {
                 saveToLocalStorage(), saveFoldersToLocalStorage();
                 try {
-                    renderApp();
+                    mkLiveRepaint();
                 }
                 catch { }
             } }), preMergeOk = !0, window.__mkSeenAutoTs = prevEntry.ts || 0);
@@ -21950,7 +22059,7 @@ catch { } const local = categories.find(c => c.id === cloudItem.id); if (local) 
             else
                 local.html = cloudHtml;
         }
-    cloudMetaNewer && (local.folder = cloudItem.folder, local.extraFolders = Array.isArray(cloudItem.extraFolders) ? cloudItem.extraFolders.filter(f => typeof f == "string" && f) : [], local.tags = Array.isArray(cloudItem.tags) ? cloudItem.tags.filter(Boolean).map(String) : local.tags || [], local.pinned = !!cloudItem.pinned, local.favorite = !!cloudItem.favorite, local.archived = !!cloudItem.archived, typeof cloudItem.color == "string" && /^[a-z]*$/.test(cloudItem.color) && (local.color = cloudItem.color), local.metaEditedAt = cloudItem.metaEditedAt), (cloudTextNewer || cloudMetaNewer) && updated++;
+    cloudMetaNewer && (cloudItem.order != null && (local.order = Number(cloudItem.order) || 0), local.folder = cloudItem.folder, local.extraFolders = Array.isArray(cloudItem.extraFolders) ? cloudItem.extraFolders.filter(f => typeof f == "string" && f) : [], local.tags = Array.isArray(cloudItem.tags) ? cloudItem.tags.filter(Boolean).map(String) : local.tags || [], local.pinned = !!cloudItem.pinned, local.favorite = !!cloudItem.favorite, local.archived = !!cloudItem.archived, typeof cloudItem.color == "string" && /^[a-z]*$/.test(cloudItem.color) && (local.color = cloudItem.color), local.metaEditedAt = cloudItem.metaEditedAt), (cloudTextNewer || cloudMetaNewer) && updated++;
 }
 else {
     let forceRestoredFromTombstone = !1;
@@ -22110,7 +22219,7 @@ async function cloudSilentPullMerge() { try {
         cloudQuiet(() => { if (cloudMergeTombstones(result.data.tombstones)) {
             saveToLocalStorage(), saveFoldersToLocalStorage();
             try {
-                renderApp();
+                mkLiveRepaint();
             }
             catch { }
         } });
@@ -22118,13 +22227,13 @@ async function cloudSilentPullMerge() { try {
     }
     // Text typed in the last moments must be in the notes (with a fresh lastEdited) BEFORE the merge, so
     // an older Cloud copy can never win over it or re-render it away
-    cloudFlushEditorFirst(), cloudQuiet(() => { const { updated: updated, added: added, retired: retired } = cloudApplyMergeData(result.data); if (updated || added || retired) { try {
+    cloudFlushEditorFirst(); const __mkSigB = mkLiveStateSig(); cloudQuiet(() => { const { updated: updated, added: added, retired: retired } = cloudApplyMergeData(result.data); if (updated || added || retired || mkLiveStateSig() !== __mkSigB) { try {
         mkLiveNotifyMerged(updated, added, retired);
     }
     catch { }
         saveToLocalStorage(), saveFoldersToLocalStorage();
         try {
-            renderApp();
+            mkLiveRepaint();
         }
         catch { }
     } }), result.meta && result.meta.ts && (window.__mkSeenAutoTs = result.meta.ts);
@@ -22723,7 +22832,7 @@ catch { } try {
 catch { } });
 function toggleLanguage() { try {
     const r = document.documentElement;
-    r.classList.add("mu-lang-sw"), clearTimeout(window.__muLangSwT), window.__muLangSwT = setTimeout(function () { r.classList.remove("mu-lang-sw"); }, 600);
+    r.classList.add("mu-lang-sw"), clearTimeout(window.__muLangSwT), window.__muLangSwT = setTimeout(function () { r.classList.remove("mu-lang-sw"); }, 0);
 }
 catch { } currentLang = currentLang === "fa" ? "en" : "fa", localStorage.setItem("app_lang_v15", currentLang); const oldDefault = DEFAULT_FOLDER; DEFAULT_FOLDER = i18n[currentLang].allFolders, folders = folders.map(f => f === oldDefault ? DEFAULT_FOLDER : f), folders = [DEFAULT_FOLDER, ...new Set(folders.filter(f => f !== DEFAULT_FOLDER))], (currentFolder === oldDefault || !folders.includes(currentFolder)) && (currentFolder = DEFAULT_FOLDER), applyLanguageUI(), MU_Theme.apply(MU_Theme.getCurrentIndex()), typeof mu_renderNoteSortLabels == "function" && mu_renderNoteSortLabels(), typeof mu_renderNotePreviewToggle == "function" && mu_renderNotePreviewToggle(), typeof mu_renderWipeAllLabels == "function" && mu_renderWipeAllLabels(), window.__muLangDefer ? (window.__muLangDefer = !1, requestAnimationFrame(function () { setTimeout(function () { var y = window.scrollY || 0; try { renderApp(); } catch { } window.scrollTo(0, y); }, 0); })) : renderApp(); }
 function applyLanguageUI() { const t = i18n[currentLang], htmlTag = document.getElementById("htmlTag"); htmlTag.dir = currentLang === "fa" ? "rtl" : "ltr", htmlTag.lang = currentLang; }
@@ -29063,7 +29172,7 @@ window.__mkFixAutoSyncBusy = !0, window.__mkFixProgHold = !0; const btn = docume
             <p>اگر یادداشت‌هایت از سقف حجم یک بکاپ بزرگ‌تر باشد، در بکاپ خودکار کم‌تازه‌ترین یادداشت‌ها جا نمی‌گیرند (کنار بکاپ «⚠️ رد شد» می‌بینی؛ روی گوشی می‌مانند). برای جای بیشتر، تعداد بکاپ دستی را در «⚙️ تنظیمات بکاپ» کم کن.</p>
 
             <h4 style="margin:14px 0 6px">💾 ذخیره خودکار پس از هر تغییر</h4>
-            <p>در تب «بکاپ خودکار» یک کلید روشن/خاموش با همین نام هست و به‌طور پیش‌فرض روشن است. اگر خاموشش کنی، هیچ نوشتن خودکاری (بعد از تغییرها، تلاش دوباره‌ی خودکار، برگشتن اینترنت، تغییرات لیست) انجام نمی‌شود؛ فقط وقتی خودت «🔄 فعال‌سازی / تعمیر سینک»، «🔁 تلاش دوباره» یا «📤 ذخیره‌ی یک بکاپ جدید» را بزنی چیزی در Cloud نوشته می‌شود. یعنی تغییرات تازه فقط روی همین دستگاه می‌مانند و اگر اطلاعات دستگاه از بین برود، چیزی برای بازیابی نیست و دستگاه‌های دیگر هم تغییرات این دستگاه را نمی‌بینند. با روشن‌کردن دوباره، تغییرات مانده چند ثانیه بعد ذخیره می‌شوند. این کلید فقط برای همین دستگاه است (جایی هم‌گام نمی‌شود) و دریافت تغییرات دستگاه‌های دیگر را قطع نمی‌کند.</p>
+            <p>در تب «بکاپ خودکار» یک کلید روشن/خاموش با همین نام هست و به‌طور پیش‌فرض روشن است. اگر خاموشش کنی، هیچ نوشتن خودکاری (بعد از تغییرها، تلاش دوباره‌ی خودکار، برگشتن اینترنت، تغییرات لیست) انجام نمی‌شود؛ فقط وقتی خودت «🔄 فعال‌سازی / تعمیر سینک»، «🔁 تلاش دوباره» یا «?? ذخیره‌ی یک بکاپ جدید» را بزنی چیزی در Cloud نوشته می‌شود. یعنی تغییرات تازه فقط روی همین دستگاه می‌مانند و اگر اطلاعات دستگاه از بین برود، چیزی برای بازیابی نیست و دستگاه‌های دیگر هم تغییرات این دستگاه را نمی‌بینند. با روشن‌کردن دوباره، تغییرات مانده چند ثانیه بعد ذخیره می‌شوند. این کلید فقط برای همین دستگاه است (جایی هم‌گام نمی‌شود) و دریافت تغییرات دستگاه‌های دیگر را قطع نمی‌کند.</p>
 
             <h4 style="margin:14px 0 6px">🔗 سینک بین دستگاه‌ها (دریافت)</h4>
             <p>ذخیره‌ی خودکار (Push) فقط نیمی از کار است؛ نیمه‌ی دیگر <b>دریافت</b> خودکار تغییرات دستگاه‌های دیگر (یادداشت‌های جدید، ویرایش‌ها و حذف‌ها) بدون Restore دستی است. تلگرام راهی برای اعلان زنده ندارد، پس برنامه هنگام باز شدن و بعد هر حدود 45 ثانیه (تا وقتی برنامه باز و روی صفحه است) نسخه‌ی ابری را چک می‌کند؛ فقط وقتی نسخه‌ی ابری عوض شده باشد دانلود می‌کند و با همان قاعده‌ی بازیابی ادغام می‌کند (جدیدتر برنده است).</p>
@@ -29903,11 +30012,11 @@ HX().scheduleCloudBackup(!1, !0), HX().showToast(fa ? `✅ ذخیره شد — �
     const norm = s => MS.norm(s);
     // "exact phrase" (also «…») must appear contiguously
     function parseQuery(raw) { const src = String(raw || "").trim(), filters = [], textTerms = [], rawTerms = [], phrases = [], negs = [], addWords = tok => { const n = MS.norm(tok); return n.split(" ").filter(Boolean).forEach(w => { textTerms.push(w), rawTerms.push(n === w ? String(tok).toLowerCase() : w), /[@:\/\\._#\d-]/.test(String(tok)) && (textTerms.noNet || (textTerms.noNet = new Set)).add(w); }), n; }; return src.replace(/"([^"]+)"|«([^»]+)»/g, (m2, a, b) => { const p = addWords(a || b); return p && phrases.push(p), " "; }).split(/\s+/).filter(Boolean).forEach(tok => { let m2; if (m2 = tok.match(/^(?:tag|برچسب):(.+)$/i))
-        filters.push({ type: "tag", val: norm(m[1]) });
-    else if (m = tok.match(/^(?:folder|پوشه):(.+)$/i))
-        filters.push({ type: "folder", val: norm(m[1]) });
-    else if (m = tok.match(/^(?:is|وضعیت):(pinned|favorite|fav|locked|سنجاق|علاقه|قفل)$/i)) {
-        const v = m[1].toLowerCase();
+        filters.push({ type: "tag", val: norm(m2[1]) });
+    else if (m2 = tok.match(/^(?:folder|پوشه):(.+)$/i))
+        filters.push({ type: "folder", val: norm(m2[1]) });
+    else if (m2 = tok.match(/^(?:is|وضعیت):(pinned|favorite|fav|locked|سنجاق|علاقه|قفل)$/i)) {
+        const v = m2[1].toLowerCase();
         filters.push({ type: "is", val: { fav: "favorite", سنجاق: "pinned", علاقه: "favorite", قفل: "locked" }[v] || v });
     }
     else if (/^[-−]./.test(tok)) {
@@ -30497,7 +30606,7 @@ HX().scheduleCloudBackup(!1, !0), HX().showToast(fa ? `✅ ذخیره شد — �
     } const ordered = [...HX().getVisibleCategories()].sort((a, b) => Number(b.pinned) - Number(a.pinned) || Number(b.favorite) - Number(a.favorite) || (Number(a.order) || 0) - (Number(b.order) || 0)), idx = ordered.findIndex(x => x.id === id), swapIdx = idx + dir; if (idx === -1 || swapIdx < 0 || swapIdx >= ordered.length)
         return;
         // ensureItem() is scoped to a different IIFE; order is the only field needed here.
-        const tmp = ordered[idx]; ordered[idx] = ordered[swapIdx], ordered[swapIdx] = tmp, ordered.forEach((it, i) => { it.order = i; }), HX().saveToLocalStorage(), HX().renderButtons(); }, window.moveFolderOrder = function (name, dir) {
+        const tmp = ordered[idx]; ordered[idx] = ordered[swapIdx], ordered[swapIdx] = tmp, ordered.forEach((it, i) => { it.order !== i && (it.metaEditedAt = new Date().toUTCString()), it.order = i; }), HX().saveToLocalStorage(), HX().renderButtons(); }, window.moveFolderOrder = function (name, dir) {
         // The root folder (index 0) stays pinned first.
         const idx = HX().folders.indexOf(name), swapIdx = idx + dir; if (idx <= 0 || swapIdx <= 0 || swapIdx >= HX().folders.length)
         return; const tmp = HX().folders[idx]; HX().folders[idx] = HX().folders[swapIdx], HX().folders[swapIdx] = tmp, HX().saveFoldersToLocalStorage(), HX().renderFolders(); }, (function () { let menuEl = null, suppressClickUntil = 0; function closeMenu() { menuEl && (menuEl.remove(), menuEl = null), document.removeEventListener("pointerdown", onOutsidePointerDown, !0), window.removeEventListener("scroll", closeMenu, !0); } function onOutsidePointerDown(e) { menuEl && !menuEl.contains(e.target) && closeMenu(); } function openMenu(wrap, onMoveRight, onMoveLeft, axis, onDelete) { if (!wrap)
@@ -31538,7 +31647,7 @@ HX().scheduleCloudBackup(!1, !0), HX().showToast(fa ? `✅ ذخیره شد — �
 }
 catch { } } document.addEventListener("input", function (e2) { var el = e2.target && e2.target.closest ? e2.target.closest('[id^="text-"]') : null; if (el) {
     var id = el.id.slice(5);
-    clearTimeout(t2), t2 = setTimeout(function () { refresh(id); }, 900);
+    clearTimeout(t2), t2 = setTimeout(function () { refresh(id); }, 0);
 } }, !0); })();
 </script>
 
@@ -32922,7 +33031,7 @@ function initZoomWatch() { syncMode(), initSoftPinch(), zoomWatchDone || (zoomWa
         catch { }
     }
 }
-catch { } } function gearSvg() { return '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3.2"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>'; } function closeBtn() { return '<button class="btn-main" onclick="MK.liteHost.closeDialog()" aria-label="' + (isFa() ? "بستن" : "Close") + '">✕</button>'; } function openSettings() { var fa = isFa(), card = document.getElementById("advancedCard"), skinRow = '<div class="mu-set-row" style="flex-direction:column;align-items:stretch"><div class="mu-set-text"><div class="mu-set-title">' + (fa ? "تم ورژن جدید" : "New version theme") + '</div><div class="mu-set-desc">' + (fa ? "یکی از تم‌های برنامه را انتخاب کنید. با زدن دکمه روز/شب در صفحه یادداشت‌ها دوباره به حالت روز و شب برمی‌گردد." : "Pick one of the app themes. Tapping the day / night button on the Notes page goes back to plain day / night.") + "</div></div>" + (MK.nfsSkin ? MK.nfsSkin.chipsHtml(fa) : "") + "</div>"; MK.liteHost.showDialog('<div class="advanced-head"><h3>' + (fa ? "تنظیمات" : "Settings") + "</h3>" + closeBtn() + "</div>" + skinRow + '<div class="mu-set-row" style="flex-direction:column;align-items:stretch"><div class="mu-set-text"><div class="mu-set-title">زبان / Language</div><div class="mu-set-desc"><div dir="rtl" style="text-align:right">زبان برنامه را انتخاب کنید.</div><div dir="ltr" style="text-align:left">Choose the app language.</div></div></div><div class="mu-vs-seg" id="muLangSeg" role="group" aria-label="زبان / Language">' + [["fa", "فارسی (Persian)"], ["en", "English (انگلیسی)"]].map(function (o) { return '<button type="button" class="mu-vs-opt" data-lang="' + o[0] + '" aria-pressed="' + ((fa ? "fa" : "en") === o[0] ? "true" : "false") + `" onclick="MU_Lite.setLang('` + o[0] + `')">` + o[1] + "</button>"; }).join("") + '</div></div><div class="mu-set-row"><div class="mu-set-text"><div class="mu-set-title">' + (fa ? "زوم صفحه" : "Page zoom") + '<span class="mu-set-badge" id="muZoomBadge">' + (zoomOn() ? fa ? "روشن" : "ON" : fa ? "خاموش" : "OFF") + '</span></div><div class="mu-set-desc">' + (fa ? "وقتی روشن باشد می‌توانید با دو انگشت روی صفحه زوم کنید (از 100٪ تا 5 برابر). پیش‌فرض: در تلگرام خاموش، در بقیه‌ی جاها روشن. «شبکه دانش» همیشه زوم مخصوص خودش را دارد و به این گزینه وابسته نیست. داخل تلگرام هم کار می‌کند." : "When on, you can pinch-zoom the page (100% up to 5x). Default: off in Telegram, on elsewhere. The Knowledge Graph always has its own zoom and does not depend on this option. Works inside Telegram too.") + '</div><button type="button" class="btn-main" id="muZoomReset" style="margin-top:8px;font-size:11px;padding:6px 12px;' + (zoomOn() ? "" : "display:none") + '" onclick="MU_Lite.resetZoom()">↺ ' + (fa ? "بازنشانی زوم (100٪)" : "Reset zoom (100%)") + '</button></div><button type="button" class="mu-switch" id="muZoomSwitch" role="switch" aria-checked="' + (zoomOn() ? "true" : "false") + '" aria-label="' + (fa ? "زوم صفحه" : "Page zoom") + '" onclick="MU_Lite.toggleZoom()"></button></div><div class="mu-set-row" style="flex-direction:column;align-items:stretch"><div class="mu-set-text"><div class="mu-set-title">' + (fa ? "سبک کادر نمایش یادداشت" : "Note viewer style") + '</div><div class="mu-set-desc">' + (fa ? "با «نمایش یادداشت» هر بار بپرسد، یا همیشه با یک سبک ثابت باز شود." : "Ask each time you press “View note”, or always open with one fixed style.") + '</div></div><div class="mu-vs-seg" id="muViewerStyleSeg" role="group">' + [["ocean", fa ? "ساده" : "Simple"], ["retro", fa ? "ویندوز 95" : "Windows 95"], ["ask", fa ? "انتخاب هر بار (پیش‌فرض)" : "Ask each time (default)"]].map(function (o) { return '<button type="button" class="mu-vs-opt" data-vs="' + o[0] + '" aria-pressed="' + (window.mu_getViewerStyle && window.mu_getViewerStyle() === o[0] ? "true" : "false") + `" onclick="MU_Lite.setViewerStyle('` + o[0] + `')">` + o[1] + "</button>"; }).join("") + "</div></div>" + (window.MU_NDot ? MU_NDot.html(fa) : "") + (window.MK_Bio ? MK_Bio.settingsHtml(fa) : "") + (window.MU_Eco ? MU_Eco.html(fa, ["all", "viewer"]) : "") + (window.mu_imgOptRowHtml ? mu_imgOptRowHtml(fa) : "")), card && card.classList.remove("kg-wide"); } window.MU_Lite = { openSettings: openSettings, setZoom: function (on) { return setZoomState(on); }, toggleZoom: function () { return setZoomState(!zoomOn()); }, resetZoom: function () { resetZoom(); }, getZoomScale: pageScale, isZoomOn: zoomOn, setLang: function (l) { try {
+catch { } } function gearSvg() { return '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3.2"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>'; } function closeBtn() { return '<button class="btn-main" onclick="MK.liteHost.closeDialog()" aria-label="' + (isFa() ? "بستن" : "Close") + '">✕</button>'; } function openSettings() { var fa = isFa(), card = document.getElementById("advancedCard"), skinRow = '<div class="mu-set-row" style="flex-direction:column;align-items:stretch"><div class="mu-set-text"><div class="mu-set-title">' + (fa ? "تم ورژن جدید" : "New version theme") + '</div><div class="mu-set-desc">' + (fa ? "یکی از تم‌های برنامه را انتخاب کنید. با زدن دکمه روز/شب در صفحه یادداشت‌ها دوباره به حالت روز و شب برمی‌گردد." : "Pick one of the app themes. Tapping the day / night button on the Notes page goes back to plain day / night.") + "</div></div>" + (MK.nfsSkin ? MK.nfsSkin.chipsHtml(fa) : "") + "</div>"; MK.liteHost.showDialog('<div class="advanced-head"><h3>' + (fa ? "تنظیمات" : "Settings") + "</h3>" + closeBtn() + "</div>" + skinRow + '<div class="mu-set-row" style="flex-direction:column;align-items:stretch"><div class="mu-set-text"><div class="mu-set-title">زبان / Language</div><div class="mu-set-desc"><div dir="rtl" style="text-align:right">زبان برنامه را انتخاب کنید.</div><div dir="ltr" style="text-align:left">Choose the app language.</div></div></div><div class="mu-vs-seg" id="muLangSeg" role="group" aria-label="زبان / Language">' + [["fa", "فارسی (Persian)"], ["en", "English (انگلیسی)"]].map(function (o) { return '<button type="button" class="mu-vs-opt" data-lang="' + o[0] + '" aria-pressed="' + ((fa ? "fa" : "en") === o[0] ? "true" : "false") + `" onclick="MU_Lite.setLang('` + o[0] + `')">` + o[1] + "</button>"; }).join("") + '</div></div><div class="mu-set-row"><div class="mu-set-text"><div class="mu-set-title">' + (fa ? "زوم صفحه" : "Page zoom") + '<span class="mu-set-badge" id="muZoomBadge">' + (zoomOn() ? fa ? "روشن" : "ON" : fa ? "خاموش" : "OFF") + '</span></div><div class="mu-set-desc">' + (fa ? "وقتی روشن باشد می‌توانید با دو انگشت روی صفحه زوم کنید (از 100٪ تا 5 برابر). پیش‌فرض: در تلگرام خاموش، در بقیه‌ی جاها روشن. «شبکه دانش» همیشه زوم مخصوص خودش را دارد و به این گزینه وابسته نیست. داخل تلگرام هم کار می‌کند." : "When on, you can pinch-zoom the page (100% up to 5x). Default: off in Telegram, on elsewhere. The Knowledge Graph always has its own zoom and does not depend on this option. Works inside Telegram too.") + '</div><button type="button" class="btn-main" id="muZoomReset" style="margin-top:8px;font-size:11px;padding:6px 12px;' + (zoomOn() ? "" : "display:none") + '" onclick="MU_Lite.resetZoom()">↺ ' + (fa ? "بازنشانی زوم (100٪)" : "Reset zoom (100%)") + '</button></div><button type="button" class="mu-switch" id="muZoomSwitch" role="switch" aria-checked="' + (zoomOn() ? "true" : "false") + '" aria-label="' + (fa ? "زوم صفحه" : "Page zoom") + '" onclick="MU_Lite.toggleZoom()"></button></div><div class="mu-set-row" style="flex-direction:column;align-items:stretch"><div class="mu-set-text"><div class="mu-set-title">' + (fa ? "سبک کادر نمایش یادداشت" : "Note viewer style") + '</div><div class="mu-set-desc">' + (fa ? "با «نمایش یادداشت» هر بار بپرسد، یا همیشه با یک سبک ثابت باز شود." : "Ask each time you press “View note”, or always open with one fixed style.") + '</div></div><div class="mu-vs-seg" id="muViewerStyleSeg" role="group">' + [["ocean", fa ? "ساده" : "Simple"], ["retro", fa ? "ویندوز 95" : "Windows 95"], ["ask", fa ? "انتخاب هر بار (پیش‌فرض)" : "Ask each time (default)"]].map(function (o) { return '<button type="button" class="mu-vs-opt" data-vs="' + o[0] + '" aria-pressed="' + (window.mu_getViewerStyle && window.mu_getViewerStyle() === o[0] ? "true" : "false") + `" onclick="MU_Lite.setViewerStyle('` + o[0] + `')">` + o[1] + "</button>"; }).join("") + "</div></div>" + (window.MU_NDot ? MU_NDot.html(fa) : "") + (window.MK_Bio ? MK_Bio.settingsHtml(fa) : "") + (window.MU_Eco ? MU_Eco.html(fa, ["all", "viewer"]) : "") + (window.mu_imgOptRowHtml ? mu_imgOptRowHtml(fa) : "") + "<div class='mu-morse-line' dir='ltr' role='img' aria-label='MARKHIN' style='flex:none;min-height:13px;display:flex;justify-content:center;align-items:center;gap:14px;flex-wrap:nowrap;white-space:nowrap;overflow:hidden;margin:20px 0 8px;font:700 14px/1 monospace;opacity:.55;-webkit-user-select:none;user-select:none;pointer-events:none'><span style='letter-spacing:4px'>\u2014\u2014</span><span style='letter-spacing:4px'>\u2022\u2014</span><span style='letter-spacing:4px'>\u2022\u2014\u2022</span><span style='letter-spacing:4px'>\u2014\u2022\u2014</span><span style='letter-spacing:4px'>\u2022\u2022\u2022\u2022</span><span style='letter-spacing:4px'>\u2022\u2022</span><span style='letter-spacing:4px'>\u2014\u2022</span></div>"), card && card.classList.remove("kg-wide"); } window.MU_Lite = { openSettings: openSettings, setZoom: function (on) { return setZoomState(on); }, toggleZoom: function () { return setZoomState(!zoomOn()); }, resetZoom: function () { resetZoom(); }, getZoomScale: pageScale, isZoomOn: zoomOn, setLang: function (l) { try {
         if (MK.liteHost.lang() === l)
             return;
     }
@@ -36992,24 +37101,7 @@ body.mu-nfsbk-on #mkBackupBar { display:none!important; }
     (function () { var _b = buildNav; buildNav = function () { var r = _b.apply(this, arguments); try {
         fitOld(), setTimeout(fitOld, 60);
     }
-    catch { } return r; }; })(), (function () { var _bn = buildNav, MNL_TXT = "Nothing Lasts Forever ..", mnlT = 0, hd = 0, el = !1; function mnlStop() { clearTimeout(mnlT), clearTimeout(hd), mnlT = 0, hd = 0, el = !1; } function typeLogoText(textElement) { if (el)
-        return; mnlStop(); el = !0; var i = 0, tn = document.createTextNode(""); textElement.textContent = "", textElement.appendChild(tn), textElement.classList.add("mnl-on"), (function step() { if (!textElement.isConnected) {
-        mnlStop();
-        return;
-    } if (i++, tn.nodeValue = MNL_TXT.slice(0, i), i >= MNL_TXT.length) {
-        mnlT = 0, el = !1, hd = setTimeout(function () { hd = 0, textElement.isConnected && (textElement.textContent = "", textElement.classList.remove("mnl-on")); }, 6e3);
-        return;
-    } var ch = MNL_TXT.charAt(i - 1), d = 55 + Math.random() * 95; ch === " " && (d += 70), ch === "." && (d += 140), mnlT = setTimeout(step, d); })(); } buildNav = function () { var result = _bn.apply(this, arguments); try {
-        mnlStop();
-        var p = document.getElementById("muNavPanel");
-        if (p && p.classList.contains("mu-nav-paired") && !p.querySelector(".mu-nav-logo")) {
-            var w = document.createElement("div");
-            w.className = "mu-nav-logo", w.innerHTML = '<button type="button" class="mu-nav-logo-btn" aria-label="MARKHIN"><svg viewBox="-8 -14 136 148" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><circle cx="60" cy="60" r="56" style="fill:var(--mnl-d);stroke:var(--nfs-border)" stroke-width="2"/></svg><svg class="mnl-ring-svg" viewBox="-8 -14 136 148" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><circle cx="60" cy="60" r="47" fill="none" style="stroke:var(--mnl-l)" stroke-width="2.6" stroke-dasharray="13.03 4.34 13.03 13.03 4.34 4.34 13.03 13.03 4.34 4.34 13.03 4.34 4.34 13.03 13.03 4.34 4.34 4.34 13.03 13.03 4.34 4.34 4.34 4.34 4.34 4.34 4.34 13.03 4.34 4.34 4.34 13.03 13.03 4.34 4.34 30.40" transform="rotate(-90 60 60)"/></svg><svg class="mnl-ring-svg mnl-ring2" viewBox="-8 -14 136 148" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><circle cx="60" cy="60" r="40" fill="none" style="stroke:var(--mnl-l)" stroke-width="1.7" pathLength="184" stroke-dasharray="3 1 1 3 3 1 3 1 3 3 3 3 1 1 1 1 1 1 1 3 1 1 1 3 3 1 1 3 3 1 3 1 1 7 1 1 3 1 1 1 1 3 1 1 3 3 1 1 1 1 1 3 3 3 1 1 1 1 1 7 1 1 1 1 3 1 1 3 3 1 3 1 3 3 1 1 3 1 1 3 1 3 1 1 1 1 1 1 3 3 1 3 1 1 3 1 1 7" transform="rotate(-90 60 60)"/></svg></button><div class="mu-nav-logo-txt" aria-live="polite"></div>';
-            var txt = w.querySelector(".mu-nav-logo-txt");
-            w.querySelector(".mu-nav-logo-btn").addEventListener("click", function (e) { e.stopPropagation(), typeLogoText(txt); }), p.appendChild(w);
-        }
-    }
-    catch { } return result; }; })();
+    catch { } return r; }; })();
     // Menu speed: the panel HTML is rebuilt only when what it shows changed (page / language / layout);
     // otherwise opening just flips classes
     var navSig = "";
@@ -37668,7 +37760,11 @@ body.mu-nfsbk-on #mkBackupBar { display:none!important; }
         } } };
     window.muNotesFs = MK.nfs = api, api.back = bkTgBack, api.canBack = nfsCanBack, api.refresh = function () { if (fsOpen())
         try {
-            render();
+            var b = $2("muNfsBody"), top = b ? b.scrollTop : 0, prev = S2.shown, guard = 0;
+            for (render(); S2.page === "notes" && S2.shown < prev && S2.shown < S2.list.length && guard++ < 300;)
+                paint(S2.shown);
+            b && (b.scrollTop = top);
+            try { S2.sel != null && typeof selPaint == "function" && selPaint(); } catch { }
         }
         catch { } },
         // The modern Notes page is the app's first page: opened once, right after the first render, under
@@ -38151,7 +38247,7 @@ body.mu-nfsbk-on #mkBackupBar { display:none!important; }
             H.categories().forEach(function (c) { map[String(c.id)] = c; });
         }
         catch { }
-        idList.forEach(function (id, i) { var c = map[String(id)]; c && (c.order = i); });
+        idList.forEach(function (id, i) { var c = map[String(id)]; c && (c.order !== i && (c.metaEditedAt = new Date().toUTCString()), c.order = i); });
         try {
             H.saveToLocalStorage();
         }
