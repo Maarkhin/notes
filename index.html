@@ -18825,10 +18825,10 @@ catch { } }, (function () { try {
     saved === null && (saved = "4"); // default = Black & White (day theme); must match its index in the list below
     var idx = parseInt(saved, 10);
     if (!Number.isFinite(idx) || idx < 0)
-        return;
+        idx = 4;
     // Must match the order of MU_Theme.list below; this early copy lets the very first paint show the
     // saved theme before that script block runs.
-    var classes = ["theme-hugo", "theme-oceanic", "theme-yourname-original", "theme-anime", "theme-bw", "theme-yourname", "theme-darkweb", "theme-terminal", "theme-interstellar", "theme-onepiece", "theme-hogwarts", "theme-homealone", "theme-strangerthings", "theme-vampire", "theme-phantom", "theme-halloween", "theme-dreamy", "theme-spider", "theme-redhorizon", "theme-midnightblue", "theme-aurora", "theme-aurora-phantom", "theme-love", "theme-anonymous"], cls = classes[idx];
+    var classes = ["theme-hugo", "theme-oceanic", "theme-yourname-original", "theme-anime", "theme-bw", "theme-yourname", "theme-darkweb", "theme-terminal", "theme-interstellar", "theme-onepiece", "theme-hogwarts", "theme-homealone", "theme-strangerthings", "theme-vampire", "theme-phantom", "theme-halloween", "theme-dreamy", "theme-spider", "theme-redhorizon", "theme-midnightblue", "theme-aurora", "theme-aurora-phantom", "theme-love", "theme-anonymous"], cls = classes[idx]; try { var __sk = localStorage.getItem("mu_nfs_skin_v1") || ""; cls = __sk && classes.indexOf("theme-" + __sk) >= 0 ? "theme-" + __sk : "theme-bw"; } catch (e) { cls = "theme-bw"; }
     cls && cls !== "theme-oceanic" && (document.body.classList.remove("theme-oceanic"), document.body.classList.add(cls), cls === "theme-bw" && (document.documentElement.style.colorScheme = "light"));
 }
 catch { } window.mu_syncHtmlBg(); })();
@@ -26608,7 +26608,7 @@ let currentLang = "fa";
 // THEME MODULE (MU_Theme): theme data, the active theme and switching/applying it all live in this one
 // namespace.
 const MU_Theme = (function () { const list = [{ id: "hugo", emoji: "", nameFa: "هوگو", nameEn: "Hugo", class: "theme-hugo" }, { id: "oceanic", emoji: "", nameFa: "اقیانوسی", nameEn: "Oceanic", class: "theme-oceanic" }, { id: "yourname-original", emoji: "", nameFa: "نام تو", nameEn: "Your Name", class: "theme-yourname-original" }, { id: "anime", emoji: "", nameFa: "دخترونه", nameEn: "Girly", class: "theme-anime" }, { id: "bw", emoji: "", nameFa: "سیاه سفید", nameEn: "Black & White", class: "theme-bw" }, { id: "yourname", emoji: "", nameFa: "غروب بنفش", nameEn: "Violet Dusk", class: "theme-yourname" }, { id: "darkweb", emoji: "", nameFa: "دارک وب", nameEn: "Dark Web", class: "theme-darkweb" }, { id: "terminal", emoji: "", nameFa: "ترمینال", nameEn: "Terminal", class: "theme-terminal" }, { id: "interstellar", emoji: "", nameFa: "میان‌ستاره‌ای", nameEn: "Interstellar", class: "theme-interstellar" }, { id: "onepiece", emoji: "", nameFa: "وان پیس", nameEn: "One Piece", class: "theme-onepiece" }, { id: "hogwarts", emoji: "", nameFa: "هاگوارتز", nameEn: "Hogwarts", class: "theme-hogwarts" }, { id: "homealone", emoji: "", nameFa: "تنها در خانه", nameEn: "Home Alone", class: "theme-homealone" }, { id: "strangerthings", emoji: "", nameFa: "چیزهای عجیب", nameEn: "Stranger Things", class: "theme-strangerthings" }, { id: "vampire", emoji: "", nameFa: "خون‌آشام", nameEn: "The Vampire", class: "theme-vampire" }, { id: "phantom", emoji: "", nameFa: "فانتوم", nameEn: "Phantom", class: "theme-phantom" }, { id: "halloween", emoji: "", nameFa: "هالووین", nameEn: "Halloween", class: "theme-halloween" }, { id: "dreamy", emoji: "", nameFa: "رویایی", nameEn: "Dreamy", class: "theme-dreamy" }, { id: "spider", emoji: "", nameFa: "عنکبوتی", nameEn: "Spider", class: "theme-spider" }, { id: "redhorizon", emoji: "", nameFa: "افق سرخ", nameEn: "Red Horizon", class: "theme-redhorizon" }, { id: "midnightblue", emoji: "", nameFa: "آبی نیمه‌شب", nameEn: "Midnight Blue", class: "theme-midnightblue" }, { id: "aurora", emoji: "", nameFa: "شفق قطبی", nameEn: "Aurora", class: "theme-aurora" }, { id: "aurora-phantom", emoji: "", nameFa: "شفق فانتومی", nameEn: "Aurora Phantom", class: "theme-aurora-phantom" }, { id: "love", emoji: "", nameFa: "لاو", nameEn: "Love", class: "theme-love" }, { id: "anonymous", emoji: "", nameFa: "انانیموس", nameEn: "Anonymous", class: "theme-anonymous" }], STORAGE_KEY = "app_theme_index_v14"; let currentIndex = Math.max(0, list.findIndex(t => t.id === "bw")); /* default theme (no saved choice) = Black & White (day) */ function apply(index) { if (!list.length)
-    return; currentIndex = Math.max(0, Math.min(Number(index) || 0, list.length - 1)); const activeTheme = list[currentIndex]; document.body.classList.add("theme-switching"), list.forEach(t => document.body.classList.remove(t.class)), document.body.classList.add(activeTheme.class),
+    return; index = (function () { try { var s = localStorage.getItem("mu_nfs_skin_v1") || "", bw = list.findIndex(function (t) { return t.id === "bw"; }), k = s ? list.findIndex(function (t) { return t.id === s; }) : bw; return k < 0 ? bw : k; } catch (e) { return index; } })(); currentIndex = Math.max(0, Math.min(Number(index) || 0, list.length - 1)); const activeTheme = list[currentIndex]; document.body.classList.add("theme-switching"), list.forEach(t => document.body.classList.remove(t.class)), document.body.classList.add(activeTheme.class),
     // Black & White (Day) is the only light theme: the native UI / keyboard follow it.
     document.documentElement.style.colorScheme = activeTheme.id === "bw" ? "light" : "", window.mu_syncHtmlBg && window.mu_syncHtmlBg(), requestAnimationFrame(() => { requestAnimationFrame(() => { document.body.classList.remove("theme-switching"); }); }); }
     // Moves to the next theme in the list and persists the choice (called by the theme button's
@@ -46970,9 +46970,10 @@ catch {
 } } function apply() { var id = get(), P = id ? palette(id) : null, i; for (i = 0; i < VARS.length; i++)
     root.style.removeProperty("--sk-" + VARS[i]); if (!P) {
     root.removeAttribute("data-mu-skin");
+    mkSyncBody();
     return;
 } for (i = 0; i < VARS.length; i++)
-    root.style.setProperty("--sk-" + VARS[i], P[VARS[i]]); root.setAttribute("data-mu-skin", id); } function setBase(th) { try {
+    root.style.setProperty("--sk-" + VARS[i], P[VARS[i]]); root.setAttribute("data-mu-skin", id); mkSyncBody(); } function mkSyncBody() { try { MU_Theme.apply(MU_Theme.getCurrentIndex()); } catch (e) { } } function setBase(th) { try {
     window.muNotesFs && typeof muNotesFs.setBase == "function" ? muNotesFs.setBase(th) : localStorage.setItem("mu_notesfs_theme_v1", th);
 }
 catch { } } var KEY_PB = "mu_nfs_skin_prevbase_v1"; function curBase() { try {
@@ -47358,5 +47359,22 @@ html.mu-nfs-dark:not(#_bw) body.theme-bw .content-container,html[data-mxe-theme=
     if (document.readyState !== "loading") burst(); else document.addEventListener("DOMContentLoaded", burst);
 })();
 </script>
+<style id="mkCloudBtnTextFix">
+/* Cloud-backup dialog: the label of the primary buttons must contrast with the button's own fill.
+   Dark fill -> white label, light fill -> dark label (the --nfs-fab / --nfs-fab-ico pair).
+   Placed last and with extra ID specificity so the day/night text rule and theme rules cannot flip it. */
+html:not(#_cbf1):not(#_cbf2) body:not(#_cbf3) #advancedModal #advancedCard:has(>.advanced-head[data-mkcloud]) .btn-save-prominent,
+html:not(#_cbf1):not(#_cbf2) body:not(#_cbf3) #advancedModal #advancedCard:has(>.advanced-head[data-mkcloud]) .btn-save-prominent *,
+html:not(#_cbf1):not(#_cbf2) body:not(#_cbf3) #advancedModal #advancedCard:has(>.advanced-head[data-mkcloud]) #cloudApplyLimitBtn,
+html:not(#_cbf1):not(#_cbf2) body:not(#_cbf3) #advancedModal #advancedCard:has(>.advanced-head[data-mkcloud]) #cloudApplyLimitBtn *,
+html:not(#_cbf1):not(#_cbf2) body:not(#_cbf3) #advancedModal #advancedCard:has(>.advanced-head[data-mkcloud]) #cloudBackupBtn,
+html:not(#_cbf1):not(#_cbf2) body:not(#_cbf3) #advancedModal #advancedCard:has(>.advanced-head[data-mkcloud]) #cloudBackupBtn *,
+html:not(#_cbf1):not(#_cbf2) body:not(#_cbf3) #advancedModal #advancedCard:has(>.advanced-head[data-mkcloud]) #cloudFixAutoSyncBtn,
+html:not(#_cbf1):not(#_cbf2) body:not(#_cbf3) #advancedModal #advancedCard:has(>.advanced-head[data-mkcloud]) #cloudFixAutoSyncBtn * {
+    color:var(--nfs-fab-ico,#fff)!important;
+    -webkit-text-fill-color:var(--nfs-fab-ico,#fff)!important;
+    text-shadow:none!important;
+}
+</style>
 </body>
 </html>
