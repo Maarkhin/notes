@@ -1407,6 +1407,7 @@ Tap the same button once more to confirm (6 s).`, !0, 6e3), !1);
     catch { }
 })();
 </script>
+<script id="mkTgPerfEarly">(function(){try{var d=document.documentElement;if(!window.__MU_HOST&&(/Telegram/i.test(navigator.userAgent||"")||!!window.TelegramWebviewProxy||/tgWebApp(Data|Version|Platform)/.test(String(location.hash||"")+"&"+String(location.search||"")))){d.classList.add("mk-tg");window.__mkTg=!0}}catch(e){}})();</script>
 <style id="mkHostPerfCss">
 html.mu-host *:not(#mkSplash):not(#mkSplash *),html.mu-host *:before,html.mu-host *:after {
     -webkit-backdrop-filter:none!important;
@@ -1452,7 +1453,7 @@ html.mu-host img,html.mu-host canvas,html.mu-host video,html.mu-host svg {
 <script id="mkBootGateJs">
 // Splash: shown for at least MIN ms, hidden once the app reports ready, never longer than MAX ms (weak
 // network). Set to false to disable only the loading screen.
-(function () { var d = document.documentElement; d.classList.add("mk-boot"); var SPLASH = !0, MIN = 1500, MAX = 2500, HARD = 15e3, t0 = Date.now(), done = !1, s2 = null, painted = !1, tp = t0, wantReveal = !1; try {
+(function () { var d = document.documentElement; d.classList.add("mk-boot"); var SPLASH = !0, MIN = (/Telegram/i.test(navigator.userAgent||"")||!!window.TelegramWebviewProxy||/tgWebApp(Data|Version|Platform)/.test(String(location.hash||"")+"&"+String(location.search||""))) ? 650 : 1500, MAX = 2500, HARD = 15e3, t0 = Date.now(), done = !1, s2 = null, painted = !1, tp = t0, wantReveal = !1; try {
     if (!SPLASH)
         throw 0;
     var TH = "light";
@@ -4308,7 +4309,7 @@ button:focus-visible,input:focus-visible,select:focus-visible {
 
     
     <script id="mkLibLoader">
-(function () { var libraryUrls = ["https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js", "https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js", "https://cdn.jsdelivr.net/npm/docx@9.5.1/build/index.umd.js", "https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js", "https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.6.2/cropper.min.js", "https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.6.2/cropper.min.css"], pcs = libraryUrls.pop(), isHostMode = !!window.__MU_HOST, hasStarted = !1; function loadStylesheet() { try {
+(function () { var libraryUrls = ["https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js", "https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js", "https://cdn.jsdelivr.net/npm/docx@9.5.1/build/index.umd.js", "https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js", "https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.6.2/cropper.min.js", "https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.6.2/cropper.min.css"], pcs = libraryUrls.pop(), tgMode = !window.__MU_HOST && (/Telegram/i.test(navigator.userAgent||"")||!!window.TelegramWebviewProxy||/tgWebApp(Data|Version|Platform)/.test(String(location.hash||"")+"&"+String(location.search||""))), isHostMode = !!window.__MU_HOST || tgMode, hasStarted = !1; function loadStylesheet() { try {
     var linkElement = document.createElement("link");
     linkElement.rel = "stylesheet", linkElement.href = pcs, linkElement.media = "print", linkElement.onload = function () { linkElement.media = "all"; }, document.head.appendChild(linkElement);
 }
@@ -4332,12 +4333,12 @@ catch { } setTimeout(callback, Math.min(timeoutMs, 1500)); } function startLoadi
     var nextIndex = 0;
     (function loadNext() { if (!(nextIndex >= libraryUrls.length)) {
         var nextUrl = libraryUrls[nextIndex++];
-        runWhenIdle(function () { loadScript(nextUrl).then(function () { setTimeout(loadNext, 400); }); }, 4e3);
+        runWhenIdle(function () { loadScript(nextUrl).then(function () { setTimeout(loadNext, tgMode ? 120 : 400); }); }, tgMode ? 1500 : 4e3);
     } })();
 } } if (!isHostMode) {
     startLoading();
     return;
-} function scheduleLoad() { setTimeout(function () { runWhenIdle(startLoading, 8e3); }, 6e3); } document.readyState === "complete" ? scheduleLoad() : window.addEventListener("load", scheduleLoad, { once: !0 }), window.__mkLoadLibsNow = function () { hasStarted = !1, isHostMode = !1, startLoading(); }, document.addEventListener("pointerdown", function onPointerDown() { document.removeEventListener("pointerdown", onPointerDown, !0), setTimeout(function () { runWhenIdle(startLoading, 3e3); }, 2500); }, !0); })();
+} function scheduleLoad() { setTimeout(function () { runWhenIdle(startLoading, tgMode ? 2500 : 8e3); }, tgMode ? 1200 : 6e3); } document.readyState === "complete" ? scheduleLoad() : window.addEventListener("load", scheduleLoad, { once: !0 }), window.__mkLoadLibsNow = function () { hasStarted = !1, isHostMode = !1, startLoading(); }, document.addEventListener("pointerdown", function onPointerDown() { document.removeEventListener("pointerdown", onPointerDown, !0), setTimeout(function () { runWhenIdle(startLoading, 3e3); }, tgMode ? 400 : 2500); }, !0); })();
 </script>
     
     
@@ -18696,7 +18697,24 @@ html.mu-nfs-open:not(#_nfs) body:before,html.mu-nfs-open:not(#_nfs) body:after,h
     catch (error) { } return originalScrollIntoView.apply(this, arguments); };
 }
 catch (mu_openSmartSearchModal) { } })();
-</script></head>
+</script>
+<style id="mkHeadOpaqueFix">
+/* sticky headers of export/picker pages must be opaque, otherwise note cards show through the title */
+html.mu-nfs-open:not(#_nfs) body #advancedModal .advanced-card.mk-page>.advanced-head,html.mu-nfs-open:not(#_nfs) body #advancedModal .advanced-card.mk-fs>.advanced-head,html.mu-nfs-open:not(#_nfs) body #advancedModal .mk-fs>.advanced-head{position:sticky!important;top:0!important;z-index:20!important;background:var(--nfs-bg)!important;box-sizing:border-box}
+html.mu-nfs-open:not(#_nfs) body #advancedModal .advanced-card.mk-page>.advanced-head h3,html.mu-nfs-open:not(#_nfs) body #advancedModal .advanced-card.mk-page>.advanced-head p{position:relative;z-index:1}
+</style>
+<style id="mkTgPerfCss">
+/* Telegram-only performance layer: lighter paint, fewer GPU layers, no tap delay, off-screen cards skipped */
+html.mk-tg{touch-action:manipulation;-webkit-text-size-adjust:100%;text-rendering:optimizeSpeed}
+html.mk-tg body{overscroll-behavior:none;-webkit-tap-highlight-color:transparent}
+html.mk-tg *:not(#mkSplash):not(#mkSplash *),html.mk-tg *:not(#mkSplash):not(#mkSplash *)::before,html.mk-tg *:not(#mkSplash):not(#mkSplash *)::after{-webkit-backdrop-filter:none!important;backdrop-filter:none!important;text-shadow:none!important;will-change:auto!important}
+html.mk-tg *:not(#mkSplash):not(#mkSplash *){transition-duration:.14s!important}
+html.mk-tg .advanced-card,html.mk-tg .note-btn-wrap,html.mk-tg .mu-nfs-card,html.mk-tg .mu-nav-panel{box-shadow:none!important}
+html.mk-tg .note-btn-wrap{content-visibility:auto;contain-intrinsic-size:auto 64px}
+html.mk-tg .mu-nfs-body,html.mk-tg #muNfsBody,html.mk-tg .mu-nfs-list{-webkit-overflow-scrolling:touch;overscroll-behavior:contain}
+@media (prefers-reduced-motion:no-preference){html.mk-tg *{scroll-behavior:auto!important}}
+</style>
+</head>
 <body class="theme-oceanic">
 <script id="mkPerfEarly">(function(){try{var d=document.documentElement,u=navigator.userAgent||"",h=String(location.hash||"");var tg=/Telegram/i.test(u)||!!window.TelegramWebviewProxy||/tgWebApp(Data|Platform|Version)/.test(h)||!!(window.Telegram&&window.Telegram.WebApp&&window.Telegram.WebApp.initData);try{tg=tg||!!sessionStorage.getItem("__telegram__initParams")}catch(e){}if(tg){d.classList.add("mk-tg");var keep=function(){try{d.classList.contains("mk-tg")||d.classList.add("mk-tg")}catch(e){}};document.addEventListener("DOMContentLoaded",keep);window.addEventListener("load",keep)}}catch(e){}})();</script>
 <script id="mkThemeBoot">
@@ -35495,22 +35513,26 @@ html.mu-lockh #muNotesFs {
 html.mu-lockh .mu-nfs-body {
     padding-bottom:calc(110px + var(--mu-kbf,0px))!important;
 }
+/* the "+" and the bars are moved frame by frame by the keyboard engine (muFabGlide): no CSS transition may fight it */
 #muNfsFab {
-    transition:translate .24s cubic-bezier(.22,.8,.26,1),bottom .2s ease;
+    transition:none!important;
 }
-html.mu-kbf-on #muNfsFab {
-    translate:0 calc(var(--mu-kbf,0px) * -1);
-}
-@media(prefers-reduced-motion:reduce) {
-    #muNfsFab {
-        transition:none;
-    }
+/* while a bar glides below its layout spot (iOS keyboard) its panel must not clip it */
+html.mu-kbanim body #contentsContainer .content-container.mxe.show,html.mu-kbanim .mu-viewer:not(.mu-vs-retro) .mu-viewer-card {
+    overflow:visible!important;
 }
 </style>
 <script id="muFabGlide">
 (function () {
-    // Keyboard-proof "+" button and bars: while the keyboard shows, the floating "+" and the bars listed in BARS
-    // (editor bottom bar, note-viewer tools, AI input, in-note search, selection bars) glide up above it
+    // Keyboard sync engine (v2). The floating "+" on the Notes page and the bottom bars (editor tools, note-viewer
+    // tools, AI input, in-note search, selection bars) are moved by ONE per-frame loop instead of CSS transitions:
+    //  - every element keeps a "visual position" S; the browser's layout position L may jump (the keyboard resizes the
+    //    page in one step) but S only moves by a short eased tween, so nothing teleports and nothing blinks
+    //  - the move starts when the field gets focus (before the keyboard is up) using the last real keyboard height,
+    //    then follows the real viewport as soon as it reports it, so the bar travels together with the keyboard
+    //  - while the page area itself shrinks (Telegram / Android Chrome) an element is never drawn below the visible
+    //    area, so it can't vanish behind the keyboard and pop back
+    //  - a ResizeObserver re-measures in the same frame the editor / viewer / AI panel is resized (before paint)
     "use strict";
     if (window.__muFabGlide)
         return;
@@ -35531,8 +35553,10 @@ html.mu-kbf-on #muNfsFab {
     try {
         reduce = matchMedia("(prefers-reduced-motion: reduce)").matches;
     }
-    catch (THRESH_KB) { }
-    var BARS = ".content-container.mxe .mxe-bottom,.mu-viewer:not(.mu-vs-retro) .mu-viewer-tools,.mAi-inputbar,.mxe-find,.dl-bar,.markhin-note-select-bar", lastEvt = 230, kickSeq = "cubic-bezier(.22,.8,.26,1)", MIN = 30, pos = new WeakMap, raf = 0, base = 0, lockedHeight = 0, lastW = 0, lastH = 0, lockAt = 0;
+    catch (_) { }
+    var BARS = ".content-container.mxe .mxe-bottom,.mu-viewer:not(.mu-vs-retro) .mu-viewer-tools,.mAi-inputbar,.mxe-find,.dl-bar,.markhin-note-select-bar", HOLDERS = ".content-container.mxe,.mu-viewer-card,#markhinAiChatOverlay", MIN = 30, base = 0, lockedHeight = 0, lastW = 0, lastH = 0, lockAt = 0, fullInner = 0;
+    var items = new Map, snapL = new WeakMap, raf = 0, until = 0, pred = null, winDvh = 0, evtFlag = !1, learnedK = 0, animCls = !1, ro = null;
+    function nowMs() { return window.performance && performance.now ? performance.now() : Date.now(); }
     function vh() { return Math.round(vv && vv.height || window.innerHeight || 0); }
     function isEditable(el) { return !el || el.nodeType !== 1 ? !1 : el.isContentEditable || el.tagName === "TEXTAREA" ? !0 : el.tagName === "INPUT" && /^(text|search|url|email|password|number|tel|)$/i.test(el.type || ""); }
     function inHome(el) { return !!(el && el.closest && el.closest("#muNotesFs")); }
@@ -35559,89 +35583,238 @@ html.mu-kbf-on #muNfsFab {
     catch (_) {
         return 0;
     } };
+    // the page area shrinks with the keyboard (Telegram, Android Chrome) or not (iOS: only the visual viewport does)
+    var layEnv = (function () { try {
+        var s = localStorage.getItem("mu_kb_lay");
+        if (s === "1")
+            return !0;
+        if (s === "0")
+            return !1;
+    }
+    catch (_) { }
+    return !(/iP(hone|ad|od)/.test(navigator.userAgent || "") || navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1); })();
+    function kKey() { return "mu_kb_h_" + ((window.innerWidth || 0) > (window.innerHeight || 0) ? "l" : "p"); }
+    function loadK() { learnedK = 0; try {
+        learnedK = +localStorage.getItem(kKey()) || 0;
+    }
+    catch (_) { } }
+    function defK() { return Math.round(Math.min(340, Math.max(220, (window.innerHeight || 700) * .32))); }
     /* قفل ارتفاع لیست یادداشت‌ها هنگام کیبورد */
     function lock() { if (rootElement.classList.contains("mu-lockh"))
         return; lockedHeight = kbShowing() ? Math.max(base, window.innerHeight || 0) : Math.max(vh(), window.innerHeight || 0); lockAt = Date.now(); rootElement.style.setProperty("--mu-fullh", lockedHeight + "px"); rootElement.classList.add("mu-lockh"); }
-    function unlock() { rootElement.classList.remove("mu-lockh", "mu-kbf-on"); rootElement.style.removeProperty("--mu-fullh"); rootElement.style.removeProperty("--mu-kbf"); }
+    function unlock() { rootElement.classList.remove("mu-lockh", "mu-kbf-on"); rootElement.style.removeProperty("--mu-fullh"); rootElement.style.removeProperty("--mu-kbf"); rootElement.__muKbf = null; }
+    // how far the "+" must rise: the real value once the keyboard is up, the predicted one while it is still opening
+    function realFabK() { var a = document.activeElement; if (!(kbShowing() && inHome(a) && rootElement.classList.contains("mu-lockh") && lockedHeight))
+        return 0; var k = Math.round(Math.max(0, lockedHeight - vh() - (vv && vv.offsetTop || 0))); if (k < 60)
+        return 0; try {
+        k += window.__muKbGap();
+    }
+    catch (bar) { } return k; }
+    function fabK() { var k = realFabK(); if (k)
+        return k; if (pred && pred.fab && !kbShowing() && inHome(document.activeElement)) {
+        var g = 0;
+        try {
+            g = window.__muKbGap();
+        }
+        catch (_) { }
+        return pred.amt + g;
+    } return 0; }
+    // keeps the Notes list body padding in step with the real keyboard height; releases the height lock once it is gone
     function barSig() { if (kbShowing()) {
-        var activeElement = document.activeElement;
-        if (inHome(activeElement) && rootElement.classList.contains("mu-lockh") && lockedHeight) {
-            var liftOffset = Math.round(Math.max(0, lockedHeight - vh() - (vv && vv.offsetTop || 0)));
-            if (liftOffset < 60)
-                liftOffset = 0;
-            else
-                try {
-                    liftOffset += window.__muKbGap();
-                }
-                catch (bar) { }
-            rootElement.style.setProperty("--mu-kbf", liftOffset + "px");
-            rootElement.classList.toggle("mu-kbf-on", !!liftOffset);
+        var k = realFabK();
+        if (rootElement.__muKbf !== k) {
+            rootElement.__muKbf = k;
+            rootElement.style.setProperty("--mu-kbf", k + "px");
         }
     }
-    else
-        unlock(); }
-    /* FLIP: نوار از جای قبلی خودش تا جای جدید سر می‌خورد، همزمان با کیبورد */
-    function tY(el) { var translateValue = getComputedStyle(el).translate; if (!translateValue || translateValue === "none")
-        return 0; return parseFloat(translateValue.split(" ")[1]) || 0; }
-    function snap() { var barElements = document.querySelectorAll(BARS); for (var i = 0; i < barElements.length; i++) {
-        var rect = barElements[i].getBoundingClientRect();
-        rect.width || rect.height ? pos.set(barElements[i], rect.top - tY(barElements[i])) : pos.delete(barElements[i]);
+    else {
+        var ae = document.activeElement;
+        if (!(Date.now() - lockAt < 600 && isEditable(ae) && inHome(ae)))
+            unlock();
     } }
-    function clean(el, token) { setTimeout(function () { if (el.__mfn !== token)
-        return; el.style.removeProperty("transition"); el.style.removeProperty("translate"); el.style.removeProperty("will-change"); }, lastEvt + 50); }
-    function off(a) {
-        var barElements = document.querySelectorAll(BARS), go = [], i, el, rect, cur, lay, pr, delta, translateY;
-        for (i = 0; i < barElements.length; i++) {
-            el = barElements[i];
-            rect = el.getBoundingClientRect();
-            if (!rect.width && !rect.height) {
-                pos.delete(el);
+    /* ---------- the engine ---------- */
+    function collect() { var out = [], nl = document.querySelectorAll(BARS), i; for (i = 0; i < nl.length; i++)
+        out.push([nl[i], 0]); var fab = document.getElementById("muNfsFab"); fab && out.push([fab, 1]); return out; }
+    function watch(el) { if (!ro)
+        return; var h = el.closest ? el.closest(HOLDERS) : null; h && !h.__muRo && (h.__muRo = !0, ro.observe(h)); }
+    function apply(el, st, tr) { if (tr === st.tr && st.applied === (tr !== 0))
+        return; st.tr = tr; if (tr === 0) {
+        el.style.removeProperty("translate");
+        el.style.removeProperty("will-change");
+        st.applied = !1;
+    }
+    else {
+        if (!st.applied) {
+            el.style.setProperty("will-change", "translate");
+            st.applied = !0;
+        }
+        el.style.setProperty("translate", "0 " + tr.toFixed(2) + "px", "important");
+    } }
+    function durFor(d) { var v = Math.round(Math.min(300, Math.max(190, 130 + d * .5))); return pred && !pred.seen ? Math.min(v, 160) : v; }
+    function setAnim(on) { on !== animCls && (animCls = on, rootElement.classList.toggle("mu-kbanim", on)); }
+    function snap() { var nl = document.querySelectorAll(BARS), list = [], i, r, st, el; for (i = 0; i < nl.length; i++)
+        list.push(nl[i]); el = document.getElementById("muNfsFab"); el && list.push(el); for (i = 0; i < list.length; i++) {
+        r = list[i].getBoundingClientRect();
+        if (r.width || r.height) {
+            st = items.get(list[i]);
+            snapL.set(list[i], r.top - (st ? st.tr : 0));
+        }
+        else
+            snapL.delete(list[i]);
+    } }
+    // one measuring + moving step. Returns true while something is still moving.
+    function pass(ts) {
+        var list = collect(), i, el, st, r, L, h, tgt, d, p, s0, l0, tr, mv, maxS, busy = !1, anyDown = !1, lim = window.innerHeight || 0, fk = fabK(), zoomed = !!(vv && vv.scale && Math.abs(vv.scale - 1) > .02), seen = new Set;
+        for (i = 0; i < list.length; i++) {
+            el = list[i][0];
+            r = el.getBoundingClientRect();
+            if (!r.width && !r.height) {
+                st = items.get(el);
+                st && (apply(el, st, 0), items.delete(el));
+                snapL.delete(el);
                 continue;
             }
-            cur = tY(el);
-            lay = rect.top - cur;
-            pr = pos.get(el);
-            pos.set(el, lay);
-            if (pr === void 0 || reduce || Math.abs(a) < MIN)
-                continue;
-            delta = pr - lay;
-            if (delta * a >= 0 || Math.abs(delta) < 2 || Math.abs(delta) > Math.abs(a) + 140)
-                continue;
-            translateY = delta + cur;
-            el.style.setProperty("transition", "none", "important");
-            el.style.setProperty("translate", "0 " + translateY + "px", "important");
-            el.style.setProperty("will-change", "translate", "important");
-            go.push(el);
+            seen.add(el);
+            st = items.get(el);
+            if (!st) {
+                st = { tr: 0, S: null, from: 0, to: 0, t0: 0, dur: 0, lastT: null, cont: 0, applied: !1 };
+                items.set(el, st);
+                watch(el);
+            }
+            L = r.top - st.tr;
+            h = r.height;
+            if (st.S === null) {
+                s0 = snapL.get(el);
+                st.S = s0 !== void 0 && Math.abs(winDvh) >= MIN && Math.abs(s0 - L) <= Math.abs(winDvh) + 140 ? s0 : L;
+                st.to = st.S;
+            }
+            // where it wants to be: the "+" rises by the keyboard height; bars follow their layout position, plus the
+            // part of a predicted keyboard move the page has not reflected yet
+            tgt = L;
+            if (list[i][1])
+                tgt = L - fk;
+            else if (pred && layEnv) {
+                l0 = pred.L0.get(el);
+                l0 !== void 0 && pred.ok.get(el) && (tgt = L + Math.min(0, -pred.amt - (L - l0)));
+            }
+            // a spot below the visible page area can't be shown yet (the page has not grown back after the keyboard
+            // closed): stay where we are until it does
+            maxS = lim - h;
+            tgt > maxS + 1.5 && (tgt = Math.min(st.S, maxS));
+            if (st.dur) {
+                p = (ts - st.t0) / st.dur;
+                if (p >= 1) {
+                    st.S = st.to;
+                    st.dur = 0;
+                }
+                else
+                    st.S = st.from + (st.to - st.from) * Math.sin(p * Math.PI / 2);
+            }
+            mv = st.lastT !== null && Math.abs(tgt - st.lastT) > 3;
+            st.cont = mv ? st.cont + 1 : 0;
+            st.lastT = tgt;
+            d = tgt - st.S;
+            if (zoomed || reduce) {
+                st.S = tgt;
+                st.dur = 0;
+            }
+            else if (st.dur) {
+                if (Math.abs(tgt - st.to) > 1) {
+                    // the page itself is moving every frame: just follow it; a single jump: restart the tween
+                    if (st.cont >= 3 && Math.abs(d) < 48) {
+                        st.S = tgt;
+                        st.dur = 0;
+                    }
+                    else {
+                        st.from = st.S;
+                        st.to = tgt;
+                        st.t0 = ts;
+                        st.dur = durFor(Math.abs(d));
+                    }
+                }
+            }
+            else if (Math.abs(d) >= 14 && st.cont < 3) {
+                st.from = st.S;
+                st.to = tgt;
+                st.t0 = ts;
+                st.dur = durFor(Math.abs(d));
+            }
+            else
+                st.S = tgt;
+            // never draw it below the visible page area (it would be hidden by the keyboard and pop in later)
+            st.S > maxS + .5 && (st.S = Math.min(maxS, tgt), st.dur = 0);
+            tr = st.S - L;
+            Math.abs(tr) < .25 && (tr = 0, st.dur || (st.S = L));
+            apply(el, st, tr);
+            tr > .5 && (anyDown = !0);
+            (st.dur || tr !== 0 || st.cont) && (busy = !0);
         }
-        if (!go.length)
-            return;
-        void rootElement.offsetHeight;
-        for (i = 0; i < go.length; i++) {
-            el = go[i];
-            el.style.setProperty("transition", "translate " + lastEvt + "ms " + kickSeq, "important");
-            el.style.setProperty("translate", "0 0px", "important");
-            el.__mfn = (el.__mfn || 0) + 1;
-            clean(el, el.__mfn);
-        }
+        items.forEach(function (it, key) { seen.has(key) || items.delete(key); });
+        setAnim(anyDown);
+        return busy;
     }
-    function tick() {
-        raf = 0;
-        var width = window.innerWidth || 0;
-        if (width !== lastW) {
-            lastW = width;
-            base = 0;
-            lockedHeight = 0;
-            unlock();
-            lastH = vh();
-            snap();
-            return;
+    function wake(ms) { until = Math.max(until, nowMs() + (ms || 900)); raf || (raf = requestAnimationFrame(tick)); }
+    function resetAll() { items.forEach(function (it, key) { apply(key, it, 0); }); items.clear(); winDvh = 0; pred = null; setAnim(!1); }
+    function endPred(learn) { if (!pred)
+        return; var k = Math.max(0, base - vh()), wasSeen = pred.seen; pred = null; if (learn && wasSeen) {
+        if (k >= 150 && k <= 650 && k !== learnedK) {
+            learnedK = k;
+            try {
+                localStorage.setItem(kKey(), String(k));
+            }
+            catch (_) { }
         }
-        var kbShowing = vh(), dh = kbShowing - lastH;
-        lastH = kbShowing;
+        try {
+            var lay = (window.innerHeight || 0) < fullInner - 100;
+            if (lay !== layEnv) {
+                layEnv = lay;
+                localStorage.setItem("mu_kb_lay", lay ? "1" : "0");
+            }
+        }
+        catch (_) { }
+    } wake(400); }
+    function stepPred(ts) { if (!pred)
+        return; if (kbShowing()) {
+        pred.seen = !0;
+        pred.amt = Math.max(0, base - vh());
+    } if (pred.seen) {
+        ts - pred.lastEvt > 200 && endPred(!0);
+    }
+    else if (ts - pred.t0 > 480)
+        endPred(!1); pred && ts - pred.t0 > 1100 && endPred(!1); }
+    // keyboard is about to open: start moving right now with the last known keyboard height
+    function startPred(t) { if (pred || reduce || !isEditable(t))
+        return; if (t.readOnly || t.getAttribute && /^none$/i.test(t.getAttribute("inputmode") || ""))
+        return; if (kbShowing())
+        return; var ls = nowMs(), lim = window.innerHeight || 0, L0 = new WeakMap, ok = new WeakMap, nl = document.querySelectorAll(BARS), i, r, st; for (i = 0; i < nl.length; i++) {
+        r = nl[i].getBoundingClientRect();
+        if (!r.width && !r.height)
+            continue;
+        st = items.get(nl[i]);
+        L0.set(nl[i], r.top - (st ? st.tr : 0));
+        ok.set(nl[i], r.bottom - (st ? st.tr : 0) > lim - 120);
+    } pred = { amt: learnedK ? Math.max(0, learnedK - 6) : defK(), t0: ls, lastEvt: ls, seen: !1, fab: inHome(t), L0: L0, ok: ok }; }
+    function settle() { items.forEach(function (it, key) { apply(key, it, 0); }); items.clear(); winDvh = 0; setAnim(!1); snap(); }
+    function tick(ts) { raf = 0; ts = ts || nowMs(); var width = window.innerWidth || 0; if (width !== lastW) {
+        lastW = width;
+        base = 0;
+        lockedHeight = 0;
+        unlock();
+        lastH = vh();
+        fullInner = window.innerHeight || 0;
+        loadK();
+        resetAll();
+        snap();
+        return;
+    } if (evtFlag) {
+        evtFlag = !1;
         barSig();
-        off(dh);
+    } kbShowing() || (fullInner = window.innerHeight || 0); stepPred(ts); var busy = pass(ts); busy || ts < until ? raf || (raf = requestAnimationFrame(tick)) : settle(); }
+    function onViewport() { var ts = nowMs(), h = vh(); winDvh += h - lastH; lastH = h; evtFlag = !0; pred && (pred.lastEvt = ts); wake(900); }
+    try {
+        typeof ResizeObserver == "function" && (ro = new ResizeObserver(function () { (raf || nowMs() < until) && pass(nowMs()); }));
     }
-    function onViewport() { raf || (raf = (window.requestAnimationFrame || setTimeout)(tick, 16)); }
+    catch (_) { ro = null; }
     /* جلوگیری از گیر کردن کیبورد روی بعضی WebView ها (همان رفتار قبلی) */
     function refocusInput(el) { try {
         if (el.tagName === "INPUT" || el.tagName === "TEXTAREA") {
@@ -35675,9 +35848,9 @@ html.mu-kbf-on #muNfsFab {
         catch (SETTLE) { } }, 380); }
     // freeze the page height before the keyboard moves it keyboard already up: just moving between fields
     // keyboard started opening / closing / changing height
-    document.addEventListener("focusin", function (e) { isEditable(e.target) && inHome(e.target) && lock(); snap(); }, !0);
+    document.addEventListener("focusin", function (e) { var t = e.target; isEditable(t) && inHome(t) && lock(); snap(); startPred(t); wake(900); }, !0);
     // keyboard is about to open
-    document.addEventListener("focusout", function () { snap(); }, !0);
+    document.addEventListener("focusout", function () { snap(); wake(900); }, !0);
     // Tapping a field that kept focus after the keyboard was dismissed does not always bring the keyboard back
     // (Telegram / Android WebView) and fires no focus event: if nothing happened shortly after the tap, the
     // field is refocused. The in-note search bar is excluded here: its click handler below handles it (a real
@@ -35697,7 +35870,7 @@ html.mu-kbf-on #muNfsFab {
         catch (_) { } }, !0);
     document.addEventListener("visibilitychange", function () { document.hidden || (snap(), setTimeout(onViewport, 0), setTimeout(onViewport, 300)); });
     window.addEventListener("resize", onViewport);
-    vv && vv.addEventListener("resize", onViewport);
+    vv && (vv.addEventListener("resize", onViewport), vv.addEventListener("scroll", function () { wake(500); }));
     try {
         navigator.virtualKeyboard && navigator.virtualKeyboard.addEventListener("geometrychange", onViewport);
     }
@@ -35713,7 +35886,10 @@ html.mu-kbf-on #muNfsFab {
         return; var a = document.activeElement, ed = isEditable(a); ed || (base = vh()); rootElement.classList.contains("mu-lockh") && !(ed && inHome(a) && kbShowing()) && Date.now() - lockAt > 1500 && unlock(); snap(); }, 1000);
     lastH = vh();
     lastW = window.innerWidth || 0;
+    fullInner = window.innerHeight || 0;
+    loadK();
     snap();
+    window.__muKbSync = { wake: wake, pass: function () { return pass(nowMs()); }, state: function () { return { layEnv: layEnv, learnedK: learnedK, pred: !!pred, items: items.size }; } };
 })();
 </script>
 
