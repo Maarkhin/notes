@@ -11738,6 +11738,10 @@ html body .advanced-card .mkl-wrap .mkl-items {
 .advanced-modal.mu-no-anim,.advanced-modal.mu-no-anim .advanced-card {
     animation:none!important;
 }
+html.mu-lang-sw #advancedModal,html.mu-lang-sw #advancedModal * {
+    animation:none!important;
+    transition:none!important;
+}
 #advancedModal .dl-card,#advancedModal .dl-hbtn,#advancedModal .dl-row,#advancedModal .dl-del {
     touch-action:manipulation;
     -webkit-tap-highlight-color:transparent;
@@ -20929,7 +20933,7 @@ const forced = !!window.__mkCloudForce; window.__mkCloudForce = !1, !(!forced &&
 // Debounce: 3 s after the last change, or half the duration of the last auto save (max 10 s) so slow saves
 // don't pile up. Max-wait: 20 s (or 2x the debounce) so someone typing without a pause (long note, dictation)
 // still gets saved.
-const CLOUD_BACKUP_DEBOUNCE_MS = 3e3, CLOUD_BACKUP_MAXWAIT_MS = 2e4;
+const CLOUD_BACKUP_DEBOUNCE_MS = 1500, CLOUD_BACKUP_MAXWAIT_MS = 2e4;
 // __mkNoSchedule > 0 (cloudQuiet) blocks scheduling while cloud data is being applied, so a merge can't trigger
 // a backup of itself. __mkSeenAutoTs = timestamp of the Cloud auto copy this device last pushed or merged.
 // __mkRebuildForce = a deliberate "Retry now" may replace an unreadable Cloud copy.
@@ -20967,11 +20971,153 @@ document.addEventListener("visibilitychange", () => { document.visibilityState =
 // Periodic light polling (near-live sync): Telegram CloudStorage has no push channel, so while the app is
 // visible a device asks every 45 s (cloudSilentPullMerge: one small index read, a full download only when the
 // Cloud auto copy changed). Paused while hidden; resumes with an immediate pull when visible again.
-const CLOUD_POLL_INTERVAL_MS = 45e3;
+// ===== LIVE SYNC ENGINE (v6) =====
+// Telegram CloudStorage has no push channel, so "instant" sync is built from a very cheap probe: ONE getItems
+// call that reads only the two tiny signature keys (the index mk_idx + the list meta mk_ls_meta). Only when
+// that signature changes is the real pull/merge (cloudSilentPullMerge) run. Because the probe is so small it
+// can run every few seconds instead of every 45 s:
+//   hot  (3 s)  : for 2 min after any save / incoming change (e.g. two devices are being used together)
+//   normal (6 s): while the user is active
+//   idle (15 s) / deep idle (45 s): when nobody touches this device for 3 / 15 min (wakes up at once on touch)
+// It never runs while hidden/offline, never while a backup is running or waiting, and never while the user
+// is typing (so an incoming change can't steal the caret). Failures back off automatically.
+const CLOUD_LIVE = { hotMs: 3e3, normalMs: 6e3, idleMs: 1e4, deepMs: 2e4, unlinkedMs: 3e4, hotWindowMs: 12e4, idleAfterMs: 18e4, deepAfterMs: 9e5, typingQuietMs: 1500, maxBackoffMs: 6e4, maxPullTries: 3 };
+const CLOUD_POLL_INTERVAL_MS = CLOUD_LIVE.normalMs;
 let __cloudPollTimer = null;
-function cloudStartPolling() { __cloudPollTimer || !IS_TELEGRAM || !hasCloudStorage || (__cloudPollTimer = setInterval(() => { cloudSilentPullMerge(); }, CLOUD_POLL_INTERVAL_MS)); }
-function cloudStopPolling() { __cloudPollTimer && (clearInterval(__cloudPollTimer), __cloudPollTimer = null); }
-document.addEventListener("visibilitychange", () => { document.visibilityState === "visible" ? (cloudStartPolling(), cloudSilentPullMerge()) : cloudStopPolling(); });
+const __cloudLive = window.__mkLive = { running: !1, busy: !1, sig: null, parts: null, ids: null, pendingSig: null, tries: 0, fails: 0, lastUserAt: Date.now(), hotUntil: 0, lastOkSeen: 0, lastProbeAt: 0, lastChangeAt: 0, probes: 0, pulls: 0, tgBound: !1 };
+function cloudLiveHot(ms) { __cloudLive.hotUntil = Math.max(__cloudLive.hotUntil, Date.now() + (ms || CLOUD_LIVE.hotWindowMs)); }
+function cloudLiveDelay() { const s = __cloudLive, now = Date.now(), idleFor = now - s.lastUserAt; let d = now < s.hotUntil ? CLOUD_LIVE.hotMs : idleFor > CLOUD_LIVE.deepAfterMs ? CLOUD_LIVE.deepMs : idleFor > CLOUD_LIVE.idleAfterMs ? CLOUD_LIVE.idleMs : CLOUD_LIVE.normalMs; try {
+    cloudIsLinked() || (d = Math.max(d, CLOUD_LIVE.unlinkedMs));
+}
+catch { } s.fails > 0 && (d = Math.min(CLOUD_LIVE.maxBackoffMs, d * Math.pow(2, Math.min(s.fails, 4)))); return Math.round(d * (.85 + Math.random() * .3)); }
+function cloudLiveSchedule(ms) { clearTimeout(__cloudPollTimer), __cloudPollTimer = null, __cloudLive.running && (__cloudPollTimer = setTimeout(cloudLiveTick, Math.max(0, ms))); }
+// Run a check as soon as possible (visible again, focus, online, first touch after a long idle...)
+function cloudLiveKick(ms) { if (!IS_TELEGRAM || !hasCloudStorage || document.visibilityState === "hidden")
+    return; __cloudLive.running || cloudStartPolling(), cloudLiveSchedule(ms || 0); }
+async function cloudLiveTick() { __cloudPollTimer = null; const s = __cloudLive; if (!s.running)
+    return; let r; try {
+    r = await cloudLiveProbe();
+}
+catch (e) {
+    s.fails++, r = "fail";
+} cloudLiveSchedule(r === "skip" ? 1200 : cloudLiveDelay()); }
+function cloudLiveAuto(rawIdx) { try {
+    const a = JSON.parse(rawIdx || "[]");
+    return Array.isArray(a) ? a.find(e => e && e.id === "auto") || null : null;
+}
+catch {
+    return null;
+} }
+async function cloudLiveProbe() { const s = __cloudLive; if (s.busy)
+    return "skip"; if (!IS_TELEGRAM || !hasCloudStorage || document.visibilityState !== "visible" || typeof navigator < "u" && navigator.onLine === !1)
+    return "skip";
+// Never interfere with (or race) our own writes
+if (window.__mkNoSchedule > 0 || __cloudBackupPending || __cloudListPending || window.__mkAutoBk && window.__mkAutoBk.active || window.__mkManualBk && window.__mkManualBk.active || window.__mkSyncBusy)
+    return "skip";
+// Never swap the screen while the user is typing
+if (Date.now() - (window.__mkLastTypeAt || 0) < CLOUD_LIVE.typingQuietMs)
+    return "skip"; const lastOk = window.__mkSync && window.__mkSync.lastOk || 0; lastOk !== s.lastOkSeen && (s.lastOkSeen = lastOk, cloudLiveHot()); s.busy = !0; try {
+    const vals = await cloudGetItemsRaw([CLOUD_INDEX_KEY, CLOUD_LIST_META_KEY, CLOUD_CONFIG_KEY]); if (!vals)
+        return s.fails++, "fail"; s.fails = 0, s.probes++, s.lastProbeAt = Date.now(); const rawIdx = vals[CLOUD_INDEX_KEY] || "", rawList = vals[CLOUD_LIST_META_KEY] || "", rawCfg = vals[CLOUD_CONFIG_KEY] || "", sig = rawIdx + "\u0001" + rawList + "\u0001" + rawCfg; if (sig === s.sig)
+        return "same";
+    // What exactly changed (idx = notes + manual backups, list = the List slot, cfg = shared settings)
+    const P = s.parts, idxChanged = !!P && P[0] !== rawIdx, listChanged = !!P && P[1] !== rawList, cfgChanged = !!P && P[2] !== rawCfg;
+    // Shared settings (manual-backup limit) changed on another device: take them in first
+    if (cfgChanged)
+        try {
+            await cloudLoadSettings(!0);
+        }
+        catch { }
+    // Keep the local copy of the backup list current, and tell the user when a NEW manual backup arrives
+    if (idxChanged || !P)
+        try {
+            const arr = JSON.parse(rawIdx || "[]");
+            if (Array.isArray(arr)) {
+                const clean = arr.filter(e => e && typeof e == "object" && e.id), oldIds = new Set((s.ids || []).map(String));
+                window.__cloudIdxCache = clean.slice();
+                const fresh = clean.filter(e => e.kind === "manual" && !oldIds.has(String(e.id)));
+                s.ids = clean.map(e => e.id);
+                fresh.length && P && showToast(currentLang === "fa" ? "📦 بکاپ دستی جدید از دستگاه دیگر رسید" : "📦 New manual backup from another device", 2400);
+            }
+        }
+        catch { }
+    s.__chg = { idxChanged, listChanged, cfgChanged };
+    // Something changed in the Cloud (or this is the first probe): pull + merge now
+    if (s.pendingSig !== sig && (s.pendingSig = sig, s.tries = 0), s.tries++, s.lastChangeAt = Date.now(), s.pulls++, cloudLiveHot(), await cloudSilentPullMerge(), cloudIsLinked()) {
+        // A pull that failed silently must not mark the change as seen: retry (a few times) with a normal delay
+        const ae = cloudLiveAuto(rawIdx);
+        if (ae && ae.ts && window.__mkSeenAutoTs !== ae.ts && s.tries < CLOUD_LIVE.maxPullTries)
+            return "retry";
+    } s.sig = sig, s.parts = [rawIdx, rawList, rawCfg], s.pendingSig = null, s.tries = 0;
+    // The ☁️ Cloud Backup panel (backup list, limit box) refreshes in place when it is open
+    if (P && (idxChanged || listChanged || cfgChanged))
+        try {
+            mkBkRefreshPanel();
+        }
+        catch { }
+    return "changed";
+}
+finally {
+    s.busy = !1;
+} }
+function cloudStartPolling() { if (!IS_TELEGRAM || !hasCloudStorage)
+    return; const s = __cloudLive; try {
+    // Telegram's own foreground/background events (desktop clients don't always fire visibilitychange)
+    if (!s.tgBound && TG && typeof TG.onEvent == "function")
+        s.tgBound = !0, TG.onEvent("activated", () => { cloudStartPolling(), cloudLiveKick(0); }), TG.onEvent("deactivated", () => { cloudStopPolling(); });
+}
+catch { } s.running || (s.running = !0, cloudLiveSchedule(1500)); }
+function cloudStopPolling() { __cloudLive.running = !1, clearTimeout(__cloudPollTimer), __cloudPollTimer = null; }
+document.addEventListener("visibilitychange", () => { document.visibilityState === "visible" ? (__cloudLive.fails = 0, cloudStartPolling(), cloudLiveKick(0)) : cloudStopPolling(); });
+window.addEventListener("focus", () => { cloudLiveKick(0); }), window.addEventListener("pageshow", () => { cloudLiveKick(0); }), window.addEventListener("online", () => { __cloudLive.fails = 0, cloudLiveKick(0); });
+// User activity: typing guard + wake-up from idle
+{
+    const typed = () => { window.__mkLastTypeAt = Date.now(); }, touched = () => { const s = __cloudLive, now = Date.now(), wasIdle = now - s.lastUserAt > CLOUD_LIVE.idleAfterMs; s.lastUserAt = now, wasIdle && cloudLiveKick(0); }, o = { passive: !0, capture: !0 };
+    ["keydown", "input", "compositionupdate", "beforeinput"].forEach(ev => document.addEventListener(ev, typed, o)), ["pointerdown", "touchstart", "keydown", "wheel"].forEach(ev => document.addEventListener(ev, touched, o));
+}
+// Small, non-blocking notice when another device's changes arrive (also a hook for other modules)
+function mkLiveNotifyMerged(updated, added, retired) { try {
+    const fa = currentLang === "fa", n = (updated || 0) + (added || 0) + (retired || 0);
+    showToast(fa ? `🔄 ${n} تغییر از دستگاه دیگر همگام شد` : `🔄 ${n} change${n === 1 ? "" : "s"} synced from another device`, 2200), window.dispatchEvent(new CustomEvent("mk-cloud-merged", { detail: { updated: updated || 0, added: added || 0, retired: retired || 0 } })), cloudLiveHot();
+}
+catch { } }
+// Manual "sync now" (also usable from the console): window.mkLiveSyncNow()
+// After this device's OWN cloud writes (backup, manual-backup delete/edit, limit change) the baseline is moved
+// forward, so its own change is never reported as coming from another device. Only done when this device is
+// in step with the Cloud auto copy; if another device's newer copy is there, the probe still pulls it.
+async function cloudLiveRebase() { const s = __cloudLive; try {
+    if (!IS_TELEGRAM || !hasCloudStorage || s.busy)
+        return;
+    const vals = await cloudGetItemsRaw([CLOUD_INDEX_KEY, CLOUD_LIST_META_KEY, CLOUD_CONFIG_KEY]); if (!vals)
+        return;
+    const rawIdx = vals[CLOUD_INDEX_KEY] || "", rawList = vals[CLOUD_LIST_META_KEY] || "", rawCfg = vals[CLOUD_CONFIG_KEY] || "", ae = cloudLiveAuto(rawIdx);
+    if (ae && ae.ts && window.__mkSeenAutoTs !== ae.ts)
+        return;
+    s.sig = rawIdx + "\u0001" + rawList + "\u0001" + rawCfg, s.parts = [rawIdx, rawList, rawCfg];
+    const arr = JSON.parse(rawIdx || "[]");
+    Array.isArray(arr) && (s.ids = arr.filter(e => e && typeof e == "object" && e.id).map(e => e.id)), cloudLiveHot();
+}
+catch { } }
+{
+    const wrapRebase = orig => function () { const p = orig.apply(this, arguments); return p && typeof p.then == "function" && p.then(() => { cloudLiveRebase(); }, () => { }), p; };
+    try {
+        typeof cloudBackupNow == "function" && (cloudBackupNow = wrapRebase(cloudBackupNow));
+    }
+    catch { }
+    try {
+        typeof cloudDeleteBackup == "function" && (cloudDeleteBackup = wrapRebase(cloudDeleteBackup));
+    }
+    catch { }
+    try {
+        typeof cloudEditManualBackup == "function" && (cloudEditManualBackup = wrapRebase(cloudEditManualBackup));
+    }
+    catch { }
+    try {
+        typeof cloudApplyManualLimitChange == "function" && (cloudApplyManualLimitChange = wrapRebase(cloudApplyManualLimitChange));
+    }
+    catch { }
+}
+window.mkLiveSyncNow = function () { __cloudLive.sig = null, __cloudLive.parts = null, __cloudLive.fails = 0, cloudLiveKick(0); };
 // Serialisation: every operation that reads-then-writes the shared index (backup, delete, edit, settings
 // change, restore reads, health check) runs one at a time.
 let __cloudOpChain = Promise.resolve();
@@ -21972,7 +22118,10 @@ async function cloudSilentPullMerge() { try {
     }
     // Text typed in the last moments must be in the notes (with a fresh lastEdited) BEFORE the merge, so
     // an older Cloud copy can never win over it or re-render it away
-    cloudFlushEditorFirst(), cloudQuiet(() => { const { updated: updated, added: added, retired: retired } = cloudApplyMergeData(result.data); if (updated || added || retired) {
+    cloudFlushEditorFirst(), cloudQuiet(() => { const { updated: updated, added: added, retired: retired } = cloudApplyMergeData(result.data); if (updated || added || retired) { try {
+        mkLiveNotifyMerged(updated, added, retired);
+    }
+    catch { }
         saveToLocalStorage(), saveFoldersToLocalStorage();
         try {
             renderApp();
@@ -22576,7 +22725,7 @@ function toggleLanguage() { try {
     const r = document.documentElement;
     r.classList.add("mu-lang-sw"), clearTimeout(window.__muLangSwT), window.__muLangSwT = setTimeout(function () { r.classList.remove("mu-lang-sw"); }, 600);
 }
-catch { } currentLang = currentLang === "fa" ? "en" : "fa", localStorage.setItem("app_lang_v15", currentLang); const oldDefault = DEFAULT_FOLDER; DEFAULT_FOLDER = i18n[currentLang].allFolders, folders = folders.map(f => f === oldDefault ? DEFAULT_FOLDER : f), folders = [DEFAULT_FOLDER, ...new Set(folders.filter(f => f !== DEFAULT_FOLDER))], (currentFolder === oldDefault || !folders.includes(currentFolder)) && (currentFolder = DEFAULT_FOLDER), applyLanguageUI(), MU_Theme.apply(MU_Theme.getCurrentIndex()), typeof mu_renderNoteSortLabels == "function" && mu_renderNoteSortLabels(), typeof mu_renderNotePreviewToggle == "function" && mu_renderNotePreviewToggle(), typeof mu_renderWipeAllLabels == "function" && mu_renderWipeAllLabels(), renderApp(); }
+catch { } currentLang = currentLang === "fa" ? "en" : "fa", localStorage.setItem("app_lang_v15", currentLang); const oldDefault = DEFAULT_FOLDER; DEFAULT_FOLDER = i18n[currentLang].allFolders, folders = folders.map(f => f === oldDefault ? DEFAULT_FOLDER : f), folders = [DEFAULT_FOLDER, ...new Set(folders.filter(f => f !== DEFAULT_FOLDER))], (currentFolder === oldDefault || !folders.includes(currentFolder)) && (currentFolder = DEFAULT_FOLDER), applyLanguageUI(), MU_Theme.apply(MU_Theme.getCurrentIndex()), typeof mu_renderNoteSortLabels == "function" && mu_renderNoteSortLabels(), typeof mu_renderNotePreviewToggle == "function" && mu_renderNotePreviewToggle(), typeof mu_renderWipeAllLabels == "function" && mu_renderWipeAllLabels(), window.__muLangDefer ? (window.__muLangDefer = !1, requestAnimationFrame(function () { setTimeout(function () { var y = window.scrollY || 0; try { renderApp(); } catch { } window.scrollTo(0, y); }, 0); })) : renderApp(); }
 function applyLanguageUI() { const t = i18n[currentLang], htmlTag = document.getElementById("htmlTag"); htmlTag.dir = currentLang === "fa" ? "rtl" : "ltr", htmlTag.lang = currentLang; }
 // saveToLocalStorage()'s IndexedDB write is fire-and-forget for routine calls; destructive/replacing
 // operations await mu_flushStorage() instead.
@@ -32778,10 +32927,10 @@ catch { } } function gearSvg() { return '<svg viewBox="0 0 24 24" fill="none" st
             return;
     }
     catch { } try {
-        MK.liteHost.lang() !== void 0 && MK.liteHost.lang() !== l && MK.liteHost.toggleLanguage();
+        window.__muLangSt = (document.getElementById("advancedCard") || {}).scrollTop || 0, window.__muLangDefer = !0, MK.liteHost.lang() !== void 0 && MK.liteHost.lang() !== l && MK.liteHost.toggleLanguage();
     }
     catch { }
-    openSettings(); }, setViewerStyle: function (v) { window.mu_setViewerStyle && window.mu_setViewerStyle(v); var cur = window.mu_getViewerStyle && window.mu_getViewerStyle() || "ocean"; document.querySelectorAll("#muViewerStyleSeg .mu-vs-opt").forEach(function (b) { b.setAttribute("aria-pressed", b.getAttribute("data-vs") === cur ? "true" : "false"); }); } }, window.openMarkhinSettings = openSettings,
+    window.__muLangDefer = !1, openSettings(); try { var __c2 = document.getElementById("advancedCard"), __st = window.__muLangSt || 0; if (__c2) { __c2.scrollTop = __st, requestAnimationFrame(function () { __c2.scrollTop = __st; }); } } catch { } }, setViewerStyle: function (v) { window.mu_setViewerStyle && window.mu_setViewerStyle(v); var cur = window.mu_getViewerStyle && window.mu_getViewerStyle() || "ocean"; document.querySelectorAll("#muViewerStyleSeg .mu-vs-opt").forEach(function (b) { b.setAttribute("aria-pressed", b.getAttribute("data-vs") === cur ? "true" : "false"); }); } }, window.openMarkhinSettings = openSettings,
     // Startup: re-apply the saved state as early as possible, and again after load in case the theme module
     // applied its own saved theme afterwards.
     applyZoom(zoomOn()), initZoomWatch(),
@@ -49392,6 +49541,60 @@ html body .mu-nav:not(.mu-show) .mu-nav-panel{transition-duration:.14s!important
 html body .mu-nav .mu-nav-bg,html body .mu-nav.mu-show .mu-nav-bg{transition:opacity .15s linear!important}
 html body .mu-nav .mu-nav-panel>*,html body .mu-nav.mu-show .mu-nav-panel>*{opacity:1!important;transform:none!important;transition:none!important;transition-delay:0s!important}
 html body .mu-nav:not(.mu-live) .mnl-ring-svg{animation-play-state:paused!important}
+</style>
+<style id="mkPrimaryBtnFix">
+/* ===== mkPrimaryBtnFix: B&W theme - the dark "Add notes" buttons (Archive / Favorites / Pinned / Tag screens, top bar + empty state)
+   keep a dark fill, white label and black frame, exactly like the other themes. The generic B&W rule that paints every modal
+   button light grey (#eee) left their white label invisible. ===== */
+html:not(.mu-nfs-dark) body.theme-bw:not(#_pb1):not(#_pb2) #advancedModal .mkc .mkc-add,
+html:not(.mu-nfs-dark) body.theme-bw:not(#_pb1):not(#_pb2) #advancedModal .mkc .mkc-empty .mkc-btn {
+    background:#222222!important;
+    background-image:none!important;
+    border:1px solid #000000!important;
+    color:#ffffff!important;
+    -webkit-text-fill-color:#ffffff!important;
+    box-shadow:none!important;
+}
+html:not(.mu-nfs-dark) body.theme-bw:not(#_pb1):not(#_pb2) #advancedModal .mkc .mkc-add *,
+html:not(.mu-nfs-dark) body.theme-bw:not(#_pb1):not(#_pb2) #advancedModal .mkc .mkc-empty .mkc-btn * {
+    color:#ffffff!important;
+    -webkit-text-fill-color:#ffffff!important;
+}
+/* night mode of the B&W theme: dark fill, white label, light frame (a black frame would vanish on the dark page) */
+html.mu-nfs-dark body.theme-bw:not(#_pb1):not(#_pb2) #advancedModal .mkc .mkc-add,
+html.mu-nfs-dark body.theme-bw:not(#_pb1):not(#_pb2) #advancedModal .mkc .mkc-empty .mkc-btn {
+    background:#2b2b2b!important;
+    background-image:none!important;
+    border:1px solid #8a8a8a!important;
+    color:#ffffff!important;
+    -webkit-text-fill-color:#ffffff!important;
+    box-shadow:none!important;
+}
+html.mu-nfs-dark body.theme-bw:not(#_pb1):not(#_pb2) #advancedModal .mkc .mkc-add *,
+html.mu-nfs-dark body.theme-bw:not(#_pb1):not(#_pb2) #advancedModal .mkc .mkc-empty .mkc-btn * {
+    color:#ffffff!important;
+    -webkit-text-fill-color:#ffffff!important;
+}
+</style>
+<style id="mkActiveBtnFix">
+/* ===== mkActiveBtnFix: active tab / primary button / active chip (Morse + Binary tools and every similar screen).
+   The day/night text rule painted the label inside these buttons with the page ink colour (dark on a dark fill in day mode,
+   white on a light fill in night mode). The label now follows the button's own colour, exactly as before that rule existed. ===== */
+html body:not(#_m1):not(#_m2):not(#_m3) #advancedModal :is(.mcx-tab.on,.mcx-btn.pri,.mcx-chip.on,.mcx-playbtn) * {
+    color:inherit!important;
+    -webkit-text-fill-color:currentColor!important;
+}
+/* B&W night mode: the active tab / chip must stand out from the inactive ones (light fill, dark label) like in the other themes */
+html.mu-nfs-dark body.theme-bw:not(#_m1):not(#_m2) #advancedModal :is(.mcx-tab.on,.mcx-chip.on) {
+    background:#d9d9d9!important;
+    background-image:none!important;
+    color:#111111!important;
+    -webkit-text-fill-color:#111111!important;
+}
+/* the button's own text fill must follow its colour too (the "Play sound & light" label is plain text directly inside the button) */
+html body:not(#_m1):not(#_m2):not(#_m3) #advancedModal :is(.mcx-tab,.mcx-btn,.mcx-chip,.mcx-hbtn,.mcx-playbtn,.mcx-sw,.mu-vs-opt) {
+    -webkit-text-fill-color:currentColor!important;
+}
 </style>
 </body>
 </html>
