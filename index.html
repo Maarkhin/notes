@@ -35284,6 +35284,39 @@ catch { } };
     } }
     // Sizing state: vvT = pending safety-net frame, __mxeLastH = last panel height, vv = pending vv3 frame
     var vvT = 0, __mxeLastH = 0, vv = 0;
+    // No-flash keyboard transitions. The page is resized in ONE step at the very first frame of the keyboard
+    // animation, while the keyboard itself needs ~150ms to slide in. Applying the new height at once cuts the editor
+    // short and leaves a blank strip (text and bottom bar vanish) until the keyboard arrives.
+    // So: when the area shrinks by a keyboard-sized amount, keep the previous panel height until the keyboard has
+    // landed (the keyboard simply slides over the still-visible text and bar); when the keyboard is dismissed we
+    // grow the panel at once (on blur) instead of waiting for the end of the animation.
+    var __mxeApp = 0, __mxeFull = 0, __mxeHT = 0, __mxeForce = !1, __mxePT = 0;
+    function mxeHold(h, box) { try {
+        if (__mxeForce)
+            __mxeForce = !1;
+        else if (__mxeApp && box && box.__mxeK && h < __mxeApp - 120) {
+            root.classList.remove("mxe-lay");
+            __mxeHT || (__mxeHT = setTimeout(function () { __mxeHT = 0, __mxeForce = !0, vv3(); }, 280));
+            return !0;
+        }
+    }
+    catch { } __mxeApp = h, h > __mxeFull && (__mxeFull = h); return !1; }
+    // Keyboard going down: the field lost focus and (after a short confirmation) is still not an editable one,
+    // so the keyboard is leaving. Give the panel its full height right away; verify against the real viewport later.
+    function mxePredictClose() { try {
+        var box = D2.querySelector(".content-container.mxe.show"), v = window.visualViewport;
+        if (!box || !v || v.scale > 1.01 || !__mxeFull || __mxeApp >= __mxeFull - 120)
+            return;
+        var ae = D2.activeElement;
+        if (ae && (ae.isContentEditable || /^(INPUT|TEXTAREA)$/.test(ae.tagName)))
+            return;
+        if (!H.kbShowing())
+            return;
+        var top = Math.round(v.offsetTop);
+        __mxeApp = __mxeFull, root.classList.remove("mxe-lay"), __mxeSet(box, __mxeFull, top);
+        clearTimeout(__mxePT), __mxePT = setTimeout(function () { __mxeForce = !0, vv3(); }, 420);
+    }
+    catch { } }
     // Write the panel height / top offset (--mxe-vh / --mxe-top) on the open box, only when they changed (cached in __mxeK)
     function __mxeSet(D, card, top) { try {
         D.scrollTop && (D.scrollTop = 0), D.scrollLeft && (D.scrollLeft = 0);
@@ -35332,6 +35365,8 @@ catch { } };
             // page really resized with the keyboard (Telegram)? then CSS alone keeps the panel exact;
             // otherwise use the JS height safety net: if the panel still ends lower than intended, pull it
             // up by the difference
+            if (mxeHold(h, container))
+                return;
             __mxeLastH = h, root.classList.toggle("mxe-lay", Math.abs((window.innerHeight || 0) - bottom) < 4), __mxeSet(container, h, top), VK && !vvT && (vvT = requestAnimationFrame(function () { vvT = 0; try {
                 var b = D2.querySelector(".content-container.mxe.show");
                 if (!b)
@@ -35357,14 +35392,14 @@ catch { } };
         }
         catch { }
     } if (root.classList.toggle("mxe-tg", mxeIsTG()), !open) {
-        root.style.removeProperty("--mxe-vh"), root.style.removeProperty("--mxe-top"), __mxeLastH = 0;
+        root.style.removeProperty("--mxe-vh"), root.style.removeProperty("--mxe-top"), __mxeLastH = 0, __mxeApp = 0, __mxeFull = 0, clearTimeout(__mxeHT), __mxeHT = 0, clearTimeout(__mxePT);
         try {
             VK && VK.overlaysContent && (VK.overlaysContent = !1);
         }
         catch { }
         return;
     } root.setAttribute("data-mxe-theme", getTheme()), vv3(), updUR(idOf(open)); }
-    window.visualViewport && (window.visualViewport.addEventListener("resize", vv2), window.visualViewport.addEventListener("scroll", vv2)), window.addEventListener("resize", vv2), D2.addEventListener("focusin", function (e) { e.target && e.target.closest && e.target.closest(".content-container.mxe") && vvSoon(); }, !0), D2.addEventListener("focusout", function (e) { e.target && e.target.closest && e.target.closest(".content-container.mxe") && vvSoon(); }, !0);
+    window.visualViewport && (window.visualViewport.addEventListener("resize", vv2), window.visualViewport.addEventListener("scroll", vv2)), window.addEventListener("resize", vv2), D2.addEventListener("focusin", function (e) { e.target && e.target.closest && e.target.closest(".content-container.mxe") && vvSoon(); }, !0), D2.addEventListener("focusout", function (e) { e.target && e.target.closest && e.target.closest(".content-container.mxe") && (vvSoon(), setTimeout(mxePredictClose, 110)); }, !0);
     try {
         var _vk = mxeVK();
         _vk && _vk.addEventListener("geometrychange", function () { window.__mxeVKStale = !1, vv3(); });
