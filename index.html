@@ -35554,7 +35554,7 @@ html.mu-kbanim body #contentsContainer .content-container.mxe.show,html.mu-kbani
         reduce = matchMedia("(prefers-reduced-motion: reduce)").matches;
     }
     catch (_) { }
-    var BARS = ".content-container.mxe .mxe-bottom,.mu-viewer:not(.mu-vs-retro) .mu-viewer-tools,.mAi-inputbar,.mxe-find,.dl-bar,.markhin-note-select-bar", HOLDERS = ".content-container.mxe,.mu-viewer-card,#markhinAiChatOverlay", MIN = 30, base = 0, lockedHeight = 0, lastW = 0, lastH = 0, lockAt = 0, fullInner = 0;
+    var BARS = ".content-container.mxe .mxe-bottom,.mu-viewer:not(.mu-vs-retro) .mu-viewer-tools,.mAi-inputbar,.mxe-find,.dl-bar,.markhin-note-select-bar", HOLDERS = ".content-container.mxe,.mu-viewer-card,#markhinAiChatOverlay,#muNotesFs", MIN = 30, base = 0, lockedHeight = 0, lastW = 0, lastH = 0, lockAt = 0, fullInner = 0;
     var items = new Map, snapL = new WeakMap, raf = 0, until = 0, pred = null, winDvh = 0, evtFlag = !1, learnedK = 0, animCls = !1, ro = null;
     function nowMs() { return window.performance && performance.now ? performance.now() : Date.now(); }
     function vh() { return Math.round(vv && vv.height || window.innerHeight || 0); }
@@ -35650,7 +35650,8 @@ html.mu-kbanim body #contentsContainer .content-container.mxe.show,html.mu-kbani
         }
         el.style.setProperty("translate", "0 " + tr.toFixed(2) + "px", "important");
     } }
-    function durFor(d) { var v = Math.round(Math.min(300, Math.max(190, 130 + d * .5))); return pred && !pred.seen ? Math.min(v, 160) : v; }
+    function durFor(d, down) { if (down)
+        return Math.round(Math.min(150, Math.max(100, 90 + d * .1))); var v = Math.round(Math.min(300, Math.max(190, 130 + d * .5))); return pred && !pred.seen ? Math.min(v, 160) : v; }
     function setAnim(on) { on !== animCls && (animCls = on, rootElement.classList.toggle("mu-kbanim", on)); }
     function snap() { var nl = document.querySelectorAll(BARS), list = [], i, r, st, el; for (i = 0; i < nl.length; i++)
         list.push(nl[i]); el = document.getElementById("muNfsFab"); el && list.push(el); for (i = 0; i < list.length; i++) {
@@ -35683,6 +35684,15 @@ html.mu-kbanim body #contentsContainer .content-container.mxe.show,html.mu-kbani
             }
             L = r.top - st.tr;
             h = r.height;
+            if (!list[i][1] && layEnv) {
+                st.S = L;
+                st.to = L;
+                st.dur = 0;
+                st.lastT = L;
+                st.cont = 0;
+                apply(el, st, 0);
+                continue;
+            }
             if (st.S === null) {
                 s0 = snapL.get(el);
                 st.S = s0 !== void 0 && Math.abs(winDvh) >= MIN && Math.abs(s0 - L) <= Math.abs(winDvh) + 140 ? s0 : L;
@@ -35729,7 +35739,7 @@ html.mu-kbanim body #contentsContainer .content-container.mxe.show,html.mu-kbani
                         st.from = st.S;
                         st.to = tgt;
                         st.t0 = ts;
-                        st.dur = durFor(Math.abs(d));
+                        st.dur = durFor(Math.abs(d), !!list[i][1] && d > 0 && !fk);
                     }
                 }
             }
@@ -35737,7 +35747,7 @@ html.mu-kbanim body #contentsContainer .content-container.mxe.show,html.mu-kbani
                 st.from = st.S;
                 st.to = tgt;
                 st.t0 = ts;
-                st.dur = durFor(Math.abs(d));
+                st.dur = durFor(Math.abs(d), !!list[i][1] && d > 0 && !fk);
             }
             else
                 st.S = tgt;
@@ -36955,12 +36965,24 @@ body.mu-nfsbk-on #mkBackupBar { display:none!important; }
         m0.innerHTML = '<button type="button" class="mu-fm" data-k="l"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6h11M9 12h11M9 18h11M4 6l1 1 2-2M4 12l1 1 2-2M4 18l1 1 2-2"/></svg><span></span></button><button type="button" class="mu-fm" data-k="f">' + build(0) + '<span></span></button><button type="button" class="mu-fm" data-k="n"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5M9 13h6M9 17h4"/></svg><span></span></button>';
         document.getElementById("muNotesFs").appendChild(m0);
     } var labelSpans = m0.querySelectorAll("span"); labelSpans[0].textContent = fa2() ? "لیست" : "List"; labelSpans[1].textContent = fa2() ? "پوشه" : "Folder"; labelSpans[2].textContent = fa2() ? "یادداشت" : "Note"; if (on && fabButton) {
-        var fabRect = fabButton.getBoundingClientRect();
-        m0.style.bottom = innerHeight - fabRect.top + 10 + "px";
-        var lf = fabRect.left + fabRect.width / 2 < innerWidth / 2;
-        m0.style.left = lf ? fabRect.left + "px" : "auto";
-        m0.style.right = lf ? "auto" : innerWidth - fabRect.right + "px";
-        m0.style.alignItems = lf ? "flex-start" : "flex-end";
+        // keep the menu glued to the "+" while it is open: the keyboard engine (muFabGlide) moves the "+" and the page height changes
+        // when the keyboard closes, so the position must be re-measured continuously, not only once at open time
+        var placeMenu = function () {
+            var fabRect = fabButton.getBoundingClientRect(), vv = window.visualViewport, vh = (vv && vv.height ? vv.height + (vv.offsetTop || 0) : 0) || innerHeight, lh = document.documentElement.clientHeight || innerHeight;
+            m0.style.bottom = Math.max(0, lh - fabRect.top + 10) + "px";
+            var lf = fabRect.left + fabRect.width / 2 < innerWidth / 2;
+            m0.style.left = lf ? fabRect.left + "px" : "auto";
+            m0.style.right = lf ? "auto" : innerWidth - fabRect.right + "px";
+            m0.style.alignItems = lf ? "flex-start" : "flex-end";
+        };
+        placeMenu();
+        if (m0.__muTrack) cancelAnimationFrame(m0.__muTrack);
+        var trackMenu = function () {
+            if (!m0.classList.contains("on")) { m0.__muTrack = 0; return; }
+            placeMenu();
+            m0.__muTrack = requestAnimationFrame(trackMenu);
+        };
+        m0.__muTrack = requestAnimationFrame(trackMenu);
     } m0.classList.toggle("on", !!on); fabButton && fabButton.classList.toggle("mu-x", !!on); }
     document.addEventListener("click", function (refitPops) { var _tgw = document.getElementById("muFabMenu"), target = refitPops.target.closest ? refitPops.target.closest("#muNfsFab,.mu-fm") : null; if (!target) {
         _tgw && _tgw.classList.contains("on") && FM(0);
