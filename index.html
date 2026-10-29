@@ -37030,9 +37030,16 @@ body.mu-nfsbk-on #mkBackupBar { display:none!important; }
         var left = g.items.length - shown;
         html += '<button type="button" class="mu-nfs-more" data-more="' + S2.groups.indexOf(g) + '">' + (fa2() ? "نمایش " + nfa(left) + " یادداشت دیگر" : "Show " + left + " more") + "</button>";
     } return html; }
+    function fCol(g) { var v = S2.collapsed[gKey(g)]; return v === void 0 ? !(S2.q && String(S2.q).trim()) : !!v; }
+    function fHue(n) { var h = 0, i; n = String(n || ""); for (i = 0; i < n.length; i++)
+        h = (h * 31 + n.charCodeAt(i)) % 360; return h; }
+    function fSummary() { if (!S2.groups.length)
+        return ""; var fa = fa2(), nf = S2.groups.filter(function (g) { return !g.none; }).length, nn = S2.list.length, txt = fa ? nfa(nf) + " پوشه · " + nfa(nn) + " یادداشت" : nf + (nf === 1 ? " folder" : " folders") + " · " + nn + (nn === 1 ? " note" : " notes"); return '<div class="mu-nfs-fsum"><span class="mu-nfs-fsum-t">' + txt + '</span><button type="button" class="mu-nfs-fall">' + fAllLabel() + "</button></div>"; }
+    function fAllLabel() { var fa = fa2(), anyOpen = S2.groups.some(function (g) { return !fCol(g); }); return anyOpen ? fa ? "جمع کردن همه" : "Collapse all" : fa ? "باز کردن همه" : "Expand all"; }
+    function fSyncAll() { var b = document.querySelector("#muNotesFs .mu-nfs-fall"); b && (b.textContent = fAllLabel()); }
     function paintFolders() { var host = $2("muNfsFolders"); if (host) {
         var html = "";
-        S2.groups.forEach(function (g, gi) { var collapsed = !!S2.collapsed[gKey(g)]; html += '<section class="mu-nfs-fgroup' + (collapsed ? " mu-collapsed" : "") + '"><div class="mu-nfs-frow"><button type="button" class="mu-nfs-fh mu-nfs-fh-l" data-fi="' + gi + '">' + ICONS.chev + '<span class="mu-nfs-fname" dir="auto">' + esc(g.none ? fa2() ? "بدون پوشه" : "No folder" : "📁 " + g.name) + "</span></button>" + (g.none ? "" : '<button type="button" class="mu-nfs-fadd" data-fa="' + gi + '" aria-label="' + (fa2() ? "افزودن یادداشت‌های موجود به این پوشه" : "Add existing notes to this folder") + '">' + ICONS.plus + "</button>") + (g.none ? "" : '<button type="button" class="mu-nfs-fadd mu-nfs-frem" data-fr="' + gi + '" aria-label="' + (fa2() ? "حذف یادداشت‌ها از این پوشه" : "Remove notes from this folder") + '">' + ICONS.minus + "</button>") + (g.none ? "" : '<button type="button" class="mu-nfs-fadd mu-nfs-fdel" data-fd="' + gi + '" aria-label="' + (fa2() ? "حذف این پوشه" : "Delete this folder") + '">' + ICONS.trash + "</button>") + '<button type="button" class="mu-nfs-fh mu-nfs-fh-r" data-fi="' + gi + '" tabindex="-1" aria-hidden="true"><span class="mu-nfs-fcount">' + nfa(g.items.length) + '</span></button></div><div class="mu-nfs-fbody">' + groupBodyHtml(g) + "</div></section>"; }), host.innerHTML = html, setEmpty(!S2.groups.length, S2.q.trim() ? fa2() ? "یادداشتی پیدا نشد." : "No matching notes." : fa2() ? "هنوز پوشه‌ای نداری. با دکمه + یکی بساز." : "No folders yet. Tap + to create one.");
+        html += fSummary(), S2.groups.forEach(function (g, gi) { var fa = fa2(), collapsed = fCol(g), cnt = g.items.length, nm = g.none ? fa ? "بدون پوشه" : "No folder" : g.name, sub = fa ? cnt ? nfa(cnt) + " یادداشت" : "خالی" : cnt ? cnt + (cnt === 1 ? " note" : " notes") : "Empty", aAdd = fa ? "افزودن یادداشت‌های موجود به این پوشه" : "Add existing notes to this folder", aRem = fa ? "حذف یادداشت‌ها از این پوشه" : "Remove notes from this folder", aDel = fa ? "حذف این پوشه" : "Delete this folder"; html += '<section class="mu-nfs-fgroup' + (collapsed ? " mu-collapsed" : "") + (g.none ? " mu-nfs-fnone" : "") + '"' + (g.none ? "" : ' style="--fh:' + fHue(g.name) + '"') + '><div class="mu-nfs-frow"><button type="button" class="mu-nfs-fh mu-nfs-fh-l" data-fi="' + gi + '"><span class="mu-nfs-ficon">' + ICONS.folder + '</span><span class="mu-nfs-ftxt"><span class="mu-nfs-fname" dir="auto">' + esc(nm) + '</span><span class="mu-nfs-fsub">' + sub + "</span></span></button>" + (g.none ? "" : '<button type="button" class="mu-nfs-fadd" data-fa="' + gi + '" aria-label="' + aAdd + '" title="' + aAdd + '">' + ICONS.plus + '</button><button type="button" class="mu-nfs-fadd mu-nfs-frem" data-fr="' + gi + '" aria-label="' + aRem + '" title="' + aRem + '">' + ICONS.minus + '</button><button type="button" class="mu-nfs-fadd mu-nfs-fdel" data-fd="' + gi + '" aria-label="' + aDel + '" title="' + aDel + '">' + ICONS.trash + "</button>") + '<button type="button" class="mu-nfs-fh mu-nfs-fh-r" data-fi="' + gi + '" aria-label="' + (fa ? "باز و بسته کردن" : "Expand or collapse") + '">' + ICONS.chev + '</button></div><div class="mu-nfs-fbody">' + groupBodyHtml(g) + "</div></section>"; }), host.innerHTML = html, setEmpty(!S2.groups.length, S2.q.trim() ? fa2() ? "یادداشتی پیدا نشد." : "No matching notes." : fa2() ? "هنوز پوشه‌ای نداری. با دکمه + یکی بساز." : "No folders yet. Tap + to create one.");
     } }
     function render() { build2(); Ne(); var notesMode = S2.page === "notes", c = colsEl(), f = $2("muNfsFolders"); c && (c.style.display = notesMode ? "" : "none"), f && (f.style.display = notesMode ? "none" : ""), notesMode ? paint(0) : paintFolders(); }
     // Empty box: placeholder follows the app language (Persian = right-to-left, English = left-to-right).
@@ -37122,7 +37129,7 @@ body.mu-nfsbk-on #mkBackupBar { display:none!important; }
         }
         sh.innerHTML = '<div class="mu-nfs-sheetbg" data-sheet-x="1"></div><div class="mu-nfs-sheetbox" role="dialog">' + html + "</div>", sh.classList.add("mu-open");
     } }
-    var NAV_GROUPS = [{ fa: "یادداشت‌ها", en: "Notes", items: [{ k: "notes", ic: "bulb", fa: "یادداشت‌ها", en: "Notes", pr: "a" }, { k: "folders", ic: "folder", fa: "پوشه‌ها", en: "Folders", pr: "a" }, { k: "list", ic: "list", fa: "لیست", en: "List", pr: "b" }, { k: "vault", ic: "vault", fa: "گاوصندوق", en: "Vault", pr: "b" }, { k: "search", ic: "search", fa: "جستجوی هوشمند", en: "Smart Search", pr: "b" }, { k: "delete", ic: "trash", fa: "حذف", en: "Delete", pr: "b" }] }, { fa: "پشتیبان‌گیری داده‌ها", en: "Data backup", items: [{ k: "cloud", ic: "cloud", fa: "بکاپ ابری تلگرام", en: "Telegram Cloud Backup" }, { k: "imp", ic: "imp", fa: "ورودی‌ها", en: "Import", pr: "c" }, { k: "exp", ic: "exp", fa: "خروجی‌ها", en: "Export", pr: "c" }] }, { fa: "مجموعه‌ها", en: "Collections", items: [{ k: "archive", ic: "archive", fa: "بایگانی", en: "Archive", pr: "d" }, { k: "favorites", ic: "star", fa: "علاقه‌مندی‌ها", en: "Favorites", pr: "d" }] }, { fa: "ابزارها", en: "Tools", items: [{ k: "morse", ic: "morse", fa: "مبدل کد مورس", en: "Morse Code Converter", pr: "e" }, { k: "binary", ic: "binary", fa: "مبدل کد باینری", en: "Binary Code Converter", pr: "e" }, { k: "kg", ic: "graph", fa: "شبکه دانش", en: "Knowledge Graph", pr: "g" }, { k: "portal", ic: "portal", fa: "پورتال رندوم", en: "Random Portal", pr: "g" }] }], navTimer = 0, navIsOpen = !1;
+    var NAV_GROUPS = [{ fa: "یادداشت‌ها", en: "Notes", items: [{ k: "notes", ic: "bulb", fa: "یادداشت‌ها", en: "Notes", pr: "a" }, { k: "folders", ic: "folder", fa: "پوشه‌ها", en: "Folders", pr: "a" }, { k: "list", ic: "list", fa: "لیست", en: "List", pr: "b" }, { k: "vault", ic: "vault", fa: "گاوصندوق", en: "Vault", pr: "b" }, { k: "search", ic: "search", fa: "جستجوی هوشمند", en: "Smart Search", pr: "b" }, { k: "delete", ic: "trash", fa: "حذف", en: "Delete", pr: "b" }] }, { fa: "پشتیبان‌گیری داده‌ها", en: "Data backup", items: [{ k: "cloud", ic: "cloud", fa: "بکاپ ابری تلگرام", en: "Telegram Cloud Backup" }, { k: "imp", ic: "imp", fa: "ورودی‌ها", en: "Import", pr: "c" }, { k: "exp", ic: "exp", fa: "خروجی‌ها", en: "Export", pr: "c" }] }, { fa: "مجموعه‌ها", en: "Collections", items: [{ k: "archive", ic: "archive", fa: "بایگانی", en: "Archive", pr: "d" }, { k: "favorites", ic: "star", fa: "علاقه‌مندی‌ها", en: "Favorites", pr: "d" }, { k: "locked", ic: "lock", fa: "قفل‌شده‌ها", en: "Locked", pr: "h" }, { k: "pinned", ic: "pin", fa: "پین‌شده‌ها", en: "Pinned", pr: "h" }] }, { fa: "ابزارها", en: "Tools", items: [{ k: "morse", ic: "morse", fa: "مبدل کد مورس", en: "Morse Code Converter", pr: "e" }, { k: "binary", ic: "binary", fa: "مبدل کد باینری", en: "Binary Code Converter", pr: "e" }, { k: "kg", ic: "graph", fa: "شبکه دانش", en: "Knowledge Graph", pr: "g" }, { k: "portal", ic: "portal", fa: "پورتال رندوم", en: "Random Portal", pr: "g" }] }], navTimer = 0, navIsOpen = !1;
     function modalEl() { return $2("advancedModal"); }
     function modalVisible() { var m = modalEl(); return !!(m && m.style.display === "flex"); }
     function fsOpen() { var r = $2("muNotesFs"); return !!(r && r.classList.contains("mu-open")); }
@@ -37146,6 +37153,8 @@ body.mu-nfsbk-on #mkBackupBar { display:none!important; }
             if (ac.querySelector(".advanced-head[data-mkcloud]"))
                 return "cloud";
         }
+        if (document.getElementById("mklkRoot"))
+            return "locked";
         var r = document.getElementById("mkcRoot");
         if (r && !r.classList.contains("mkc-pick"))
             return r.classList.contains("mkc-pin") ? "pinned" : r.classList.contains("mkc-fav") ? "favorites" : "archive";
@@ -37373,7 +37382,7 @@ body.mu-nfsbk-on #mkBackupBar { display:none!important; }
         }
         _();
         return;
-    } var listType = k === "archive" ? "archived" : "favorite"; try {
+    } var listType = k === "archive" ? "archived" : k === "pinned" ? "pinned" : k === "locked" ? "locked" : "favorite"; try {
         H.dashShowList(listType);
         var m = modalEl();
         m && m.classList.add("mu-no-anim");
@@ -37930,13 +37939,19 @@ body.mu-nfsbk-on #mkBackupBar { display:none!important; }
             ga && !ga.none && api.pickNotes(ga.name);
             return;
         }
+        var fall = t.closest("#muNotesFs .mu-nfs-fall");
+        if (fall) {
+            var anyOpen = S2.groups.some(function (g) { return !fCol(g); });
+            S2.groups.forEach(function (g) { S2.collapsed[gKey(g)] = anyOpen; }), paintFolders();
+            return;
+        }
         var fh = t.closest("#muNotesFs .mu-nfs-fh");
         if (fh) {
             var g = S2.groups[+fh.getAttribute("data-fi")];
             if (!g)
                 return;
             var sec = fh.closest(".mu-nfs-fgroup"), col = !sec.classList.contains("mu-collapsed");
-            sec.classList.toggle("mu-collapsed", col), S2.collapsed[gKey(g)] = col;
+            sec.classList.toggle("mu-collapsed", col), S2.collapsed[gKey(g)] = col; fSyncAll();
             return;
         }
         var more = t.closest("#muNotesFs .mu-nfs-more");
@@ -37976,7 +37991,7 @@ body.mu-nfsbk-on #mkBackupBar { display:none!important; }
         }
         // tapping empty space on the notes page while notes are selected cancels the selection (only the
         // selection mode ends; nothing is changed or lost - pin / favorite / lock edits are already saved)
-        S2.sel != null && fsOpen() && !modalVisible() && t.closest("#muNfsBody") && !t.closest("button, a, input, textarea, select, label, .mu-nfs-card, .mu-nfs-fh, .mu-nfs-fadd, .mu-nfs-more, #muNfsSheet") && clearSel();
+        S2.sel != null && fsOpen() && !modalVisible() && t.closest("#muNfsBody") && !t.closest("button, a, input, textarea, select, label, .mu-nfs-card, .mu-nfs-fh, .mu-nfs-fall, .mu-nfs-fadd, .mu-nfs-more, #muNfsSheet") && clearSel();
     } }), document.addEventListener("input", function (e) { var t = e.target; if (!(!t || t.id !== "muNfsPickQ")) {
         var q = norm(t.value).trim();
         Array.prototype.forEach.call(document.querySelectorAll("#muNfsSheet .mu-nfs-pk"), function (b) { b.style.display = !q || (b.getAttribute("data-q") || "").indexOf(q) > -1 ? "" : "none"; });
@@ -49586,6 +49601,65 @@ html:not(#_cbf1):not(#_cbf2) body:not(#_cbf3) #advancedModal #advancedCard:has(>
     text-shadow:none!important;
 }
 </style>
+<style id="mkCloudFixBtnContrast">
+/* "Enable / fix auto sync" button: night theme -> white label, day theme -> black label (also while disabled/busy). */
+html:not(#_cbf1):not(#_cbf2) body:not(#_cbf3) #advancedModal #advancedCard:has(>.advanced-head[data-mkcloud]) #cloudFixAutoSyncBtn,
+html:not(#_cbf1):not(#_cbf2) body:not(#_cbf3) #advancedModal #advancedCard:has(>.advanced-head[data-mkcloud]) #cloudFixAutoSyncBtn:disabled {
+    background:#dcdcdc!important;
+    border:1px solid #b5b5b5!important;
+    color:#000!important;
+    -webkit-text-fill-color:#000!important;
+    text-shadow:none!important;
+    opacity:1!important;
+}
+html:not(#_cbf1):not(#_cbf2) body:not(#_cbf3) #advancedModal #advancedCard:has(>.advanced-head[data-mkcloud]) #cloudFixAutoSyncBtn * {
+    color:#000!important;
+    -webkit-text-fill-color:#000!important;
+    text-shadow:none!important;
+}
+html:not(#_cbf1):not(#_cbf2) body:not(#_cbf3) #advancedModal #advancedCard:has(>.advanced-head[data-mkcloud]) #cloudFixAutoSyncBtn:disabled {
+    opacity:.75!important;
+}
+html.mu-nfs-dark:not(#_cbf1):not(#_cbf2) body:not(#_cbf3) #advancedModal #advancedCard:has(>.advanced-head[data-mkcloud]) #cloudFixAutoSyncBtn,
+html.mu-nfs-dark:not(#_cbf1):not(#_cbf2) body:not(#_cbf3) #advancedModal #advancedCard:has(>.advanced-head[data-mkcloud]) #cloudFixAutoSyncBtn:disabled {
+    background:#3a3a3a!important;
+    border:1px solid #5a5a5a!important;
+    color:#fff!important;
+    -webkit-text-fill-color:#fff!important;
+}
+html.mu-nfs-dark:not(#_cbf1):not(#_cbf2) body:not(#_cbf3) #advancedModal #advancedCard:has(>.advanced-head[data-mkcloud]) #cloudFixAutoSyncBtn * {
+    color:#fff!important;
+    -webkit-text-fill-color:#fff!important;
+}
+</style>
+<style id="mkSaveCropBtnContrast">
+/* Apply Crop / Save buttons: day theme -> black label, night theme -> white label. */
+html:not(#_k1):not(#_k2) body:not(#_k3) #advancedCard button[onclick^="mu2_confirmCrop"],
+html:not(#_k1):not(#_k2) body:not(#_k3) .mu-save-slot>button.btn-save-prominent {
+    background:#dcdcdc!important;
+    border:1px solid #b5b5b5!important;
+    color:#000!important;
+    -webkit-text-fill-color:#000!important;
+    text-shadow:none!important;
+}
+html:not(#_k1):not(#_k2) body:not(#_k3) #advancedCard button[onclick^="mu2_confirmCrop"] *,
+html:not(#_k1):not(#_k2) body:not(#_k3) .mu-save-slot>button.btn-save-prominent * {
+    color:#000!important;
+    -webkit-text-fill-color:#000!important;
+}
+html.mu-nfs-dark:not(#_k1):not(#_k2) body:not(#_k3) #advancedCard button[onclick^="mu2_confirmCrop"],
+html.mu-nfs-dark:not(#_k1):not(#_k2) body:not(#_k3) .mu-save-slot>button.btn-save-prominent {
+    background:#3a3a3a!important;
+    border:1px solid #5a5a5a!important;
+    color:#fff!important;
+    -webkit-text-fill-color:#fff!important;
+}
+html.mu-nfs-dark:not(#_k1):not(#_k2) body:not(#_k3) #advancedCard button[onclick^="mu2_confirmCrop"] *,
+html.mu-nfs-dark:not(#_k1):not(#_k2) body:not(#_k3) .mu-save-slot>button.btn-save-prominent * {
+    color:#fff!important;
+    -webkit-text-fill-color:#fff!important;
+}
+</style>
 <script id="muThemeInstant">
 (function () { var root = document.documentElement, t1 = 0, t2 = 0, raf = 0; function off() { if (raf) {
     try {
@@ -49768,6 +49842,123 @@ html.mu-nfs-dark body.theme-bw:not(#_m1):not(#_m2) #advancedModal :is(.mcx-tab.o
 html body:not(#_m1):not(#_m2):not(#_m3) #advancedModal :is(.mcx-tab,.mcx-btn,.mcx-chip,.mcx-hbtn,.mcx-playbtn,.mcx-sw,.mu-vs-opt) {
     -webkit-text-fill-color:currentColor!important;
 }
+</style>
+<style id="muFoldersPageCss">
+/* Folders page (menu → Folders) v3: Windows 11 File Explorer look (flat rows, yellow folder icons, tree chevron, tree guide line). Visual only. */
+#muNotesFs #muNfsFolders{padding:0 0 24px;--w-acc:#0067c0;--w-hov:rgba(0,0,0,.05);--w-press:rgba(0,0,0,.09);--w-sel:rgba(0,103,192,.09);--w-line:rgba(0,0,0,.10);--w-del:#c42b1c;--w-del-bg:rgba(196,43,28,.10)}
+#muNotesFs[data-theme=dark] #muNfsFolders{--w-acc:#60cdff;--w-hov:rgba(255,255,255,.06);--w-press:rgba(255,255,255,.10);--w-sel:rgba(96,205,255,.11);--w-line:rgba(255,255,255,.11);--w-del:#ff99a4;--w-del-bg:rgba(255,153,164,.14)}
+
+/* summary bar (Explorer status/command strip) */
+#muNotesFs .mu-nfs-fsum{display:flex;align-items:center;justify-content:space-between;gap:10px;margin:0 0 6px;padding:0 6px 6px;min-height:38px;font-size:12px;line-height:1.5;color:var(--nfs-muted);border-bottom:1px solid var(--w-line)}
+#muNotesFs .mu-nfs-fsum-t{font-weight:400}
+#muNotesFs .mu-nfs-fall{flex:0 0 auto;border:0;background:transparent;color:var(--nfs-ink);font:inherit;font-size:12.5px;font-weight:400;line-height:1;padding:8px 12px;border-radius:5px;cursor:pointer;-webkit-tap-highlight-color:transparent;touch-action:manipulation;transition:background .12s}
+#muNotesFs .mu-nfs-fall:hover{background:var(--w-hov)}
+#muNotesFs .mu-nfs-fall:active{background:var(--w-press);transform:none}
+
+/* folder row */
+#muNotesFs .mu-nfs-fgroup{margin:0 0 2px}
+#muNotesFs .mu-nfs-frow{position:relative;overflow:visible;display:flex;align-items:center;gap:0;padding:2px 4px;min-height:54px;background:transparent;border:0;border-radius:6px;box-shadow:none;transition:background .12s}
+#muNotesFs .mu-nfs-fgroup.mu-collapsed .mu-nfs-frow:hover{background:var(--w-hov)}
+#muNotesFs .mu-nfs-fgroup:not(.mu-collapsed) .mu-nfs-frow{background:var(--w-sel)}
+#muNotesFs .mu-nfs-frow:before{content:"";position:absolute;inset-inline-start:0;inset-block:auto;top:50%;width:3px;height:0;border-radius:3px;background:var(--w-acc);opacity:1;transform:translateY(-50%);transition:height .15s;pointer-events:none}
+#muNotesFs .mu-nfs-fgroup:not(.mu-collapsed) .mu-nfs-frow:before{height:18px;inset-block:auto;border-radius:3px}
+#muNotesFs .mu-nfs-fnone .mu-nfs-frow{border:0;box-shadow:none}
+#muNotesFs .mu-nfs-fnone .mu-nfs-frow:before{display:block}
+#muNotesFs .mu-nfs-fnone:not(.mu-collapsed) .mu-nfs-frow{background:var(--w-sel);border:0}
+
+/* name + count */
+#muNotesFs .mu-nfs-fh.mu-nfs-fh-l{flex:1 1 auto;width:auto;min-width:0;min-height:46px;gap:10px;padding:2px 6px;border-radius:5px;font-size:14px;background:transparent;-webkit-tap-highlight-color:transparent;transition:background .12s}
+#muNotesFs .mu-nfs-fh.mu-nfs-fh-l:active{background:var(--w-press)}
+#muNotesFs .mu-nfs-fnone .mu-nfs-fh.mu-nfs-fh-l:active{background:var(--w-press)}
+#muNotesFs .mu-nfs-ftxt{display:flex;flex-direction:column;align-items:flex-start;gap:0;min-width:0}
+#muNotesFs .mu-nfs-fname{max-width:100%;font-size:14px;font-weight:500;line-height:1.5}
+#muNotesFs .mu-nfs-fh .mu-nfs-fsub{font-size:12px;font-weight:400;line-height:1.4;color:var(--nfs-muted)!important;-webkit-text-fill-color:var(--nfs-muted)!important}
+
+/* Windows 11 folder icon (closed = yellow folder, open = with paper peeking out) */
+#muNotesFs .mu-nfs-ficon{flex:0 0 auto;width:34px;height:34px;display:block;border-radius:0;box-shadow:none;background:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 48 48'%3E%3Cdefs%3E%3ClinearGradient id='b' x1='0' y1='0' x2='0' y2='1'%3E%3Cstop offset='0' stop-color='%23E8A500'/%3E%3Cstop offset='1' stop-color='%23CC8A00'/%3E%3C/linearGradient%3E%3ClinearGradient id='f' x1='0' y1='0' x2='0' y2='1'%3E%3Cstop offset='0' stop-color='%23FFE585'/%3E%3Cstop offset='1' stop-color='%23FFC531'/%3E%3C/linearGradient%3E%3C/defs%3E%3Cpath d='M6 7h12.4c.9 0 1.7.4 2.3 1l2.6 3H42a3 3 0 013 3v23a4 4 0 01-4 4H7a4 4 0 01-4-4V10a3 3 0 013-3z' fill='url(%23b)'/%3E%3Cpath d='M3 17.5a3 3 0 013-3h36a3 3 0 013 3V37a4 4 0 01-4 4H7a4 4 0 01-4-4z' fill='url(%23f)'/%3E%3C/svg%3E") center/contain no-repeat;filter:drop-shadow(0 1px 1px rgba(0,0,0,.20))}
+#muNotesFs[data-theme=dark] .mu-nfs-ficon{background:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 48 48'%3E%3Cdefs%3E%3ClinearGradient id='b' x1='0' y1='0' x2='0' y2='1'%3E%3Cstop offset='0' stop-color='%23E8A500'/%3E%3Cstop offset='1' stop-color='%23CC8A00'/%3E%3C/linearGradient%3E%3ClinearGradient id='f' x1='0' y1='0' x2='0' y2='1'%3E%3Cstop offset='0' stop-color='%23FFE585'/%3E%3Cstop offset='1' stop-color='%23FFC531'/%3E%3C/linearGradient%3E%3C/defs%3E%3Cpath d='M6 7h12.4c.9 0 1.7.4 2.3 1l2.6 3H42a3 3 0 013 3v23a4 4 0 01-4 4H7a4 4 0 01-4-4V10a3 3 0 013-3z' fill='url(%23b)'/%3E%3Cpath d='M3 17.5a3 3 0 013-3h36a3 3 0 013 3V37a4 4 0 01-4 4H7a4 4 0 01-4-4z' fill='url(%23f)'/%3E%3C/svg%3E") center/contain no-repeat;filter:drop-shadow(0 1px 1px rgba(0,0,0,.5))}
+#muNotesFs .mu-nfs-ficon svg{display:none}
+#muNotesFs .mu-nfs-fgroup:not(.mu-collapsed) .mu-nfs-ficon,#muNotesFs[data-theme=dark] .mu-nfs-fgroup:not(.mu-collapsed) .mu-nfs-ficon{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 48 48'%3E%3Cdefs%3E%3ClinearGradient id='b' x1='0' y1='0' x2='0' y2='1'%3E%3Cstop offset='0' stop-color='%23E8A500'/%3E%3Cstop offset='1' stop-color='%23CC8A00'/%3E%3C/linearGradient%3E%3ClinearGradient id='f' x1='0' y1='0' x2='0' y2='1'%3E%3Cstop offset='0' stop-color='%23FFE585'/%3E%3Cstop offset='1' stop-color='%23FFC531'/%3E%3C/linearGradient%3E%3C/defs%3E%3Cpath d='M6 7h12.4c.9 0 1.7.4 2.3 1l2.6 3H42a3 3 0 013 3v23a4 4 0 01-4 4H7a4 4 0 01-4-4V10a3 3 0 013-3z' fill='url(%23b)'/%3E%3Crect x='9' y='10.5' width='29' height='13' rx='2' fill='%23fbfbfb'/%3E%3Crect x='9' y='10.5' width='29' height='13' rx='2' fill='none' stroke='%23000' stroke-opacity='.08'/%3E%3Cpath d='M9.4 20.4A3 3 0 0112.3 18H44.6a2.4 2.4 0 012.3 3.1L42.3 38.3A4 4 0 0138.4 41.3H7.6A4.2 4.2 0 013.5 36.1z' fill='url(%23f)'/%3E%3C/svg%3E")}
+#muNotesFs .mu-nfs-fnone .mu-nfs-ficon,#muNotesFs[data-theme=dark] .mu-nfs-fnone .mu-nfs-ficon{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 48 48'%3E%3Cdefs%3E%3ClinearGradient id='b' x1='0' y1='0' x2='0' y2='1'%3E%3Cstop offset='0' stop-color='%238C98A8'/%3E%3Cstop offset='1' stop-color='%236F7B8C'/%3E%3C/linearGradient%3E%3ClinearGradient id='f' x1='0' y1='0' x2='0' y2='1'%3E%3Cstop offset='0' stop-color='%23C9D2DE'/%3E%3Cstop offset='1' stop-color='%23A9B5C4'/%3E%3C/linearGradient%3E%3C/defs%3E%3Cpath d='M6 7h12.4c.9 0 1.7.4 2.3 1l2.6 3H42a3 3 0 013 3v23a4 4 0 01-4 4H7a4 4 0 01-4-4V10a3 3 0 013-3z' fill='url(%23b)'/%3E%3Cpath d='M3 17.5a3 3 0 013-3h36a3 3 0 013 3V37a4 4 0 01-4 4H7a4 4 0 01-4-4z' fill='url(%23f)'/%3E%3C/svg%3E")}
+#muNotesFs .mu-nfs-fnone:not(.mu-collapsed) .mu-nfs-ficon,#muNotesFs[data-theme=dark] .mu-nfs-fnone:not(.mu-collapsed) .mu-nfs-ficon{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 48 48'%3E%3Cdefs%3E%3ClinearGradient id='b' x1='0' y1='0' x2='0' y2='1'%3E%3Cstop offset='0' stop-color='%238C98A8'/%3E%3Cstop offset='1' stop-color='%236F7B8C'/%3E%3C/linearGradient%3E%3ClinearGradient id='f' x1='0' y1='0' x2='0' y2='1'%3E%3Cstop offset='0' stop-color='%23C9D2DE'/%3E%3Cstop offset='1' stop-color='%23A9B5C4'/%3E%3C/linearGradient%3E%3C/defs%3E%3Cpath d='M6 7h12.4c.9 0 1.7.4 2.3 1l2.6 3H42a3 3 0 013 3v23a4 4 0 01-4 4H7a4 4 0 01-4-4V10a3 3 0 013-3z' fill='url(%23b)'/%3E%3Crect x='9' y='10.5' width='29' height='13' rx='2' fill='%23fbfbfb'/%3E%3Crect x='9' y='10.5' width='29' height='13' rx='2' fill='none' stroke='%23000' stroke-opacity='.08'/%3E%3Cpath d='M9.4 20.4A3 3 0 0112.3 18H44.6a2.4 2.4 0 012.3 3.1L42.3 38.3A4 4 0 0138.4 41.3H7.6A4.2 4.2 0 013.5 36.1z' fill='url(%23f)'/%3E%3C/svg%3E")}
+
+/* flat toolbar-style actions */
+#muNotesFs .mu-nfs-fadd{flex:0 0 auto;width:34px;height:34px;border:0!important;border-radius:5px;background:transparent;color:var(--nfs-muted)!important;transition:background .12s,color .12s}
+#muNotesFs .mu-nfs-fadd svg{width:16px;height:16px;stroke-width:1.8}
+#muNotesFs .mu-nfs-fadd:hover{background:var(--w-hov)}
+#muNotesFs .mu-nfs-fadd:active{background:var(--w-press);transform:none}
+#muNotesFs .mu-nfs-frow .mu-nfs-fadd+.mu-nfs-fadd{margin-inline-start:0}
+#muNotesFs .mu-nfs-fadd.mu-nfs-fdel{background:transparent;color:var(--nfs-muted)!important;border:0!important}
+#muNotesFs .mu-nfs-fadd.mu-nfs-fdel:hover,#muNotesFs .mu-nfs-fadd.mu-nfs-fdel:active{background:var(--w-del-bg);color:var(--w-del)!important}
+#muNotesFs[data-theme=dark] .mu-nfs-fadd.mu-nfs-fdel{background:transparent;color:var(--nfs-muted)!important}
+#muNotesFs[data-theme=dark] .mu-nfs-fadd.mu-nfs-fdel:hover,#muNotesFs[data-theme=dark] .mu-nfs-fadd.mu-nfs-fdel:active{background:var(--w-del-bg);color:var(--w-del)!important}
+
+/* tree chevron at the start of the row */
+#muNotesFs .mu-nfs-fh.mu-nfs-fh-r{order:-1;flex:0 0 auto;width:30px;height:34px;min-height:0;margin-inline-start:0;padding:0;justify-content:center;border-radius:5px;background:transparent;color:var(--nfs-muted)!important;-webkit-text-fill-color:var(--nfs-muted)!important;-webkit-tap-highlight-color:transparent;transition:background .12s}
+#muNotesFs .mu-nfs-fh.mu-nfs-fh-r:active{background:var(--w-press)}
+#muNotesFs .mu-nfs-fh.mu-nfs-fh-r svg{width:12px;height:12px;stroke-width:2.6}
+#muNotesFs .mu-nfs-chev{transition:transform .18s cubic-bezier(.3,.7,.3,1)}
+
+/* expanded content: tree guide line */
+#muNotesFs .mu-nfs-fbody{margin-inline-start:19px;padding:8px 0 6px;padding-inline-start:7px;border-inline-start:1px solid var(--w-line)}
+#muNotesFs .mu-nfs-fempty{margin:0;padding:12px;text-align:center;border:1.5px dashed var(--nfs-border);border-radius:13px;color:var(--nfs-muted);font-size:12.5px}
+#muNfsFolders .mu-nfs-fempty{margin:0;padding:14px 8px;text-align:center;border:0;border-radius:0;color:var(--nfs-muted);font-size:12.5px}
+
+@media (max-width:340px){#muNotesFs .mu-nfs-fadd{width:30px;height:30px}#muNotesFs .mu-nfs-ficon{width:30px;height:30px}}
+@media (prefers-reduced-motion:reduce){#muNotesFs .mu-nfs-frow,#muNotesFs .mu-nfs-frow:before,#muNotesFs .mu-nfs-chev,#muNotesFs .mu-nfs-fadd,#muNotesFs .mu-nfs-fall{transition:none}}
+</style>
+<style id="mkfChipFix">
+/* Folder page (opened from dashboard): selected sort chip must keep readable text in both themes */
+html body:not(#_c1) #advancedCard.mdx .mkf-chip.on{background:#EEF2FB!important;border-color:#EEF2FB!important;color:#0B0E16!important;-webkit-text-fill-color:#0B0E16!important}
+html.mu-nfs-open.mu-nfs-light:not(#_c0) body:not(#_c1) #advancedModal #advancedCard.mdx .mkf-chip.on{background:#1f1f1f!important;border-color:#1f1f1f!important;color:#ffffff!important;-webkit-text-fill-color:#ffffff!important}
+html.mu-nfs-open.mu-nfs-dark:not(#_c0) body:not(#_c1) #advancedModal #advancedCard.mdx .mkf-chip.on{background:#e8e8e8!important;border-color:#e8e8e8!important;color:#111111!important;-webkit-text-fill-color:#111111!important}
+html body:not(#_c1) #advancedCard.mdx .mkf-chip:not(.on){-webkit-text-fill-color:currentColor!important}
+</style>
+<style id="mkfWin11Css">
+/* Folder page opened from the Dashboard: Windows 11 File Explorer look (address-bar icon, flat search box, command strip, flat file rows). Visual only. */
+#advancedCard.mdx .mkf{--w-acc:#60cdff;--w-hov:rgba(127,127,127,.11);--w-press:rgba(127,127,127,.2);--w-sel:rgba(96,205,255,.13)}
+html.mu-nfs-open.mu-nfs-light #advancedCard.mdx .mkf{--w-acc:#0067c0;--w-sel:rgba(0,103,192,.10)}
+
+/* header: open yellow folder instead of the line icon */
+html body #advancedCard.mdx:has(#mkfRoot[data-kind="folder"]) .mkf-hico{width:28px;height:28px;font-size:0;background:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 48 48'%3E%3Cdefs%3E%3ClinearGradient id='b' x1='0' y1='0' x2='0' y2='1'%3E%3Cstop offset='0' stop-color='%23E8A500'/%3E%3Cstop offset='1' stop-color='%23CC8A00'/%3E%3C/linearGradient%3E%3ClinearGradient id='f' x1='0' y1='0' x2='0' y2='1'%3E%3Cstop offset='0' stop-color='%23FFE585'/%3E%3Cstop offset='1' stop-color='%23FFC531'/%3E%3C/linearGradient%3E%3C/defs%3E%3Cpath d='M6 7h12.4c.9 0 1.7.4 2.3 1l2.6 3H42a3 3 0 013 3v23a4 4 0 01-4 4H7a4 4 0 01-4-4V10a3 3 0 013-3z' fill='url(%23b)'/%3E%3Crect x='9' y='10.5' width='29' height='13' rx='2' fill='%23fbfbfb'/%3E%3Crect x='9' y='10.5' width='29' height='13' rx='2' fill='none' stroke='%23000' stroke-opacity='.08'/%3E%3Cpath d='M9.4 20.4A3 3 0 0112.3 18H44.6a2.4 2.4 0 012.3 3.1L42.3 38.3A4 4 0 0138.4 41.3H7.6A4.2 4.2 0 013.5 36.1z' fill='url(%23f)'/%3E%3C/svg%3E") center/contain no-repeat;filter:drop-shadow(0 1px 1px rgba(0,0,0,.3))}
+html body #advancedCard.mdx:has(#mkfRoot[data-kind="folder"][data-val=""]) .mkf-hico{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 48 48'%3E%3Cdefs%3E%3ClinearGradient id='b' x1='0' y1='0' x2='0' y2='1'%3E%3Cstop offset='0' stop-color='%238C98A8'/%3E%3Cstop offset='1' stop-color='%236F7B8C'/%3E%3C/linearGradient%3E%3ClinearGradient id='f' x1='0' y1='0' x2='0' y2='1'%3E%3Cstop offset='0' stop-color='%23C9D2DE'/%3E%3Cstop offset='1' stop-color='%23A9B5C4'/%3E%3C/linearGradient%3E%3C/defs%3E%3Cpath d='M6 7h12.4c.9 0 1.7.4 2.3 1l2.6 3H42a3 3 0 013 3v23a4 4 0 01-4 4H7a4 4 0 01-4-4V10a3 3 0 013-3z' fill='url(%23b)'/%3E%3Crect x='9' y='10.5' width='29' height='13' rx='2' fill='%23fbfbfb'/%3E%3Crect x='9' y='10.5' width='29' height='13' rx='2' fill='none' stroke='%23000' stroke-opacity='.08'/%3E%3Cpath d='M9.4 20.4A3 3 0 0112.3 18H44.6a2.4 2.4 0 012.3 3.1L42.3 38.3A4 4 0 0138.4 41.3H7.6A4.2 4.2 0 013.5 36.1z' fill='url(%23f)'/%3E%3C/svg%3E")}
+html body #advancedCard.mdx:has(#mkfRoot[data-kind="folder"]) .mkf-hico svg{display:none}
+
+/* flat Win11 search box with accent bottom line on focus */
+html body #advancedCard.mdx .mkf{gap:10px;padding-top:10px}
+html body #advancedCard.mdx .mkf-search{height:40px;border-radius:6px;padding:0 12px;font-size:16px;box-shadow:none}
+html body #advancedCard.mdx .mkf-search:focus-within{border-color:var(--d-line2);box-shadow:inset 0 -2px 0 var(--w-acc)}
+
+/* command strip: count + flat sort buttons */
+html body #advancedCard.mdx .mkf-bar{padding:0 2px 8px;border-bottom:1px solid var(--d-line2);gap:6px}
+html body #advancedCard.mdx .mkf-count{font-size:12.5px}
+html body #advancedCard.mdx .mkf-sort{gap:2px}
+html body:not(#_w1) #advancedCard.mdx .mkf-chip{position:relative;padding:7px 12px;border:0!important;border-radius:5px;background:transparent!important;font-size:12.5px;font-weight:500;color:var(--d-soft)!important;-webkit-text-fill-color:var(--d-soft)!important;transition:background .12s}
+html body:not(#_w1) #advancedCard.mdx .mkf-chip:hover{background:var(--w-hov)!important}
+html body:not(#_w1) #advancedCard.mdx .mkf-chip:active{background:var(--w-press)!important}
+html body:not(#_w1):not(#_w2):not(#_w3):not(#_w4):not(#_w5) #advancedCard.mdx .mkf-chip.on{background:var(--w-sel)!important;border:0!important;color:var(--d-ink)!important;-webkit-text-fill-color:var(--d-ink)!important}
+html body #advancedCard.mdx .mkf-chip.on:after{content:"";position:absolute;inset-inline:32%;bottom:2px;height:2px;border-radius:2px;background:var(--w-acc)}
+
+/* file rows */
+html body #advancedCard.mdx .mkf-list{gap:2px}
+html body #advancedCard.mdx .mkf-card{position:relative;min-height:56px;padding:9px 12px;padding-inline-start:54px;gap:2px;border:0;border-radius:6px;background:transparent;box-shadow:none;transition:background .12s}
+html body #advancedCard.mdx .mkf-card:before{content:"";position:absolute;inset-inline-start:12px;top:10px;width:28px;height:34px;background:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 48 48'%3E%3Cdefs%3E%3ClinearGradient id='p' x1='0' y1='0' x2='0' y2='1'%3E%3Cstop offset='0' stop-color='%23ffffff'/%3E%3Cstop offset='1' stop-color='%23E3E9F2'/%3E%3C/linearGradient%3E%3C/defs%3E%3Cpath d='M11 4h19l10 10v28a2 2 0 01-2 2H11a2 2 0 01-2-2V6a2 2 0 012-2z' fill='url(%23p)' stroke='%238A94A6' stroke-width='1.4'/%3E%3Cpath d='M30 4v8a2 2 0 002 2h8z' fill='%23C5CEDB'/%3E%3Cpath d='M14.5 23h19M14.5 29h19M14.5 35h12' stroke='%234F8BD9' stroke-width='2.4' stroke-linecap='round'/%3E%3C/svg%3E") center/contain no-repeat;filter:drop-shadow(0 1px 1px rgba(0,0,0,.25))}
+html body #advancedCard.mdx .mkf-card:hover{background:var(--w-hov);border:0}
+html body #advancedCard.mdx .mkf-card:active{background:var(--w-press);transform:none}
+html body #advancedCard.mdx .mkf-card:focus-visible{outline:2px solid var(--w-acc);outline-offset:-2px}
+html body #advancedCard.mdx .mkf-title{font-size:14px;font-weight:500;line-height:1.6}
+html body #advancedCard.mdx .mkf-snip{font-size:12px;line-height:1.7}
+html body #advancedCard.mdx .mkf-meta{gap:8px;margin-top:0}
+html body #advancedCard.mdx .mkf-date{font-size:11.5px}
+html body #advancedCard.mdx .mkf-tag{border:0;border-radius:4px;background:var(--w-hov);padding:0 7px;font-size:11px}
+
+/* empty folder */
+html body #advancedCard.mdx .mkf-empty{padding:48px 16px;border:0;border-radius:0;gap:8px}
+html body #advancedCard.mdx:has(#mkfRoot[data-kind="folder"]) .mkf-empty-ico{width:72px;height:72px;font-size:0;background:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 48 48'%3E%3Cdefs%3E%3ClinearGradient id='b' x1='0' y1='0' x2='0' y2='1'%3E%3Cstop offset='0' stop-color='%23E8A500'/%3E%3Cstop offset='1' stop-color='%23CC8A00'/%3E%3C/linearGradient%3E%3ClinearGradient id='f' x1='0' y1='0' x2='0' y2='1'%3E%3Cstop offset='0' stop-color='%23FFE585'/%3E%3Cstop offset='1' stop-color='%23FFC531'/%3E%3C/linearGradient%3E%3C/defs%3E%3Cpath d='M6 7h12.4c.9 0 1.7.4 2.3 1l2.6 3H42a3 3 0 013 3v23a4 4 0 01-4 4H7a4 4 0 01-4-4V10a3 3 0 013-3z' fill='url(%23b)'/%3E%3Crect x='9' y='10.5' width='29' height='13' rx='2' fill='%23fbfbfb'/%3E%3Crect x='9' y='10.5' width='29' height='13' rx='2' fill='none' stroke='%23000' stroke-opacity='.08'/%3E%3Cpath d='M9.4 20.4A3 3 0 0112.3 18H44.6a2.4 2.4 0 012.3 3.1L42.3 38.3A4 4 0 0138.4 41.3H7.6A4.2 4.2 0 013.5 36.1z' fill='url(%23f)'/%3E%3C/svg%3E") center/contain no-repeat;filter:drop-shadow(0 2px 2px rgba(0,0,0,.3))}
+html body #advancedCard.mdx:has(#mkfRoot[data-kind="folder"][data-val=""]) .mkf-empty-ico{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 48 48'%3E%3Cdefs%3E%3ClinearGradient id='b' x1='0' y1='0' x2='0' y2='1'%3E%3Cstop offset='0' stop-color='%238C98A8'/%3E%3Cstop offset='1' stop-color='%236F7B8C'/%3E%3C/linearGradient%3E%3ClinearGradient id='f' x1='0' y1='0' x2='0' y2='1'%3E%3Cstop offset='0' stop-color='%23C9D2DE'/%3E%3Cstop offset='1' stop-color='%23A9B5C4'/%3E%3C/linearGradient%3E%3C/defs%3E%3Cpath d='M6 7h12.4c.9 0 1.7.4 2.3 1l2.6 3H42a3 3 0 013 3v23a4 4 0 01-4 4H7a4 4 0 01-4-4V10a3 3 0 013-3z' fill='url(%23b)'/%3E%3Crect x='9' y='10.5' width='29' height='13' rx='2' fill='%23fbfbfb'/%3E%3Crect x='9' y='10.5' width='29' height='13' rx='2' fill='none' stroke='%23000' stroke-opacity='.08'/%3E%3Cpath d='M9.4 20.4A3 3 0 0112.3 18H44.6a2.4 2.4 0 012.3 3.1L42.3 38.3A4 4 0 0138.4 41.3H7.6A4.2 4.2 0 013.5 36.1z' fill='url(%23f)'/%3E%3C/svg%3E")}
+html body #advancedCard.mdx:has(#mkfRoot[data-kind="folder"]) .mkf-empty-ico svg{display:none}
+html body #advancedCard.mdx .mkf-empty-t{font-weight:500;font-size:13.5px}
+@media (prefers-reduced-motion:reduce){html body #advancedCard.mdx .mkf-card,html body #advancedCard.mdx .mkf-chip{transition:none}}
 </style>
 </body>
 </html>
