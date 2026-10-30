@@ -1477,6 +1477,31 @@ html.mk-tg-lite .mu-redhorizon-stars:before,html.mk-tg-lite .mu-redhorizon-stars
 html.mk-tg-lite body:before,html.mk-tg-lite body:after {
     filter:none!important;
 }
+/* Turbo (all Telegram clients): the big glass-blur layers (full-screen viewer, lightbox, overlays, sticky headers, editor
+   inputs) are the most expensive thing the Telegram WebView paints; they sit on near-opaque backgrounds so the look barely changes. */
+html.mk-tg .mu-viewer-backdrop,html.mk-tg .mu-viewer-card,html.mk-tg .mu-img-lightbox,html.mk-tg html body .mkl-ov,html.mk-tg .stk,
+html.mk-tg html body .advanced-card.mcx-card.mk-page>.advanced-head,
+html.mk-tg.mk-tg body .content-container *:not(#_mkx) {
+    -webkit-backdrop-filter:none!important;
+    backdrop-filter:none!important;
+}
+/* only paint what is near the screen: long lists and the big settings/tool pages */
+html.mk-tg .note-btn-wrap,html.mk-tg #muNfsBody>*>* {
+    content-visibility:auto;
+    contain-intrinsic-size:auto 72px;
+}
+html.mk-tg .mu-viewer-card,html.mk-tg .advanced-card {
+    contain:layout style;
+}
+/* no 300ms tap delay / no grey tap flash / no text-size jumps in the Telegram WebView */
+html.mk-tg,html.mk-tg body {
+    -webkit-tap-highlight-color:transparent;
+    -webkit-text-size-adjust:100%;
+    text-size-adjust:100%;
+}
+html.mk-tg button,html.mk-tg a,html.mk-tg [role=button],html.mk-tg .note-btn-wrap,html.mk-tg .top-btn,html.mk-tg label,html.mk-tg select {
+    touch-action:manipulation;
+}
 </style>
 <script id="mkTgPerf">
 /* Telegram performance tier. mkHostCompat only lightens embedded previews; inside Telegram it deliberately does nothing,
@@ -1528,7 +1553,7 @@ html.mk-tg-lite body:before,html.mk-tg-lite body:after {
             }
         }
         last = ts;
-        if (n >= 90) {
+        if (n >= 60) {
             stop(!0);
             return;
         }
@@ -1549,7 +1574,7 @@ html.mk-tg-lite body:before,html.mk-tg-lite body:after {
         w.removeEventListener("scroll", onScroll, !0);
         d.removeEventListener("touchmove", onScroll, !0);
         if (decide) {
-            if (bad / n > .3) {
+            if (bad / n > .25) {
                 ls(LA, "lite");
                 apply();
             }
@@ -4743,7 +4768,7 @@ input:not([type]),input[type=text],input[type=password],input[type=search],input
     catch { } }),
     // ignore the changes we just made ourselves
     mo && mo.takeRecords(); }
-    function onRecords(recs) { for (var parents = new Set, fields = [], i2 = 0; i2 < recs.length; i2++) {
+    function onRecordsNow(recs) { for (var parents = new Set, fields = [], i2 = 0; i2 < recs.length; i2++) {
         var r = recs[i2];
         if (r.type === "characterData") {
             var tp = textParent(r.target);
@@ -4797,7 +4822,22 @@ input:not([type]),input[type=text],input[type=password],input[type=search],input
         collectTree(document.body, parents, fields), flush(parents, fields);
     } }
     try {
-        mo = new MutationObserver(onRecords), mo.observe(document.documentElement, { childList: !0, subtree: !0, characterData: !0 });
+        /* Telegram speed: many small DOM batches during rendering used to trigger one tree walk each. When nobody is typing,
+   they are merged into a single pass right before the next paint (typing in a field still runs immediately). */
+var __pend = [], __pendT = 0;
+function __typing() { var e = document.activeElement; return !!e && (e.isContentEditable || e.tagName === "TEXTAREA" || e.tagName === "INPUT"); }
+function __drain() { if (!__pend.length) { __pendT = 0; return; } __pendT = 0; var r = __pend; __pend = []; try {
+    mo && (r = r.concat(mo.takeRecords()));
+}
+catch { } r.length && onRecordsNow(r); }
+function onRecords(recs) { if (composing || __typing()) {
+    if (__pend.length) {
+        recs = __pend.concat(recs), __pend = [];
+    }
+    return onRecordsNow(recs);
+} for (var i = 0; i < recs.length; i++)
+    __pend.push(recs[i]); __pendT || (__pendT = 1, window.requestAnimationFrame ? requestAnimationFrame(__drain) : setTimeout(__drain, 16), setTimeout(function () { __pendT && __drain(); }, 120)); }
+mo = new MutationObserver(onRecords), mo.observe(document.documentElement, { childList: !0, subtree: !0, characterData: !0 });
     }
     catch { }
     document.readyState === "loading" ? document.addEventListener("DOMContentLoaded", scanAll) : scanAll(), window.addEventListener("load", scanAll),
@@ -18633,6 +18673,13 @@ html.mu-nfs-open:not(#_nfs) body .advanced-card:has(.markhin-filename-input) .ma
     background:#7f7f7f61;
 }
 </style>
+<style id="muNavHeadFixCss">
+#muNav .mu-nav-panel .mu-nav-head{gap:5px}
+#muNav .mu-nav-panel .mu-nav-head .mu-nav-set,#muNav .mu-nav-panel .mu-nav-head .mu-nav-layout{flex:0 0 34px;width:34px;height:34px;border-radius:11px}
+#muNav .mu-nav-panel .mu-nav-head .mu-nav-set svg,#muNav .mu-nav-panel .mu-nav-head .mu-nav-layout svg{width:17px;height:17px}
+#muNav .mu-nav-panel .mu-nav-head .mu-nav-lang{height:34px;border-radius:11px;font-size:10.5px;padding:0 8px;gap:4px}
+#muNav .mu-nav-panel .mu-nav-head .mu-nav-lang svg{width:15px;height:15px}
+</style>
 <style id="muViewBtnCss">
 html body #contentsContainer .mxe .mxe-bottom .mxe-btn.mxe-viewnote {
     width:auto!important;
@@ -20469,54 +20516,82 @@ function cloudGetItemsRaw(keys) { return cloudGuard(fin => TG.CloudStorage.getIt
 // in the panel (default 1 = strictly one after another; kept locally under CLOUD_PARALLEL_KEY). A big backup
 // is ~10 batches of 100 keys.
 const CLOUD_PARALLEL_KEY = "mk_cloud_parallel_v1";
+const CLOUD_PAR_MAX = 6, CLOUD_PAR_DEFAULT = 4;
 function cloudParallel() { try {
     const n = parseInt(localStorage.getItem(CLOUD_PARALLEL_KEY), 10);
-    return n >= 1 && n <= 3 ? n : 1;
+    return n >= 1 && n <= CLOUD_PAR_MAX ? n : CLOUD_PAR_DEFAULT;
 }
 catch {
-    return 1;
+    return CLOUD_PAR_DEFAULT;
 } }
-function cloudSetParallel(n) { if (n = parseInt(n, 10), !(n >= 1 && n <= 3))
+// Effective concurrency = the chosen value, lowered for a while if Telegram recently rejected parallel calls
+// (adaptive: after a rejected write the session drops to 2, and to 1 after a second one; recovers after 10 min).
+function cloudParEff() { const n = cloudParallel(), c = window.__mkParCap; return c && Date.now() < (window.__mkParCapUntil || 0) ? Math.min(n, c) : n; }
+function cloudParBackoff() { const c = window.__mkParCap && Date.now() < (window.__mkParCapUntil || 0) ? window.__mkParCap : 99; window.__mkParCap = c > 2 ? 2 : 1, window.__mkParCapUntil = Date.now() + 6e5; }
+function cloudSetParallel(n) { if (n = parseInt(n, 10), !(n >= 1 && n <= CLOUD_PAR_MAX))
     return !1; try {
-    localStorage.setItem(CLOUD_PARALLEL_KEY, String(n));
+    localStorage.setItem(CLOUD_PARALLEL_KEY, String(n)), window.__mkParCap = 0;
 }
 catch {
     return !1;
 } return cloudParallel() === n; }
+const cloudSleep = ms => new Promise(r => setTimeout(r, ms));
 async function cloudGetItems(keys) { const batches = []; for (let i = 0; i < keys.length; i += CLOUD_BATCH)
     batches.push(keys.slice(i, i + CLOUD_BATCH)); const out = {}; let next = 0, failed = !1; const worker = async () => { for (; !failed;) {
     const b = next++;
     if (b >= batches.length)
         return;
-    const part = await cloudGetItemsRaw(batches[b]);
-    if (part === null) {
-        // any failed batch = treat the whole read as failed
+    let part = await cloudGetItemsRaw(batches[b]);
+    // one retry after a short pause (a transient bridge hiccup no longer throws away the whole read)
+    if (part === null && !failed && (cloudParBackoff(), await cloudSleep(250), part = await cloudGetItemsRaw(batches[b])), part === null) {
         failed = !0;
         return;
     }
     Object.assign(out, part);
-} }; return await Promise.all(Array.from({ length: Math.min(cloudParallel(), batches.length) }, worker)), failed ? {} : out; }
+} }; return await Promise.all(Array.from({ length: Math.min(cloudParEff(), batches.length) }, worker)), failed ? {} : out; }
 function cloudSetItem(key, value) { return cloudGuard(fin => TG.CloudStorage.setItem(key, value, (err, ok) => fin(!err && ok !== !1)), !1); }
 // Writes many chunks, 1-3 at a time (cloudParallel()), each retried once on failure. Returns true only when
 // EVERY chunk landed; the first hard failure stops the rest. onProgress(doneCount) is called as chunks finish
-async function cloudSetMany(keys, values, onProgress) { let next = 0, done = 0, failed = !1; const worker = async () => { for (; !failed;) {
+async function cloudSetMany(keys, values, onProgress) { const doneSet = new Uint8Array(keys.length); let next = 0, done = 0, failed = !1; const tick = i => { if (!doneSet[i] && (doneSet[i] = 1, done++, onProgress))
+    try {
+        onProgress(done);
+    }
+    catch { } }; const worker = async () => { for (; !failed;) {
     const i = next++;
     if (i >= keys.length)
         return;
     let ok = await cloudSetItem(keys[i], values[i]);
-    if (!ok && !failed && (ok = await cloudSetItem(keys[i], values[i])), !ok) {
+    if (ok) {
+        tick(i);
+        continue;
+    }
+    // first miss: leave it for the sequential rescue pass below (other workers keep going at full speed)
+    cloudParBackoff();
+    if (cloudParEff() <= 1 && !(ok = await cloudSetItem(keys[i], values[i]))) {
         failed = !0;
         return;
     }
-    if (done++, onProgress)
-        try {
-            onProgress(done);
-        }
-        catch { }
-} }; return await Promise.all(Array.from({ length: Math.min(cloudParallel(), keys.length) }, worker)), !failed; }
+    ok && tick(i);
+} }; await Promise.all(Array.from({ length: Math.min(cloudParEff(), keys.length) }, worker)); 
+// Rescue pass: whatever did not land under parallel load is retried one at a time (2 tries, short pause)
+for (let i = 0; i < keys.length; i++) {
+    if (doneSet[i])
+        continue;
+    let ok = !1;
+    for (let t = 0; t < 3 && !ok; t++)
+        t && await cloudSleep(300 * t), ok = await cloudSetItem(keys[i], values[i]);
+    if (!ok)
+        return !1;
+    tick(i);
+} return done === keys.length; }
 function cloudRemoveItemsRaw(keys) { return cloudGuard(fin => TG.CloudStorage.removeItems(keys, err => fin(!err)), !1); }
-async function cloudRemoveItems(keys) { let allOk = !0; for (let i = 0; i < keys.length; i += CLOUD_BATCH)
-    await cloudRemoveItemsRaw(keys.slice(i, i + CLOUD_BATCH)) || (allOk = !1); return allOk; }
+async function cloudRemoveItems(keys) { const batches = []; for (let i = 0; i < keys.length; i += CLOUD_BATCH)
+    batches.push(keys.slice(i, i + CLOUD_BATCH)); let allOk = !0, next = 0; const worker = async () => { for (;;) {
+    const b = next++;
+    if (b >= batches.length)
+        return;
+    await cloudRemoveItemsRaw(batches[b]) || await cloudRemoveItemsRaw(batches[b]) || (allOk = !1);
+} }; return await Promise.all(Array.from({ length: Math.min(cloudParEff(), batches.length) }, worker)), allOk; }
 function cloudGetKeys() { return cloudGuard(fin => TG.CloudStorage.getKeys((err, keys) => fin(err ? null : Array.isArray(keys) ? keys : [])), null); }
 // Chunk keys of a backup entry. The key prefix is entry.pfx, else its id (the auto slot alternates between
 // "auto" and "auto2"); an invalid prefix is rejected.
@@ -28785,7 +28860,7 @@ document.addEventListener("DOMContentLoaded", () => { initAdvancedSystems(); });
             function build() {
                 return `<div class="mklk" id="mklkRoot" dir="${fa ? "rtl" : "ltr"}"><div class="mklk-col">
             <div class="mklk-head">
-                <button type="button" class="mklk-btn" data-act="back" aria-label="${fa ? "بازگشت به داشبورد" : "Back to dashboard"}">${IC.back}</button>
+                ${window.__mkDashOpen ? `<button type="button" class="mklk-btn" data-act="back" aria-label="${fa ? "بازگشت به داشبورد" : "Back to dashboard"}">${IC.back}</button>` : `<button type="button" class="mklk-btn mklk-menu" data-act="menu" aria-label="${fa ? "منو" : "Menu"}"><svg viewBox="0 0 24 24"><path d="M4 6.5h16M4 12h16M4 17.5h16"/></svg></button>`}
                 <h3><span class="mklk-hico">${IC.lock}</span><span>${fa ? "قفل‌شده‌ها" : "Locked notes"}</span><small class="mklk-count" id="mklkCount">0</small></h3>
                 <button type="button" class="mklk-btn" data-act="close" aria-label="${fa ? "بستن" : "Close"}">${IC.close}</button>
             </div>
@@ -28825,7 +28900,7 @@ document.addEventListener("DOMContentLoaded", () => { initAdvancedSystems(); });
                 return;
             r2.addEventListener("click", e => { const t = e.target.closest("[data-act]"); if (t) {
                 const a = t.dataset.act;
-                a === "back" ? markhinDashboardMain() : a === "close" ? HX().closeAdvancedModal() : a === "sort" ? (st.sort = t.dataset.v, sset("mklk_sort", st.sort), r2.querySelectorAll('[data-act="sort"]').forEach(b => b.classList.toggle("on", b.dataset.v === st.sort)), paintList()) : a === "view" && (st.view = t.dataset.v, sset("mklk_view", st.view), r2.querySelectorAll('[data-act="view"]').forEach(b => b.classList.toggle("on", b.dataset.v === st.view)), paintList());
+                a === "menu" ? (window.muNav && window.muNav.open && window.muNav.open()) : a === "back" ? markhinDashboardMain() : a === "close" ? HX().closeAdvancedModal() : a === "sort" ? (st.sort = t.dataset.v, sset("mklk_sort", st.sort), r2.querySelectorAll('[data-act="sort"]').forEach(b => b.classList.toggle("on", b.dataset.v === st.sort)), paintList()) : a === "view" && (st.view = t.dataset.v, sset("mklk_view", st.view), r2.querySelectorAll('[data-act="view"]').forEach(b => b.classList.toggle("on", b.dataset.v === st.view)), paintList());
                 return;
             } const row = e.target.closest("[data-id]"); row && markhinDash_openNote(row.dataset.id); });
             const si = document.getElementById("mklkSearch");
@@ -29014,14 +29089,14 @@ const total = keys.length, cap = HX().MAX_CHUNKS_PER_BACKUP, LIM = 1024, budget 
         function mu_cloudParallelHtml() {
             const fa = HX().currentLang === "fa", cur = HX().cloudParallel();
             let chips = "";
-            for (let i = 1; i <= 3; i++)
+            for (let i = 1; i <= 6; i++)
                 chips += `<button type="button" class="btn-main" data-par-chip="${i}" onclick="markhinDash_cloudPickParallel(${i})" style="min-width:38px;${i === cur ? "outline:2px solid currentColor;font-weight:bold;" : ""}">${i}</button>`;
             return `<div class="mkc2-block cloudParallelBox" style="margin:12px 0">
             <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap;margin-bottom:6px">
                 <div style="font-weight:bold">${fa ? "⚡ سرعت ذخیره‌سازی (پارالل)" : "⚡ Save speed (parallel)"}</div>
                 <div style="display:flex;gap:6px">${chips}</div>
             </div>
-            <div style="font-size:12px;line-height:1.8;opacity:.85">${fa ? "تعداد درخواست هم‌زمان (۱ تا ۳). " : "Simultaneous requests (1 to 3). "}${fa ? "1 = قطعه‌ها یکی‌یکی نوشته می‌شوند (پایدارترین، پیش‌فرض). 2 یا 3 = چند قطعه هم‌زمان، پس ذخیره‌ی بکاپ‌های بزرگ سریع‌تر می‌شود؛ ولی اگر تلگرام بعضی درخواست‌ها را رد کند، بکاپ‌ها بیشتر «ناموفق» می‌شوند. اگر این اتفاق افتاد، روی 1 برگردان. این تنظیم فقط روی همین دستگاه اثر دارد و بلافاصله اعمال می‌شود." : "1 = chunks are written one after another (most stable, default). 2 or 3 = several at once, so big backups save faster; but if Telegram rejects some requests, backups may fail more often. If that happens, go back to 1. This only affects this device and applies immediately."}</div>
+            <div style="font-size:12px;line-height:1.8;opacity:.85">${fa ? "تعداد درخواست هم‌زمان (۱ تا ۶). " : "Simultaneous requests (1 to 6). "}${fa ? "4 = پیش‌فرض (سریع). بالاتر = سریع‌تر برای بکاپ‌های بزرگ. 1 = یکی‌یکی (کندترین، پایدارترین). اگر تلگرام درخواستی را رد کند برنامه خودش به‌طور خودکار هم‌زمانی را کم می‌کند و قطعهٔ ناموفق را دوباره می‌نویسد. این تنظیم فقط روی همین دستگاه اثر دارد و بلافاصله اعمال می‌شود." : "4 = default (fast). Higher = faster for big backups. 1 = one by one (slowest, most stable). If Telegram rejects a request the app automatically lowers concurrency and rewrites the failed chunk. This only affects this device and applies immediately."}</div>
         </div>`;
         }
         function markhinDash_cloudPickParallel(n2) { const fa = HX().currentLang === "fa"; if (!HX().cloudSetParallel(n2)) {
@@ -31759,28 +31834,49 @@ function splitTopLevelCommas(sel) { for (var out = [], d = 0, q = "", cur = "", 
         continue;
     }
     c === "(" || c === "[" ? d++ : (c === ")" || c === "]") && d--, c === "," && d === 0 ? (out.push(cur), cur = "") : cur += c;
-} return out.push(cur), out; } function strip(rules) { for (var i2 = rules.length - 1; i2 >= 0; i2--) {
-    var r2 = rules[i2];
-    try {
-        // @media / @supports / @layer
-        if (r2.cssRules && r2.selectorText === void 0) {
-            var cond = r2.conditionText || r2.media && r2.media.mediaText || "";
-            if (/hover\s*:\s*hover/.test(cond))
-                continue;
-            strip(r2.cssRules);
-            continue;
-        }
-        var sel = r2.selectorText;
-        if (!sel || sel.indexOf(":hover") === -1 || sel.indexOf(":not(:hover") !== -1)
-            continue;
-        var keep = splitTopLevelCommas(sel).filter(function (x) { return x.indexOf(":hover") === -1; });
-        r2.selectorText = keep.length ? keep.join(",") : ".mu-hover-off";
+} return out.push(cur), out; } /* Telegram speed: the :hover rewrite used to walk every CSS rule in one go (a long task right at startup, and every
+   selectorText write invalidates styles). Now it works in small time slices while the browser is idle, and only once. */
+var __hvQ = null, __hvRun = !1, __hvAgain = !1;
+function hvRule(r2, stack) { try {
+    // @media / @supports / @layer
+    if (r2.cssRules && r2.selectorText === void 0) {
+        var cond = r2.conditionText || r2.media && r2.media.mediaText || "";
+        if (/hover\s*:\s*hover/.test(cond))
+            return;
+        stack.push({ rules: r2.cssRules, i: r2.cssRules.length - 1 });
+        return;
     }
-    catch { }
-} } function run() { isHoverNone && Array.prototype.forEach.call(document.styleSheets, function (ss) { try {
-    ss.ownerNode && ss.ownerNode.tagName === "STYLE" && strip(ss.cssRules);
+    var sel = r2.selectorText;
+    if (!sel || sel.indexOf(":hover") === -1 || sel.indexOf(":not(:hover") !== -1)
+        return;
+    var keep = splitTopLevelCommas(sel).filter(function (x) { return x.indexOf(":hover") === -1; });
+    r2.selectorText = keep.length ? keep.join(",") : ".mu-hover-off";
 }
-catch { } }); } "requestIdleCallback" in window ? requestIdleCallback(run, { timeout: 1500 }) : setTimeout(run, 300), window.addEventListener("load", function () { setTimeout(run, 800); }),
+catch { } }
+function hvStep() { var t0 = Date.now(), stack = __hvQ; if (!stack) { __hvRun = !1; return; } while (stack.length && Date.now() - t0 < 6) {
+    var fr = stack[stack.length - 1];
+    if (fr.i < 0) {
+        stack.pop();
+        continue;
+    }
+    hvRule(fr.rules[fr.i--], stack);
+} if (stack.length) {
+    hvSched();
+    return;
+} __hvQ = null, __hvRun = !1, __hvAgain && (__hvAgain = !1, run()); }
+function hvSched() { "requestIdleCallback" in window ? requestIdleCallback(hvStep, { timeout: 400 }) : setTimeout(hvStep, 30); }
+function run() { if (!isHoverNone)
+    return; if (__hvRun) {
+    __hvAgain = !0;
+    return;
+} var stack = []; try {
+    Array.prototype.forEach.call(document.styleSheets, function (ss) { try {
+        ss.ownerNode && ss.ownerNode.tagName === "STYLE" && ss.cssRules && stack.push({ rules: ss.cssRules, i: ss.cssRules.length - 1 });
+    }
+    catch { } });
+}
+catch { } if (!stack.length)
+    return; __hvQ = stack, __hvRun = !0, hvSched(); } "requestIdleCallback" in window ? requestIdleCallback(run, { timeout: 1500 }) : setTimeout(run, 300), window.addEventListener("load", function () { setTimeout(run, 800); }),
 // 2) After a mouse/finger click, drop focus from the button so it doesn't keep a "selected" look. Keyboard
 // activation (e.detail===0) keeps focus for accessibility
 document.addEventListener("click", function (e) { if (e.detail) {
@@ -36426,7 +36522,7 @@ body.mu-nfsbk-on #mkBackupBar { display:none!important; }
     // page.
     var KEY_VIEW = "mu_notesfs_view_v1", KEY_THEME = "mu_notesfs_theme_v1", KEY_SORT = "mu_notesfs_sort_v1", KEY_LINES = "mu_notesfs_lines_v1", BATCH = 40, RETseen = !1, RET = null, RETst = null, S2 = { fsel: null, fopen: !1, sel: null, pick: null, view: "grid", theme: "light", page: "notes", sort: "created_desc", lines: 9, list: [], shown: 0, q: "", groups: [], collapsed: {}, limit: {} }, SORTS = [{ v: "edited_desc", fa: "آخرین ویرایش (جدیدترین اول)", en: "Last edited (newest first)" }, { v: "edited_asc", fa: "آخرین ویرایش (قدیمی‌ترین اول)", en: "Last edited (oldest first)" }, { v: "created_desc", fa: "تاریخ ساخت (جدیدترین اول)", en: "Date created (newest first)" }, { v: "created_asc", fa: "تاریخ ساخت (قدیمی‌ترین اول)", en: "Date created (oldest first)" }, { v: "alpha_asc", fa: "الفبا (آ ← ی)", en: "Name (A → Z)" }, { v: "alpha_desc", fa: "الفبا (ی ← آ)", en: "Name (Z → A)" }, { v: "manual", fa: "دلخواه (نگه دار و جابه‌جا کن)", en: "Custom (hold & drag)" }];
     function svg(inner, sw) { return '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="' + (sw || 2) + '" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' + inner + "</svg>"; }
-    var ICONS = { search: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="M20.5 20.5 16 16"/></svg>', rows: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" aria-hidden="true"><rect x="4" y="4" width="16" height="6.5" rx="2"/><rect x="4" y="13.5" width="16" height="6.5" rx="2"/></svg>', grid: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" aria-hidden="true"><rect x="4" y="4" width="6.5" height="6.5" rx="1.6"/><rect x="13.5" y="4" width="6.5" height="6.5" rx="1.6"/><rect x="4" y="13.5" width="6.5" height="6.5" rx="1.6"/><rect x="13.5" y="13.5" width="6.5" height="6.5" rx="1.6"/></svg>', sun: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2.5v2.5M12 19v2.5M2.5 12H5M19 12h2.5M5.3 5.3l1.8 1.8M16.9 16.9l1.8 1.8M5.3 18.7l1.8-1.8M16.9 7.1l1.8-1.8"/></svg>', moon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 14.5A8 8 0 0 1 9.5 4a8 8 0 1 0 10.5 10.5z"/></svg>', menu: svg('<path d="M4 6.5h16M4 12h16M4 17.5h16"/>'), sort: svg('<path d="M8 20V5M8 5L4.5 8.5M8 5l3.5 3.5"/><path d="M16 4v15M16 19l-3.5-3.5M16 19l3.5-3.5"/>'), prev: svg('<rect x="3.5" y="4.5" width="17" height="15" rx="2.6"/><path d="M7.5 9h9M7.5 12.5h9M7.5 16h5.5"/>'), tick: svg('<path d="M5 12.5l4.5 4.5L19 7.5"/>', 2.4), plus: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>', minus: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M5 12h14"/></svg>', chev: '<svg class="mu-nfs-chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg>', bulb: svg('<path d="M9 18h6M10 21h4M12 3a6 6 0 0 0-3.6 10.8c.6.5.9 1.1.9 1.8V16h5.4v-.6c0-.7.3-1.3.9-1.8A6 6 0 0 0 12 3z"/>'), folder: svg('<path d="M3.5 7.5a2 2 0 0 1 2-2h4l2 2.2h7a2 2 0 0 1 2 2v7.8a2 2 0 0 1-2 2h-13a2 2 0 0 1-2-2z"/>'), archive: svg('<rect x="3.5" y="4.5" width="17" height="4.5" rx="1.2"/><path d="M5 9v9.5A1.5 1.5 0 0 0 6.5 20h11a1.5 1.5 0 0 0 1.5-1.5V9M12 11.5v5M9.8 14.5l2.2 2.2 2.2-2.2"/>'), star: svg('<path d="M12 3.8l2.5 5.2 5.7.8-4.1 4 1 5.7L12 16.8 6.9 19.5l1-5.7-4.1-4 5.7-.8z"/>'), exit: svg('<path d="M15 5l-7 7 7 7"/>'), close: svg('<path d="M6 6l12 12M18 6L6 18"/>', 2.2), pin: svg('<path d="M9 4h6l-1 5 3 3v1.5H7V12l3-3z"/><path d="M12 13.5V20"/>'), lock: svg('<rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/>'), unlock: svg('<rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V8a4 4 0 0 1 7.4-2"/>'), vault: svg('<rect x="4.5" y="10.5" width="15" height="10" rx="2.2"/><path d="M8 10.5V8a4 4 0 018 0v2.5"/><circle cx="12" cy="15.5" r="1.2"/>'), trash: svg('<path d="M4 7h16M9 7V4.5h6V7M6.5 7l1 13h9l1-13M10 11v6M14 11v6"/>'), dup: svg('<rect x="8.5" y="8.5" width="11.5" height="11.5" rx="3"/><path d="M15.5 8.5V6.8A2.8 2.8 0 0 0 12.7 4H6.8A2.8 2.8 0 0 0 4 6.8v5.9a2.8 2.8 0 0 0 2.8 2.8h1.7"/><path d="M14.25 11.9v4.7M11.9 14.25h4.7"/>'), mic: svg('<rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5.5 11.5a6.5 6.5 0 0 0 13 0M12 18v3"/>'), list: svg('<rect x="3.5" y="3.5" width="17" height="17" rx="5"/><path d="M8 12.4l2.9 2.9L16.2 9.4"/>'), graph: svg('<circle cx="6" cy="7" r="2.3"/><circle cx="18" cy="6" r="2.3"/><circle cx="12" cy="17.5" r="2.6"/><path d="M8 8l2.7 7.2M16.2 7.7l-2.6 7.6M8.3 7l7.4-.6"/>'), portal: svg('<circle cx="12" cy="12" r="8.5"/><circle cx="12" cy="12" r="4.8"/><circle cx="12" cy="12" r="1.2"/>'), morse: svg('<circle cx="5.5" cy="12" r="1.5"/><path d="M10 12h4.5M18.5 12h.01"/><path d="M3.5 5.5h17M3.5 18.5h17" opacity=".45"/>'), binary: svg('<ellipse cx="7.5" cy="8" rx="3" ry="4"/><path d="M16 4.5V12M14 6l2-1.5"/><path d="M14 19.5h6M7.5 15.5v5M5.5 17l2-1.5"/>'), globe: svg('<circle cx="12" cy="12" r="8.5"/><path d="M3.5 12h17M12 3.5c2.4 2.4 3.6 5.2 3.6 8.5s-1.2 6.1-3.6 8.5c-2.4-2.4-3.6-5.2-3.6-8.5S9.6 5.9 12 3.5z"/>'), imp: svg('<path d="M12 4v11M7.8 11l4.2 4.2 4.2-4.2"/><path d="M4.5 16.5v1.8a1.7 1.7 0 0 0 1.7 1.7h11.6a1.7 1.7 0 0 0 1.7-1.7v-1.8"/>'), exp: svg('<path d="M12 15V4M7.8 8l4.2-4.2L16.2 8"/><path d="M4.5 16.5v1.8a1.7 1.7 0 0 0 1.7 1.7h11.6a1.7 1.7 0 0 0 1.7-1.7v-1.8"/>'), dash: svg('<rect x="3.5" y="3.5" width="7" height="8.5" rx="2"/><rect x="13.5" y="3.5" width="7" height="5" rx="2"/><rect x="13.5" y="11.5" width="7" height="9" rx="2"/><rect x="3.5" y="15" width="7" height="5.5" rx="2"/>'), gear: svg('<path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/>'), cloud: svg('<path d="M7 18.5a4.2 4.2 0 0 1-.6-8.4 5.6 5.6 0 0 1 10.8 1.2A3.6 3.6 0 0 1 17 18.5z"/><path d="M12 15.5V10M9.8 12l2.2-2.2 2.2 2.2"/>') };
+    var ICONS = { search: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="M20.5 20.5 16 16"/></svg>', rows: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" aria-hidden="true"><rect x="4" y="4" width="16" height="6.5" rx="2"/><rect x="4" y="13.5" width="16" height="6.5" rx="2"/></svg>', grid: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" aria-hidden="true"><rect x="4" y="4" width="6.5" height="6.5" rx="1.6"/><rect x="13.5" y="4" width="6.5" height="6.5" rx="1.6"/><rect x="4" y="13.5" width="6.5" height="6.5" rx="1.6"/><rect x="13.5" y="13.5" width="6.5" height="6.5" rx="1.6"/></svg>', sun: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2.5v2.5M12 19v2.5M2.5 12H5M19 12h2.5M5.3 5.3l1.8 1.8M16.9 16.9l1.8 1.8M5.3 18.7l1.8-1.8M16.9 7.1l1.8-1.8"/></svg>', moon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 14.5A8 8 0 0 1 9.5 4a8 8 0 1 0 10.5 10.5z"/></svg>', menu: svg('<path d="M4 6.5h16M4 12h16M4 17.5h16"/>'), sort: svg('<path d="M8 20V5M8 5L4.5 8.5M8 5l3.5 3.5"/><path d="M16 4v15M16 19l-3.5-3.5M16 19l3.5-3.5"/>'), prev: svg('<rect x="3.5" y="4.5" width="17" height="15" rx="2.6"/><path d="M7.5 9h9M7.5 12.5h9M7.5 16h5.5"/>'), tick: svg('<path d="M5 12.5l4.5 4.5L19 7.5"/>', 2.4), plus: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>', minus: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M5 12h14"/></svg>', chev: '<svg class="mu-nfs-chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg>', bulb: svg('<path d="M9 18h6M10 21h4M12 3a6 6 0 0 0-3.6 10.8c.6.5.9 1.1.9 1.8V16h5.4v-.6c0-.7.3-1.3.9-1.8A6 6 0 0 0 12 3z"/>'), folder: svg('<path d="M3.5 7.5a2 2 0 0 1 2-2h4l2 2.2h7a2 2 0 0 1 2 2v7.8a2 2 0 0 1-2 2h-13a2 2 0 0 1-2-2z"/>'), archive: svg('<rect x="3.5" y="4.5" width="17" height="4.5" rx="1.2"/><path d="M5 9v9.5A1.5 1.5 0 0 0 6.5 20h11a1.5 1.5 0 0 0 1.5-1.5V9M12 11.5v5M9.8 14.5l2.2 2.2 2.2-2.2"/>'), star: svg('<path d="M12 3.8l2.5 5.2 5.7.8-4.1 4 1 5.7L12 16.8 6.9 19.5l1-5.7-4.1-4 5.7-.8z"/>'), exit: svg('<path d="M15 5l-7 7 7 7"/>'), close: svg('<path d="M6 6l12 12M18 6L6 18"/>', 2.2), pin: svg('<path d="M9 4h6l-1 5 3 3v1.5H7V12l3-3z"/><path d="M12 13.5V20"/>'), lock: svg('<rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/>'), unlock: svg('<rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V8a4 4 0 0 1 7.4-2"/>'), vault: svg('<rect x="4.5" y="10.5" width="15" height="10" rx="2.2"/><path d="M8 10.5V8a4 4 0 018 0v2.5"/><circle cx="12" cy="15.5" r="1.2"/>'), trash: svg('<path d="M4 7h16M9 7V4.5h6V7M6.5 7l1 13h9l1-13M10 11v6M14 11v6"/>'), dup: svg('<rect x="8.5" y="8.5" width="11.5" height="11.5" rx="3"/><path d="M15.5 8.5V6.8A2.8 2.8 0 0 0 12.7 4H6.8A2.8 2.8 0 0 0 4 6.8v5.9a2.8 2.8 0 0 0 2.8 2.8h1.7"/><path d="M14.25 11.9v4.7M11.9 14.25h4.7"/>'), mic: svg('<rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5.5 11.5a6.5 6.5 0 0 0 13 0M12 18v3"/>'), list: svg('<rect x="3.5" y="3.5" width="17" height="17" rx="5"/><path d="M8 12.4l2.9 2.9L16.2 9.4"/>'), graph: svg('<circle cx="6" cy="7" r="2.3"/><circle cx="18" cy="6" r="2.3"/><circle cx="12" cy="17.5" r="2.6"/><path d="M8 8l2.7 7.2M16.2 7.7l-2.6 7.6M8.3 7l7.4-.6"/>'), fview: svg('<path d="M14 3.5H7.5a2 2 0 0 0-2 2v13a2 2 0 0 0 2 2h9a2 2 0 0 0 2-2V8z"/><path d="M14 3.5V8h4.5"/><circle cx="10.8" cy="13.4" r="1.5"/><path d="M12.3 13.4h3M14.6 13.4v1.6"/>'), portal: svg('<circle cx="12" cy="12" r="8.5"/><circle cx="12" cy="12" r="4.8"/><circle cx="12" cy="12" r="1.2"/>'), morse: svg('<circle cx="5.5" cy="12" r="1.5"/><path d="M10 12h4.5M18.5 12h.01"/><path d="M3.5 5.5h17M3.5 18.5h17" opacity=".45"/>'), binary: svg('<ellipse cx="7.5" cy="8" rx="3" ry="4"/><path d="M16 4.5V12M14 6l2-1.5"/><path d="M14 19.5h6M7.5 15.5v5M5.5 17l2-1.5"/>'), globe: svg('<circle cx="12" cy="12" r="8.5"/><path d="M3.5 12h17M12 3.5c2.4 2.4 3.6 5.2 3.6 8.5s-1.2 6.1-3.6 8.5c-2.4-2.4-3.6-5.2-3.6-8.5S9.6 5.9 12 3.5z"/>'), imp: svg('<path d="M12 4v11M7.8 11l4.2 4.2 4.2-4.2"/><path d="M4.5 16.5v1.8a1.7 1.7 0 0 0 1.7 1.7h11.6a1.7 1.7 0 0 0 1.7-1.7v-1.8"/>'), exp: svg('<path d="M12 15V4M7.8 8l4.2-4.2L16.2 8"/><path d="M4.5 16.5v1.8a1.7 1.7 0 0 0 1.7 1.7h11.6a1.7 1.7 0 0 0 1.7-1.7v-1.8"/>'), dash: svg('<rect x="3.5" y="3.5" width="7" height="8.5" rx="2"/><rect x="13.5" y="3.5" width="7" height="5" rx="2"/><rect x="13.5" y="11.5" width="7" height="9" rx="2"/><rect x="3.5" y="15" width="7" height="5.5" rx="2"/>'), gear: svg('<path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/>'), cloud: svg('<path d="M7 18.5a4.2 4.2 0 0 1-.6-8.4 5.6 5.6 0 0 1 10.8 1.2A3.6 3.6 0 0 1 17 18.5z"/><path d="M12 15.5V10M9.8 12l2.2-2.2 2.2 2.2"/>') };
     function $2(id) { return document.getElementById(id); }
     function fa2() { try {
         return !!H.isFa();
@@ -37129,7 +37225,7 @@ body.mu-nfsbk-on #mkBackupBar { display:none!important; }
         }
         sh.innerHTML = '<div class="mu-nfs-sheetbg" data-sheet-x="1"></div><div class="mu-nfs-sheetbox" role="dialog">' + html + "</div>", sh.classList.add("mu-open");
     } }
-    var NAV_GROUPS = [{ fa: "یادداشت‌ها", en: "Notes", items: [{ k: "notes", ic: "bulb", fa: "یادداشت‌ها", en: "Notes", pr: "a" }, { k: "folders", ic: "folder", fa: "پوشه‌ها", en: "Folders", pr: "a" }, { k: "list", ic: "list", fa: "لیست", en: "List", pr: "b" }, { k: "vault", ic: "vault", fa: "گاوصندوق", en: "Vault", pr: "b" }, { k: "search", ic: "search", fa: "جستجوی هوشمند", en: "Smart Search", pr: "b" }, { k: "delete", ic: "trash", fa: "حذف", en: "Delete", pr: "b" }] }, { fa: "پشتیبان‌گیری داده‌ها", en: "Data backup", items: [{ k: "cloud", ic: "cloud", fa: "بکاپ ابری تلگرام", en: "Telegram Cloud Backup" }, { k: "imp", ic: "imp", fa: "ورودی‌ها", en: "Import", pr: "c" }, { k: "exp", ic: "exp", fa: "خروجی‌ها", en: "Export", pr: "c" }] }, { fa: "مجموعه‌ها", en: "Collections", items: [{ k: "archive", ic: "archive", fa: "بایگانی", en: "Archive", pr: "d" }, { k: "favorites", ic: "star", fa: "علاقه‌مندی‌ها", en: "Favorites", pr: "d" }, { k: "locked", ic: "lock", fa: "قفل‌شده‌ها", en: "Locked", pr: "h" }, { k: "pinned", ic: "pin", fa: "پین‌شده‌ها", en: "Pinned", pr: "h" }] }, { fa: "ابزارها", en: "Tools", items: [{ k: "morse", ic: "morse", fa: "مبدل کد مورس", en: "Morse Code Converter", pr: "e" }, { k: "binary", ic: "binary", fa: "مبدل کد باینری", en: "Binary Code Converter", pr: "e" }, { k: "kg", ic: "graph", fa: "شبکه دانش", en: "Knowledge Graph", pr: "g" }, { k: "portal", ic: "portal", fa: "پورتال رندوم", en: "Random Portal", pr: "g" }] }], navTimer = 0, navIsOpen = !1;
+    var NAV_GROUPS = [{ fa: "یادداشت‌ها", en: "Notes", items: [{ k: "notes", ic: "bulb", fa: "یادداشت‌ها", en: "Notes", pr: "a" }, { k: "folders", ic: "folder", fa: "پوشه‌ها", en: "Folders", pr: "a" }, { k: "list", ic: "list", fa: "لیست", en: "List", pr: "b" }, { k: "vault", ic: "vault", fa: "گاوصندوق", en: "Vault", pr: "b" }, { k: "search", ic: "search", fa: "جستجوی هوشمند", en: "Smart Search", pr: "b" }, { k: "delete", ic: "trash", fa: "حذف", en: "Delete", pr: "b" }] }, { fa: "پشتیبان‌گیری داده‌ها", en: "Data backup", items: [{ k: "cloud", ic: "cloud", fa: "بکاپ ابری تلگرام", en: "Telegram Cloud Backup" }, { k: "imp", ic: "imp", fa: "ورودی‌ها", en: "Import", pr: "c" }, { k: "exp", ic: "exp", fa: "خروجی‌ها", en: "Export", pr: "c" }] }, { fa: "مجموعه‌ها", en: "Collections", items: [{ k: "archive", ic: "archive", fa: "بایگانی", en: "Archive", pr: "d" }, { k: "favorites", ic: "star", fa: "علاقه‌مندی‌ها", en: "Favorites", pr: "d" }, { k: "locked", ic: "lock", fa: "قفل‌شده‌ها", en: "Locked", pr: "h" }, { k: "pinned", ic: "pin", fa: "پین‌شده‌ها", en: "Pinned", pr: "h" }] }, { fa: "ابزارها", en: "Tools", items: [{ k: "fileviewer", ic: "fview", fa: "نمایشگر و رمزگشایی فایل‌ها", en: "File Viewer & Decryptor" }, { k: "morse", ic: "morse", fa: "مبدل کد مورس", en: "Morse Code Converter", pr: "e" }, { k: "binary", ic: "binary", fa: "مبدل کد باینری", en: "Binary Code Converter", pr: "e" }, { k: "kg", ic: "graph", fa: "شبکه دانش", en: "Knowledge Graph", pr: "g" }, { k: "portal", ic: "portal", fa: "پورتال رندوم", en: "Random Portal", pr: "g" }] }], navTimer = 0, navIsOpen = !1;
     function modalEl() { return $2("advancedModal"); }
     function modalVisible() { var m = modalEl(); return !!(m && m.style.display === "flex"); }
     function fsOpen() { var r = $2("muNotesFs"); return !!(r && r.classList.contains("mu-open")); }
@@ -37179,7 +37275,7 @@ body.mu-nfsbk-on #mkBackupBar { display:none!important; }
     } }
     function buildNav() { var p = $2("muNavPanel"); if (p) {
         var cur = curPage();
-        p.classList.toggle("mu-nav-paired", pairOn()), p.innerHTML = '<div class="mu-nav-head"><button type="button" class="mu-nav-set' + (cur === "settings" ? " on" : "") + '" data-nav="settings" aria-label="' + (fa2() ? "تنظیمات" : "Settings") + '" title="' + (fa2() ? "تنظیمات" : "Settings") + '">' + ICONS.gear + '</button><button type="button" class="mu-nav-layout" data-nav="layout" aria-label="' + (fa2() ? "تغییر نمایش منو" : "Change menu layout") + '" title="' + (fa2() ? "تغییر نمایش منو" : "Change menu layout") + '">' + (pairOn() ? ICONS.rows : ICONS.grid) + "<span>" + (fa2() ? "نمایش" : "Layout") + '</span></button><button type="button" class="mu-nav-old" data-nav="fileviewer">' + (fa2() ? "نمایشگر و رمزگشایی فایل‌ها" : "File Viewer & Decryptor") + '</button><button type="button" class="mu-nav-lang" data-nav="lang" aria-label="' + (fa2() ? "تغییر زبان" : "Change language") + '">' + ICONS.globe + '<span dir="auto">' + (fa2() ? "English" : "فارسی") + "</span></button></div>" + NAV_GROUPS.map(function (g, gi) { return (gi ? '<div class="mu-nav-sep"></div>' : "") + '<div class="mu-nav-grp"><div class="mu-nav-sec">' + esc(fa2() ? g.fa : g.en) + "</div>" + (function () { for (var out = [], i = 0, its = g.items; i < its.length;)
+        p.classList.toggle("mu-nav-paired", pairOn()), p.innerHTML = '<div class="mu-nav-head"><button type="button" class="mu-nav-set' + (cur === "settings" ? " on" : "") + '" data-nav="settings" aria-label="' + (fa2() ? "تنظیمات" : "Settings") + '" title="' + (fa2() ? "تنظیمات" : "Settings") + '">' + ICONS.gear + '</button><button type="button" class="mu-nav-layout" data-nav="layout" aria-label="' + (fa2() ? "تغییر نمایش منو" : "Change menu layout") + '" title="' + (fa2() ? "تغییر نمایش منو" : "Change menu layout") + '">' + (pairOn() ? ICONS.rows : ICONS.grid) + "<span>" + (fa2() ? "نمایش" : "Layout") + '</span></button><span class="mu-nav-hspacer" aria-hidden="true" style="flex:1 1 0;min-width:0"></span><button type="button" class="mu-nav-lang" data-nav="lang" aria-label="' + (fa2() ? "تغییر زبان" : "Change language") + '">' + ICONS.globe + '<span dir="auto">' + (fa2() ? "English" : "فارسی") + "</span></button></div>" + NAV_GROUPS.map(function (g, gi) { return (gi ? '<div class="mu-nav-sep"></div>' : "") + '<div class="mu-nav-grp"><div class="mu-nav-sec">' + esc(fa2() ? g.fa : g.en) + "</div>" + (function () { for (var out = [], i = 0, its = g.items; i < its.length;)
             pairOn() && its[i].pr && its[i + 1] && its[i + 1].pr === its[i].pr ? (out.push('<div class="mu-nav-pair">' + navItemHtml(its[i], cur) + navItemHtml(its[i + 1], cur) + "</div>"), i += 2) : pairOn() ? (out.push('<div class="mu-nav-pair mu-nav-solo">' + navItemHtml(its[i], cur) + "</div>"), i++) : (out.push(navItemHtml(its[i], cur)), i++); return out.join(""); })() + "</div>"; }).join("");
     } }
     // Markhin sigil: a black & white emblem at the bottom of the menu (grid layout only). Tap it and it
