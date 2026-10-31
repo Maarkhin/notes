@@ -5268,11 +5268,11 @@ html body .mk-c.mk-c9,html body .text-box .mk-c.mk-c9,html body .mu-viewer-body 
 html body .mk-c.mk-cx,html body .text-box .mk-c.mk-cx,html body .mu-viewer-body .mk-c.mk-cx,html body #contentsContainer .mxe .text-box .mk-c.mk-cx,html body #contentsContainer .mxe .text-box .mk-c.mk-cx *:not(.mk-hl){color:var(--mk-x)!important;-webkit-text-fill-color:var(--mk-x)!important}
 /* light theme: darker, slightly heavier default (uncoloured) text */
 #muNotesFs[data-theme=light] .mu-nfs-card .mu-nfs-ttl{font-weight:800!important}
-#muNotesFs[data-theme=light] .mu-nfs-card .mu-nfs-txt .mu-nfs-ln{font-weight:600!important}
-html body .mu-viewer.mu-vs-light .mu-viewer-body,html body .mu-viewer.mu-vs-retro .mu-viewer-body{color:#000!important;-webkit-text-fill-color:#000!important;font-weight:600!important}
+#muNotesFs[data-theme=light] .mu-nfs-card .mu-nfs-txt .mu-nfs-ln{font-weight:400!important}
+html body .mu-viewer.mu-vs-light .mu-viewer-body,html body .mu-viewer.mu-vs-retro .mu-viewer-body{color:#000!important;-webkit-text-fill-color:#000!important;font-weight:400!important}
 html body .mu-viewer.mu-vs-light .mu-viewer-title{color:#000!important;-webkit-text-fill-color:#000!important}
-html[data-mxe-theme=light] body #contentsContainer .mxe .text-box{color:#000!important;-webkit-text-fill-color:#000!important;font-weight:600!important}
-html[data-mxe-theme=light] body #contentsContainer .mxe .mc-title-input{color:#000!important;-webkit-text-fill-color:#000!important;font-weight:700!important}
+html[data-mxe-theme=light] body #contentsContainer .mxe .text-box{color:#000!important;-webkit-text-fill-color:#000!important;font-weight:400!important}
+html[data-mxe-theme=light] body #contentsContainer .mxe .mc-title-input{color:#000!important;-webkit-text-fill-color:#000!important;font-weight:600!important}
 /* light theme: deeper, more readable text colours (same as the note-list preview) */
 html[data-mxe-theme=light] body #contentsContainer .mxe .text-box .mk-c.mk-c1,html[data-mxe-theme=light] body #contentsContainer .mxe .text-box .mk-c.mk-c1 *:not(.mk-hl),html body .mu-viewer.mu-vs-light .mu-viewer-body .mk-c.mk-c1,html body .mu-viewer.mu-vs-retro .mu-viewer-body .mk-c.mk-c1{color:color-mix(in srgb,#ef4444 58%,#000)!important;-webkit-text-fill-color:color-mix(in srgb,#ef4444 58%,#000)!important;font-weight:700}
 html[data-mxe-theme=light] body #contentsContainer .mxe .text-box .mk-c.mk-c2,html[data-mxe-theme=light] body #contentsContainer .mxe .text-box .mk-c.mk-c2 *:not(.mk-hl),html body .mu-viewer.mu-vs-light .mu-viewer-body .mk-c.mk-c2,html body .mu-viewer.mu-vs-retro .mu-viewer-body .mk-c.mk-c2{color:color-mix(in srgb,#f97316 58%,#000)!important;-webkit-text-fill-color:color-mix(in srgb,#f97316 58%,#000)!important;font-weight:700}
@@ -13892,7 +13892,7 @@ html:not([dir=ltr]) .mu-nb-en {
 }
 #muNotesFs .mu-nfs-card.mu-nfs-sel {
     outline:3px solid var(--nfs-text)!important;
-    outline-offset:2px;
+    outline-offset:-3px!important;
 }
 .mu-nfs-fgroup {
     margin:0 0 12px;
@@ -23541,7 +23541,7 @@ function sanitizeHtml(html) { const template = document.createElement("template"
     elements.push(walker.currentNode); return elements.forEach(el => { if (!allowedTags.has(el.tagName)) {
     el.replaceWith(document.createTextNode(el.textContent || ""));
     return;
-} [...el.attributes].forEach(attr => { const name = attr.name.toLowerCase(), value = attr.value.trim(), isAllowed = el.tagName === "SPAN" && name === "style" && /^--mk-x:#[0-9a-f]{6};?$/i.test(value.replace(/\s+/g, "")) || ["class", "id", "contenteditable", "draggable", "aria-label"].includes(name) || el.tagName === "A" && ["href", "target", "rel"].includes(name) || el.tagName === "IMG" && ["src", "alt", "width", "height", "data-mu-media"].includes(name) || el.tagName === "AUDIO" && ["src", "controls", "data-mu-media"].includes(name) || el.tagName === "BUTTON" && name === "type" || (el.tagName === "TD" || el.tagName === "TH") && (name === "colspan" || name === "rowspan") && /^(?:[2-9]|[1-9]\d)$/.test(value) || name === "style" && /^(?:width:\d{2,4}px|height:\d{2,3}px);?$/i.test(value.replace(/\s+/g, "")) && (/^(?:width)/i.test(value.replace(/\s+/g, "")) ? el.tagName === "TD" || el.tagName === "TH" : el.tagName === "TR"); (name.startsWith("on") || !isAllowed) && el.removeAttribute(attr.name), name === "href" && !/^(https?:|mailto:)/i.test(value) && el.removeAttribute(attr.name), name === "src" && !/^(https?:|data:image\/|data:audio\/)/i.test(value) && el.removeAttribute(attr.name); }), el.tagName === "A" && (el.setAttribute("target", "_blank"), el.setAttribute("rel", "noopener noreferrer")), el.tagName === "IMG" && el.setAttribute("draggable", "true"); }), template.innerHTML; }
+} [...el.attributes].forEach(attr => { const name = attr.name.toLowerCase(), value = attr.value.trim(), isAllowed = el.tagName === "SPAN" && name === "style" && /^--mk-x:#[0-9a-f]{6};?$/i.test(value.replace(/\s+/g, "")) || el.tagName === "SPAN" && name === "style" && /^font-size:\d(?:\.\d{1,3})?em;?$/i.test(value.replace(/\s+/g, "")) || ["class", "id", "contenteditable", "draggable", "aria-label"].includes(name) || el.tagName === "A" && ["href", "target", "rel"].includes(name) || el.tagName === "IMG" && ["src", "alt", "width", "height", "data-mu-media"].includes(name) || el.tagName === "AUDIO" && ["src", "controls", "data-mu-media"].includes(name) || el.tagName === "BUTTON" && name === "type" || (el.tagName === "TD" || el.tagName === "TH") && (name === "colspan" || name === "rowspan") && /^(?:[2-9]|[1-9]\d)$/.test(value) || name === "style" && /^(?:width:\d{2,4}px|height:\d{2,3}px);?$/i.test(value.replace(/\s+/g, "")) && (/^(?:width)/i.test(value.replace(/\s+/g, "")) ? el.tagName === "TD" || el.tagName === "TH" : el.tagName === "TR"); (name.startsWith("on") || !isAllowed) && el.removeAttribute(attr.name), name === "href" && !/^(https?:|mailto:)/i.test(value) && el.removeAttribute(attr.name), name === "src" && !/^(https?:|data:image\/|data:audio\/)/i.test(value) && el.removeAttribute(attr.name); }), el.tagName === "A" && (el.setAttribute("target", "_blank"), el.setAttribute("rel", "noopener noreferrer")), el.tagName === "IMG" && el.setAttribute("draggable", "true"); }), template.innerHTML; }
 function getSearchQuery() { const el = document.getElementById("searchInput"); return normalizeText(el ? el.value : ""); }
 function getVisibleCategories() { const query = getSearchQuery(); let visible = currentFolder === "__FAVORITES__" ? categories.filter(c => !!c.favorite) : currentFolder === DEFAULT_FOLDER ? categories : categories.filter(c => window.mu_inFolder(c, currentFolder)); return query ? visible.filter(item => normalizeText(item.name).includes(query) || normalizeText(item.text || item.html || "").includes(query)) : visible; }
 function toggleFolderDeleteMode() { if (isDeleteFolderMode = !isDeleteFolderMode, applyLanguageUI(), renderFolders(), isDeleteFolderMode) {
@@ -35042,6 +35042,37 @@ catch { } };
             txt && copyPlain(txt, function (ok) { msg(ok ? "✅ کپی شد" : "⚠️ کپی نشد", ok ? "✅ Copied" : "⚠️ Could not copy"); });
         }
     } });
+    // ---- A- / A+ on a SELECTION: only the selected text changes size. <span class="mk-fs" style="font-size:Nem"> (relative to the
+    // note's own size, so the whole-note A- / A+ and the Size menu still scale it); sanitizeHtml allows exactly that one style.
+    function mkFsRangeOf(id) { var t = D2.getElementById("text-" + id); if (!t || t.getAttribute("contenteditable") !== "true") return null; var s = window.getSelection(), r = null;
+        if (s && s.rangeCount && !s.isCollapsed && t.contains(s.anchorNode) && t.contains(s.focusNode)) r = s.getRangeAt(0);
+        else if (expSnap && expSnap.id === id && !expSnap.r.collapsed && t.contains(expSnap.r.startContainer) && t.contains(expSnap.r.endContainer)) r = expSnap.r.cloneRange();
+        return r ? { t: t, r: r } : null; }
+    function mkFsOf(node, t) { var el = node && (node.nodeType === 1 ? node : node.parentElement), h = el && el.closest ? el.closest(".mk-fs") : null; return h && t.contains(h) && h !== t ? h : null; }
+    function mkFsUnwrapNode(t2, n2) { var h = mkFsOf(n2, t2); if (h) {
+        var a2 = D2.createRange(); a2.setStart(h, 0), a2.setEndBefore(n2);
+        var fa = a2.extractContents(), b = D2.createRange(); b.setStartAfter(n2), b.setEnd(h, h.childNodes.length);
+        var fb = b.extractContents();
+        if (hlHasContent(fa)) { var h1 = h.cloneNode(!1); h1.appendChild(fa), h.parentNode.insertBefore(h1, h); }
+        if (hlHasContent(fb)) { var h2 = h.cloneNode(!1); h2.appendChild(fb), h.parentNode.insertBefore(h2, h.nextSibling); }
+        for (; h.firstChild;) h.parentNode.insertBefore(h.firstChild, h);
+        h.parentNode.removeChild(h);
+    } }
+    function mkFsMerge(t2) { Array.prototype.slice.call(t2.querySelectorAll(".mk-fs")).forEach(function (s) { if (s.parentNode)
+        for (var nx = s.nextSibling; nx && nx.nodeType === 1 && nx.classList.contains("mk-fs") && (nx.getAttribute("style") || "") === (s.getAttribute("style") || "");) {
+            for (; nx.firstChild;) s.appendChild(nx.firstChild);
+            var dn = nx; nx = nx.nextSibling, dn.parentNode.removeChild(dn);
+        } }); }
+    function mkFsTidy(t2) { Array.prototype.slice.call(t2.querySelectorAll(".mk-fs")).forEach(function (h) { h.textContent.replace(/\u200b/g, "") !== "" || h.querySelector("img,br,canvas,audio,video,table") || h.parentNode && h.parentNode.removeChild(h); }); }
+    function mkFsApply(t2, range, d) { var r = hlSplitRange(range), nodes = hlTexts(r).filter(hlOk); if (!nodes.length) return !1;
+        nodes.forEach(function (nd) { var el0 = nd.parentElement; if (!el0) return;
+            var cur = parseFloat(getComputedStyle(el0).fontSize) || 13, nxt = Math.max(9, Math.min(60, Math.round((cur + d) * 10) / 10));
+            mkFsUnwrapNode(t2, nd);
+            var par = nd.parentElement, base = par && parseFloat(getComputedStyle(par).fontSize) || 13, em = Math.round(nxt / base * 1000) / 1000;
+            if (Math.abs(em - 1) > .004) { var sp = D2.createElement("span"); sp.className = "mk-fs", sp.setAttribute("style", "font-size:" + em + "em"), nd.parentNode.insertBefore(sp, nd), sp.appendChild(nd); } });
+        mkFsMerge(t2);
+        try { var f2 = nodes[0], l = nodes[nodes.length - 1], rg = D2.createRange(), s = window.getSelection(); rg.setStart(f2, 0), rg.setEnd(l, l.nodeValue.length), s.removeAllRanges(), s.addRange(rg); } catch { }
+        return !0; }
     // Font size (9–40, stored as item.fontSize): one setter for A- / A+, the Size menu of the writing popover
     // and the hidden toolbar's select, so all three stay in sync
     function setSize(id, n2) { var it = itemOf(id), t = D2.getElementById("text-" + id), box = D2.getElementById("container-" + id); if (!(!it || !t || it.isDecoy)) {
@@ -35185,6 +35216,12 @@ catch { } };
     else if (k === "codeMode")
         toggleCodeMode(id);
     else if (k === "smaller" || k === "bigger") {
+        // text selected -> only that text changes size; nothing selected -> the whole note, as before
+        var fsr = mkFsRangeOf(id);
+        if (fsr) {
+            mkFsApply(fsr.t, fsr.r, k === "bigger" ? 1 : -1) && (mkFsTidy(fsr.t), function () { try { fsr.t.dispatchEvent(new Event("input", { bubbles: !0 })); } catch { } }(), saved(id));
+            return !1;
+        }
         var it = itemOf(id);
         // keep the menu open, like the design
         return it && setSize(id, (Number(it.fontSize) || 13) + (k === "bigger" ? 1 : -1)), !1;
@@ -46970,7 +47007,7 @@ catch { } })();
 </script>
 <script id="mk-clearfmt-table-patch">
 (function () { if (window.mkClearFormat)
-    return; var INL = "b,strong,i,em,u,s,strike,del,ins,font,mark,code,kbd,samp,tt,small,big,cite,var,a,sub,sup,.mk-hl,.mk-c", BLK = ".mxe-h,blockquote,pre,h1,h2,h3,h4,h5,h6", PROPS = ["color", "background", "background-color", "font-size", "font-family", "font-weight", "font-style", "text-decoration", "text-decoration-line", "-webkit-text-fill-color", "text-shadow", "text-transform", "letter-spacing", "font-variant", "vertical-align"]; function el(n) { return n && (n.nodeType === 1 ? n : n.parentElement); } function toast(m) { try {
+    return; var INL = "b,strong,i,em,u,s,strike,del,ins,font,mark,code,kbd,samp,tt,small,big,cite,var,a,sub,sup,.mk-hl,.mk-c,.mk-fs", BLK = ".mxe-h,blockquote,pre,h1,h2,h3,h4,h5,h6", PROPS = ["color", "background", "background-color", "font-size", "font-family", "font-weight", "font-style", "text-decoration", "text-decoration-line", "-webkit-text-fill-color", "text-shadow", "text-transform", "letter-spacing", "font-variant", "vertical-align"]; function el(n) { return n && (n.nodeType === 1 ? n : n.parentElement); } function toast(m) { try {
     typeof showToast == "function" && showToast(m);
 }
 catch { } } function fa() { try {
@@ -50571,7 +50608,7 @@ html[data-mxe-theme=light] #mkSelBars{--sb-bg:rgba(255,255,255,.98);--sb-fg:#1b1
 #mkSelBars .sb-main svg{width:16px;height:16px}
 #mkSelBars .sb-fmt button{flex:1 1 0;min-width:0;height:36px;padding:0;font-size:16px}
 #mkSelBars button:active,#mkSelBars button.press{background:var(--sb-press)}
-#mkSelBars button.on{background:var(--sb-on)}
+#mkSelBars button.on{background:var(--sb-on);box-shadow:inset 0 0 0 2px currentColor}
 #mkSelBars button[disabled]{opacity:.45;pointer-events:none}
 #mkSelBars svg{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;flex:0 0 auto}
 #mkSelBars .sb-sep{flex:0 0 1px;align-self:stretch;margin:7px 3px;background:var(--sb-line)}
@@ -50583,6 +50620,11 @@ html[data-mxe-theme=light] #mkSelBars{--sb-bg:rgba(255,255,255,.98);--sb-fg:#1b1
 #mkSelBars .busy{opacity:.55;pointer-events:none}
 #mkSelBars.narrow .sb-main svg{display:none}
 .text-box[contenteditable=true]{-webkit-touch-callout:none}
+</style>
+<style id="mkFixV23">
+/* note text is normal weight unless the person makes it bold; the title is a little lighter */
+html body #contentsContainer .mxe .text-box{font-weight:400}
+html body #contentsContainer .mxe .mc-title-input{opacity:.8!important}
 </style>
 <script id="mkSelBarsJs">
 (function () {
@@ -50697,13 +50739,38 @@ html[data-mxe-theme=light] #mkSelBars{--sb-bg:rgba(255,255,255,.98);--sb-fg:#1b1
   }
   var raf = 0; function placeSoon() { raf || (raf = requestAnimationFrame(function () { raf = 0; place(); })); }
 
+  // True when EVERY selected character has the format (queryCommandState only looks at the start of the selection).
+  function selTexts(r) {
+    var root = r.commonAncestorContainer, out = [];
+    function seg(n) { var a = 0, b = n.nodeValue.length; if (n === r.startContainer) a = r.startOffset; if (n === r.endContainer) b = r.endOffset; return /\S/.test(n.nodeValue.slice(a, b).replace(/\u200b/g, "")); }
+    if (root.nodeType === 3) return seg(root) ? [root] : out;
+    for (var w = D.createTreeWalker(root, NodeFilter.SHOW_TEXT), n; n = w.nextNode();) { if (r.intersectsNode(n) && n.nodeValue && seg(n)) out.push(n); }
+    return out;
+  }
+  function fmtAll(cmd, r) {
+    var nodes = selTexts(r); if (!nodes.length) return false;
+    return nodes.every(function (n) {
+      var el = n.parentElement; if (!el) return false;
+      if (cmd === "bold") {
+        if (el.closest("b,strong")) return true;
+        var tb = el.closest(".text-box"), w = parseInt(getComputedStyle(el).fontWeight, 10) || 400, bw = tb ? (parseInt(getComputedStyle(tb).fontWeight, 10) || 400) : 400;
+        return w >= 600 && w > bw;
+      }
+      if (cmd === "italic") return !!el.closest("i,em") || getComputedStyle(el).fontStyle === "italic";
+      if (cmd === "underline") return !!el.closest("u");
+      return !!el.closest("s,strike,del");
+    });
+  }
   function markOn() {
     if (!bar) return;
-    bar.querySelectorAll("[data-cmd]").forEach(function (b) { var cmd = b.getAttribute("data-cmd"), on = false; try { on = D.queryCommandState(cmd); } catch (e) { }
-    // Chrome reports "bold" whenever the computed weight is >= 600; the light theme sets the note text itself to 600, so plain text looked bold.
-    // Count it as bold only when it is really heavier than the note text or sits inside <b>/<strong>.
-    if (on && cmd === "bold") { try { var sl = D.getSelection(), nd = sl && sl.anchorNode, el = nd && (nd.nodeType === 1 ? nd : nd.parentElement), tb = el && el.closest && el.closest(".text-box"); if (tb && !el.closest("b,strong") && (parseInt(getComputedStyle(el).fontWeight, 10) || 400) <= (parseInt(getComputedStyle(tb).fontWeight, 10) || 400)) on = false; } catch (e) { } }
-    b.classList.toggle("on", !!on); });
+    var s = D.getSelection(), r = null;
+    try { if (s && s.rangeCount && !s.isCollapsed && ctx && ctx.tb.contains(s.anchorNode)) r = s.getRangeAt(0); } catch (e) { }
+    if (!r && saved) r = saved;
+    bar.querySelectorAll("[data-cmd]").forEach(function (b) {
+      var cmd = b.getAttribute("data-cmd"), on = false;
+      try { on = r ? fmtAll(cmd, r) : D.queryCommandState(cmd); } catch (e) { }
+      b.classList.toggle("on", !!on); b.setAttribute("aria-pressed", on ? "true" : "false");
+    });
   }
 
   // best effort: a script-made re-selection makes Chrome/Android drop its own floating menu (handles stay)
