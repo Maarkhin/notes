@@ -50787,9 +50787,25 @@ html[data-mxe-theme=light] #mkSelBars{--sb-bg:rgba(255,255,255,.98);--sb-fg:#1b1
 #mkSelBars.narrow .sw::before{width:19px;height:19px}
 #mkSelBars .hl{background:#ffeb3b;color:#111;border-radius:4px;padding:2px 6px;font-weight:800;font-size:14px}
 #mkSelBars .busy{opacity:.55;pointer-events:none}
+/* dark-theme legibility fix: the app-wide "span,div,button{color:var(--text-color)}" rule made labels dark-on-dark; keep the bar's own colours and opaque backgrounds */
+#mkSelBars{--sb-bg:#24252b}
+html[data-mxe-theme=light] #mkSelBars{--sb-bg:#ffffff}
+#mkSelBars .sb-row{background:var(--sb-bg)!important;color:var(--sb-fg)!important;-webkit-text-fill-color:var(--sb-fg)!important;opacity:1!important;-webkit-backdrop-filter:none;backdrop-filter:none}
+#mkSelBars button{color:var(--sb-fg)!important;-webkit-text-fill-color:var(--sb-fg)!important;opacity:1}
+#mkSelBars button[disabled]{opacity:.45}
+#mkSelBars button :not(svg):not(svg *){color:inherit!important;-webkit-text-fill-color:inherit!important}
+#mkSelBars button .hl{color:#111!important;-webkit-text-fill-color:#111!important;background:#ffeb3b!important}
+#mkSelBars .sb-main button span{font-weight:600}
 #mkSelBars.narrow .sb-main svg{display:none}
 #mkSelBars.tmode .sb-fmt{display:none}
 .text-box[contenteditable=true]{-webkit-touch-callout:none}
+</style>
+<style id="mkContrastFix2">
+/* legibility safety-net (dark editor / drag overlay): the app-wide "span,div,button,label,p{color:var(--text-color)}" rule used the page theme's DARK --text-color inside dark modals and overlays */
+html.mxe-open:not([data-mxe-theme=light]) #advancedModal,html.mxe-open:not([data-mxe-theme=light]) #muFolderPickerOverlay{--text-color:var(--nfs-text,#e6e6e6)}
+html.mxe-open:not([data-mxe-theme=light]) #advancedModal .advanced-card.mdx{--text-color:#EEF2FB}
+.mkt-dlg span,.mkt-dlg b,.mkt-dlg label{color:inherit}
+html body .markhin-drop-zone{color:#fff!important;-webkit-text-fill-color:#fff!important;border-color:#fff}
 </style>
 <style id="mkFixV23">
 /* note text is normal weight unless the person makes it bold; the title is a little lighter */
