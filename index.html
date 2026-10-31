@@ -5211,7 +5211,7 @@ html body #contentsContainer .mxe .mc-title-input {
     box-shadow:none!important;
     color:var(--mx-title)!important;
     font-family:inherit!important;
-    font-size:23px!important;
+    font-size:19px!important;
     font-weight:400!important;
     line-height:1.3!important;
     text-align:start!important;
@@ -35558,16 +35558,23 @@ catch { } };
     // landed (the keyboard simply slides over the still-visible text and bar); when the keyboard is dismissed we
     // grow the panel at once (on blur) instead of waiting for the end of the animation.
     var __mxeApp = 0, __mxeFull = 0, __mxeHT = 0, __mxeForce = !1, __mxePT = 0;
+    // While the panel keeps its old height (keyboard sliding in), the bottom bar sits under the keyboard. On pages that
+    // resize with the keyboard (Android / Telegram) lift it by exactly the amount the panel is about to shrink; the lift is
+    // removed in the same frame the new height is applied, so the bar never jumps.
+    function mxeLayEnv() { try { var st = window.__muKbSync && window.__muKbSync.state(); return !!(st && st.layEnv); } catch { return !1; } }
+    function mxeLift(box, px) { try { if (!box || !mxeLayEnv() || !(px > 40 && px < 900)) return; var b = box.querySelector(".mxe-bottom"); if (!b) return; box.__mxeLb = b; b.style.setProperty("transition", "none", "important"); b.style.setProperty("translate", "0 " + (-Math.round(px)) + "px", "important"); } catch { } }
+    function mxeUnlift(box) { try { var b = box && box.__mxeLb; if (!b) return; box.__mxeLb = null; b.style.removeProperty("translate"); b.style.removeProperty("transition"); } catch { } }
     function mxeHold(h, box) { try {
         if (__mxeForce)
             __mxeForce = !1;
         else if (__mxeApp && box && box.__mxeK && h < __mxeApp - 120) {
             root.classList.remove("mxe-lay");
-            __mxeHT || (__mxeHT = setTimeout(function () { __mxeHT = 0, __mxeForce = !0, vv3(); }, 280));
+            mxeLift(box, __mxeApp - h);
+            __mxeHT || (__mxeHT = setTimeout(function () { __mxeHT = 0, __mxeForce = !0, vv3(), mxeUnlift(box); }, 280));
             return !0;
         }
     }
-    catch { } __mxeApp = h, h > __mxeFull && (__mxeFull = h); return !1; }
+    catch { } mxeUnlift(box), __mxeApp = h, h > __mxeFull && (__mxeFull = h); return !1; }
     // Keyboard going down: the field lost focus and (after a short confirmation) is still not an editable one,
     // so the keyboard is leaving. Give the panel its full height right away; verify against the real viewport later.
     function mxePredictClose() { try {
@@ -35580,7 +35587,7 @@ catch { } };
         if (!H.kbShowing())
             return;
         var top = Math.round(v.offsetTop);
-        __mxeApp = __mxeFull, root.classList.remove("mxe-lay"), __mxeSet(box, __mxeFull, top);
+        __mxeApp = __mxeFull, mxeUnlift(box), root.classList.remove("mxe-lay"), __mxeSet(box, __mxeFull, top);
         clearTimeout(__mxePT), __mxePT = setTimeout(function () { __mxeForce = !0, vv3(); }, 420);
     }
     catch { } }
@@ -35611,7 +35618,7 @@ catch { } };
     function vv3() { var container = D2.querySelector(".content-container.mxe.show"); if (container) {
         var v = window.visualViewport;
         if (!(!v || v.scale > 1.01)) {
-            var top = Math.round(v.offsetTop), bottom = top + Math.round(v.height), VK = mxeVK(), vkUsed = !1;
+            var top = Math.round(v.offsetTop), bottom = top + Math.round(v.height), VK = mxeVK(), vkUsed = !1, gapUsed = 0;
             if (VK && !window.__mxeVKStale)
                 try {
                     var r = VK.boundingRect;
@@ -35625,16 +35632,21 @@ catch { } };
             // end the panel above it
             if (!vkUsed)
                 try {
-                    H.kbShowing() && (bottom -= H.kbGap());
+                    H.kbShowing() && (bottom -= (gapUsed = H.kbGap() || 0));
                 }
                 catch { }
             var h = bottom - top;
             // page really resized with the keyboard (Telegram)? then CSS alone keeps the panel exact;
             // otherwise use the JS height safety net: if the panel still ends lower than intended, pull it
             // up by the difference
-            if (mxeHold(h, container))
+            // the page itself already shrank with the keyboard: CSS (mxe-lay) keeps the panel and its bottom bar in step in the
+            // same frame, so there is nothing to hold back (holding is what hid the bar under the keyboard)
+            if (Math.abs((window.innerHeight || 0) - (bottom + gapUsed)) < 4) {
+                mxeUnlift(container), __mxeApp = h, h > __mxeFull && (__mxeFull = h);
+            }
+            else if (mxeHold(h, container))
                 return;
-            __mxeLastH = h, root.classList.toggle("mxe-lay", Math.abs((window.innerHeight || 0) - bottom) < 4), __mxeSet(container, h, top), VK && !vvT && (vvT = requestAnimationFrame(function () { vvT = 0; try {
+            __mxeLastH = h, root.classList.toggle("mxe-lay", Math.abs((window.innerHeight || 0) - (bottom + gapUsed)) < 4), root.style.setProperty("--mxe-gap", gapUsed + "px"), __mxeSet(container, h, top), VK && !vvT && (vvT = requestAnimationFrame(function () { vvT = 0; try {
                 var b = D2.querySelector(".content-container.mxe.show");
                 if (!b)
                     return;
@@ -35655,11 +35667,11 @@ catch { } };
         window.__mxeTgCss = 1;
         try {
             var st = D2.createElement("style");
-            st.id = "mxeTgSmoothCss", st.textContent = 'html.mxe-lay body #contentsContainer .content-container.mxe.show{height:auto !important;bottom:0 !important}html.mxe-tg[data-mxe-theme="light"].mxe-open,html.mxe-tg[data-mxe-theme="light"].mxe-open body{background:#f9f9f9 !important}html.mxe-tg[data-mxe-theme="dark"].mxe-open,html.mxe-tg[data-mxe-theme="dark"].mxe-open body{background:#1d1d1f !important}', D2.head.appendChild(st);
+            st.id = "mxeTgSmoothCss", st.textContent = 'html.mxe-lay body #contentsContainer .content-container.mxe.show{height:auto !important;bottom:var(--mxe-gap,0px) !important}html.mxe-tg[data-mxe-theme="light"].mxe-open,html.mxe-tg[data-mxe-theme="light"].mxe-open body{background:#f9f9f9 !important}html.mxe-tg[data-mxe-theme="dark"].mxe-open,html.mxe-tg[data-mxe-theme="dark"].mxe-open body{background:#1d1d1f !important}', D2.head.appendChild(st);
         }
         catch { }
     } if (root.classList.toggle("mxe-tg", mxeIsTG()), !open) {
-        root.style.removeProperty("--mxe-vh"), root.style.removeProperty("--mxe-top"), __mxeLastH = 0, __mxeApp = 0, __mxeFull = 0, clearTimeout(__mxeHT), __mxeHT = 0, clearTimeout(__mxePT);
+        root.style.removeProperty("--mxe-vh"), root.style.removeProperty("--mxe-top"), root.style.removeProperty("--mxe-gap"), __mxeLastH = 0, __mxeApp = 0, __mxeFull = 0, clearTimeout(__mxeHT), __mxeHT = 0, clearTimeout(__mxePT);
         try {
             VK && VK.overlaysContent && (VK.overlaysContent = !1);
         }
@@ -50619,6 +50631,7 @@ html[data-mxe-theme=light] #mkSelBars{--sb-bg:rgba(255,255,255,.98);--sb-fg:#1b1
 #mkSelBars .hl{background:#ffeb3b;color:#111;border-radius:4px;padding:2px 6px;font-weight:800;font-size:14px}
 #mkSelBars .busy{opacity:.55;pointer-events:none}
 #mkSelBars.narrow .sb-main svg{display:none}
+#mkSelBars.tmode .sb-fmt{display:none}
 .text-box[contenteditable=true]{-webkit-touch-callout:none}
 </style>
 <style id="mkFixV23">
@@ -50691,6 +50704,16 @@ html body #contentsContainer .mxe .mc-title-input{opacity:.8!important}
     bar.innerHTML = h; mainRow = bar.querySelector(".sb-main"); fmtRow = bar.querySelector(".sb-fmt");
   }
 
+  // ---------- note title (an <input>): its own selection ----------
+  function titleCurrent() {
+    var el = D.activeElement; if (!el || !el.classList || !el.classList.contains("mc-title-input") || el.disabled) return null;
+    var box = el.closest(".content-container.mxe"); if (!box) return null;
+    var a, b; try { a = el.selectionStart; b = el.selectionEnd; } catch (e) { return null; }
+    if (a == null || b == null || a === b || !el.value.slice(a, b).trim()) return null;
+    return { title: true, tb: el, box: box, s: a, e: b };
+  }
+  function anyCurrent() { return current() || titleCurrent(); }
+
   // ---------- which selection counts ----------
   function current() {
     var s = window.getSelection(); if (!s || !s.rangeCount || s.isCollapsed) return null;
@@ -50704,16 +50727,20 @@ html body #contentsContainer .mxe .mc-title-input{opacity:.8!important}
 
   // ---------- show / hide / place ----------
   function show(c) {
-    build(); ctx = c; saved = c.range.cloneRange(); bar.classList.add("show"); place(); markOn();
+    build(); ctx = c; saved = c.title ? { s: c.s, e: c.e } : c.range.cloneRange(); bar.classList.toggle("tmode", !!c.title); bar.classList.add("show"); place(); markOn();
   }
-  function hide() { if (bar) bar.classList.remove("show"); ctx = null; lastKey = ""; }
+  function hide() { if (bar) bar.classList.remove("show", "tmode"); ctx = null; lastKey = ""; }
   function place() {
     if (!bar || !ctx || !bar.classList.contains("show")) return;
     if (!ctx.box.classList.contains("show") || !ctx.tb.isConnected) { hide(); return; }
-    var s = window.getSelection(), live = s.rangeCount && !s.isCollapsed && ctx.tb.contains(s.anchorNode);
-    var r = live ? s.getRangeAt(0) : saved; if (!r) return;
-    var rects = r.getClientRects(), br = r.getBoundingClientRect();
-    var first = rects.length ? rects[0] : br, last = rects.length ? rects[rects.length - 1] : br;
+    var first, last;
+    if (ctx.title) { var ir = ctx.tb.getBoundingClientRect(); first = last = ir; }
+    else {
+      var s = window.getSelection(), live = s.rangeCount && !s.isCollapsed && ctx.tb.contains(s.anchorNode);
+      var r = live ? s.getRangeAt(0) : saved; if (!r) return;
+      var rects = r.getClientRects(), br = r.getBoundingClientRect();
+      first = rects.length ? rects[0] : br; last = rects.length ? rects[rects.length - 1] : br;
+    }
     var vv = window.visualViewport, vw = vv ? vv.width : innerWidth, vh = vv ? vv.height : innerHeight, ot = vv ? vv.offsetTop : 0, ol = vv ? vv.offsetLeft : 0;
     var W = Math.min(vw - 16, 440), minLeft = ol + 8;
     bar.style.width = W + "px"; bar.classList.remove("narrow");
@@ -50763,6 +50790,7 @@ html body #contentsContainer .mxe .mc-title-input{opacity:.8!important}
   }
   function markOn() {
     if (!bar) return;
+    if (ctx && ctx.title) return;
     var s = D.getSelection(), r = null;
     try { if (s && s.rangeCount && !s.isCollapsed && ctx && ctx.tb.contains(s.anchorNode)) r = s.getRangeAt(0); } catch (e) { }
     if (!r && saved) r = saved;
@@ -50777,6 +50805,10 @@ html body #contentsContainer .mxe .mc-title-input{opacity:.8!important}
   function hideNative(c) {
     try {
       if (localStorage.getItem("mksb_native") === "1") return;
+      if (c.title) {
+        var tk = [c.s, c.e, c.tb.value.length].join(":"); if (tk === lastKey || touching) return; lastKey = tk;
+        internal = true; c.tb.setSelectionRange(c.s, c.s); c.tb.setSelectionRange(c.s, c.e); setTimeout(function () { internal = false; }, 60); return;
+      }
       var r = c.range, key = [r.startOffset, r.endOffset, c.sel.toString().length].join(":");
       if (key === lastKey || touching) return; lastKey = key;
       var rr = r.cloneRange(); internal = true; c.sel.removeAllRanges(); c.sel.addRange(rr); setTimeout(function () { internal = false; }, 60);
@@ -50788,8 +50820,8 @@ html body #contentsContainer .mxe .mc-title-input{opacity:.8!important}
     try { if (localStorage.getItem("mksb_off") === "1") return; } catch (e) { }
     clearTimeout(timer);
     timer = setTimeout(function () {
-      var c = current();
-      if (!c) { if (bar && bar.classList.contains("show") && ctx && saved && saved.startContainer.isConnected && ctx.tb.isConnected) { placeSoon(); return; } hide(); return; }
+      var c = anyCurrent();
+      if (!c) { if (bar && bar.classList.contains("show") && ctx && !ctx.title && saved && saved.startContainer.isConnected && ctx.tb.isConnected) { placeSoon(); return; } hide(); return; }
       show(c); hideNative(c); setTimeout(place, 30);
     }, 280);
 
@@ -50798,6 +50830,11 @@ html body #contentsContainer .mxe .mc-title-input{opacity:.8!important}
   // ---------- actions ----------
   function restore(needFocus) {
     if (!ctx || !saved) return null;
+    if (ctx.title) {
+      var ti = ctx.tb, sv = saved;
+      try { if (D.activeElement !== ti) ti.focus({ preventScroll: true }); if (ti.selectionStart !== sv.s || ti.selectionEnd !== sv.e) ti.setSelectionRange(sv.s, sv.e); } catch (e) { }
+      return { toString: function () { return ti.value.slice(sv.s, sv.e); } };
+    }
     needFocus || hush();
     var s = window.getSelection();
     try {
@@ -50817,7 +50854,7 @@ html body #contentsContainer .mxe .mc-title-input{opacity:.8!important}
   }
   function hush() {
     var tb = ctx && ctx.tb;
-    if (!tb || D.activeElement === tb && !qTb) return;
+    if (!tb || ctx.title || D.activeElement === tb && !qTb) return;
     if (qTb !== tb) { unquiet(); qTb = tb; qHad = tb.getAttribute("inputmode"); tb.setAttribute("inputmode", "none"); }
     qTimers.forEach(clearTimeout); qTimers = [];
     [100, 300, 650].forEach(function (ms) { qTimers.push(setTimeout(function () { if (D.activeElement === tb) { try { tb.blur(); } catch (e) { } } }, ms)); });
@@ -50839,15 +50876,15 @@ html body #contentsContainer .mxe .mc-title-input{opacity:.8!important}
       navigator.clipboard.readText().then(function (t) { if (!t) return; quiet(function () { restore(true); try { D.execCommand("insertText", false, t); } catch (e) { } }); }, function () { toast(T.noPaste); });
     } else { var ok = false; try { ok = D.execCommand("paste"); } catch (e) { } ok || toast(T.noPaste); }
   }
-  function actAll() { if (!ctx) return; restore(); var s = window.getSelection(), r = D.createRange(); r.selectNodeContents(ctx.tb); s.removeAllRanges(); s.addRange(r); saved = r.cloneRange(); lastKey = ""; setTimeout(function () { var c = current(); c && (ctx = c, saved = c.range.cloneRange(), place()); }, 30); }
+  function actAll() { if (!ctx) return; if (ctx.title) { var ti = ctx.tb; restore(); try { ti.setSelectionRange(0, ti.value.length); } catch (e) { } saved = { s: 0, e: ti.value.length }; ctx.s = 0; ctx.e = ti.value.length; lastKey = ""; setTimeout(place, 30); return; } restore(); var s = window.getSelection(), r = D.createRange(); r.selectNodeContents(ctx.tb); s.removeAllRanges(); s.addRange(r); saved = r.cloneRange(); lastKey = ""; setTimeout(function () { var c = current(); c && (ctx = c, saved = c.range.cloneRange(), place()); }, 30); }
   function actTr(btn) {
     var T = L(), text = selText().trim(); if (!text) return;
     if (typeof mu_translateAny !== "function") { toast(T.trFail); return; }
-    var ar = (text.match(/[\u0600-\u06FF]/g) || []).length, sl = ar > text.length * 0.3 ? "fa" : "en", tl = sl === "fa" ? "en" : "fa", my = saved && saved.cloneRange(), tb = ctx && ctx.tb;
+    var ar = (text.match(/[\u0600-\u06FF]/g) || []).length, sl = ar > text.length * 0.3 ? "fa" : "en", tl = sl === "fa" ? "en" : "fa", tit = !!(ctx && ctx.title), my = saved && (tit ? { s: saved.s, e: saved.e } : saved.cloneRange()), tb = ctx && ctx.tb;
     btn.classList.add("busy"); toast(T.trying);
     Promise.resolve(mu_translateAny(text, sl, tl)).then(function (out) {
       btn.classList.remove("busy"); hide(); out = (typeof out === "string" ? out : (out && out.text)) || ""; if (!out || !tb || !tb.isConnected) { out || toast(T.trFail); return; }
-      try { ctx = { tb: tb, box: tb.closest(".content-container.mxe") }; quiet(function () { tb.focus({ preventScroll: true }); var s = window.getSelection(); s.removeAllRanges(); s.addRange(my); D.execCommand("insertText", false, out); }); } catch (e) { toast(T.trFail); }
+      try { ctx = { tb: tb, box: tb.closest(".content-container.mxe"), title: tit }; quiet(function () { tb.focus({ preventScroll: true }); if (tit) { tb.setSelectionRange(my.s, my.e); D.execCommand("insertText", false, out); return; } var s = window.getSelection(); s.removeAllRanges(); s.addRange(my); D.execCommand("insertText", false, out); }); } catch (e) { toast(T.trFail); }
     }, function () { btn.classList.remove("busy"); toast(T.trFail); });
   }
   // formatting: click the editor's own (hidden) button, so every format behaves exactly like the writing-tools sheet
@@ -50878,13 +50915,13 @@ html body #contentsContainer .mxe .mc-title-input{opacity:.8!important}
   D.addEventListener("selectionchange", onSel);
   D.addEventListener("touchstart", function (e) { if (!(bar && bar.contains(e.target))) { touching = true; unquiet(); if (bar && bar.classList.contains("show")) hide(); } }, { passive: true, capture: true });
   D.addEventListener("mousedown", function (e) { if (bar && bar.classList.contains("show") && !bar.contains(e.target)) hide(); }, true);
-  ["touchend", "touchcancel"].forEach(function (ev) { D.addEventListener(ev, function () { touching = false; if (current()) onSel(); }, { passive: true, capture: true }); });
+  ["touchend", "touchcancel"].forEach(function (ev) { D.addEventListener(ev, function () { touching = false; if (anyCurrent()) onSel(); }, { passive: true, capture: true }); });
   D.addEventListener("scroll", placeSoon, true);
   window.addEventListener("resize", placeSoon);
   if (window.visualViewport) { window.visualViewport.addEventListener("resize", placeSoon); window.visualViewport.addEventListener("scroll", placeSoon); }
   D.addEventListener("keydown", function (e) { if (e.key && e.key.length === 1 || e.key === "Backspace" || e.key === "Delete" || e.key === "Enter") { if (bar && bar.classList.contains("show") && !e.ctrlKey && !e.metaKey) hide(); } }, true);
   // while a text selection exists, stop the system long-press menu from covering these bars
-  D.addEventListener("contextmenu", function (e) { if (current() && e.target.closest && e.target.closest('.text-box[contenteditable="true"]')) { try { if (localStorage.getItem("mksb_native") !== "1") e.preventDefault(); } catch (x) { } } }, true);
+  D.addEventListener("contextmenu", function (e) { if (anyCurrent() && e.target.closest && e.target.closest('.text-box[contenteditable="true"], .content-container.mxe .mc-title-input')) { try { if (localStorage.getItem("mksb_native") !== "1") e.preventDefault(); } catch (x) { } } }, true);
   // A tap anywhere else clears the text selection (and the bars with it). Left alone: the bars themselves and the editor's own
   // tools / panels / dialogs (they act on the selection). Drags, scrolls and long-presses are not taps, so they never clear it.
   var tapD = null;
