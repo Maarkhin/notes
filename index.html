@@ -5254,7 +5254,106 @@ html body #contentsContainer .mxe .text-box:empty:before {
     color:var(--mx-note-ph)!important;
     opacity:1!important;
 }
-html body #contentsContainer .mxe .text-box .mxe-h {
+html body #contentsContainer .mxe .text-box 
+/* mk text colour: classes (inline styles are stripped by sanitizeHtml) */
+html body .mk-c.mk-c1,html body .text-box .mk-c.mk-c1,html body .mu-viewer-body .mk-c.mk-c1,html body #contentsContainer .mxe .text-box .mk-c.mk-c1,html body #contentsContainer .mxe .text-box .mk-c.mk-c1 *:not(.mk-hl){color:#ef4444!important;-webkit-text-fill-color:#ef4444!important}
+html body .mk-c.mk-c2,html body .text-box .mk-c.mk-c2,html body .mu-viewer-body .mk-c.mk-c2,html body #contentsContainer .mxe .text-box .mk-c.mk-c2,html body #contentsContainer .mxe .text-box .mk-c.mk-c2 *:not(.mk-hl){color:#f97316!important;-webkit-text-fill-color:#f97316!important}
+html body .mk-c.mk-c3,html body .text-box .mk-c.mk-c3,html body .mu-viewer-body .mk-c.mk-c3,html body #contentsContainer .mxe .text-box .mk-c.mk-c3,html body #contentsContainer .mxe .text-box .mk-c.mk-c3 *:not(.mk-hl){color:#eab308!important;-webkit-text-fill-color:#eab308!important}
+html body .mk-c.mk-c4,html body .text-box .mk-c.mk-c4,html body .mu-viewer-body .mk-c.mk-c4,html body #contentsContainer .mxe .text-box .mk-c.mk-c4,html body #contentsContainer .mxe .text-box .mk-c.mk-c4 *:not(.mk-hl){color:#22c55e!important;-webkit-text-fill-color:#22c55e!important}
+html body .mk-c.mk-c5,html body .text-box .mk-c.mk-c5,html body .mu-viewer-body .mk-c.mk-c5,html body #contentsContainer .mxe .text-box .mk-c.mk-c5,html body #contentsContainer .mxe .text-box .mk-c.mk-c5 *:not(.mk-hl){color:#14b8a6!important;-webkit-text-fill-color:#14b8a6!important}
+html body .mk-c.mk-c6,html body .text-box .mk-c.mk-c6,html body .mu-viewer-body .mk-c.mk-c6,html body #contentsContainer .mxe .text-box .mk-c.mk-c6,html body #contentsContainer .mxe .text-box .mk-c.mk-c6 *:not(.mk-hl){color:#3b82f6!important;-webkit-text-fill-color:#3b82f6!important}
+html body .mk-c.mk-c7,html body .text-box .mk-c.mk-c7,html body .mu-viewer-body .mk-c.mk-c7,html body #contentsContainer .mxe .text-box .mk-c.mk-c7,html body #contentsContainer .mxe .text-box .mk-c.mk-c7 *:not(.mk-hl){color:#8b5cf6!important;-webkit-text-fill-color:#8b5cf6!important}
+html body .mk-c.mk-c8,html body .text-box .mk-c.mk-c8,html body .mu-viewer-body .mk-c.mk-c8,html body #contentsContainer .mxe .text-box .mk-c.mk-c8,html body #contentsContainer .mxe .text-box .mk-c.mk-c8 *:not(.mk-hl){color:#ec4899!important;-webkit-text-fill-color:#ec4899!important}
+html body .mk-c.mk-c9,html body .text-box .mk-c.mk-c9,html body .mu-viewer-body .mk-c.mk-c9,html body #contentsContainer .mxe .text-box .mk-c.mk-c9,html body #contentsContainer .mxe .text-box .mk-c.mk-c9 *:not(.mk-hl){color:#9ca3af!important;-webkit-text-fill-color:#9ca3af!important}
+html body .mk-c.mk-cx,html body .text-box .mk-c.mk-cx,html body .mu-viewer-body .mk-c.mk-cx,html body #contentsContainer .mxe .text-box .mk-c.mk-cx,html body #contentsContainer .mxe .text-box .mk-c.mk-cx *:not(.mk-hl){color:var(--mk-x)!important;-webkit-text-fill-color:var(--mk-x)!important}
+/* light theme: darker, slightly heavier default (uncoloured) text */
+#muNotesFs[data-theme=light] .mu-nfs-card .mu-nfs-ttl{font-weight:800!important}
+#muNotesFs[data-theme=light] .mu-nfs-card .mu-nfs-txt .mu-nfs-ln{font-weight:600!important}
+html body .mu-viewer.mu-vs-light .mu-viewer-body,html body .mu-viewer.mu-vs-retro .mu-viewer-body{color:#000!important;-webkit-text-fill-color:#000!important;font-weight:600!important}
+html body .mu-viewer.mu-vs-light .mu-viewer-title{color:#000!important;-webkit-text-fill-color:#000!important}
+html[data-mxe-theme=light] body #contentsContainer .mxe .text-box{color:#000!important;-webkit-text-fill-color:#000!important;font-weight:600!important}
+html[data-mxe-theme=light] body #contentsContainer .mxe .mc-title-input{color:#000!important;-webkit-text-fill-color:#000!important;font-weight:700!important}
+/* light theme: deeper, more readable text colours (same as the note-list preview) */
+html[data-mxe-theme=light] body #contentsContainer .mxe .text-box .mk-c.mk-c1,html[data-mxe-theme=light] body #contentsContainer .mxe .text-box .mk-c.mk-c1 *:not(.mk-hl),html body .mu-viewer.mu-vs-light .mu-viewer-body .mk-c.mk-c1,html body .mu-viewer.mu-vs-retro .mu-viewer-body .mk-c.mk-c1{color:color-mix(in srgb,#ef4444 58%,#000)!important;-webkit-text-fill-color:color-mix(in srgb,#ef4444 58%,#000)!important;font-weight:700}
+html[data-mxe-theme=light] body #contentsContainer .mxe .text-box .mk-c.mk-c2,html[data-mxe-theme=light] body #contentsContainer .mxe .text-box .mk-c.mk-c2 *:not(.mk-hl),html body .mu-viewer.mu-vs-light .mu-viewer-body .mk-c.mk-c2,html body .mu-viewer.mu-vs-retro .mu-viewer-body .mk-c.mk-c2{color:color-mix(in srgb,#f97316 58%,#000)!important;-webkit-text-fill-color:color-mix(in srgb,#f97316 58%,#000)!important;font-weight:700}
+html[data-mxe-theme=light] body #contentsContainer .mxe .text-box .mk-c.mk-c3,html[data-mxe-theme=light] body #contentsContainer .mxe .text-box .mk-c.mk-c3 *:not(.mk-hl),html body .mu-viewer.mu-vs-light .mu-viewer-body .mk-c.mk-c3,html body .mu-viewer.mu-vs-retro .mu-viewer-body .mk-c.mk-c3{color:color-mix(in srgb,#eab308 58%,#000)!important;-webkit-text-fill-color:color-mix(in srgb,#eab308 58%,#000)!important;font-weight:700}
+html[data-mxe-theme=light] body #contentsContainer .mxe .text-box .mk-c.mk-c4,html[data-mxe-theme=light] body #contentsContainer .mxe .text-box .mk-c.mk-c4 *:not(.mk-hl),html body .mu-viewer.mu-vs-light .mu-viewer-body .mk-c.mk-c4,html body .mu-viewer.mu-vs-retro .mu-viewer-body .mk-c.mk-c4{color:color-mix(in srgb,#22c55e 58%,#000)!important;-webkit-text-fill-color:color-mix(in srgb,#22c55e 58%,#000)!important;font-weight:700}
+html[data-mxe-theme=light] body #contentsContainer .mxe .text-box .mk-c.mk-c5,html[data-mxe-theme=light] body #contentsContainer .mxe .text-box .mk-c.mk-c5 *:not(.mk-hl),html body .mu-viewer.mu-vs-light .mu-viewer-body .mk-c.mk-c5,html body .mu-viewer.mu-vs-retro .mu-viewer-body .mk-c.mk-c5{color:color-mix(in srgb,#14b8a6 58%,#000)!important;-webkit-text-fill-color:color-mix(in srgb,#14b8a6 58%,#000)!important;font-weight:700}
+html[data-mxe-theme=light] body #contentsContainer .mxe .text-box .mk-c.mk-c6,html[data-mxe-theme=light] body #contentsContainer .mxe .text-box .mk-c.mk-c6 *:not(.mk-hl),html body .mu-viewer.mu-vs-light .mu-viewer-body .mk-c.mk-c6,html body .mu-viewer.mu-vs-retro .mu-viewer-body .mk-c.mk-c6{color:color-mix(in srgb,#3b82f6 58%,#000)!important;-webkit-text-fill-color:color-mix(in srgb,#3b82f6 58%,#000)!important;font-weight:700}
+html[data-mxe-theme=light] body #contentsContainer .mxe .text-box .mk-c.mk-c7,html[data-mxe-theme=light] body #contentsContainer .mxe .text-box .mk-c.mk-c7 *:not(.mk-hl),html body .mu-viewer.mu-vs-light .mu-viewer-body .mk-c.mk-c7,html body .mu-viewer.mu-vs-retro .mu-viewer-body .mk-c.mk-c7{color:color-mix(in srgb,#8b5cf6 58%,#000)!important;-webkit-text-fill-color:color-mix(in srgb,#8b5cf6 58%,#000)!important;font-weight:700}
+html[data-mxe-theme=light] body #contentsContainer .mxe .text-box .mk-c.mk-c8,html[data-mxe-theme=light] body #contentsContainer .mxe .text-box .mk-c.mk-c8 *:not(.mk-hl),html body .mu-viewer.mu-vs-light .mu-viewer-body .mk-c.mk-c8,html body .mu-viewer.mu-vs-retro .mu-viewer-body .mk-c.mk-c8{color:color-mix(in srgb,#ec4899 58%,#000)!important;-webkit-text-fill-color:color-mix(in srgb,#ec4899 58%,#000)!important;font-weight:700}
+html[data-mxe-theme=light] body #contentsContainer .mxe .text-box .mk-c.mk-c9,html[data-mxe-theme=light] body #contentsContainer .mxe .text-box .mk-c.mk-c9 *:not(.mk-hl),html body .mu-viewer.mu-vs-light .mu-viewer-body .mk-c.mk-c9,html body .mu-viewer.mu-vs-retro .mu-viewer-body .mk-c.mk-c9{color:color-mix(in srgb,#9ca3af 58%,#000)!important;-webkit-text-fill-color:color-mix(in srgb,#9ca3af 58%,#000)!important;font-weight:700}
+html[data-mxe-theme=light] body #contentsContainer .mxe .text-box .mk-c.mk-cx,html[data-mxe-theme=light] body #contentsContainer .mxe .text-box .mk-c.mk-cx *:not(.mk-hl),html body .mu-viewer.mu-vs-light .mu-viewer-body .mk-c.mk-cx,html body .mu-viewer.mu-vs-retro .mu-viewer-body .mk-c.mk-cx{color:color-mix(in srgb,var(--mk-x) 58%,#000)!important;-webkit-text-fill-color:color-mix(in srgb,var(--mk-x) 58%,#000)!important;font-weight:700}
+html body #contentsContainer .mxe .mxe-pop .mxe-colors{display:none;flex-wrap:wrap;gap:5px;justify-content:center;padding:10px 6px 8px;border-top:1px solid var(--mx-line);margin-top:4px;min-width:240px;box-sizing:border-box}
+html body #contentsContainer .mxe .mxe-pop.colors-open .mxe-colors{display:flex}
+html body #contentsContainer .mxe .mxe-pop .mxe-colors .mxe-collab{flex:0 0 100%;font-size:12px;opacity:.65;text-align:start;padding:0 6px}
+html body #contentsContainer .mxe .mxe-pop .mxe-colors.tt{margin-top:0;border-top:0;padding-top:2px}
+html body #contentsContainer .mxe .mxe-pop .mxe-colors button.mxe-sw{display:flex!important;align-items:center!important;justify-content:center!important;gap:0!important;width:26px!important;height:26px!important;min-width:26px!important;padding:0!important;border-radius:50%!important;background:var(--sw)!important;border:2px solid transparent!important;flex:0 0 auto!important;font-size:14px!important;line-height:1!important}
+html body #contentsContainer .mxe .mxe-pop .mxe-colors button.mxe-sw.none{background:transparent!important;border:2px dashed currentColor!important;opacity:.8}
+html body #contentsContainer .mxe .mxe-pop .mxe-colors button.mxe-sw.on{box-shadow:0 0 0 2px var(--mx-pop),0 0 0 4px var(--mx-icon)!important}
+html body #contentsContainer .mxe .mxe-pop .mxe-colors label.mxe-sw.custom{position:relative;display:flex;align-items:center;justify-content:center;width:26px;height:26px;border-radius:50%;box-sizing:border-box;cursor:pointer;background:conic-gradient(#ef4444,#eab308,#22c55e,#3b82f6,#8b5cf6,#ef4444);border:2px solid transparent;overflow:hidden;flex:0 0 auto}
+html body #contentsContainer .mxe .mxe-pop .mxe-colors label.mxe-sw.custom.on{box-shadow:0 0 0 2px var(--mx-pop),0 0 0 4px var(--mx-icon)}
+html body #contentsContainer .mxe .mxe-pop .mxe-colors label.mxe-sw.custom input{position:absolute;inset:0;width:100%;height:100%;opacity:0;cursor:pointer;border:0;padding:0}
+.mxe-cico{font-size:16px;font-weight:800;line-height:1.05;border-bottom:3px solid var(--mk-cur,#ef4444);padding:0 3px 1px}
+html body #contentsContainer .mxe .mxe-pop .mxe-colors button.mxe-sw.custom{background:conic-gradient(#ef4444,#f97316,#eab308,#22c55e,#14b8a6,#3b82f6,#8b5cf6,#ec4899,#ef4444)!important;position:relative!important;overflow:hidden!important}
+html body #contentsContainer .mxe .mxe-pop .mxe-colors button.mxe-sw.custom::after{content:"+";position:absolute;inset:4px;border-radius:50%;background:var(--mx-pop);color:var(--mx-icon);font-size:13px;font-weight:800;line-height:14px;text-align:center;display:block}
+html body #contentsContainer .mxe .mxe-pop .mxe-colors button.mxe-sw.mxe-rec{box-shadow:inset 0 0 0 1px rgba(127,127,127,.5)!important}
+html body #contentsContainer .mxe .mxe-pop .mxe-colors button.mxe-sw.mxe-rec.on{box-shadow:0 0 0 2px var(--mx-pop),0 0 0 4px var(--mx-icon)!important}
+#mkTcs[hidden],#mkTcs [hidden]{display:none!important}
+#mkTcs{position:fixed;inset:0;z-index:2147483645;display:flex;align-items:flex-end;justify-content:center;background:rgba(0,0,0,.5);overscroll-behavior:contain;touch-action:none;-webkit-tap-highlight-color:transparent;outline:none;animation:mkcpFade .18s ease}
+#mkTcs,#mkTcs *{box-sizing:border-box}
+#mkTcs *{color:inherit;font-family:inherit;text-shadow:none;letter-spacing:normal;text-transform:none}
+#mkTcs .mkcp-box{--bg:#ffffff;--fg:#1d1d1f;--mut:rgba(0,0,0,.55);--line:rgba(0,0,0,.13);--card:rgba(0,0,0,.055);--acc:#0e7490;--onacc:#ffffff;width:100%;max-width:520px;max-height:92vh;max-height:92dvh;overflow-y:auto;overscroll-behavior:contain;touch-action:pan-y;background:var(--bg);color:var(--fg);border-radius:22px 22px 0 0;padding:14px 16px calc(16px + env(safe-area-inset-bottom,0px));border-top:1px solid var(--line);box-shadow:0 -12px 40px rgba(0,0,0,.4);font:500 14px/1.5 system-ui,-apple-system,"Segoe UI",Tahoma,sans-serif;text-align:start;animation:mkcpUp .24s cubic-bezier(.2,.8,.2,1)}
+#mkTcs[data-dark="1"] .mkcp-box{--bg:#242428;--fg:#f2f2f4;--mut:rgba(255,255,255,.62);--line:rgba(255,255,255,.15);--card:rgba(255,255,255,.075);--acc:#4fd1e6;--onacc:#06222a}
+#mkTcs button{all:unset;box-sizing:border-box;cursor:pointer;-webkit-tap-highlight-color:transparent;text-align:center;font:inherit}
+#mkTcs button:focus-visible,#mkTcs .mkcp-hex:focus-visible{outline:2px solid var(--acc);outline-offset:2px}
+#mkTcs .mkcp-hd{display:flex;align-items:center;justify-content:space-between;margin:0 2px 12px}
+#mkTcs .mkcp-ttl{font-size:17px;font-weight:800;color:var(--fg)}
+#mkTcs .mkcp-x{width:34px;height:34px;border-radius:50%;background:var(--card);display:flex;align-items:center;justify-content:center;font-size:15px;color:var(--fg)}
+#mkTcs .mkcp-prev{border-radius:14px;padding:14px 16px;border:1px solid var(--line);font-size:20px;font-weight:700;line-height:1.5;text-align:center;overflow:hidden}
+#mkTcs .mkcp-smp{display:inline-block}
+#mkTcs .mkcp-meta{display:flex;align-items:center;justify-content:space-between;gap:8px;margin:10px 2px 0}
+#mkTcs .mkcp-chip{display:flex;align-items:center;gap:8px;min-width:0}
+#mkTcs .mkcp-dot{display:block;width:20px;height:20px;border-radius:50%;box-shadow:inset 0 0 0 1px rgba(127,127,127,.5);flex:0 0 auto}
+#mkTcs .mkcp-hexlab{font:700 14px/1 ui-monospace,Menlo,Consolas,monospace;direction:ltr;color:var(--fg)}
+#mkTcs .mkcp-cr{font-size:12px;font-weight:700;padding:4px 11px;border-radius:99px;white-space:nowrap;color:var(--fg)}
+#mkTcs .mkcp-cr[data-l="g"]{background:rgba(34,197,94,.2);color:#15803d}
+#mkTcs .mkcp-cr[data-l="m"]{background:rgba(234,179,8,.22);color:#a16207}
+#mkTcs .mkcp-cr[data-l="b"]{background:rgba(239,68,68,.2);color:#b91c1c}
+#mkTcs[data-dark="1"] .mkcp-cr[data-l="g"]{color:#4ade80}
+#mkTcs[data-dark="1"] .mkcp-cr[data-l="m"]{color:#facc15}
+#mkTcs[data-dark="1"] .mkcp-cr[data-l="b"]{color:#f87171}
+#mkTcs .mkcp-note{margin:6px 2px 0;font-size:12px;color:var(--mut)}
+#mkTcs .mkcp-tabs{display:flex;gap:4px;background:var(--card);padding:4px;border-radius:14px;margin:14px 0 12px}
+#mkTcs .mkcp-tabs button{flex:1;padding:9px 6px;border-radius:10px;font-weight:700;color:var(--mut)}
+#mkTcs .mkcp-tabs button.on{background:var(--bg);color:var(--fg);box-shadow:0 1px 5px rgba(0,0,0,.22)}
+#mkTcs .mkcp-lab{font-size:12px;font-weight:700;color:var(--mut);margin:12px 2px 7px}
+#mkTcs .mkcp-lab:first-child{margin-top:2px}
+#mkTcs .mkcp-grid{display:grid;grid-template-columns:repeat(10,1fr);gap:7px}
+#mkTcs .mkcp-sw{display:block;aspect-ratio:1/1;border-radius:50%;background:var(--c);box-shadow:inset 0 0 0 1px rgba(127,127,127,.45);position:relative;transition:transform .12s ease}
+#mkTcs .mkcp-sw:active{transform:scale(.88)}
+#mkTcs .mkcp-sw.on{box-shadow:0 0 0 2px var(--bg),0 0 0 4px var(--fg)}
+#mkTcs .mkcp-plus{background:conic-gradient(#ef4444,#f97316,#eab308,#22c55e,#14b8a6,#3b82f6,#8b5cf6,#ec4899,#ef4444);display:flex;align-items:center;justify-content:center;font-weight:800;font-size:16px;color:#fff}
+#mkTcs .mkcp-sv{position:relative;height:190px;border-radius:14px;overflow:hidden;direction:ltr;touch-action:none;cursor:crosshair;background-color:#f00;background-image:linear-gradient(to top,#000,rgba(0,0,0,0)),linear-gradient(to right,#fff,rgba(255,255,255,0))}
+#mkTcs .mkcp-svk,#mkTcs .mkcp-huek{position:absolute;display:block;border-radius:50%;border:3px solid #fff;box-shadow:0 0 0 1.5px rgba(0,0,0,.45),0 2px 8px rgba(0,0,0,.4);pointer-events:none}
+#mkTcs .mkcp-svk{width:26px;height:26px;margin:-13px 0 0 -13px}
+#mkTcs .mkcp-hue{position:relative;height:24px;border-radius:12px;margin:18px 14px 6px;direction:ltr;touch-action:none;cursor:pointer;background:linear-gradient(to right,#f00,#ff0,#0f0,#0ff,#00f,#f0f,#f00)}
+#mkTcs .mkcp-huek{top:50%;width:30px;height:30px;margin:-15px 0 0 -15px}
+#mkTcs .mkcp-row{display:flex;align-items:center;gap:10px;margin-top:14px}
+#mkTcs .mkcp-hl{font-size:13px;font-weight:700;color:var(--mut);flex:0 0 auto}
+#mkTcs .mkcp-hex{all:unset;box-sizing:border-box;flex:1;min-width:0;direction:ltr;text-align:center;font:700 17px/1.2 ui-monospace,Menlo,Consolas,monospace;letter-spacing:.08em;text-transform:uppercase;padding:11px 12px;border-radius:12px;background:var(--card);border:1.5px solid var(--line);color:var(--fg);-webkit-user-select:text;user-select:text;-webkit-text-fill-color:var(--fg)}
+#mkTcs .mkcp-hex:focus{border-color:var(--acc)}
+#mkTcs .mkcp-hex.bad{border-color:#ef4444}
+#mkTcs .mkcp-eye{width:46px;height:46px;border-radius:12px;background:var(--card);display:flex;align-items:center;justify-content:center;font-size:20px;flex:0 0 auto}
+#mkTcs .mkcp-ft{display:flex;align-items:center;gap:8px;margin-top:18px}
+#mkTcs .mkcp-ft button{padding:12px 16px;border-radius:12px;font-weight:800;color:var(--fg);white-space:nowrap}
+#mkTcs .mkcp-ok{flex:1;background:var(--acc);color:var(--onacc)!important}
+#mkTcs .mkcp-ghost{background:var(--card)}
+#mkTcs .mkcp-off{color:#ef4444!important}
+@keyframes mkcpUp{from{transform:translateY(40px);opacity:0}to{transform:none;opacity:1}}
+@keyframes mkcpFade{from{opacity:0}to{opacity:1}}
+@media (prefers-reduced-motion:reduce){#mkTcs,#mkTcs .mkcp-box{animation:none}}
+.mxe-h {
     font-size:1.45em;
     line-height:1.35;
     margin:.15em 0;
@@ -13588,6 +13687,15 @@ html:not([dir=ltr]) .mu-nb-en {
     overflow-wrap:anywhere;
     word-break:break-word;
 }
+#muNotesFs .mu-nfs-card .mu-nfs-txt .mu-nfs-c {
+    color:var(--pv)!important;
+    -webkit-text-fill-color:var(--pv)!important;
+}
+#muNotesFs[data-theme=light] .mu-nfs-card .mu-nfs-txt .mu-nfs-c {
+    color:color-mix(in srgb,var(--pv) 58%,#000)!important;
+    -webkit-text-fill-color:color-mix(in srgb,var(--pv) 58%,#000)!important;
+    font-weight:700;
+}
 #muNotesFs .mu-nfs-card .mu-nfs-txt .mu-nfs-ln {
     color:inherit!important;
     -webkit-text-fill-color:currentColor!important;
@@ -18679,6 +18787,10 @@ html.mu-nfs-open:not(#_nfs) body .advanced-card:has(.markhin-filename-input) .ma
 #muNav .mu-nav-panel .mu-nav-head .mu-nav-set svg,#muNav .mu-nav-panel .mu-nav-head .mu-nav-layout svg{width:17px;height:17px}
 #muNav .mu-nav-panel .mu-nav-head .mu-nav-lang{height:34px;border-radius:11px;font-size:10.5px;padding:0 8px;gap:4px}
 #muNav .mu-nav-panel .mu-nav-head .mu-nav-lang svg{width:15px;height:15px}
+#muNav .mu-nav-panel .mu-nav-head .mu-nav-dash{flex:0 1 auto;min-width:0;height:34px;box-sizing:border-box;display:inline-flex;align-items:center;justify-content:center;padding:0 10px;border-radius:11px;border:1px solid var(--nfs-border);background:#7f7f7f1c;color:var(--nfs-ink);font-family:inherit;font-size:10.5px;font-weight:600;white-space:nowrap;cursor:pointer;touch-action:manipulation}
+#muNav .mu-nav-panel .mu-nav-head .mu-nav-dash span{color:inherit;overflow:hidden;text-overflow:ellipsis}
+#muNav .mu-nav-panel .mu-nav-head .mu-nav-dash:active{background:#7f7f7f42}
+#muNav .mu-nav-panel .mu-nav-head .mu-nav-dash.on{background:#7f7f7f42}
 </style>
 <style id="muViewBtnCss">
 html body #contentsContainer .mxe .mxe-bottom .mxe-btn.mxe-viewnote {
@@ -18885,8 +18997,8 @@ html body #contentsContainer .mxe .mxe-top .mxe-btn:disabled,html body #contents
     border-color:#0000001f!important;
 }
 .mu-viewer.mu-vs-ocean.mu-vs-light .mu-viewer-title {
-    color:#1f1f1f!important;
-    -webkit-text-fill-color:#1f1f1f!important;
+    color:#000!important;
+    -webkit-text-fill-color:#000!important;
 }
 .mu-viewer.mu-vs-ocean.mu-vs-light .mu-viewer-rule {
     background:linear-gradient(90deg,transparent,#1f7fa3,transparent)!important;
@@ -18897,8 +19009,8 @@ html body #contentsContainer .mxe .mxe-top .mxe-btn:disabled,html body #contents
     color:#1f1f1f!important;
 }
 .mu-viewer.mu-vs-ocean.mu-vs-light .mu-viewer-body,.mu-viewer.mu-vs-ocean.mu-vs-light .mu-viewer-body *:not(a):not(a *) {
-    color:#1f1f1f!important;
-    -webkit-text-fill-color:#1f1f1f!important;
+    color:#000!important;
+    -webkit-text-fill-color:#000!important;
     text-shadow:none!important;
 }
 .mu-viewer.mu-vs-ocean.mu-vs-light .mu-viewer-body a {
@@ -20825,9 +20937,9 @@ function cloudB85Dec(encodedStr) { const length = encodedStr.length, remainder =
 // Compact v2 payload (short note keys + compression) needs the CompressionStream API; without it the backup
 // falls back to the plain v1 format.
 function cloudPackOn() { return typeof CompressionStream < "u"; }
-function cloudPackNote(note) { const packed = { i: note.id, n: note.name }; return note.folder && (packed.f = note.folder), note.extraFolders && note.extraFolders.length && (packed.x = note.extraFolders), note.html ? packed.h = note.html : note.text && (packed.t = note.text), note.encrypted && (packed.e = note.encrypted), note.hint && (packed.k = note.hint), note.tags && note.tags.length && (packed.g = note.tags), note.pinned && (packed.p = 1), note.favorite && (packed.v = 1), note.archived && (packed.a = 1), note.order && (packed.o = note.order), note.fontFamily && (packed.ff = note.fontFamily), note.fontSize && note.fontSize !== 13 && (packed.fs = note.fontSize), note.color && (packed.c = note.color), note.fakeContent && (packed.fk = note.fakeContent), note.unlockAt && (packed.ua = note.unlockAt), note.ghostUntil && (packed.gu = note.ghostUntil), note.lastEdited && (packed.le = note.lastEdited), note.metaEditedAt && note.metaEditedAt !== note.lastEdited && (packed.me = note.metaEditedAt), packed; }
+function cloudPackNote(note) { const packed = { i: note.id, n: note.name }; return note.folder && (packed.f = note.folder), note.extraFolders && note.extraFolders.length && (packed.x = note.extraFolders), note.html ? packed.h = note.html : note.text && (packed.t = note.text), note.encrypted && (packed.e = note.encrypted), note.hint && (packed.k = note.hint), note.tags && note.tags.length && (packed.g = note.tags), note.pinned && (packed.p = 1), note.favorite && (packed.v = 1), note.archived && (packed.a = 1), note.order && (packed.o = note.order), note.fontFamily && (packed.ff = note.fontFamily), note.fontSize && note.fontSize !== 13 && (packed.fs = note.fontSize), note.color && (packed.c = note.color), note.titleColor ? packed.tc = note.titleColor : note.titleColor === null && (packed.tc = ""), note.fakeContent && (packed.fk = note.fakeContent), note.unlockAt && (packed.ua = note.unlockAt), note.ghostUntil && (packed.gu = note.ghostUntil), note.lastEdited && (packed.le = note.lastEdited), note.metaEditedAt && note.metaEditedAt !== note.lastEdited && (packed.me = note.metaEditedAt), packed; }
 function cloudUnpackNote(packedNote) { if (!packedNote || typeof packedNote != "object")
-    return packedNote; const note = { id: packedNote.i, name: packedNote.n, folder: packedNote.f || "", extraFolders: packedNote.x || [], html: packedNote.h || "", encrypted: packedNote.e || null, hint: packedNote.k || "", tags: packedNote.g || [], pinned: !!packedNote.p, favorite: !!packedNote.v, archived: !!packedNote.a, order: packedNote.o || 0, fontFamily: packedNote.ff || "", fontSize: packedNote.fs || 13, color: packedNote.c || "", fakeContent: packedNote.fk || "", unlockAt: packedNote.ua || "", ghostUntil: packedNote.gu || "", lastEdited: packedNote.le || "", metaEditedAt: packedNote.me || packedNote.le || "" }; let plainText = packedNote.t; return Object.defineProperty(note, "text", { enumerable: !0, configurable: !0, get() { return plainText === void 0 && (plainText = note.html ? htmlToPlainText(note.html) : ""), plainText; }, set(newText) { plainText = newText; } }), note; }
+    return packedNote; const note = { id: packedNote.i, name: packedNote.n, folder: packedNote.f || "", extraFolders: packedNote.x || [], html: packedNote.h || "", encrypted: packedNote.e || null, hint: packedNote.k || "", tags: packedNote.g || [], pinned: !!packedNote.p, favorite: !!packedNote.v, archived: !!packedNote.a, order: packedNote.o || 0, fontFamily: packedNote.ff || "", fontSize: packedNote.fs || 13, color: packedNote.c || "", titleColor: packedNote.tc === void 0 ? void 0 : packedNote.tc || null, fakeContent: packedNote.fk || "", unlockAt: packedNote.ua || "", ghostUntil: packedNote.gu || "", lastEdited: packedNote.le || "", metaEditedAt: packedNote.me || packedNote.le || "" }; let plainText = packedNote.t; return Object.defineProperty(note, "text", { enumerable: !0, configurable: !0, get() { return plainText === void 0 && (plainText = note.html ? htmlToPlainText(note.html) : ""), plainText; }, set(newText) { plainText = newText; } }), note; }
 // Persian byte codec: common Persian letters, digits and punctuation are stored as ONE byte (128+index)
 // instead of two UTF-8 bytes, before gzip / LZMA compression.
 const CLOUD_FA = "\u0627\u0628\u067E\u062A\u062B\u062C\u0686\u062D\u062E\u062F\u0630\u0631\u0632\u0698\u0633\u0634\u0635\u0636\u0637\u0638\u0639\u063A\u0641\u0642\u06A9\u06AF\u0644\u0645\u0646\u0648\u0647\u06CC\u0621\u0622\u0623\u0624\u0625\u0626\u0629\u0643\u0649\u064A\u06C0\u200C\u060C\u061F\u061B\u00AB\u00BB\u00A0\u0640\u06F0\u06F1\u06F2\u06F3\u06F4\u06F5\u06F6\u06F7\u06F8\u06F9\u0660\u0661\u0662\u0663\u0664\u0665\u0666\u0667\u0668\u0669\u064B\u064C\u064D\u064E\u064F\u0650\u0651\u0652\u066A\u066B\u066C\u200F\u200E\u2026\u2013\u2014\u2018\u2019\u201C\u201D\u2022\u00B0\u00D7\u00F7", CLOUD_FA_MAP = (() => { const codeToIndex = new Map; for (let index = 0; index < CLOUD_FA.length; index++)
@@ -21403,6 +21515,38 @@ catch { } if (drop.length) {
     for (const old of drop)
         await cloudRemoveItems(cloudEntryKeys(old));
 } return { ok: !0, removed: drop.length }; })().catch(e => (console.warn("Cloud settings error", e), { ok: !1, reason: "unavailable" }))); }
+// Settings -> "Reset settings": only the save speed (parallel) of the backup settings goes back to its default.
+// The manual-backup count goes back to its default ONLY when no manual backup is saved (nothing is ever deleted).
+// manual: "reset" (changed or already default) | "kept" (manual backups exist) | "unknown" (Cloud could not be read)
+async function cloudResetBackupSettings() { try {
+    localStorage.removeItem(CLOUD_PARALLEL_KEY);
+}
+catch { } window.__mkParCap = 0; let manual = "reset"; if (!hasCloudStorage) {
+    // outside Telegram there is no Cloud, so no manual backup can exist: only the local copy of the count
+    try {
+        localStorage.removeItem(CLOUD_LOCAL_LIMIT_KEY);
+    }
+    catch { }
+    cloudApplyManualLimit(CLOUD_MANUAL_DEFAULT);
+}
+else {
+    let list = null;
+    try {
+        list = await cloudListBackups();
+    }
+    catch {
+        list = null;
+    }
+    if (!Array.isArray(list))
+        manual = "unknown";
+    else if (list.some(e => e && e.kind === "manual"))
+        manual = "kept";
+    else if (MAX_MANUAL_BACKUPS !== CLOUD_MANUAL_DEFAULT) {
+        const res = await cloudApplyManualLimitChange(CLOUD_MANUAL_DEFAULT);
+        res && res.ok || (manual = "unknown");
+    }
+} return { ok: !0, manual: manual }; }
+window.mkResetBackupSettings = cloudResetBackupSettings;
 // Yes/No confirm that also works inside Telegram's WebView: TG.showConfirm (text cut to 256 chars), else the
 // host app's dialog, else plain confirm().
 function mkBkConfirm(msg) { return new Promise(function (label) { if (IS_TELEGRAM && TG && typeof TG.showConfirm === "function") {
@@ -22193,7 +22337,7 @@ catch { } const local = categories.find(c => c.id === cloudItem.id); if (local) 
         }
         catch { }
     if (cloudTextNewer || lockWins)
-        if (local.name = cloudItem.name, cloudItem.order != null && (local.order = Number(cloudItem.order) || 0), cloudItem.fontFamily && (local.fontFamily = cloudItem.fontFamily), cloudItem.fontSize && (local.fontSize = Number(cloudItem.fontSize) || local.fontSize), typeof cloudItem.fakeContent == "string" && (local.fakeContent = cloudItem.fakeContent), cloudItem.unlockAt !== void 0 && (local.unlockAt = cloudItem.unlockAt), cloudItem.ghostUntil !== void 0 && (local.ghostUntil = cloudItem.ghostUntil), local.lastEdited = cloudItem.lastEdited, isNoteLocked(cloudItem))
+        if (local.name = cloudItem.name, cloudItem.titleColor !== void 0 && (local.titleColor = cloudItem.titleColor), cloudItem.order != null && (local.order = Number(cloudItem.order) || 0), cloudItem.fontFamily && (local.fontFamily = cloudItem.fontFamily), cloudItem.fontSize && (local.fontSize = Number(cloudItem.fontSize) || local.fontSize), typeof cloudItem.fakeContent == "string" && (local.fakeContent = cloudItem.fakeContent), cloudItem.unlockAt !== void 0 && (local.unlockAt = cloudItem.unlockAt), cloudItem.ghostUntil !== void 0 && (local.ghostUntil = cloudItem.ghostUntil), local.lastEdited = cloudItem.lastEdited, isNoteLocked(cloudItem))
             local.encrypted = { ...cloudItem.encrypted }, local.hint = cloudItem.hint || "", local.text = "", local.html = "", local.isDecoy = !1, noteSessionKeys.delete(local.id);
         else {
             local.encrypted = null;
@@ -22827,7 +22971,7 @@ function mu_sanitizeNoteId(s, index) { return (s == null ? "" : String(s)).repla
 // into the complete, current note shape.
 // Separate "when did the metadata (pin/favorite/archive/tags/folder) last change" stamp, kept apart from
 // `lastEdited` (which is only for title/body text) so cloud merge can compare and apply each half.
-function normalizeCategory(item, index) { const src = item && typeof item == "object" ? item : {}; return { id: mu_sanitizeNoteId(src.id, index), name: String(src.name ?? `Note ${index + 1}`), folder: typeof src.folder == "string" ? src.folder : "", extraFolders: Array.isArray(src.extraFolders) ? [...new Set(src.extraFolders.filter(f => typeof f == "string" && f && f !== src.folder))] : [], text: String(src.text ?? ""), html: String(src.html ?? src.text ?? ""), lastEdited: src.lastEdited ? String(src.lastEdited) : "", metaEditedAt: src.metaEditedAt ? String(src.metaEditedAt) : src.lastEdited ? String(src.lastEdited) : "", password: typeof src.password == "string" ? src.password : "", encrypted: src.encrypted && typeof src.encrypted == "object" ? { ...src.encrypted } : null, hint: typeof src.hint == "string" ? src.hint : "", isDecoy: !1, unlockAt: src.unlockAt ?? "", ghostUntil: src.ghostUntil ?? "", tags: Array.isArray(src.tags) ? src.tags.filter(Boolean).map(String) : [], pinned: !!src.pinned, favorite: !!src.favorite, archived: !!src.archived, order: Number(src.order) || 0, fakeContent: typeof src.fakeContent == "string" ? src.fakeContent : "", fontFamily: typeof src.fontFamily == "string" ? src.fontFamily : "", fontSize: Number(src.fontSize) || 13, color: typeof src.color == "string" && /^[a-z]*$/.test(src.color) ? src.color : "" }; }
+function normalizeCategory(item, index) { const src = item && typeof item == "object" ? item : {}; return { id: mu_sanitizeNoteId(src.id, index), name: String(src.name ?? `Note ${index + 1}`), folder: typeof src.folder == "string" ? src.folder : "", extraFolders: Array.isArray(src.extraFolders) ? [...new Set(src.extraFolders.filter(f => typeof f == "string" && f && f !== src.folder))] : [], text: String(src.text ?? ""), html: String(src.html ?? src.text ?? ""), lastEdited: src.lastEdited ? String(src.lastEdited) : "", metaEditedAt: src.metaEditedAt ? String(src.metaEditedAt) : src.lastEdited ? String(src.lastEdited) : "", password: typeof src.password == "string" ? src.password : "", encrypted: src.encrypted && typeof src.encrypted == "object" ? { ...src.encrypted } : null, hint: typeof src.hint == "string" ? src.hint : "", isDecoy: !1, unlockAt: src.unlockAt ?? "", ghostUntil: src.ghostUntil ?? "", tags: Array.isArray(src.tags) ? src.tags.filter(Boolean).map(String) : [], pinned: !!src.pinned, favorite: !!src.favorite, archived: !!src.archived, order: Number(src.order) || 0, fakeContent: typeof src.fakeContent == "string" ? src.fakeContent : "", fontFamily: typeof src.fontFamily == "string" ? src.fontFamily : "", fontSize: Number(src.fontSize) || 13, color: typeof src.color == "string" && /^[a-z]*$/.test(src.color) ? src.color : "", titleColor: typeof src.titleColor == "string" && /^(#[0-9a-f]{6}|[1-9])$/i.test(src.titleColor) ? src.titleColor : null }; }
 // Stamps a note's metadata-only edit time
 function mu_touchMeta(item) { item && (item.metaEditedAt = new Date().toUTCString()); }
 // Lock / unlock / hint changes must travel to other devices: stamp BOTH lastEdited and metaEditedAt, strictly newer
@@ -23397,7 +23541,7 @@ function sanitizeHtml(html) { const template = document.createElement("template"
     elements.push(walker.currentNode); return elements.forEach(el => { if (!allowedTags.has(el.tagName)) {
     el.replaceWith(document.createTextNode(el.textContent || ""));
     return;
-} [...el.attributes].forEach(attr => { const name = attr.name.toLowerCase(), value = attr.value.trim(), isAllowed = ["class", "id", "contenteditable", "draggable", "aria-label"].includes(name) || el.tagName === "A" && ["href", "target", "rel"].includes(name) || el.tagName === "IMG" && ["src", "alt", "width", "height", "data-mu-media"].includes(name) || el.tagName === "AUDIO" && ["src", "controls", "data-mu-media"].includes(name) || el.tagName === "BUTTON" && name === "type" || (el.tagName === "TD" || el.tagName === "TH") && (name === "colspan" || name === "rowspan") && /^(?:[2-9]|[1-9]\d)$/.test(value) || name === "style" && /^(?:width:\d{2,4}px|height:\d{2,3}px);?$/i.test(value.replace(/\s+/g, "")) && (/^(?:width)/i.test(value.replace(/\s+/g, "")) ? el.tagName === "TD" || el.tagName === "TH" : el.tagName === "TR"); (name.startsWith("on") || !isAllowed) && el.removeAttribute(attr.name), name === "href" && !/^(https?:|mailto:)/i.test(value) && el.removeAttribute(attr.name), name === "src" && !/^(https?:|data:image\/|data:audio\/)/i.test(value) && el.removeAttribute(attr.name); }), el.tagName === "A" && (el.setAttribute("target", "_blank"), el.setAttribute("rel", "noopener noreferrer")), el.tagName === "IMG" && el.setAttribute("draggable", "true"); }), template.innerHTML; }
+} [...el.attributes].forEach(attr => { const name = attr.name.toLowerCase(), value = attr.value.trim(), isAllowed = el.tagName === "SPAN" && name === "style" && /^--mk-x:#[0-9a-f]{6};?$/i.test(value.replace(/\s+/g, "")) || ["class", "id", "contenteditable", "draggable", "aria-label"].includes(name) || el.tagName === "A" && ["href", "target", "rel"].includes(name) || el.tagName === "IMG" && ["src", "alt", "width", "height", "data-mu-media"].includes(name) || el.tagName === "AUDIO" && ["src", "controls", "data-mu-media"].includes(name) || el.tagName === "BUTTON" && name === "type" || (el.tagName === "TD" || el.tagName === "TH") && (name === "colspan" || name === "rowspan") && /^(?:[2-9]|[1-9]\d)$/.test(value) || name === "style" && /^(?:width:\d{2,4}px|height:\d{2,3}px);?$/i.test(value.replace(/\s+/g, "")) && (/^(?:width)/i.test(value.replace(/\s+/g, "")) ? el.tagName === "TD" || el.tagName === "TH" : el.tagName === "TR"); (name.startsWith("on") || !isAllowed) && el.removeAttribute(attr.name), name === "href" && !/^(https?:|mailto:)/i.test(value) && el.removeAttribute(attr.name), name === "src" && !/^(https?:|data:image\/|data:audio\/)/i.test(value) && el.removeAttribute(attr.name); }), el.tagName === "A" && (el.setAttribute("target", "_blank"), el.setAttribute("rel", "noopener noreferrer")), el.tagName === "IMG" && el.setAttribute("draggable", "true"); }), template.innerHTML; }
 function getSearchQuery() { const el = document.getElementById("searchInput"); return normalizeText(el ? el.value : ""); }
 function getVisibleCategories() { const query = getSearchQuery(); let visible = currentFolder === "__FAVORITES__" ? categories.filter(c => !!c.favorite) : currentFolder === DEFAULT_FOLDER ? categories : categories.filter(c => window.mu_inFolder(c, currentFolder)); return query ? visible.filter(item => normalizeText(item.name).includes(query) || normalizeText(item.text || item.html || "").includes(query)) : visible; }
 function toggleFolderDeleteMode() { if (isDeleteFolderMode = !isDeleteFolderMode, applyLanguageUI(), renderFolders(), isDeleteFolderMode) {
@@ -23419,7 +23563,13 @@ function renderButtons(filtered = getVisibleCategories()) { const btnContainer =
 // four popovers (media, writing tools, delete, more). Buttons carry data-mxe="name[:arg]"; the
 // behaviour script ("MXE — full-screen note editor: behaviour") handles them.
 // Inline SVG icons of the editor buttons (labels come from MXE_L, Persian / English)
-const MXE_IC = { back: '<svg viewBox="0 0 24 24"><path d="M20 12H5M11.5 5.5L5 12l6.5 6.5"/></svg>', focus: '<svg viewBox="0 0 24 24"><path d="M4 9V6a2 2 0 012-2h3M15 4h3a2 2 0 012 2v3M20 15v3a2 2 0 01-2 2h-3M9 20H6a2 2 0 01-2-2v-3"/><circle cx="12" cy="12" r="3.2"/><path class="mxe-slash" d="M3.5 3.5l17 17"/></svg>', fav: '<svg viewBox="0 0 24 24"><path class="fo" d="M12 3.5l2.6 5.4 5.9.8-4.3 4.1 1 5.9-5.2-2.8-5.2 2.8 1-5.9-4.3-4.1 5.9-.8z"/></svg>', pin: '<svg viewBox="0 0 24 24"><path class="fo" d="M9 3h6M10 3v6.2L7 12.5V14h10v-1.5l-3-3.3V3"/><path d="M12 14v7"/></svg>', lockOff: '<svg viewBox="0 0 24 24"><rect x="4.5" y="10.5" width="15" height="10" rx="2.2"/><path d="M8 10.5V8a4 4 0 017.5-1.9"/><circle class="f" cx="12" cy="15.5" r="1.3"/></svg>', lockOn: '<svg viewBox="0 0 24 24"><rect x="4.5" y="10.5" width="15" height="10" rx="2.2"/><path d="M8 10.5V8a4 4 0 018 0v2.5"/><circle class="f" cx="12" cy="15.5" r="1.3"/></svg>', arc: '<svg viewBox="0 0 24 24"><path d="M4 8.5V18a2 2 0 002 2h12a2 2 0 002-2V8.5"/><rect x="3" y="4" width="18" height="4.5" rx="1.3"/><path d="M12 11.5v5.5M9.5 14.6l2.5 2.6 2.5-2.6"/></svg>', save: '<svg viewBox="0 0 24 24"><path d="M5 3h11l3 3v13a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2zM7 3v5h8V3M7 21v-7h10v7"/></svg>', image: '<svg viewBox="0 0 24 24"><rect x="3.5" y="4.5" width="17" height="15" rx="2.5"/><circle cx="9" cy="10" r="1.6"/><path d="M4 17l5-4.5 4 3.5 3-2.5 4 3.5"/></svg>', mic: '<svg viewBox="0 0 24 24"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5.5 11.5a6.5 6.5 0 0013 0M12 18v3"/></svg>', stop: '<svg viewBox="0 0 24 24"><rect x="6" y="6" width="12" height="12" rx="2.5"/></svg>', draw: '<svg viewBox="0 0 24 24"><path d="M4 20l1-4L16.5 4.5a2 2 0 013 3L8 19z"/><path d="M14.5 6.5l3 3"/></svg>', write: '<svg viewBox="0 0 24 24"><path d="M6 15.5L12 3l6 12.5M8.2 11h7.6"/><path d="M5 20.5h14" stroke-width="2.4"/></svg>', undo: '<svg viewBox="0 0 24 24"><path d="M9 14L4 9l5-5M4 9h10.5a5.5 5.5 0 010 11H11"/></svg>', redo: '<svg viewBox="0 0 24 24"><path d="M15 14l5-5-5-5M20 9H9.5a5.5 5.5 0 000 11H13"/></svg>', copy: '<svg viewBox="0 0 24 24"><rect x="8.5" y="8.5" width="12" height="12" rx="2.2"/><path d="M15.5 8.5V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7.5a2 2 0 002 2h2.5"/></svg>', trash: '<svg viewBox="0 0 24 24"><path d="M4 7h16M9.5 7V4.5h5V7M6.5 7l1 13h9l1-13M10 11v6M14 11v6"/></svg>', more: '<svg viewBox="0 0 24 24"><circle class="f" cx="12" cy="5" r="2"/><circle class="f" cx="12" cy="12" r="2"/><circle class="f" cx="12" cy="19" r="2"/></svg>', hide: '<svg viewBox="0 0 24 24"><path d="M2.5 12S6 5.5 12 5.5 21.5 12 21.5 12 18 18.5 12 18.5 2.5 12 2.5 12z"/><circle cx="12" cy="12" r="2.8"/><path d="M4 20L20 4"/></svg>', link: '<svg viewBox="0 0 24 24"><path d="M10 14a4 4 0 005.7 0l3-3a4 4 0 00-5.7-5.7l-1 1M14 10a4 4 0 00-5.7 0l-3 3A4 4 0 0011 18.7l1-1"/></svg>', eye: '<svg viewBox="0 0 24 24"><path d="M2.5 12S6 5.5 12 5.5 21.5 12 21.5 12 18 18.5 12 18.5 2.5 12 2.5 12z"/><circle cx="12" cy="12" r="2.8"/></svg>', search: '<svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="6.5"/><path d="M16 16l4.5 4.5"/></svg>', dna: '<svg viewBox="0 0 24 24"><path d="M7 3c0 6 10 6 10 12s-10 6-10 6M17 3c0 6-10 6-10 12M8 7h8M8 17h8"/></svg>', hint: '<svg viewBox="0 0 24 24"><path d="M9 18h6M10 21h4M12 3a6 6 0 00-3.5 10.9c.6.5 1 1.2 1 2.1h5c0-.9.4-1.6 1-2.1A6 6 0 0012 3z"/></svg>', doc: '<svg viewBox="0 0 24 24"><rect x="5" y="3" width="14" height="18" rx="2"/><path d="M8.5 8h7M8.5 12h7M8.5 16h4"/></svg>', spark: '<svg viewBox="0 0 24 24"><path d="M12 3l1.8 5.2L19 10l-5.2 1.8L12 17l-1.8-5.2L5 10l5.2-1.8zM18.5 15.5l.8 2.2 2.2.8-2.2.8-.8 2.2-.8-2.2-2.2-.8 2.2-.8z"/></svg>', tag: '<svg viewBox="0 0 24 24"><path d="M3 12V4h8l10 10-8 8z"/><circle cx="7.5" cy="8.5" r="1.2"/></svg>', tr: '<svg viewBox="0 0 24 24"><path d="M4 6h9M8.5 4v2M6 6c.5 3 2.5 5.5 5.5 7M11 6c-.5 3-3 6-6.5 7.5M13 20l4-9 4 9M14.4 17h5.2"/></svg>', trEn: '<svg viewBox="0 0 24 24"><path d="M4 7h16M4 12h10M4 17h6"/></svg>', trFa: '<svg viewBox="0 0 24 24"><path d="M20 7H4M20 12H10M20 17h-6"/></svg>', palette: '<svg viewBox="0 0 24 24"><path d="M12 3a9 9 0 100 18c1.2 0 1.9-.9 1.6-1.9-.3-1 .3-2.1 1.4-2.1H17a4 4 0 004-4c0-5-4.3-10-9-10z"/><circle class="f" cx="7.6" cy="11.2" r="1.1"/><circle class="f" cx="10.4" cy="7.2" r="1.1"/><circle class="f" cx="15.2" cy="7.6" r="1.1"/></svg>', dup: '<svg viewBox="0 0 24 24"><rect x="8.5" y="8.5" width="11.5" height="11.5" rx="3"/><path d="M15.5 8.5V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7.5a2 2 0 002 2h2.5"/></svg>', folder: '<svg viewBox="0 0 24 24"><path d="M3 7a2 2 0 012-2h4l2 2.5h8a2 2 0 012 2V18a2 2 0 01-2 2H5a2 2 0 01-2-2z"/></svg>', capsule: '<svg viewBox="0 0 24 24"><circle cx="12" cy="13" r="7.5"/><path d="M12 9v4l2.5 2M9.5 3h5"/></svg>', sun: '<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"/><path d="M12 2.5v2.2M12 19.3v2.2M2.5 12h2.2M19.3 12h2.2M5.3 5.3l1.6 1.6M17.1 17.1l1.6 1.6M18.7 5.3l-1.6 1.6M6.9 17.1l-1.6 1.6"/></svg>', moon: '<svg viewBox="0 0 24 24"><path d="M20 14.5A8 8 0 019.5 4a8 8 0 1010.5 10.5z"/></svg>', ghost: '<svg viewBox="0 0 24 24"><path d="M5 21V11a7 7 0 0114 0v10l-3-2-2 2-2-2-2 2-2-2z"/><circle class="f" cx="9.5" cy="11" r="1"/><circle class="f" cx="14.5" cy="11" r="1"/></svg>' }, MXE_L = { fa: { back: "بازگشت و ذخیره", focus: "حالت تمرکز", fav: "علاقه‌مندی", pin: "سنجاق", enc: "قفل یادداشت", arc: "بایگانی", save: "ذخیره", media: "رسانه", write: "ابزار نوشتن", undo: "واگرد", redo: "جلو", copy: "کپی متن", clear: "پاک‌کردن متن", more: "بیشتر", image: "تصویر", voice: "ضبط صدا", voiceStop: "توقف ضبط", draw: "نقاشی", bold: "پررنگ", italic: "کج", strike: "خط‌خورده", heading: "عنوان", ul: "فهرست", todo: "چک‌لیست", quote: "نقل‌قول", code: "کد", codeMode: "تایپ کپی‌شو", underline: "زیرخط", highlight: "هایلایت", ol: "شماره‌دار", table: "جدول", linkf: "لینک", smaller: "کوچک‌تر", bigger: "بزرگ‌تر", clearf: "حذف قالب", normal: "معمولی", size: "اندازه", gQuick: "دسترسی سریع", toDay: "حالت روز", toNight: "حالت شب", gTheme: "تم", gManage: "مدیریت", gSecurity: "امنیت", gTr: "ترجمه", gOrganize: "سازمان‌دهی", gSpecial: "جلوه‌های ویژه", gDanger: "خطر", gInfo: "اطلاعات", view: "نمایش یادداشت", fakeEdit: "ویرایش یادداشت جعلی", fake: "یادداشت جعلی", vault: "افزودن به گاوصندوق", toEn: "ترجمه به انگلیسی", toFa: "ترجمه به فارسی", dup: "تکثیر یادداشت", tags: "برچسب‌ها", folder: "افزودن / حذف پوشه", capsule: "کپسول زمان", ghost: "Ghost", del: "حذف یادداشت", last: "آخرین ویرایش:", never: "ثبت نشده" }, en: { back: "Back (saves)", focus: "Focus mode", fav: "Favorite", pin: "Pin", enc: "Lock note", arc: "Archive", save: "Save", media: "Media", write: "Writing tools", undo: "Undo", redo: "Redo", copy: "Copy text", clear: "Clear text", more: "More", image: "Image", voice: "Voice", voiceStop: "Stop recording", draw: "Drawing", bold: "Bold", italic: "Italic", strike: "Strike", heading: "Heading", ul: "List", todo: "Checklist", quote: "Quote", code: "Code", codeMode: "Tap-copy", underline: "Underline", highlight: "Highlight", ol: "Numbered", table: "Table", linkf: "Link", smaller: "Smaller", bigger: "Bigger", clearf: "Clear format", normal: "Normal", size: "Size", gQuick: "Quick actions", toDay: "Day mode", toNight: "Night mode", gTheme: "Theme", gManage: "Manage", gSecurity: "Security", gTr: "Translate", gOrganize: "Organize", gSpecial: "Special effects", gDanger: "Danger", gInfo: "Info", view: "View note", fakeEdit: "Edit fake note", fake: "Fake note", vault: "Add to vault", toEn: "Translate to EN", toFa: "Translate to FA", dup: "Duplicate note", tags: "Tags", folder: "Add / remove folder", capsule: "Time capsule", ghost: "Ghost", del: "Delete note", last: "Last edited:", never: "Not recorded" } };
+const MXE_COLORS = ["#ef4444", "#f97316", "#eab308", "#22c55e", "#14b8a6", "#3b82f6", "#8b5cf6", "#ec4899", "#9ca3af"];
+function mkColorHex(el) { try { const sx = el.getAttribute && /^--mk-x:(#[0-9a-f]{6})/i.exec((el.getAttribute("style") || "").replace(/\s+/g, "")); if (sx) return sx[1].slice(1).toUpperCase(); for (const c of el.classList) { const m = /^mk-c([1-9])$/.exec(c); if (m && MXE_COLORS[m[1] - 1]) return MXE_COLORS[m[1] - 1].slice(1).toUpperCase(); } } catch { } return null; }
+function mkTitleHex(v) { return typeof v == "string" && /^#[0-9a-f]{6}$/i.test(v) ? v : (/^[1-9]$/.test(String(v)) ? MXE_COLORS[Number(v) - 1] : null); }
+function mkTitleStyle(item) { const c = item && mkTitleHex(item.titleColor); return c ? "color:" + c + " !important;-webkit-text-fill-color:" + c + " !important" : ""; }
+function mkPaintTitles() { try { const cs = typeof categories != "undefined" ? categories : [], mp = new Map(cs.map(c => [String(c.id), c])); document.querySelectorAll(".custom-btn[data-note-id] .note-item-title, .mu-nfs-card[data-id] .mu-nfs-ttl").forEach(el => { const b = el.closest("[data-note-id],[data-id]"), it = mp.get(String(b.dataset.noteId || b.dataset.id)), c = it && mkTitleHex(it.titleColor); c ? (el.style.setProperty("color", c, "important"), el.style.setProperty("-webkit-text-fill-color", c, "important")) : (el.style.removeProperty("color"), el.style.removeProperty("-webkit-text-fill-color")); }); } catch { } }
+try { let _raf = 0; const _ob = new MutationObserver(ms => { ms.every(m => m.target.closest && m.target.closest(".text-box,.mc-title-input")) || _raf || (_raf = requestAnimationFrame(() => { _raf = 0; mkPaintTitles(); })); }); const _go = () => { document.body ? (_ob.observe(document.body, { childList: true, subtree: true }), mkPaintTitles()) : setTimeout(_go, 200); }; document.readyState === "loading" ? document.addEventListener("DOMContentLoaded", _go) : _go(); } catch { }
+const MXE_IC = { back: '<svg viewBox="0 0 24 24"><path d="M20 12H5M11.5 5.5L5 12l6.5 6.5"/></svg>', focus: '<svg viewBox="0 0 24 24"><path d="M4 9V6a2 2 0 012-2h3M15 4h3a2 2 0 012 2v3M20 15v3a2 2 0 01-2 2h-3M9 20H6a2 2 0 01-2-2v-3"/><circle cx="12" cy="12" r="3.2"/><path class="mxe-slash" d="M3.5 3.5l17 17"/></svg>', fav: '<svg viewBox="0 0 24 24"><path class="fo" d="M12 3.5l2.6 5.4 5.9.8-4.3 4.1 1 5.9-5.2-2.8-5.2 2.8 1-5.9-4.3-4.1 5.9-.8z"/></svg>', pin: '<svg viewBox="0 0 24 24"><path class="fo" d="M9 3h6M10 3v6.2L7 12.5V14h10v-1.5l-3-3.3V3"/><path d="M12 14v7"/></svg>', lockOff: '<svg viewBox="0 0 24 24"><rect x="4.5" y="10.5" width="15" height="10" rx="2.2"/><path d="M8 10.5V8a4 4 0 017.5-1.9"/><circle class="f" cx="12" cy="15.5" r="1.3"/></svg>', lockOn: '<svg viewBox="0 0 24 24"><rect x="4.5" y="10.5" width="15" height="10" rx="2.2"/><path d="M8 10.5V8a4 4 0 018 0v2.5"/><circle class="f" cx="12" cy="15.5" r="1.3"/></svg>', arc: '<svg viewBox="0 0 24 24"><path d="M4 8.5V18a2 2 0 002 2h12a2 2 0 002-2V8.5"/><rect x="3" y="4" width="18" height="4.5" rx="1.3"/><path d="M12 11.5v5.5M9.5 14.6l2.5 2.6 2.5-2.6"/></svg>', save: '<svg viewBox="0 0 24 24"><path d="M5 3h11l3 3v13a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2zM7 3v5h8V3M7 21v-7h10v7"/></svg>', image: '<svg viewBox="0 0 24 24"><rect x="3.5" y="4.5" width="17" height="15" rx="2.5"/><circle cx="9" cy="10" r="1.6"/><path d="M4 17l5-4.5 4 3.5 3-2.5 4 3.5"/></svg>', mic: '<svg viewBox="0 0 24 24"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5.5 11.5a6.5 6.5 0 0013 0M12 18v3"/></svg>', stop: '<svg viewBox="0 0 24 24"><rect x="6" y="6" width="12" height="12" rx="2.5"/></svg>', draw: '<svg viewBox="0 0 24 24"><path d="M4 20l1-4L16.5 4.5a2 2 0 013 3L8 19z"/><path d="M14.5 6.5l3 3"/></svg>', write: '<svg viewBox="0 0 24 24"><path d="M6 15.5L12 3l6 12.5M8.2 11h7.6"/><path d="M5 20.5h14" stroke-width="2.4"/></svg>', undo: '<svg viewBox="0 0 24 24"><path d="M9 14L4 9l5-5M4 9h10.5a5.5 5.5 0 010 11H11"/></svg>', redo: '<svg viewBox="0 0 24 24"><path d="M15 14l5-5-5-5M20 9H9.5a5.5 5.5 0 000 11H13"/></svg>', copy: '<svg viewBox="0 0 24 24"><rect x="8.5" y="8.5" width="12" height="12" rx="2.2"/><path d="M15.5 8.5V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7.5a2 2 0 002 2h2.5"/></svg>', trash: '<svg viewBox="0 0 24 24"><path d="M4 7h16M9.5 7V4.5h5V7M6.5 7l1 13h9l1-13M10 11v6M14 11v6"/></svg>', more: '<svg viewBox="0 0 24 24"><circle class="f" cx="12" cy="5" r="2"/><circle class="f" cx="12" cy="12" r="2"/><circle class="f" cx="12" cy="19" r="2"/></svg>', hide: '<svg viewBox="0 0 24 24"><path d="M2.5 12S6 5.5 12 5.5 21.5 12 21.5 12 18 18.5 12 18.5 2.5 12 2.5 12z"/><circle cx="12" cy="12" r="2.8"/><path d="M4 20L20 4"/></svg>', link: '<svg viewBox="0 0 24 24"><path d="M10 14a4 4 0 005.7 0l3-3a4 4 0 00-5.7-5.7l-1 1M14 10a4 4 0 00-5.7 0l-3 3A4 4 0 0011 18.7l1-1"/></svg>', eye: '<svg viewBox="0 0 24 24"><path d="M2.5 12S6 5.5 12 5.5 21.5 12 21.5 12 18 18.5 12 18.5 2.5 12 2.5 12z"/><circle cx="12" cy="12" r="2.8"/></svg>', search: '<svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="6.5"/><path d="M16 16l4.5 4.5"/></svg>', dna: '<svg viewBox="0 0 24 24"><path d="M7 3c0 6 10 6 10 12s-10 6-10 6M17 3c0 6-10 6-10 12M8 7h8M8 17h8"/></svg>', hint: '<svg viewBox="0 0 24 24"><path d="M9 18h6M10 21h4M12 3a6 6 0 00-3.5 10.9c.6.5 1 1.2 1 2.1h5c0-.9.4-1.6 1-2.1A6 6 0 0012 3z"/></svg>', doc: '<svg viewBox="0 0 24 24"><rect x="5" y="3" width="14" height="18" rx="2"/><path d="M8.5 8h7M8.5 12h7M8.5 16h4"/></svg>', spark: '<svg viewBox="0 0 24 24"><path d="M12 3l1.8 5.2L19 10l-5.2 1.8L12 17l-1.8-5.2L5 10l5.2-1.8zM18.5 15.5l.8 2.2 2.2.8-2.2.8-.8 2.2-.8-2.2-2.2-.8 2.2-.8z"/></svg>', tag: '<svg viewBox="0 0 24 24"><path d="M3 12V4h8l10 10-8 8z"/><circle cx="7.5" cy="8.5" r="1.2"/></svg>', tr: '<svg viewBox="0 0 24 24"><path d="M4 6h9M8.5 4v2M6 6c.5 3 2.5 5.5 5.5 7M11 6c-.5 3-3 6-6.5 7.5M13 20l4-9 4 9M14.4 17h5.2"/></svg>', trEn: '<svg viewBox="0 0 24 24"><path d="M4 7h16M4 12h10M4 17h6"/></svg>', trFa: '<svg viewBox="0 0 24 24"><path d="M20 7H4M20 12H10M20 17h-6"/></svg>', palette: '<svg viewBox="0 0 24 24"><path d="M12 3a9 9 0 100 18c1.2 0 1.9-.9 1.6-1.9-.3-1 .3-2.1 1.4-2.1H17a4 4 0 004-4c0-5-4.3-10-9-10z"/><circle class="f" cx="7.6" cy="11.2" r="1.1"/><circle class="f" cx="10.4" cy="7.2" r="1.1"/><circle class="f" cx="15.2" cy="7.6" r="1.1"/></svg>', dup: '<svg viewBox="0 0 24 24"><rect x="8.5" y="8.5" width="11.5" height="11.5" rx="3"/><path d="M15.5 8.5V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7.5a2 2 0 002 2h2.5"/></svg>', folder: '<svg viewBox="0 0 24 24"><path d="M3 7a2 2 0 012-2h4l2 2.5h8a2 2 0 012 2V18a2 2 0 01-2 2H5a2 2 0 01-2-2z"/></svg>', capsule: '<svg viewBox="0 0 24 24"><circle cx="12" cy="13" r="7.5"/><path d="M12 9v4l2.5 2M9.5 3h5"/></svg>', sun: '<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"/><path d="M12 2.5v2.2M12 19.3v2.2M2.5 12h2.2M19.3 12h2.2M5.3 5.3l1.6 1.6M17.1 17.1l1.6 1.6M18.7 5.3l-1.6 1.6M6.9 17.1l-1.6 1.6"/></svg>', moon: '<svg viewBox="0 0 24 24"><path d="M20 14.5A8 8 0 019.5 4a8 8 0 1010.5 10.5z"/></svg>', ghost: '<svg viewBox="0 0 24 24"><path d="M5 21V11a7 7 0 0114 0v10l-3-2-2 2-2-2-2 2-2-2z"/><circle class="f" cx="9.5" cy="11" r="1"/><circle class="f" cx="14.5" cy="11" r="1"/></svg>' }, MXE_L = { fa: { back: "بازگشت و ذخیره", focus: "حالت تمرکز", fav: "علاقه‌مندی", pin: "سنجاق", enc: "قفل یادداشت", arc: "بایگانی", save: "ذخیره", media: "رسانه", write: "ابزار نوشتن", undo: "واگرد", redo: "جلو", copy: "کپی متن", clear: "پاک‌کردن متن", more: "بیشتر", image: "تصویر", voice: "ضبط صدا", voiceStop: "توقف ضبط", draw: "نقاشی", bold: "پررنگ", italic: "کج", strike: "خط‌خورده", heading: "عنوان", ul: "فهرست", todo: "چک‌لیست", quote: "نقل‌قول", code: "کد", codeMode: "تایپ کپی‌شو", underline: "زیرخط", highlight: "هایلایت", color: "رنگ متن", colorOff: "بدون رنگ", colorCustom: "رنگ دلخواه", titleColor: "رنگ عنوان", ol: "شماره‌دار", table: "جدول", linkf: "لینک", smaller: "کوچک‌تر", bigger: "بزرگ‌تر", clearf: "حذف قالب", normal: "معمولی", size: "اندازه", gQuick: "دسترسی سریع", toDay: "حالت روز", toNight: "حالت شب", gTheme: "تم", gManage: "مدیریت", gSecurity: "امنیت", gTr: "ترجمه", gOrganize: "سازمان‌دهی", gSpecial: "جلوه‌های ویژه", gDanger: "خطر", gInfo: "اطلاعات", view: "نمایش یادداشت", fakeEdit: "ویرایش یادداشت جعلی", fake: "یادداشت جعلی", vault: "افزودن به گاوصندوق", toEn: "ترجمه به انگلیسی", toFa: "ترجمه به فارسی", dup: "تکثیر یادداشت", tags: "برچسب‌ها", folder: "افزودن / حذف پوشه", capsule: "کپسول زمان", ghost: "Ghost", del: "حذف یادداشت", last: "آخرین ویرایش:", never: "ثبت نشده" }, en: { back: "Back (saves)", focus: "Focus mode", fav: "Favorite", pin: "Pin", enc: "Lock note", arc: "Archive", save: "Save", media: "Media", write: "Writing tools", undo: "Undo", redo: "Redo", copy: "Copy text", clear: "Clear text", more: "More", image: "Image", voice: "Voice", voiceStop: "Stop recording", draw: "Drawing", bold: "Bold", italic: "Italic", strike: "Strike", heading: "Heading", ul: "List", todo: "Checklist", quote: "Quote", code: "Code", codeMode: "Tap-copy", underline: "Underline", highlight: "Highlight", color: "Text color", colorOff: "No color", colorCustom: "Custom color", titleColor: "Title color", ol: "Numbered", table: "Table", linkf: "Link", smaller: "Smaller", bigger: "Bigger", clearf: "Clear format", normal: "Normal", size: "Size", gQuick: "Quick actions", toDay: "Day mode", toNight: "Night mode", gTheme: "Theme", gManage: "Manage", gSecurity: "Security", gTr: "Translate", gOrganize: "Organize", gSpecial: "Special effects", gDanger: "Danger", gInfo: "Info", view: "View note", fakeEdit: "Edit fake note", fake: "Fake note", vault: "Add to vault", toEn: "Translate to EN", toFa: "Translate to FA", dup: "Duplicate note", tags: "Tags", folder: "Add / remove folder", capsule: "Time capsule", ghost: "Ghost", del: "Delete note", last: "Last edited:", never: "Not recorded" } };
 function mxe_getTheme() { try {
     return localStorage.getItem("mxe_theme") === "light" ? "light" : "dark";
 }
@@ -23430,7 +23580,7 @@ catch {
 // top: back, A+ / A-, focus, day / night, favorite, pin, lock, archive, save.
 // bottom: media, writing tools, undo / redo, copy, delete, view, more (each popover opens upward).
 // ctx: { fa, t, isHidden, isRecordingThis, lastEditedText }
-function mxe_markup(item, ctx) { const fa = !!ctx.fa, L = MXE_L[fa ? "fa" : "en"], t = ctx.t || {}, locked = isNoteLocked(item), focusOn = !!(window.__mxeFocus && window.__mxeFocus.has(String(item.id))), q = s => escapeHtml(String(s)), btn = (act, cls, label, icon, extra) => `<button type="button" class="mxe-btn ${cls || ""}" data-mxe="${act}" aria-label="${q(label)}" title="${q(label)}" ${extra || ""}>${icon}</button>`, pitem = (act, icon, label, cls, extra) => `<button type="button" class="${cls || ""}" data-mxe="${act}" ${extra || ""}>${icon}<span>${q(label)}</span></button>`, fmt = (k, glyph, label) => `<button type="button" data-mxe="fmt:${k}" data-fmtk="${k}">${glyph}<span>${q(label)}</span></button>`, top = '<div class="mxe-top">' + btn("back", "mxe-back", L.back, MXE_IC.back) + btn("fmt:bigger", "mxe-txt", L.bigger, "<b>A+</b>") + btn("fmt:smaller", "mxe-txt", L.smaller, "<b>A-</b>") + btn("focus", focusOn ? "on" : "", L.focus, MXE_IC.focus, `aria-pressed="${focusOn}"`) + btn("theme:toggle", "mxe-theme-btn", L.toDay + " / " + L.toNight, MXE_IC.sun.replace("<svg ", '<svg class="ic-sun" ') + MXE_IC.moon.replace("<svg ", '<svg class="ic-moon" ')) + btn("flag:favorite", "mxe-fillon" + (item.favorite ? " mc-icon-active" : ""), L.fav, MXE_IC.fav, 'data-flag="favorite"') + btn("flag:pinned", "mxe-fillon" + (item.pinned ? " mc-icon-active" : ""), L.pin, MXE_IC.pin, 'data-flag="pinned"') + btn("lock", locked ? "on" : "", L.enc, locked ? MXE_IC.lockOn : MXE_IC.lockOff) + btn("archive", item.archived ? "on" : "", L.arc, MXE_IC.arc) + btn("save", "", L.save, MXE_IC.save) + "</div>", sizes = [12, 13, 15, 16, 18, 22, 28], curSize = Number(item.fontSize) || 13; sizes.indexOf(curSize) < 0 && (sizes.push(curSize), sizes.sort((a, b) => a - b)); const sizeOpts = sizes.map(n => `<option value="${n}" ${n === curSize ? "selected" : ""}>${n}</option>`).join(""), rec = !!ctx.isRecordingThis, bottom = '<div class="mxe-bottom"><div class="mxe-pop l" data-pop="media">' + pitem("media:image", MXE_IC.image, L.image) + pitem("media:voice", rec ? MXE_IC.stop : MXE_IC.mic, rec ? L.voiceStop : L.voice, rec ? "danger" : "") + pitem("media:draw", MXE_IC.draw, L.draw) + '</div><div class="mxe-pop l" data-pop="write"><div class="grid">' + fmt("normal", '<span style="font-size:15px;font-weight:700">Aa</span>', L.normal) + fmt("table", '<svg width="22" height="22" viewBox="0 0 22 22" aria-hidden="true" fill="none"><rect x="2.5" y="3.5" width="17" height="15" rx="3" stroke="currentColor" stroke-width="1.5"/><path d="M5.5 3.5h11a3 3 0 0 1 3 3V9h-17V6.5a3 3 0 0 1 3-3z" fill="#4cc9f0" fill-opacity=".55"/><path d="M2.5 9h17M2.5 13.75h17M9 9v9.5M14.5 9v9.5" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg>', L.table) + fmt("bold", '<b style="font-size:18px">B</b>', L.bold) + fmt("italic", '<i style="font-size:18px;font-family:serif">I</i>', L.italic) + fmt("strike", '<s style="font-size:18px">S</s>', L.strike) + fmt("heading", '<b style="font-size:16px">H</b>', L.heading) + fmt("ul", '<span style="font-size:18px">•</span>', L.ul) + fmt("todo", '<span style="font-size:18px">☐</span>', L.todo) + fmt("quote", '<span style="font-size:20px">”</span>', L.quote) + fmt("code", '<span style="font-size:14px;font-family:monospace">&lt;/&gt;</span>', L.code) + fmt("codeMode", '<span style="font-size:15px;font-family:monospace;font-weight:800">`·`</span>', L.codeMode) + fmt("underline", '<u style="font-size:18px">U</u>', L.underline) + fmt("highlight", '<span style="font-size:15px;font-weight:800;background:#ffeb3b;color:#111;padding:0 6px;border-radius:4px;line-height:1.4">A</span>', L.highlight) + fmt("ol", '<span style="font-size:15px">1.</span>', L.ol) + fmt("link", MXE_IC.link, L.linkf) + fmt("clear", '<span style="font-size:18px">✕</span>', L.clearf) + `</div><div class="szrow"><label>${q(L.size)}</label><select class="mxe-size" data-mxe-size="1">${sizeOpts}</select></div></div><div class="mxe-pop r" data-pop="trash">` + pitem("clear", MXE_IC.trash, fa ? "حذف متن یادداشت" : "Delete note text") + pitem("more:delete", MXE_IC.trash, fa ? "حذف خود یادداشت" : "Delete the note itself", "danger") + '</div><div class="mxe-pop r" data-pop="more"><span class="mxm-handle" aria-hidden="true"></span>' + pitem("more:find", MXE_IC.search, fa ? "جستجو در یادداشت" : "Search in note", "mxm-search") + '<div class="mxm-quick">' + pitem("save", MXE_IC.save, L.save) + pitem("archive", MXE_IC.arc, L.arc, item.archived ? "on" : "") + pitem("more:view", MXE_IC.eye, fa ? "نمایش" : "View") + pitem("focus", MXE_IC.focus, fa ? "تمرکز" : "Focus", focusOn ? "on" : "") + pitem("flag:pinned", MXE_IC.pin, L.pin, "mxe-fillon") + pitem("flag:favorite", MXE_IC.fav, L.fav, "mxe-fillon") + '</div><div class="mxm-seg" role="group">' + pitem("theme:light", MXE_IC.sun, L.toDay, "", 'data-theme-opt="light"') + pitem("theme:dark", MXE_IC.moon, L.toNight, "", 'data-theme-opt="dark"') + `</div><div class="mxm-sec"><div class="grp">${q(L.gOrganize)}</div><div class="mxm-list">` + pitem("more:folder", MXE_IC.folder, L.folder) + pitem("more:tags", MXE_IC.tag, L.tags) + pitem("more:color", MXE_IC.palette, fa ? "رنگ یادداشت" : "Colour") + pitem("more:dup", MXE_IC.dup, L.dup) + `</div></div><div class="mxm-sec"><div class="grp">${q(L.gManage)}</div><div class="mxm-list">` + pitem("more:hide", MXE_IC.hide, ctx.isHidden ? t.show || "Show" : t.hide || "Hide") + pitem("more:link", MXE_IC.link, t.previewLink || "Link preview") + pitem("more:dna", MXE_IC.dna, "DNA") + `</div></div><div class="mxm-sec"><div class="grp">${q(L.gSecurity)}</div><div class="mxm-list">` + pitem("lock", locked ? MXE_IC.lockOn : MXE_IC.lockOff, L.enc) + (locked ? pitem("more:hint", MXE_IC.hint, t.changeHint || "Change hint") : "") + pitem("more:fake", MXE_IC.doc, item.fakeContent ? L.fakeEdit : L.fake) + pitem("more:vault", MXE_IC.lockOn, L.vault) + `</div></div><div class="mxm-sec"><div class="grp">${q(L.gTr)}</div><div class="mxm-list">` + pitem("more:toen", MXE_IC.trEn, L.toEn) + pitem("more:tofa", MXE_IC.trFa, L.toFa) + `</div></div><div class="mxm-sec"><div class="grp">${q(L.gSpecial)}</div><div class="mxm-list">` + pitem("more:capsule", MXE_IC.capsule, L.capsule) + pitem("more:ghost", MXE_IC.ghost, L.ghost) + "</div></div>" + pitem("more:delete", MXE_IC.trash, L.del, "danger mxm-danger") + `<div class="info">${q(L.last)} <span dir="ltr" class="mxe-info-val">${q(ctx.lastEditedText || L.never)}</span></div></div>` + btn("pop:media", rec ? "warn" : "", L.media, MXE_IC.image) + btn("pop:write", "", L.write, MXE_IC.write) + btn("undo", "mxe-undo", L.undo, MXE_IC.undo) + btn("redo", "mxe-redo", L.redo, MXE_IC.redo) + btn("copy", "", L.copy, MXE_IC.copy) + btn("pop:trash", "", fa ? "حذف" : "Delete", MXE_IC.trash) + '<span class="mxe-sp"></span>' + btn("more:view", "mxe-viewnote", L.view, MXE_IC.eye + `<span class="mxe-vlbl">${fa ? "نمایش" : "View"}</span>`) + btn("pop:more", "mxe-more", L.more, MXE_IC.more) + "</div>"; return { top: top, bottom: bottom }; }
+function mxe_markup(item, ctx) { const fa = !!ctx.fa, L = MXE_L[fa ? "fa" : "en"], t = ctx.t || {}, locked = isNoteLocked(item), focusOn = !!(window.__mxeFocus && window.__mxeFocus.has(String(item.id))), q = s => escapeHtml(String(s)), btn = (act, cls, label, icon, extra) => `<button type="button" class="mxe-btn ${cls || ""}" data-mxe="${act}" aria-label="${q(label)}" title="${q(label)}" ${extra || ""}>${icon}</button>`, pitem = (act, icon, label, cls, extra) => `<button type="button" class="${cls || ""}" data-mxe="${act}" ${extra || ""}>${icon}<span>${q(label)}</span></button>`, fmt = (k, glyph, label) => `<button type="button" data-mxe="fmt:${k}" data-fmtk="${k}">${glyph}<span>${q(label)}</span></button>`, top = '<div class="mxe-top">' + btn("back", "mxe-back", L.back, MXE_IC.back) + btn("fmt:bigger", "mxe-txt", L.bigger, "<b>A+</b>") + btn("fmt:smaller", "mxe-txt", L.smaller, "<b>A-</b>") + btn("focus", focusOn ? "on" : "", L.focus, MXE_IC.focus, `aria-pressed="${focusOn}"`) + btn("theme:toggle", "mxe-theme-btn", L.toDay + " / " + L.toNight, MXE_IC.sun.replace("<svg ", '<svg class="ic-sun" ') + MXE_IC.moon.replace("<svg ", '<svg class="ic-moon" ')) + btn("flag:favorite", "mxe-fillon" + (item.favorite ? " mc-icon-active" : ""), L.fav, MXE_IC.fav, 'data-flag="favorite"') + btn("flag:pinned", "mxe-fillon" + (item.pinned ? " mc-icon-active" : ""), L.pin, MXE_IC.pin, 'data-flag="pinned"') + btn("lock", locked ? "on" : "", L.enc, locked ? MXE_IC.lockOn : MXE_IC.lockOff) + btn("archive", item.archived ? "on" : "", L.arc, MXE_IC.arc) + btn("save", "", L.save, MXE_IC.save) + "</div>", sizes = [12, 13, 15, 16, 18, 22, 28], curSize = Number(item.fontSize) || 13; sizes.indexOf(curSize) < 0 && (sizes.push(curSize), sizes.sort((a, b) => a - b)); const sizeOpts = sizes.map(n => `<option value="${n}" ${n === curSize ? "selected" : ""}>${n}</option>`).join(""), rec = !!ctx.isRecordingThis, bottom = '<div class="mxe-bottom"><div class="mxe-pop l" data-pop="media">' + pitem("media:image", MXE_IC.image, L.image) + pitem("media:voice", rec ? MXE_IC.stop : MXE_IC.mic, rec ? L.voiceStop : L.voice, rec ? "danger" : "") + pitem("media:draw", MXE_IC.draw, L.draw) + '</div><div class="mxe-pop l" data-pop="write"><div class="grid">' + fmt("color", '<span class="mxe-cico">A</span>', L.color) + fmt("normal", '<span style="font-size:15px;font-weight:700">Aa</span>', L.normal) + fmt("table", '<svg width="22" height="22" viewBox="0 0 22 22" aria-hidden="true" fill="none"><rect x="2.5" y="3.5" width="17" height="15" rx="3" stroke="currentColor" stroke-width="1.5"/><path d="M5.5 3.5h11a3 3 0 0 1 3 3V9h-17V6.5a3 3 0 0 1 3-3z" fill="#4cc9f0" fill-opacity=".55"/><path d="M2.5 9h17M2.5 13.75h17M9 9v9.5M14.5 9v9.5" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg>', L.table) + fmt("bold", '<b style="font-size:18px">B</b>', L.bold) + fmt("italic", '<i style="font-size:18px;font-family:serif">I</i>', L.italic) + fmt("strike", '<s style="font-size:18px">S</s>', L.strike) + fmt("heading", '<b style="font-size:16px">H</b>', L.heading) + fmt("ul", '<span style="font-size:18px">•</span>', L.ul) + fmt("todo", '<span style="font-size:18px">☐</span>', L.todo) + fmt("quote", '<span style="font-size:20px">”</span>', L.quote) + fmt("code", '<span style="font-size:14px;font-family:monospace">&lt;/&gt;</span>', L.code) + fmt("codeMode", '<span style="font-size:15px;font-family:monospace;font-weight:800">`·`</span>', L.codeMode) + fmt("underline", '<u style="font-size:18px">U</u>', L.underline) + fmt("highlight", '<span style="font-size:15px;font-weight:800;background:#ffeb3b;color:#111;padding:0 6px;border-radius:4px;line-height:1.4">A</span>', L.highlight) + fmt("ol", '<span style="font-size:15px">1.</span>', L.ol) + fmt("link", MXE_IC.link, L.linkf) + fmt("clear", '<span style="font-size:18px">✕</span>', L.clearf) + `</div><div class="mxe-colors" role="group" aria-label="${q(L.color)}"><span class="mxe-collab">${q(L.color)}</span>${MXE_COLORS.map((c, i) => `<button type="button" class="mxe-sw" data-mxe="fmt:color:${i + 1}" data-sw="${i + 1}" style="--sw:${c}" aria-label="${q(L.color)} ${i + 1}"></button>`).join("")}<button type="button" class="mxe-sw custom" data-mxe="fmt:cpick" title="${q(L.colorCustom)}" aria-label="${q(L.colorCustom)}"></button><button type="button" class="mxe-sw none" data-mxe="fmt:color:0" data-sw="0" title="${q(L.colorOff)}" aria-label="${q(L.colorOff)}">✕</button></div><div class="mxe-colors tt" role="group" aria-label="${q(L.titleColor)}"><span class="mxe-collab">${q(L.titleColor)}</span>${MXE_COLORS.map((c, i) => `<button type="button" class="mxe-sw" data-mxe="fmt:tcolor:${i + 1}" data-tsw="${i + 1}" style="--sw:${c}" aria-label="${q(L.titleColor)} ${i + 1}"></button>`).join("")}<button type="button" class="mxe-sw custom" data-mxe="fmt:tcpick" title="${q(L.colorCustom)}" aria-label="${q(L.colorCustom)}"></button><button type="button" class="mxe-sw none" data-mxe="fmt:tcolor:0" data-tsw="0" title="${q(L.colorOff)}" aria-label="${q(L.colorOff)}">✕</button></div><div class="szrow"><label>${q(L.size)}</label><select class="mxe-size" data-mxe-size="1">${sizeOpts}</select></div></div><div class="mxe-pop r" data-pop="trash">` + pitem("clear", MXE_IC.trash, fa ? "حذف متن یادداشت" : "Delete note text") + pitem("more:delete", MXE_IC.trash, fa ? "حذف خود یادداشت" : "Delete the note itself", "danger") + '</div><div class="mxe-pop r" data-pop="more"><span class="mxm-handle" aria-hidden="true"></span>' + pitem("more:find", MXE_IC.search, fa ? "جستجو در یادداشت" : "Search in note", "mxm-search") + '<div class="mxm-quick">' + pitem("save", MXE_IC.save, L.save) + pitem("archive", MXE_IC.arc, L.arc, item.archived ? "on" : "") + pitem("more:view", MXE_IC.eye, fa ? "نمایش" : "View") + pitem("focus", MXE_IC.focus, fa ? "تمرکز" : "Focus", focusOn ? "on" : "") + pitem("flag:pinned", MXE_IC.pin, L.pin, "mxe-fillon") + pitem("flag:favorite", MXE_IC.fav, L.fav, "mxe-fillon") + '</div><div class="mxm-seg" role="group">' + pitem("theme:light", MXE_IC.sun, L.toDay, "", 'data-theme-opt="light"') + pitem("theme:dark", MXE_IC.moon, L.toNight, "", 'data-theme-opt="dark"') + `</div><div class="mxm-sec"><div class="grp">${q(L.gOrganize)}</div><div class="mxm-list">` + pitem("more:folder", MXE_IC.folder, L.folder) + pitem("more:tags", MXE_IC.tag, L.tags) + pitem("more:color", MXE_IC.palette, fa ? "رنگ یادداشت" : "Colour") + pitem("more:dup", MXE_IC.dup, L.dup) + `</div></div><div class="mxm-sec"><div class="grp">${q(L.gManage)}</div><div class="mxm-list">` + pitem("more:hide", MXE_IC.hide, ctx.isHidden ? t.show || "Show" : t.hide || "Hide") + pitem("more:link", MXE_IC.link, t.previewLink || "Link preview") + pitem("more:dna", MXE_IC.dna, "DNA") + `</div></div><div class="mxm-sec"><div class="grp">${q(L.gSecurity)}</div><div class="mxm-list">` + pitem("lock", locked ? MXE_IC.lockOn : MXE_IC.lockOff, L.enc) + (locked ? pitem("more:hint", MXE_IC.hint, t.changeHint || "Change hint") : "") + pitem("more:fake", MXE_IC.doc, item.fakeContent ? L.fakeEdit : L.fake) + pitem("more:vault", MXE_IC.lockOn, L.vault) + `</div></div><div class="mxm-sec"><div class="grp">${q(L.gTr)}</div><div class="mxm-list">` + pitem("more:toen", MXE_IC.trEn, L.toEn) + pitem("more:tofa", MXE_IC.trFa, L.toFa) + `</div></div><div class="mxm-sec"><div class="grp">${q(L.gSpecial)}</div><div class="mxm-list">` + pitem("more:capsule", MXE_IC.capsule, L.capsule) + pitem("more:ghost", MXE_IC.ghost, L.ghost) + "</div></div>" + pitem("more:delete", MXE_IC.trash, L.del, "danger mxm-danger") + `<div class="info">${q(L.last)} <span dir="ltr" class="mxe-info-val">${q(ctx.lastEditedText || L.never)}</span></div></div>` + btn("pop:media", rec ? "warn" : "", L.media, MXE_IC.image) + btn("pop:write", "", L.write, MXE_IC.write) + btn("undo", "mxe-undo", L.undo, MXE_IC.undo) + btn("redo", "mxe-redo", L.redo, MXE_IC.redo) + btn("copy", "", L.copy, MXE_IC.copy) + btn("pop:trash", "", fa ? "حذف" : "Delete", MXE_IC.trash) + '<span class="mxe-sp"></span>' + btn("more:view", "mxe-viewnote", L.view, MXE_IC.eye + `<span class="mxe-vlbl">${fa ? "نمایش" : "View"}</span>`) + btn("pop:more", "mxe-more", L.more, MXE_IC.more) + "</div>"; return { top: top, bottom: bottom }; }
 // Slim tag row just above the bottom bar: one #tag chip per tag (tap / long-press opens Edit / Delete).
 // Empty — and hidden by CSS :empty — when the note has no tags, is a fake (decoy) note or is hidden.
 function mxe_tagbarInner(item) { try {
@@ -23507,6 +23657,7 @@ function renderContents(filtered = getVisibleCategories()) {
                            value="${isHidden ? generateMask() : escapeHtml(item.name || "")}"
                            placeholder="${escapeHtml(t.titleFieldPlaceholder || t.rename)}"
                            maxlength="120"
+                           style="${mkTitleStyle(item)}"
                            ${item.isDecoy || isHidden ? "disabled" : ""}
                            oninput="mcLiveTitle('${item.id}', this.value)"
                            onchange="mcCommitTitle('${item.id}')"
@@ -25049,7 +25200,7 @@ async function mu_docxRunsFromInline(node, engine, fmt) {
         // inside a text node
         return node.textContent && node.textContent.replace(/\r\n?/g, `
 `).split(`
-`).forEach((part, i) => runs.push(new TextRun({ text: part, break: i > 0 ? 1 : void 0, bold: fmt.bold, italics: fmt.italics, underline: fmt.underline ? {} : void 0, strike: fmt.strike, highlight: fmt.highlight, font: fmt.font, rightToLeft: fmt.rtl || void 0 }))), runs;
+`).forEach((part, i) => runs.push(new TextRun({ text: part, break: i > 0 ? 1 : void 0, bold: fmt.bold, italics: fmt.italics, underline: fmt.underline ? {} : void 0, strike: fmt.strike, highlight: fmt.highlight, color: fmt.color, font: fmt.font, rightToLeft: fmt.rtl || void 0 }))), runs;
     if (node.nodeType !== Node.ELEMENT_NODE)
         return runs;
     const tag = node.tagName;
@@ -25062,7 +25213,7 @@ async function mu_docxRunsFromInline(node, engine, fmt) {
     if (node.classList && node.classList.contains("img-toolbar"))
         return runs;
     const childFmt = { ...fmt };
-    if ((tag === "B" || tag === "STRONG") && (childFmt.bold = !0), (tag === "I" || tag === "EM") && (childFmt.italics = !0), tag === "U" && (childFmt.underline = !0), tag === "S" && (childFmt.strike = !0), tag === "SPAN" && node.classList && node.classList.contains("mk-hl") && (childFmt.highlight = "yellow"), tag === "CODE" && (childFmt.font = "Consolas"), tag === "A") {
+    if ((tag === "B" || tag === "STRONG") && (childFmt.bold = !0), (tag === "I" || tag === "EM") && (childFmt.italics = !0), tag === "U" && (childFmt.underline = !0), tag === "S" && (childFmt.strike = !0), tag === "SPAN" && node.classList && node.classList.contains("mk-hl") && (childFmt.highlight = "yellow"), tag === "SPAN" && node.classList && mkColorHex(node) && (childFmt.color = mkColorHex(node)), tag === "CODE" && (childFmt.font = "Consolas"), tag === "A") {
         const href = node.getAttribute("href");
         let inner = [];
         for (const c of node.childNodes)
@@ -25935,7 +26086,7 @@ ${getTxtContent(item.id, item).replace(/\n+$/, "")}
   .mu-note-body .mu-row-c>.mu-img-side:first-child{text-align:right}.mu-note-body .mu-row-c>.mu-img-side:last-child{text-align:left}
   .mu-note-body p{margin:0 0 1em}
   .mu-note-body div,.mu-note-body p,.mu-note-body li,.mu-note-body blockquote,.mu-note-body pre{unicode-bidi:plaintext}
-  .mk-hl{background:#fff176;color:#111;border-radius:3px;padding:0 2px}
+  .mk-c1{color:#ef4444}.mk-c2{color:#f97316}.mk-c3{color:#eab308}.mk-c4{color:#22c55e}.mk-c5{color:#14b8a6}.mk-c6{color:#3b82f6}.mk-c7{color:#8b5cf6}.mk-c8{color:#ec4899}.mk-c9{color:#9ca3af}.mk-cx{color:var(--mk-x,inherit)}.mk-hl{background:#fff176;color:#111;border-radius:3px;padding:0 2px}
   .mu-note-body blockquote{border-inline-start:3px solid #60a5fa;margin:10px 0;padding:8px 14px;background:rgba(96,165,250,.06);border-radius:8px}
   .mu-note-body pre,.mu-note-body code{font-family:Consolas,Menlo,monospace}
   .mu-note-body code{background:rgba(127,127,127,.15);padding:1px 5px;border-radius:4px;direction:ltr;unicode-bidi:isolate}
@@ -28383,7 +28534,7 @@ document.addEventListener("DOMContentLoaded", () => { initAdvancedSystems(); });
     article ul,article ol{padding-inline:0;list-style-position:inside}
     h1{unicode-bidi:plaintext;text-align:start}
     article img{max-width:100%;height:auto;border-radius:8px}
-    .mk-hl{background:#fff176;color:#111;border-radius:3px;padding:0 2px;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+    .mk-c1{color:#ef4444}.mk-c2{color:#f97316}.mk-c3{color:#eab308}.mk-c4{color:#22c55e}.mk-c5{color:#14b8a6}.mk-c6{color:#3b82f6}.mk-c7{color:#8b5cf6}.mk-c8{color:#ec4899}.mk-c9{color:#9ca3af}.mk-cx{color:var(--mk-x,inherit)}.mk-hl{background:#fff176;color:#111;border-radius:3px;padding:0 2px;-webkit-print-color-adjust:exact;print-color-adjust:exact}
     article blockquote{border-${fa ? "right" : "left"}:3px solid #60a5fa;margin:10px 0;padding:8px 14px;background:rgba(96,165,250,.06);border-radius:0 8px 8px 0}
     article table{border-collapse:collapse;width:100%;margin:10px 0;display:block;overflow-x:auto}
     article td,article th{border:1px solid #475569;padding:8px}
@@ -30439,6 +30590,12 @@ HX().scheduleCloudBackup(!1, !0), HX().showToast(fa ? `✅ ذخیره شد — �
     return mu_isolateNumbers(clipped); }
     // Line-preserving preview: returns the note's REAL lines (same order, same wording, same digits)
     // instead of one flattened, number-isolated string
+    // ---- note text colour in the list preview
+    const MU_PV_PAL = ["#ef4444", "#f97316", "#eab308", "#22c55e", "#14b8a6", "#3b82f6", "#8b5cf6", "#ec4899", "#9ca3af"];
+    function mu_pvColorOf(el) { try { if (el.classList.contains("mk-cx")) { const m = /--mk-x:\s*(#[0-9a-f]{6})/i.exec(el.getAttribute("style") || ""); if (m) return m[1].toLowerCase(); } for (const c of el.classList) { const m = /^mk-c([1-9])$/.exec(c); if (m) return MU_PV_PAL[m[1] - 1]; } } catch { } return ""; }
+    // runs of one line: [[startCodePoint, endCodePoint, "#rrggbb"], ...]
+    function mu_pvLineHtml(text, runs, suffix) { const esc = s => HX().escapeHtml(s); if (!runs || !runs.length) return esc(text) + (suffix ? esc(suffix) : ""); const cps = Array.from(text); let html = "", pos = 0; runs.forEach(r => { const a = Math.max(pos, r[0]), b = Math.min(r[1], cps.length); if (!(b > a) || !/^#[0-9a-f]{6}$/i.test(r[2])) return; a > pos && (html += esc(cps.slice(pos, a).join(""))), html += '<span class="mu-pv-c" style="color:' + r[2] + "!important;-webkit-text-fill-color:" + r[2] + '!important">' + esc(cps.slice(a, b).join("")) + "</span>", pos = b; }); pos < cps.length && (html += esc(cps.slice(pos).join(""))); return html + (suffix ? esc(suffix) : ""); }
+    function mu_notePreviewRunsArr(item) { try { const e = window.__mu_pvCache && window.__mu_pvCache.get(item.id); return e && e.runs ? e.runs.slice() : []; } catch { return []; } }
     function mu_notePreviewLinesArr(item) {
         if (item.fakeContent)
             return [];
@@ -30460,29 +30617,40 @@ HX().scheduleCloudBackup(!1, !0), HX().showToast(fa ? `✅ ذخیره شد — �
 `), el.insertAdjacentText("afterend", `
 `);
         });
-        const raw = (tmp.textContent || "").replace(/\u00A0/g, " "), out = [];
+        // text colour (<span class="mk-c mk-cN|mk-cx">) -> per-character colour map, so the list preview keeps the note's text colours
+        const hasCol = src.indexOf("mk-c") >= 0; let raw = "", cmap = [];
+        for (const tw = document.createTreeWalker(tmp, NodeFilter.SHOW_TEXT); tw.nextNode();) {
+            const s = tw.currentNode.nodeValue || ""; if (!s) continue; raw += s;
+            if (hasCol) { const h = tw.currentNode.parentElement && tw.currentNode.parentElement.closest(".mk-c"), col = h ? mu_pvColorOf(h) : ""; for (let k = 0; k < s.length; k++) cmap.push(col); }
+        }
+        raw = raw.replace(/\u00A0/g, " "); const out = [], outRuns = []; let off = 0;
         for (const ln of raw.split(`
 `)) {
-            const t = ln.replace(/[ \t]+$/, "").replace(/^[ \t]+/, "");
+            const lineStart = off; off += ln.length + 1;
+            const lead = ln.length - ln.replace(/^[ \t]+/, "").length, t = ln.replace(/[ \t]+$/, "").replace(/^[ \t]+/, "");
             // skip blank lines only
-            if (t && (out.push(Array.from(t).slice(0, 400).join("")), out.length >= 8))
+            if (t) {
+                const cps = Array.from(t).slice(0, 400), runs = []; let ui = lineStart + lead, cur = null;
+                if (hasCol) cps.forEach((ch, ci) => { const col = cmap[ui] || ""; ui += ch.length; if (col) { if (cur && cur[2] === col && cur[1] === ci) cur[1] = ci + 1; else { cur = [ci, ci + 1, col]; runs.push(cur); } } else cur = null; });
+                out.push(cps.join("")), outRuns.push(runs);
                 // fitter trims to the chosen count
-                break;
+                if (out.length >= 8) break;
+            }
         }
         if (pvc.size > HX().categories.length + 64) {
             const live = new Set(HX().categories.map(c => c && c.id));
             pvc.forEach((_v, k) => { live.has(k) || pvc.delete(k); });
         }
-        return pvc.set(item.id, { src: src, out: out }), out.slice();
+        return pvc.set(item.id, { src: src, out: out, runs: outRuns }), out.slice();
     }
     // Ellipsis with a space before it ("word …"): the browser's own CSS ellipsis can't be given a space,
     // so the preview is fitted here
-    (function () { function renderMetaLine(lineText) { return '<span class="note-item-meta-line" dir="auto">' + HX().escapeHtml(lineText) + "</span>"; } function build(lines, maxChars, addEllipsis) { let withEll = maxChars, html = ""; for (let lineIndex = 0; lineIndex < lines.length && withEll > 0; lineIndex++) {
+    (function () { function renderMetaLine(lineText, runs, suffix) { return '<span class="note-item-meta-line" dir="auto">' + mu_pvLineHtml(lineText, runs, suffix) + "</span>"; } function build(lines, maxChars, addEllipsis, pvc) { let withEll = maxChars, html = ""; for (let lineIndex = 0; lineIndex < lines.length && withEll > 0; lineIndex++) {
         const chars = Array.from(lines[lineIndex]);
         if (chars.length <= withEll)
-            html += renderMetaLine(lines[lineIndex]), withEll -= chars.length;
+            html += renderMetaLine(lines[lineIndex], pvc && pvc[lineIndex]), withEll -= chars.length;
         else {
-            html += renderMetaLine(chars.slice(0, withEll).join("").replace(/\s+$/, "") + (addEllipsis ? " …" : "")), withEll = 0;
+            html += renderMetaLine(chars.slice(0, withEll).join("").replace(/\s+$/, ""), pvc && pvc[lineIndex], addEllipsis ? " …" : ""), withEll = 0;
             break;
         }
     } return html; } let obs = null, scheduled = !1; function fitAll() { scheduled = !1; const box = document.getElementById("buttonsContainer"); if (box) {
@@ -30495,13 +30663,13 @@ HX().scheduleCloudBackup(!1, !0), HX().showToast(fa ? `✅ ذخیره شد — �
             catch {
                 return;
             } if (!lines || !lines.length)
-                return; el.innerHTML = lines.map(renderMetaLine).join(""); const allowed = (parseFloat(getComputedStyle(el).lineHeight) || 15) * n + 1; if (!el.clientWidth || el.scrollHeight <= allowed)
+                return; let pvc = null; try { pvc = JSON.parse(decodeURIComponent(el.getAttribute("data-pvc") || "null")); } catch { } el.innerHTML = lines.map((l, i) => renderMetaLine(l, pvc && pvc[i])).join(""); const allowed = (parseFloat(getComputedStyle(el).lineHeight) || 15) * n + 1; if (!el.clientWidth || el.scrollHeight <= allowed)
                 return; const total = lines.reduce((t, l) => t + Array.from(l).length, 0);
                 // largest k whose text + " …" still fits
                 let lo = 0, hi = total; for (; lo < hi;) {
                 const mid = lo + hi + 1 >> 1;
-                el.innerHTML = build(lines, mid, !0), el.scrollHeight <= allowed ? lo = mid : hi = mid - 1;
-            } el.innerHTML = build(lines, lo, !0); });
+                el.innerHTML = build(lines, mid, !0, pvc), el.scrollHeight <= allowed ? lo = mid : hi = mid - 1;
+            } el.innerHTML = build(lines, lo, !0, pvc); });
         }
         finally {
             obs && box && obs.observe(box, { childList: !0, subtree: !0 });
@@ -30726,7 +30894,7 @@ HX().scheduleCloudBackup(!1, !0), HX().showToast(fa ? `✅ ذخیره شد — �
         }
         c2.innerHTML = '<div class="no-result-msg">' + t.noResult + "</div>";
         return;
-    } const rawQuery = (document.getElementById("searchInput") || {}).value || "", searching = !!rawQuery.trim(), sortCmp = mu_noteSortComparator(mu_getNoteSortMode()), ordered = searching ? list.slice() : [...list].sort((a, b) => Number(b.pinned) - Number(a.pinned) || Number(b.favorite) - Number(a.favorite) || sortCmp(a, b)), wantIds = new Set(ordered.map(item => String(item.id))), existingByCid = new Map; Array.from(c2.children).forEach(child => { const cid = child.dataset ? child.dataset.id : null; cid && wantIds.has(cid) ? existingByCid.set(cid, child) : child.parentNode === c2 && c2.removeChild(child); }); let prevNode = null; ordered.forEach(item => { Array.isArray(item.tags) || (item.tags = []); const cid = String(item.id); let wrap = existingByCid.get(cid), b2; wrap ? b2 = wrap.querySelector(".custom-btn") : (wrap = document.createElement("div"), wrap.className = "note-btn-wrap", wrap.dataset.id = cid, b2 = document.createElement("button"), b2.dataset.noteId = item.id, wrap.appendChild(b2)); const wantClass = "custom-btn note-item " + (HX().activeOpenId === item.id ? "active-btn " : "") + (item.pinned ? "note-pinned " : "") + (item.favorite ? "note-favorite " : ""); b2.className !== wantClass && (b2.className = wantClass), b2.setAttribute("aria-expanded", HX().activeOpenId === item.id ? "true" : "false"), b2.style.animationDelay = window.MarkhinNoteDeleteMode ? "0s" : ""; const titleHtml = HX().escapeHtml(HX().isNoteLocked(item) ? "🔒 " : "") + (window.mu_flagIconsList || MK.flagIcons)(item) + HX().escapeHtml((item.fakeContent ? "🎭 " : "") + (item.titleHidden ? "•••••" : mu_isolateNumbers(String(item.name || "")))), metaLines = item.titleHidden || !mu_getNotePreviewEnabled() ? [] : mu_notePreviewLinesArr(item), wantHtml = '<span class="note-item-title' + (item.titleHidden ? " is-masked" : "") + '" dir="auto">' + titleHtml + "</span>" + (metaLines.length ? '<span class="note-item-meta" data-pv="' + encodeURIComponent(JSON.stringify(metaLines)) + '">' + metaLines.map(l => '<span class="note-item-meta-line" dir="auto">' + HX().escapeHtml(l) + "</span>").join("") + "</span>" : ""); b2.innerHTML !== wantHtml && (b2.innerHTML = wantHtml), b2.onclick = () => { if (HX().activeOpenId === item.id && !searching) {
+    } const rawQuery = (document.getElementById("searchInput") || {}).value || "", searching = !!rawQuery.trim(), sortCmp = mu_noteSortComparator(mu_getNoteSortMode()), ordered = searching ? list.slice() : [...list].sort((a, b) => Number(b.pinned) - Number(a.pinned) || Number(b.favorite) - Number(a.favorite) || sortCmp(a, b)), wantIds = new Set(ordered.map(item => String(item.id))), existingByCid = new Map; Array.from(c2.children).forEach(child => { const cid = child.dataset ? child.dataset.id : null; cid && wantIds.has(cid) ? existingByCid.set(cid, child) : child.parentNode === c2 && c2.removeChild(child); }); let prevNode = null; ordered.forEach(item => { Array.isArray(item.tags) || (item.tags = []); const cid = String(item.id); let wrap = existingByCid.get(cid), b2; wrap ? b2 = wrap.querySelector(".custom-btn") : (wrap = document.createElement("div"), wrap.className = "note-btn-wrap", wrap.dataset.id = cid, b2 = document.createElement("button"), b2.dataset.noteId = item.id, wrap.appendChild(b2)); const wantClass = "custom-btn note-item " + (HX().activeOpenId === item.id ? "active-btn " : "") + (item.pinned ? "note-pinned " : "") + (item.favorite ? "note-favorite " : ""); b2.className !== wantClass && (b2.className = wantClass), b2.setAttribute("aria-expanded", HX().activeOpenId === item.id ? "true" : "false"), b2.style.animationDelay = window.MarkhinNoteDeleteMode ? "0s" : ""; const titleHtml = HX().escapeHtml(HX().isNoteLocked(item) ? "🔒 " : "") + (window.mu_flagIconsList || MK.flagIcons)(item) + HX().escapeHtml((item.fakeContent ? "🎭 " : "") + (item.titleHidden ? "•••••" : mu_isolateNumbers(String(item.name || "")))), metaLines = item.titleHidden || !mu_getNotePreviewEnabled() ? [] : mu_notePreviewLinesArr(item), metaRuns = metaLines.length ? mu_notePreviewRunsArr(item) : [], pvcAttr = metaRuns.some(r => r && r.length) ? ' data-pvc="' + encodeURIComponent(JSON.stringify(metaRuns)) + '"' : "", wantHtml = '<span class="note-item-title' + (item.titleHidden ? " is-masked" : "") + '" dir="auto">' + titleHtml + "</span>" + (metaLines.length ? '<span class="note-item-meta" data-pv="' + encodeURIComponent(JSON.stringify(metaLines)) + '"' + pvcAttr + '>' + metaLines.map((l, i) => '<span class="note-item-meta-line" dir="auto">' + mu_pvLineHtml(l, metaRuns[i]) + "</span>").join("") + "</span>" : ""); b2.innerHTML !== wantHtml && (b2.innerHTML = wantHtml), b2.onclick = () => { if (HX().activeOpenId === item.id && !searching) {
         HX().handleCategoryClick(item.id);
         return;
     }
@@ -33014,6 +33182,94 @@ window.muIcon = function (name) { var P = { trash: '<path d="M4 7h16"/><path d="
     };
 })();
 </script>
+<script id="muResetSettingsJs">
+/* Settings -> "Reset settings" (بازنشانی تنظیمات).
+   Puts every app SETTING back to its default (theme, language, app font, preview lines, display order, list/grid view,
+   menu layout, page zoom, note-viewer style / text size, typing mode, eco options, fingerprint unlock, morse / binary
+   tool options, online search, backup auto-save / compression / save speed).
+   It never touches notes, folders, vault, lists, backups or AI settings. The manual-backup count resets only when no
+   manual backup is saved (see cloudResetBackupSettings).
+   The page reloads at the end so every module re-reads its default. */
+(function () {
+    "use strict";
+    var KEYS = [
+        // theme / look
+        "app_theme_index_v14", "app_lite_prev_theme_v1", "app_lite_mode_v1", "mu_nfs_skin_v1", "mu_nfs_skin_prevbase_v1",
+        "mu_notesfs_theme_v1", "mxe_theme", "mu_nfs_edtheme_sync_v1",
+        // notes page: display order, preview, grid/list view, menu layout
+        "mu_notesfs_sort_v1", "markhin_note_sort_mode_v1", "mu_notesfs_lines_v1", "markhin_note_preview_enabled_v1",
+        "markhin_note_preview_lines_v1", "mu_notesfs_view_v1", "mu_nav_pair_v1", "mu_ab_sections_v1",
+        // note viewer
+        "markhin_viewer_style_v1", "markhin_viewer_fs_v1", "mu_live_mode",
+        // font, eco, zoom, language
+        "mu_ndot_font_v1", "app_eco_v1", "app_page_zoom_v1", "app_lang_v15",
+        // fingerprint unlock (turning it off also forgets the saved passwords, like switching it off by hand)
+        "mk_bio_on", "mk_bio_never", "mk_bio_pw_v1",
+        // morse / binary tools
+        "mcx_wpm", "mcx_bfmt",
+        // smart online search switch (the learned-words cache is data, so it stays)
+        "markhin_online_search",
+        // backup page: auto-save switch + manual-backup compression (save speed and manual count are handled by mkResetBackupSettings)
+        "mk_cloud_autosave_v1", "mk_manual_comp_v1"
+    ], running = false;
+    function fa() { try { return MK.liteHost.isFa(); } catch (e) { return true; } }
+    function T(f, e) { return fa() ? f : e; }
+    function el(id) { return document.getElementById(id); }
+    function toast(m, ms) { try { MK.host.toast(m, ms); } catch (e) { } }
+    function busy() { var a = window.__mkAutoBk, m = window.__mkManualBk; return !!((a && a.active) || (m && m.active) || window.__mkSyncBusy); }
+    function btn(label, cls, onclick, extra) { return '<button type="button" class="btn-main' + (cls ? " " + cls : "") + '" onclick="' + onclick + '" style="font-size:12px;padding:8px 14px;' + (extra || "") + '">' + label + "</button>"; }
+    function idle(isFa) { return btn("↺ " + (isFa ? "بازنشانی تنظیمات" : "Reset settings"), "", "MU_ResetSettings.ask()", ""); }
+    function html(isFa) {
+        var ai = !!window.MarkhinAI;
+        function ln(ic, h, t) { return '<div style="margin:3px 0"><b>' + ic + " " + h + ":</b> " + t + "</div>"; }
+        var desc = isFa
+            ? '<div style="margin:0 0 4px">این موارد به پیش‌فرض برمی‌گردد:</div>'
+              + ln("🎨", "ظاهر", "تم، سبک کادر نمایش، فونت برنامه، زوم، زبان، حالت سبک")
+              + ln("🗂", "صفحه‌ی یادداشت‌ها", "ترتیب نمایش، پیش‌نمایش، نمای لیست/شبکه، چیدمان منو")
+              + ln("📖", "نمایش یادداشت", "سبک و اندازه‌ی متن، حالت تایپ زنده")
+              + ln("🔒", "امنیت", "اثر انگشت (رمزهای ذخیره‌شده‌ی آن هم پاک می‌شود)")
+              + ln("🔧", "ابزار و جستجو", "مورس/باینری، جستجوی آنلاین، حالت صرفه‌جویی")
+              + ln("☁️", "بکاپ", "ذخیره‌ی خودکار، فشرده‌سازی، سرعت (پارالل)، و تعداد بکاپ دستی (فقط اگر بکاپ دستی نداری)")
+              + '<div style="margin:6px 0 0">✅ <b>دست‌نخورده:</b> یادداشت‌ها، پوشه‌ها، گاوصندوق، لیست‌ها، همه‌ی بکاپ‌ها' + (ai ? "، تنظیمات و کلید هوش مصنوعی" : "") + ".</div>"
+            : '<div style="margin:0 0 4px">These go back to their defaults:</div>'
+              + ln("🎨", "Look", "theme, viewer frame style, app font, zoom, language, lite mode")
+              + ln("🗂", "Notes page", "display order, preview, list/grid view, menu layout")
+              + ln("📖", "Note viewer", "text style and size, live-typing mode")
+              + ln("🔒", "Security", "fingerprint unlock (its saved passwords are removed too)")
+              + ln("🔧", "Tools & search", "morse/binary, online search, eco options")
+              + ln("☁️", "Backup", "auto-save, compression, save speed (parallel), and the manual-backup count (only if you have no manual backup)")
+              + '<div style="margin:6px 0 0">✅ <b>Not touched:</b> notes, folders, vault, lists, all backups' + (ai ? ", AI settings and key" : "") + ".</div>";
+        return '<div class="mu-set-row" id="muRsRow" style="flex-direction:column;align-items:stretch"><div class="mu-set-text"><div class="mu-set-title">' + (isFa ? "بازنشانی تنظیمات" : "Reset settings") + '</div><div class="mu-set-desc">' + desc + '</div></div><div id="muRsActions" style="margin-top:8px">' + idle(isFa) + "</div></div>";
+    }
+    function ask() {
+        if (running) return;
+        var a = el("muRsActions"); if (!a) return;
+        a.innerHTML = '<div class="mu-set-desc" style="margin:0 0 8px">' + T("مطمئنی؟ تنظیمات به پیش‌فرض برمی‌گردد و برنامه یک‌بار دوباره بارگذاری می‌شود. یادداشت‌ها و بکاپ‌ها پاک نمی‌شوند.", "Are you sure? Settings return to default and the app reloads once. Notes and backups are not deleted.") + '</div><div style="display:flex;gap:8px;flex-wrap:wrap">' + btn(T("بله، بازنشانی کن", "Yes, reset"), "", "MU_ResetSettings.run()", "background:rgba(220,53,69,.18);border:1px solid rgba(220,53,69,.55)") + btn(T("انصراف", "Cancel"), "", "MU_ResetSettings.cancel()", "") + "</div>";
+    }
+    function cancel() { if (running) return; var a = el("muRsActions"); a && (a.innerHTML = idle(fa())); }
+    async function run() {
+        if (running) return;
+        if (busy()) { toast(T("⏳ تا پایان بکاپِ در حال انجام صبر کن و دوباره امتحان کن.", "⏳ Wait for the running backup to finish, then try again."), 3500); return; }
+        running = true;
+        var a = el("muRsActions"); a && (a.innerHTML = '<div class="mu-set-desc">⏳ ' + T("در حال بازنشانی…", "Resetting…") + "</div>");
+        var note = "";
+        try { document.documentElement.style.pointerEvents = "none"; } catch (e) { }
+        try { if (window.MK_Bio && MK_Bio.isOn() && MK_Bio.disable) await MK_Bio.disable(true); } catch (e) { }
+        try {
+            if (typeof window.mkResetBackupSettings === "function") {
+                var r = await window.mkResetBackupSettings();
+                if (r && r.manual === "kept") note = T(" (تعداد بکاپ دستی تغییر نکرد چون بکاپ دستی ذخیره‌شده داری)", " (manual backup count kept because you have saved manual backups)");
+                else if (r && r.manual === "unknown") note = T(" (تعداد بکاپ دستی تغییر نکرد؛ بررسی بکاپ‌ها ممکن نشد)", " (manual backup count left as is; the backups could not be checked)");
+            }
+        } catch (e) { }
+        KEYS.forEach(function (k) { try { localStorage.removeItem(k); } catch (e) { } });
+        try { typeof mu_flushStorage === "function" && await mu_flushStorage(); } catch (e) { }
+        toast("✅ " + T("تنظیمات بازنشانی شد؛ در حال بارگذاری دوباره…", "Settings reset; reloading…") + note, 3200);
+        setTimeout(function () { try { location.reload(); } catch (e) { running = false; try { document.documentElement.style.pointerEvents = ""; } catch (e2) { } } }, 1500);
+    }
+    window.MU_ResetSettings = { html: html, ask: ask, cancel: cancel, run: run, keys: KEYS };
+})();
+</script>
 <script id="muLiteScript">
 (function () { var KEY = "app_lite_mode_v1", PREV = "app_lite_prev_theme_v1", root = document.documentElement; function ls(get, k, v) { try {
     return get ? localStorage.getItem(k) : v === null ? localStorage.removeItem(k) : localStorage.setItem(k, v);
@@ -33207,7 +33463,7 @@ function initZoomWatch() { syncMode(), initSoftPinch(), zoomWatchDone || (zoomWa
         catch { }
     }
 }
-catch { } } function gearSvg() { return '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3.2"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>'; } function closeBtn() { return '<button class="btn-main" onclick="MK.liteHost.closeDialog()" aria-label="' + (isFa() ? "بستن" : "Close") + '">✕</button>'; } function openSettings() { var fa = isFa(), card = document.getElementById("advancedCard"), skinRow = '<div class="mu-set-row" style="flex-direction:column;align-items:stretch"><div class="mu-set-text"><div class="mu-set-title">' + (fa ? "تم ورژن جدید" : "New version theme") + '</div><div class="mu-set-desc">' + (fa ? "یکی از تم‌های برنامه را انتخاب کنید. با زدن دکمه روز/شب در صفحه یادداشت‌ها دوباره به حالت روز و شب برمی‌گردد." : "Pick one of the app themes. Tapping the day / night button on the Notes page goes back to plain day / night.") + "</div></div>" + (MK.nfsSkin ? MK.nfsSkin.chipsHtml(fa) : "") + "</div>"; MK.liteHost.showDialog('<div class="advanced-head"><h3>' + (fa ? "تنظیمات" : "Settings") + "</h3>" + closeBtn() + "</div>" + skinRow + '<div class="mu-set-row" style="flex-direction:column;align-items:stretch"><div class="mu-set-text"><div class="mu-set-title">زبان / Language</div><div class="mu-set-desc"><div dir="rtl" style="text-align:right">زبان برنامه را انتخاب کنید.</div><div dir="ltr" style="text-align:left">Choose the app language.</div></div></div><div class="mu-vs-seg" id="muLangSeg" role="group" aria-label="زبان / Language">' + [["fa", "فارسی (Persian)"], ["en", "English (انگلیسی)"]].map(function (o) { return '<button type="button" class="mu-vs-opt" data-lang="' + o[0] + '" aria-pressed="' + ((fa ? "fa" : "en") === o[0] ? "true" : "false") + `" onclick="MU_Lite.setLang('` + o[0] + `')">` + o[1] + "</button>"; }).join("") + '</div></div><div class="mu-set-row"><div class="mu-set-text"><div class="mu-set-title">' + (fa ? "زوم صفحه" : "Page zoom") + '<span class="mu-set-badge" id="muZoomBadge">' + (zoomOn() ? fa ? "روشن" : "ON" : fa ? "خاموش" : "OFF") + '</span></div><div class="mu-set-desc">' + (fa ? "وقتی روشن باشد می‌توانید با دو انگشت روی صفحه زوم کنید (از 100٪ تا 5 برابر). پیش‌فرض: در تلگرام خاموش، در بقیه‌ی جاها روشن. «شبکه دانش» همیشه زوم مخصوص خودش را دارد و به این گزینه وابسته نیست. داخل تلگرام هم کار می‌کند." : "When on, you can pinch-zoom the page (100% up to 5x). Default: off in Telegram, on elsewhere. The Knowledge Graph always has its own zoom and does not depend on this option. Works inside Telegram too.") + '</div><button type="button" class="btn-main" id="muZoomReset" style="margin-top:8px;font-size:11px;padding:6px 12px;' + (zoomOn() ? "" : "display:none") + '" onclick="MU_Lite.resetZoom()">↺ ' + (fa ? "بازنشانی زوم (100٪)" : "Reset zoom (100%)") + '</button></div><button type="button" class="mu-switch" id="muZoomSwitch" role="switch" aria-checked="' + (zoomOn() ? "true" : "false") + '" aria-label="' + (fa ? "زوم صفحه" : "Page zoom") + '" onclick="MU_Lite.toggleZoom()"></button></div><div class="mu-set-row" style="flex-direction:column;align-items:stretch"><div class="mu-set-text"><div class="mu-set-title">' + (fa ? "سبک کادر نمایش یادداشت" : "Note viewer style") + '</div><div class="mu-set-desc">' + (fa ? "با «نمایش یادداشت» هر بار بپرسد، یا همیشه با یک سبک ثابت باز شود." : "Ask each time you press “View note”, or always open with one fixed style.") + '</div></div><div class="mu-vs-seg" id="muViewerStyleSeg" role="group">' + [["ocean", fa ? "ساده" : "Simple"], ["retro", fa ? "ویندوز 95" : "Windows 95"], ["ask", fa ? "انتخاب هر بار (پیش‌فرض)" : "Ask each time (default)"]].map(function (o) { return '<button type="button" class="mu-vs-opt" data-vs="' + o[0] + '" aria-pressed="' + (window.mu_getViewerStyle && window.mu_getViewerStyle() === o[0] ? "true" : "false") + `" onclick="MU_Lite.setViewerStyle('` + o[0] + `')">` + o[1] + "</button>"; }).join("") + "</div></div>" + (window.MU_NDot ? MU_NDot.html(fa) : "") + (window.MK_Bio ? MK_Bio.settingsHtml(fa) : "") + (window.MU_Eco ? MU_Eco.html(fa, ["all", "viewer"]) : "") + (window.mu_imgOptRowHtml ? mu_imgOptRowHtml(fa) : "") + "<div class='mu-morse-line' dir='ltr' role='img' aria-label='MARKHIN' style='flex:none;min-height:13px;display:flex;justify-content:center;align-items:center;gap:14px;flex-wrap:nowrap;white-space:nowrap;overflow:hidden;margin:20px 0 8px;font:700 14px/1 monospace;opacity:.55;-webkit-user-select:none;user-select:none;pointer-events:none'><span style='letter-spacing:4px'>\u2014\u2014</span><span style='letter-spacing:4px'>\u2022\u2014</span><span style='letter-spacing:4px'>\u2022\u2014\u2022</span><span style='letter-spacing:4px'>\u2014\u2022\u2014</span><span style='letter-spacing:4px'>\u2022\u2022\u2022\u2022</span><span style='letter-spacing:4px'>\u2022\u2022</span><span style='letter-spacing:4px'>\u2014\u2022</span></div>"), card && card.classList.remove("kg-wide"); } window.MU_Lite = { openSettings: openSettings, setZoom: function (on) { return setZoomState(on); }, toggleZoom: function () { return setZoomState(!zoomOn()); }, resetZoom: function () { resetZoom(); }, getZoomScale: pageScale, isZoomOn: zoomOn, setLang: function (l) { try {
+catch { } } function gearSvg() { return '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3.2"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>'; } function closeBtn() { return '<button class="btn-main" onclick="MK.liteHost.closeDialog()" aria-label="' + (isFa() ? "بستن" : "Close") + '">✕</button>'; } function openSettings() { var fa = isFa(), card = document.getElementById("advancedCard"), skinRow = '<div class="mu-set-row" style="flex-direction:column;align-items:stretch"><div class="mu-set-text"><div class="mu-set-title">' + (fa ? "تم ورژن جدید" : "New version theme") + '</div><div class="mu-set-desc">' + (fa ? "یکی از تم‌های برنامه را انتخاب کنید. با زدن دکمه روز/شب در صفحه یادداشت‌ها دوباره به حالت روز و شب برمی‌گردد." : "Pick one of the app themes. Tapping the day / night button on the Notes page goes back to plain day / night.") + "</div></div>" + (MK.nfsSkin ? MK.nfsSkin.chipsHtml(fa) : "") + "</div>"; MK.liteHost.showDialog('<div class="advanced-head"><h3>' + (fa ? "تنظیمات" : "Settings") + "</h3>" + closeBtn() + "</div>" + skinRow + '<div class="mu-set-row" style="flex-direction:column;align-items:stretch"><div class="mu-set-text"><div class="mu-set-title">زبان / Language</div><div class="mu-set-desc"><div dir="rtl" style="text-align:right">زبان برنامه را انتخاب کنید.</div><div dir="ltr" style="text-align:left">Choose the app language.</div></div></div><div class="mu-vs-seg" id="muLangSeg" role="group" aria-label="زبان / Language">' + [["fa", "فارسی (Persian)"], ["en", "English (انگلیسی)"]].map(function (o) { return '<button type="button" class="mu-vs-opt" data-lang="' + o[0] + '" aria-pressed="' + ((fa ? "fa" : "en") === o[0] ? "true" : "false") + `" onclick="MU_Lite.setLang('` + o[0] + `')">` + o[1] + "</button>"; }).join("") + '</div></div><div class="mu-set-row"><div class="mu-set-text"><div class="mu-set-title">' + (fa ? "زوم صفحه" : "Page zoom") + '<span class="mu-set-badge" id="muZoomBadge">' + (zoomOn() ? fa ? "روشن" : "ON" : fa ? "خاموش" : "OFF") + '</span></div><div class="mu-set-desc">' + (fa ? "وقتی روشن باشد می‌توانید با دو انگشت روی صفحه زوم کنید (از 100٪ تا 5 برابر). پیش‌فرض: در تلگرام خاموش، در بقیه‌ی جاها روشن. «شبکه دانش» همیشه زوم مخصوص خودش را دارد و به این گزینه وابسته نیست. داخل تلگرام هم کار می‌کند." : "When on, you can pinch-zoom the page (100% up to 5x). Default: off in Telegram, on elsewhere. The Knowledge Graph always has its own zoom and does not depend on this option. Works inside Telegram too.") + '</div><button type="button" class="btn-main" id="muZoomReset" style="margin-top:8px;font-size:11px;padding:6px 12px;' + (zoomOn() ? "" : "display:none") + '" onclick="MU_Lite.resetZoom()">↺ ' + (fa ? "بازنشانی زوم (100٪)" : "Reset zoom (100%)") + '</button></div><button type="button" class="mu-switch" id="muZoomSwitch" role="switch" aria-checked="' + (zoomOn() ? "true" : "false") + '" aria-label="' + (fa ? "زوم صفحه" : "Page zoom") + '" onclick="MU_Lite.toggleZoom()"></button></div><div class="mu-set-row" style="flex-direction:column;align-items:stretch"><div class="mu-set-text"><div class="mu-set-title">' + (fa ? "سبک کادر نمایش یادداشت" : "Note viewer style") + '</div><div class="mu-set-desc">' + (fa ? "با «نمایش یادداشت» هر بار بپرسد، یا همیشه با یک سبک ثابت باز شود." : "Ask each time you press “View note”, or always open with one fixed style.") + '</div></div><div class="mu-vs-seg" id="muViewerStyleSeg" role="group">' + [["ocean", fa ? "ساده" : "Simple"], ["retro", fa ? "ویندوز 95" : "Windows 95"], ["ask", fa ? "انتخاب هر بار (پیش‌فرض)" : "Ask each time (default)"]].map(function (o) { return '<button type="button" class="mu-vs-opt" data-vs="' + o[0] + '" aria-pressed="' + (window.mu_getViewerStyle && window.mu_getViewerStyle() === o[0] ? "true" : "false") + `" onclick="MU_Lite.setViewerStyle('` + o[0] + `')">` + o[1] + "</button>"; }).join("") + "</div></div>" + (window.MU_NDot ? MU_NDot.html(fa) : "") + (window.MK_Bio ? MK_Bio.settingsHtml(fa) : "") + (window.MU_Eco ? MU_Eco.html(fa, ["all", "viewer"]) : "") + (window.mu_imgOptRowHtml ? mu_imgOptRowHtml(fa) : "") + (window.MU_ResetSettings ? MU_ResetSettings.html(fa) : "") + "<div class='mu-morse-line' dir='ltr' role='img' aria-label='MARKHIN' style='flex:none;min-height:13px;display:flex;justify-content:center;align-items:center;gap:14px;flex-wrap:nowrap;white-space:nowrap;overflow:hidden;margin:20px 0 8px;font:700 14px/1 monospace;opacity:.55;-webkit-user-select:none;user-select:none;pointer-events:none'><span style='letter-spacing:4px'>\u2014\u2014</span><span style='letter-spacing:4px'>\u2022\u2014</span><span style='letter-spacing:4px'>\u2022\u2014\u2022</span><span style='letter-spacing:4px'>\u2014\u2022\u2014</span><span style='letter-spacing:4px'>\u2022\u2022\u2022\u2022</span><span style='letter-spacing:4px'>\u2022\u2022</span><span style='letter-spacing:4px'>\u2014\u2022</span></div>"), card && card.classList.remove("kg-wide"); } window.MU_Lite = { openSettings: openSettings, setZoom: function (on) { return setZoomState(on); }, toggleZoom: function () { return setZoomState(!zoomOn()); }, resetZoom: function () { resetZoom(); }, getZoomScale: pageScale, isZoomOn: zoomOn, setLang: function (l) { try {
         if (MK.liteHost.lang() === l)
             return;
     }
@@ -34006,7 +34262,7 @@ catch { } };
     // Reuse the app's own logic: call an app function by name through the host (silently nothing when it is missing)
     function callFn(name) { return H.call.apply(null, arguments); }
     // Close every open popover (except `except`)
-    function closePops(except) { D2.querySelectorAll(".mxe-pop.open").forEach(function (p) { p !== except && p.classList.remove("open"); }); }
+    function closePops(except) { D2.querySelectorAll(".mxe-pop.open").forEach(function (p) { p !== except && (p.classList.remove("open"), p.classList.remove("colors-open")); }); }
     // A popover opens upward from the bottom bar: its height is capped (110–800px) to fit between the bar and
     // the top of the page, and it scrolls inside
     function fitPop(p) { try {
@@ -34431,6 +34687,205 @@ catch { } };
             saved(id);
         }
     } }
+    
+    // ---- text colour: <span class="mk-c mk-cN"> (N = 1..9 -> MXE_COLORS[N-1]); classes survive sanitizeHtml, inline styles don't.
+    // Selection -> the selected text takes the colour. Nothing selected -> a zero-width marker inside the coloured span holds the
+    // caret, so the NEXT typed text has that colour. Choosing 0 removes the colour.
+    var mkCurCol = 1;
+    try { var _sv = localStorage.getItem("mxe_textcolor"); /^#[0-9a-f]{6}$/i.test(_sv) ? mkCurCol = _sv.toLowerCase() : parseInt(_sv, 10) >= 1 && parseInt(_sv, 10) <= 9 && (mkCurCol = parseInt(_sv, 10)); } catch { }
+    function mkColPaintCur(box) { try { var c = typeof mkCurCol == "string" ? mkCurCol : (function () { var b = box && box.querySelector && box.querySelector('[data-sw="' + mkCurCol + '"]'); return b && b.style.getPropertyValue("--sw"); })(); c && root.style.setProperty("--mk-cur", String(c).trim()); } catch { } }
+    function mkColSpec(el) { if (!el || !el.classList) return 0; var n = mkColN(el); if (n) return n; if (el.classList.contains("mk-cx")) { var m = /--mk-x:\s*(#[0-9a-f]{6})/i.exec(el.getAttribute("style") || ""); return m ? m[1].toLowerCase() : 0; } return 0; }
+    function mkColN(el) { if (!el || !el.classList) return 0; for (var i = 0; i < el.classList.length; i++) { var m = /^mk-c([1-9])$/.exec(el.classList[i]); if (m) return +m[1]; } return 0; }
+    function mkColOf(node, t) { var el = node && (node.nodeType === 1 ? node : node.parentElement), h = el && el.closest ? el.closest(".mk-c") : null; return h && t.contains(h) && h !== t ? h : null; }
+    function mkColNew(n) { var sp = D2.createElement("span"); typeof n == "string" ? (sp.className = "mk-c mk-cx", sp.setAttribute("style", "--mk-x:" + n)) : sp.className = "mk-c mk-c" + n; return sp; }
+    function mkColSame(a, b) { return a.className === b.className && (a.getAttribute("style") || "") === (b.getAttribute("style") || ""); }
+    function mkColUnwrapNode(t2, n2) { var h = mkColOf(n2, t2); if (h) {
+        var a2 = D2.createRange(); a2.setStart(h, 0), a2.setEndBefore(n2);
+        var fa = a2.extractContents(), b = D2.createRange(); b.setStartAfter(n2), b.setEnd(h, h.childNodes.length);
+        var fb = b.extractContents();
+        if (hlHasContent(fa)) { var h1 = h.cloneNode(!1); h1.appendChild(fa), h.parentNode.insertBefore(h1, h); }
+        if (hlHasContent(fb)) { var h2 = h.cloneNode(!1); h2.appendChild(fb), h.parentNode.insertBefore(h2, h.nextSibling); }
+        for (; h.firstChild;) h.parentNode.insertBefore(h.firstChild, h);
+        h.parentNode.removeChild(h);
+    } }
+    function mkColMerge(t2) { Array.prototype.slice.call(t2.querySelectorAll(".mk-c")).forEach(function (s) { if (s.parentNode)
+        for (var nx = s.nextSibling; nx && nx.nodeType === 1 && mkColSame(nx, s);) {
+            for (; nx.firstChild;) s.appendChild(nx.firstChild);
+            var dn = nx; nx = nx.nextSibling, dn.parentNode.removeChild(dn);
+        } }); }
+    function mkColTidy(t2) { var s = window.getSelection(), an = s.rangeCount ? s.anchorNode : null; Array.prototype.slice.call(t2.querySelectorAll(".mk-c")).forEach(function (h) { h.textContent.replace(/​/g, "") !== "" || h.querySelector("img,br,canvas,audio,video,table") || an && h.contains(an) || h.parentNode.removeChild(h); }); }
+    function mkColApply(t2, range, n) { var r = hlSplitRange(range), nodes = hlTexts(r).filter(hlOk); if (!nodes.length) return !1;
+        nodes.forEach(function (nd) { mkColUnwrapNode(t2, nd); if (n) { var sp = mkColNew(n); nd.parentNode.insertBefore(sp, nd), sp.appendChild(nd); } });
+        mkColMerge(t2);
+        try { var f2 = nodes[0], l = nodes[nodes.length - 1], rg = D2.createRange(), s = window.getSelection(); rg.setStart(f2, 0), rg.setEnd(l, l.nodeValue.length), s.removeAllRanges(), s.addRange(rg); } catch { }
+        return !0; }
+    function mkColCaret(t2, s2, n) { var CMDS = ["bold", "italic", "underline", "strikeThrough"], was = CMDS.map(function (c) { try { return D2.queryCommandState(c); } catch { return !1; } }),
+        r = s2.getRangeAt(0), h2 = mkColOf(r.startContainer, t2); if (h2 && n && mkColSpec(h2) === n) return; var zw = D2.createTextNode("​"), rg = D2.createRange(), holder = null;
+        if (h2) {
+            var tail = D2.createRange(); tail.selectNodeContents(h2), tail.setStart(r.startContainer, r.startOffset);
+            var more = tail.toString().replace(/​/g, "") !== "" || !!tail.cloneContents().querySelector("img,br,canvas,audio,video,table");
+            if (more) { var fr = tail.extractContents(), h22 = h2.cloneNode(!1); h22.appendChild(fr), h2.parentNode.insertBefore(h22, h2.nextSibling); }
+            if (n) { holder = mkColNew(n), holder.appendChild(zw), h2.parentNode.insertBefore(holder, h2.nextSibling); } else h2.parentNode.insertBefore(zw, h2.nextSibling);
+        } else if (n) { holder = mkColNew(n), holder.appendChild(zw), r.insertNode(holder); }
+        else return;
+        rg.setStart(zw, 1), rg.collapse(!0), s2.removeAllRanges(), s2.addRange(rg);
+        mkPend = holder ? { zw: zw, holder: holder } : null;
+        CMDS.forEach(function (c, i) { try { was[i] && !D2.queryCommandState(c) && D2.execCommand(c); } catch { } }); }
+    // The caret can drift next to the empty coloured marker (taps, keyboards re-placing it): just before typing, put it back inside
+    var mkPend = null;
+    D2.addEventListener('beforeinput', function (e) { try {
+        if (!mkPend || !/^insert/.test(e.inputType || '')) return;
+        var m = mkPend, tb = e.target && e.target.closest ? e.target.closest('.text-box[contenteditable="true"]') : null;
+        if (!tb || !m.zw.isConnected || !m.holder.isConnected || !tb.contains(m.holder) || m.holder.textContent !== '\u200b') { mkPend = null; return; }
+        var sl = window.getSelection(); if (!sl.rangeCount || !sl.isCollapsed || sl.anchorNode === m.zw) return;
+        var c = sl.getRangeAt(0), near = m.holder.contains(c.startContainer);
+        if (!near) { var a = D2.createRange(), tmp = D2.createRange(); a.setStartBefore(m.holder), a.collapse(!0); if (c.compareBoundaryPoints(Range.START_TO_START, a) <= 0) tmp.setStart(c.startContainer, c.startOffset), tmp.setEnd(a.startContainer, a.startOffset); else { a.setStartAfter(m.holder), a.collapse(!0), tmp.setStart(a.startContainer, a.startOffset), tmp.setEnd(c.startContainer, c.startOffset); }
+            near = tmp.toString().replace(/\u200b/g, '') === '' && !tmp.cloneContents().querySelector('img,br,canvas,audio,video,table'); }
+        if (near) { var nr = D2.createRange(); nr.setStart(m.zw, 1), nr.collapse(!0), sl.removeAllRanges(), sl.addRange(nr); }
+    } catch { } }, !0);
+    function mkColorAction(id, box, k) {
+        var pop = box.querySelector('.mxe-pop[data-pop="write"]');
+        if (k === "color") { if (pop) { pop.classList.toggle("colors-open"), mkcpPaintRecent(box), mkColPaintCur(box), mkTitleSync(box, itemOf(id)), fitPop(pop); try { var ss = window.getSelection(), tt = D2.getElementById("text-" + id); tt && ss && ss.rangeCount && tt.contains(ss.anchorNode) ? mkColSync(box, fmtState(tt, ss.anchorNode)) : mkColSync(box, {}); } catch { } } return !0; }
+        var kv = k.slice(6), n = /^#[0-9a-f]{6}$/i.test(kv) ? kv.toLowerCase() : parseInt(kv, 10); if (typeof n != "string" && (isNaN(n) || n < 0 || n > 9)) return !0;
+        var t = restoreText(id); if (!t) return !0;
+        var s = window.getSelection(); (!s.rangeCount || !t.contains(s.anchorNode)) && caretEnd(t);
+        var range = s.getRangeAt(0);
+        range.collapsed && expSnap && expSnap.id === id && !expSnap.r.collapsed && t.contains(expSnap.r.startContainer) && t.contains(expSnap.r.endContainer) && (range = expSnap.r.cloneRange());
+        expSnap = null;
+        if (range.collapsed) mkColCaret(t, s, n); else if (!mkColApply(t, range, n)) return !0;
+        mkColTidy(t);
+        if (n) { mkCurCol = n; try { localStorage.setItem("mxe_textcolor", String(n)); } catch { } mkColPaintCur(box); }
+        pop && pop.classList.remove("colors-open");
+        try { t.dispatchEvent(new Event("input", { bubbles: !0 })); } catch { }
+        saved(id); return !0; }
+    function mkColSync(box, st) { var cur = st && st.colorEl ? mkColSpec(st.colorEl) : 0; mkcpMark(box, !1, cur); box.querySelectorAll(".mxe-colors [data-sw]").forEach(function (b) { var on = typeof cur == "number" && cur > 0 && +b.getAttribute("data-sw") === cur; b.classList.toggle("on", on), b.setAttribute("aria-pressed", on ? "true" : "false"); }); box.querySelectorAll(".mxe-colors .custom").forEach(function (l) { l.classList.toggle("on", typeof cur == "string" && !!cur); var ip = l.querySelector("input"); ip && (typeof cur == "string" && cur ? ip.value = cur : typeof mkCurCol == "string" && (ip.value = mkCurCol)); }); mkColPaintCur(box); }
+    D2.addEventListener("change", function (e) { var ip = e.target && e.target.classList && e.target.classList.contains("mxe-cpick") ? e.target : null; if (ip) { var bx = boxOf(ip); bx && mkColorAction(idOf(bx), bx, "color:" + ip.value); } });
+    function mkTitleSync(box, it) { var cur = it && it.titleColor ? String(it.titleColor) : ""; mkcpMark(box, !0, cur); box.querySelectorAll(".mxe-colors.tt [data-tsw]").forEach(function (b) { var on = cur === b.getAttribute("data-tsw"); b.classList.toggle("on", on), b.setAttribute("aria-pressed", on ? "true" : "false"); }); box.querySelectorAll(".mxe-colors.tt .custom").forEach(function (l) { var on = /^#/.test(cur); l.classList.toggle("on", on); var ip = l.querySelector("input"); ip && on && (ip.value = cur); }); }
+    function mkTitleColorAction(id, box, k) { var it = itemOf(id); if (!it) return !0; var kv = k.slice(7), v = /^#[0-9a-f]{6}$/i.test(kv) ? kv.toLowerCase() : parseInt(kv, 10); if (typeof v != "string" && (isNaN(v) || v < 0 || v > 9)) return !0;
+        it.titleColor = v ? String(v) : null;
+        var inp = D2.getElementById("mc-title-" + id), c = typeof mkTitleHex == "function" ? mkTitleHex(it.titleColor) : null;
+        if (inp) { c ? (inp.style.setProperty("color", c, "important"), inp.style.setProperty("-webkit-text-fill-color", c, "important")) : (inp.style.removeProperty("color"), inp.style.removeProperty("-webkit-text-fill-color")); }
+        try { typeof mkPaintTitles == "function" && mkPaintTitles(); } catch { }
+        try { H.touchMeta(it); } catch { } try { H.saveToLocalStorage(); } catch { } try { saved(id); } catch { }
+        mkTitleSync(box, it); var pop = box.querySelector('.mxe-pop[data-pop="write"]'); pop && pop.classList.remove("colors-open"); return !0; }
+    D2.addEventListener("change", function (e) { var ip = e.target && e.target.classList && e.target.classList.contains("mxe-tpick") ? e.target : null; if (ip) { var bx = boxOf(ip); bx && mkTitleColorAction(idOf(bx), bx, "tcolor:" + ip.value); } });
+    // ================= Colour picker sheet (v16) =================
+    // Replaces the phone's native <input type=color> dialog (the plain "Select colour" box) with an in-app bottom sheet:
+    // big palette, free HSV picker, HEX field, recent colours, live preview on the real note background and a contrast check.
+    // Data model is unchanged: classic 9 colours stay <span class="mk-c mk-cN">, every other colour is <span class="mk-c mk-cx" style="--mk-x:#rrggbb">.
+    var MKCP_REC = "mxe_recent_colors";
+    function mkcpCols() { return typeof MXE_COLORS != "undefined" && MXE_COLORS && MXE_COLORS.length ? MXE_COLORS : ["#ef4444", "#f97316", "#eab308", "#22c55e", "#14b8a6", "#3b82f6", "#8b5cf6", "#ec4899", "#9ca3af"]; }
+    function mkcpNorm(v) { v = String(v == null ? "" : v).trim().replace(/^#/, "").toLowerCase(); if (/^[0-9a-f]{3}$/.test(v)) v = v.charAt(0) + v.charAt(0) + v.charAt(1) + v.charAt(1) + v.charAt(2) + v.charAt(2); return /^[0-9a-f]{6}$/.test(v) ? "#" + v : null; }
+    function mkcpRecent() { try { var a = JSON.parse(localStorage.getItem(MKCP_REC) || "[]"); return Array.isArray(a) ? a.map(mkcpNorm).filter(Boolean).slice(0, 12) : []; } catch (e) { return []; } }
+    function mkcpPush(hex) { try { hex = mkcpNorm(hex); if (!hex) return; var a = mkcpRecent().filter(function (x) { return x !== hex; }); a.unshift(hex); localStorage.setItem(MKCP_REC, JSON.stringify(a.slice(0, 12))); } catch (e) { } }
+    function mkcpRgb(h) { var n = parseInt(h.slice(1), 16); return [n >> 16 & 255, n >> 8 & 255, n & 255]; }
+    function mkcpHex(r, g, b) { return "#" + [r, g, b].map(function (x) { x = Math.max(0, Math.min(255, Math.round(x))); return (x < 16 ? "0" : "") + x.toString(16); }).join(""); }
+    function mkcpHsv(h) { var c = mkcpRgb(h), r = c[0] / 255, g = c[1] / 255, b = c[2] / 255, mx = Math.max(r, g, b), mn = Math.min(r, g, b), d = mx - mn, hh = 0; if (d) hh = mx === r ? ((g - b) / d + 6) % 6 : mx === g ? (b - r) / d + 2 : (r - g) / d + 4; return [hh * 60, mx ? d / mx : 0, mx]; }
+    function mkcpFromHsv(h, s, v) { var f = function (n) { var k = (n + h / 60) % 6; return (v - v * s * Math.max(0, Math.min(k, 4 - k, 1))) * 255; }; return mkcpHex(f(5), f(3), f(1)); }
+    function mkcpHsl(h, s, l) { s /= 100; l /= 100; var a = s * Math.min(l, 1 - l), f = function (n) { var k = (n + h / 30) % 12; return (l - a * Math.max(-1, Math.min(k - 3, 9 - k, 1))) * 255; }; return mkcpHex(f(0), f(8), f(4)); }
+    function mkcpLum(h) { var c = mkcpRgb(h).map(function (x) { x /= 255; return x <= .03928 ? x / 12.92 : Math.pow((x + .055) / 1.055, 2.4); }); return .2126 * c[0] + .7152 * c[1] + .0722 * c[2]; }
+    function mkcpContrast(a, b) { var x = mkcpLum(a), y = mkcpLum(b); return (Math.max(x, y) + .05) / (Math.min(x, y) + .05); }
+    // the light theme shows custom/classic colours darkened (color-mix(colour 58%, black)); the preview must match what the note really shows
+    function mkcpShown(hex, dark) { if (dark) return hex; var c = mkcpRgb(hex); return mkcpHex(c[0] * .58, c[1] * .58, c[2] * .58); }
+    function mkcpBg(el, dark) { try { for (var n = el; n && n.nodeType === 1; n = n.parentElement) { var m = /rgba?\(([^)]+)\)/.exec(getComputedStyle(n).backgroundColor || ""); if (m) { var p = m[1].split(",").map(parseFloat); if (p.length >= 3 && !isNaN(p[0]) && !isNaN(p[1]) && !isNaN(p[2]) && (p.length < 4 || p[3] > .6)) return mkcpHex(p[0], p[1], p[2]); } } } catch (e) { } return dark ? "#1c1c1e" : "#ffffff"; }
+    function mkcpTitleHex(v) { v = String(v == null ? "" : v); return /^#[0-9a-f]{6}$/i.test(v) ? v.toLowerCase() : (/^[1-9]$/.test(v) ? mkcpCols()[Number(v) - 1] || null : null); }
+    // recent colours inside the small inline colour panel (before the rainbow "+" button)
+    function mkcpPaintRecent(box) { try { var rec = mkcpRecent().filter(function (h) { return mkcpCols().indexOf(h) < 0; }).slice(0, 6); box.querySelectorAll(".mxe-colors").forEach(function (row) { row.querySelectorAll(".mxe-rec").forEach(function (n) { n.parentNode && n.parentNode.removeChild(n); }); var tt = row.classList.contains("tt"), anchor = row.querySelector(".custom"); if (!anchor) return; rec.forEach(function (h) { var b = D2.createElement("button"); b.type = "button"; b.className = "mxe-sw mxe-rec"; b.setAttribute("data-mxe", "fmt:" + (tt ? "tcolor:" : "color:") + h); b.style.setProperty("--sw", h); b.setAttribute("aria-label", h); b.title = h; row.insertBefore(b, anchor); }); }); } catch (e) { } }
+    function mkcpMark(box, tt, cur) { try { box.querySelectorAll(".mxe-colors" + (tt ? ".tt" : ":not(.tt)") + " .mxe-rec").forEach(function (b) { var h = (b.getAttribute("data-mxe") || "").slice(-7).toLowerCase(), on = typeof cur == "string" && cur.toLowerCase() === h; b.classList.toggle("on", on); b.setAttribute("aria-pressed", on ? "true" : "false"); }); } catch (e) { } }
+    if (!window.__mkcpClickHook) { window.__mkcpClickHook = 1, window.addEventListener("click", function (e) { var ov = e.target && e.target.closest ? e.target.closest("#mkTcs") : null; ov && ov.__mkAct && (e.stopPropagation(), ov.__mkAct(e)); }, !0); }
+    function mkcpOpen(id, box, isTitle) {
+        var old = D2.getElementById("mkTcs"); old && old.parentNode && old.parentNode.removeChild(old);
+        var dark = mkIsDark(), isFa = fa(), COLS = mkcpCols(), t0 = D2.getElementById("text-" + id), it = itemOf(id), sel = window.getSelection(), snap = null;
+        // remember what was selected NOW: the HEX field takes focus and some phones collapse the selection
+        if (!isTitle && t0) { try {
+            if (sel && sel.rangeCount && t0.contains(sel.anchorNode) && !sel.getRangeAt(0).collapsed) snap = sel.getRangeAt(0).cloneRange();
+            else if (expSnap && expSnap.id === id && !expSnap.r.collapsed && t0.contains(expSnap.r.startContainer) && t0.contains(expSnap.r.endContainer)) snap = expSnap.r.cloneRange();
+            else if (lastRange && lastId === id && t0.contains(lastRange.startContainer) && t0.contains(lastRange.endContainer)) snap = lastRange.cloneRange();
+            else if (sel && sel.rangeCount && t0.contains(sel.anchorNode)) snap = sel.getRangeAt(0).cloneRange();
+        } catch (e) { snap = null; } }
+        var cur = null;
+        try {
+            if (isTitle) cur = it && it.titleColor ? mkcpTitleHex(it.titleColor) : null;
+            else if (snap) { var he = mkColOf(snap.startContainer, t0), sp = he ? mkColSpec(he) : 0; cur = sp ? (typeof sp == "number" ? COLS[sp - 1] : sp) : null; }
+        } catch (e) { cur = null; }
+        var init = mkcpNorm(cur) || (typeof mkCurCol == "string" ? mkcpNorm(mkCurCol) : COLS[mkCurCol - 1]) || COLS[0];
+        var S = isFa ? { ttl: isTitle ? "رنگ عنوان" : "رنگ متن", pal: "پالت", cus: "دلخواه", base: "رنگ‌های پایه", gray: "خاکستری", spec: "طیف رنگ‌ها", rec: "اخیراً استفاده‌شده", hexl: "کد رنگ", off: "بدون رنگ", cancel: "انصراف", ok: "اعمال", eye: "قطره‌چکان", sample: "نمونهٔ متن Aa 123", g: "خوانایی عالی", m: "خوانایی متوسط", b: "خوانایی ضعیف", lnote: "در تم روشن، رنگ‌ها برای خوانایی بهتر کمی تیره‌تر نمایش داده می‌شوند.", sv: "روشنایی و اشباع", hue: "طیف" }
+            : { ttl: isTitle ? "Title colour" : "Text colour", pal: "Palette", cus: "Custom", base: "Basic", gray: "Greys", spec: "Spectrum", rec: "Recent", hexl: "Hex code", off: "No colour", cancel: "Cancel", ok: "Apply", eye: "Eyedropper", sample: "Sample text Aa 123", g: "Great contrast", m: "Fair contrast", b: "Low contrast", lnote: "In the light theme colours are shown a bit darker for readability.", sv: "Shade", hue: "Hue" };
+        function sw(hex, extra) { return '<button type="button" class="mkcp-sw' + (extra ? " " + extra : "") + '" data-a="pick" data-h="' + hex + '" style="--c:' + hex + '" aria-label="' + hex + '"></button>'; }
+        var grays = ["#ffffff", "#e5e7eb", "#cbd5e1", "#9ca3af", "#6b7280", "#4b5563", "#374151", "#1f2937", "#111827", "#000000"], hues = [0, 24, 46, 68, 100, 150, 178, 205, 255, 322], lights = [82, 70, 58, 46, 34];
+        var hb = '<div class="mkcp-lab">' + S.base + '</div><div class="mkcp-grid">' + COLS.map(function (c) { return sw(c); }).join("") + '<button type="button" class="mkcp-sw mkcp-plus" data-a="tab" data-t="cus" aria-label="' + S.cus + '">+</button></div>'
+            + '<div class="mkcp-lab">' + S.gray + '</div><div class="mkcp-grid">' + grays.map(function (c) { return sw(c); }).join("") + '</div>'
+            + '<div class="mkcp-lab">' + S.spec + '</div><div class="mkcp-grid">' + lights.map(function (l) { return hues.map(function (h) { return sw(mkcpHsl(h, 86, l)); }).join(""); }).join("") + '</div>';
+        var rec = mkcpRecent();
+        rec.length && (hb += '<div class="mkcp-lab">' + S.rec + '</div><div class="mkcp-grid">' + rec.slice(0, 10).map(function (c) { return sw(c); }).join("") + '</div>');
+        var ov = D2.createElement("div"); ov.id = "mkTcs"; ov.className = "mkcp-ov"; ov.setAttribute("data-dark", dark ? "1" : "0"); ov.setAttribute("dir", isFa ? "rtl" : "ltr"); ov.tabIndex = -1;
+        ov.innerHTML = '<div class="mkcp-box" role="dialog" aria-modal="true" aria-label="' + S.ttl + '">'
+            + '<div class="mkcp-hd"><span class="mkcp-ttl">' + S.ttl + '</span><button type="button" class="mkcp-x" data-a="x" aria-label="close">✕</button></div>'
+            + '<div class="mkcp-prev"><span class="mkcp-smp">' + S.sample + '</span></div>'
+            + '<div class="mkcp-meta"><span class="mkcp-chip"><i class="mkcp-dot"></i><b class="mkcp-hexlab"></b></span><span class="mkcp-cr"></span></div>'
+            + (!dark && !isTitle ? '<div class="mkcp-note">' + S.lnote + '</div>' : '')
+            + '<div class="mkcp-tabs" role="tablist"><button type="button" class="on" data-a="tab" data-t="pal" role="tab">' + S.pal + '</button><button type="button" data-a="tab" data-t="cus" role="tab">' + S.cus + '</button></div>'
+            + '<div class="mkcp-pane" data-pane="pal">' + hb + '</div>'
+            + '<div class="mkcp-pane" data-pane="cus" hidden><div class="mkcp-sv" aria-label="' + S.sv + '"><i class="mkcp-svk"></i></div><div class="mkcp-hue" aria-label="' + S.hue + '"><i class="mkcp-huek"></i></div>'
+            + '<div class="mkcp-row"><label class="mkcp-hl">' + S.hexl + '</label><input type="text" class="mkcp-hex" maxlength="7" inputmode="text" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" dir="ltr" aria-label="' + S.hexl + '"><button type="button" class="mkcp-eye" data-a="eye" hidden aria-label="' + S.eye + '" title="' + S.eye + '">&#9678;</button></div></div>'
+            + '<div class="mkcp-ft"><button type="button" class="mkcp-ok" data-a="ok">' + S.ok + '</button><button type="button" class="mkcp-ghost" data-a="x">' + S.cancel + '</button><button type="button" class="mkcp-ghost mkcp-off" data-a="off">' + S.off + '</button></div></div>';
+        var q1 = function (s) { return ov.querySelector(s); }, prev = q1(".mkcp-prev"), smp = q1(".mkcp-smp"), dot = q1(".mkcp-dot"), hexLab = q1(".mkcp-hexlab"), cr = q1(".mkcp-cr"), sv = q1(".mkcp-sv"), svk = q1(".mkcp-svk"), hueEl = q1(".mkcp-hue"), huek = q1(".mkcp-huek"), hexIn = q1(".mkcp-hex"), eye = q1(".mkcp-eye");
+        var bgHex = mkcpBg(t0 || box, dark), st = { h: 0, s: 1, v: 1, hex: init };
+        function paint(src) {
+            var shown = isTitle ? st.hex : mkcpShown(st.hex, dark), ratio = mkcpContrast(shown, bgHex), lv = ratio >= 4.5 ? "g" : ratio >= 3 ? "m" : "b";
+            smp.style.setProperty("color", shown, "important"), smp.style.setProperty("-webkit-text-fill-color", shown, "important"), prev.style.setProperty("background", bgHex, "important");
+            dot.style.background = st.hex, hexLab.textContent = st.hex.toUpperCase(), cr.setAttribute("data-l", lv), cr.textContent = S[lv] + " · " + (Math.round(ratio * 10) / 10) + ":1";
+            ov.querySelectorAll(".mkcp-sw[data-h]").forEach(function (b) { b.classList.toggle("on", b.getAttribute("data-h") === st.hex); });
+            if (src !== "hex") { hexIn.value = st.hex.toUpperCase(), hexIn.classList.remove("bad"); }
+            var hc = mkcpFromHsv(st.h, 1, 1); sv.style.backgroundColor = hc, svk.style.left = st.s * 100 + "%", svk.style.top = (1 - st.v) * 100 + "%", svk.style.background = st.hex, huek.style.left = st.h / 360 * 100 + "%", huek.style.background = hc;
+        }
+        function setHex(hex, src) { st.hex = hex; var hv = mkcpHsv(hex); hv[1] > .03 && hv[2] > .03 && (st.h = hv[0]), st.s = hv[1], st.v = hv[2], paint(src); }
+        function setHsv() { st.hex = mkcpFromHsv(st.h, st.s, st.v), paint("hsv"); }
+        function close() { try { ov.parentNode && ov.parentNode.removeChild(ov); } catch (e) { } }
+        ov.__mkClose = close;
+        function tab(t) { ov.querySelectorAll(".mkcp-tabs button").forEach(function (b) { var on = b.getAttribute("data-t") === t; b.classList.toggle("on", on), b.setAttribute("aria-selected", on ? "true" : "false"); }); ov.querySelectorAll(".mkcp-pane").forEach(function (p) { p.hidden = p.getAttribute("data-pane") !== t; }); t === "cus" && paint("tab"); }
+        function drag(el, fn) { var mv = null; el.addEventListener("pointerdown", function (e) { e.preventDefault(); try { el.setPointerCapture(e.pointerId); } catch (x) { } mv = function (ev) { var r = el.getBoundingClientRect(); fn(Math.max(0, Math.min(1, (ev.clientX - r.left) / (r.width || 1))), Math.max(0, Math.min(1, (ev.clientY - r.top) / (r.height || 1)))); }; mv(e); }); el.addEventListener("pointermove", function (e) { mv && mv(e); }); ["pointerup", "pointercancel", "lostpointercapture"].forEach(function (n) { el.addEventListener(n, function () { mv = null; }); }); }
+        drag(sv, function (x, y) { st.s = x, st.v = 1 - y, setHsv(); });
+        drag(hueEl, function (x) { st.h = Math.min(359.9, x * 360), setHsv(); });
+        hexIn.addEventListener("input", function () { var raw = hexIn.value.trim(), n = mkcpNorm(raw); n ? (hexIn.classList.remove("bad"), setHex(n, "hex")) : hexIn.classList.toggle("bad", !!raw && (/[^0-9a-fA-F#]/.test(raw) || raw.replace("#", "").length >= 6)); });
+        hexIn.addEventListener("blur", function () { hexIn.value = st.hex.toUpperCase(), hexIn.classList.remove("bad"); });
+        hexIn.addEventListener("keydown", function (e) { e.key === "Enter" && (e.preventDefault(), hexIn.blur()); });
+        hexIn.addEventListener("focus", function () { try { expSnap = null; } catch (e) { } setTimeout(function () { try { hexIn.scrollIntoView({ block: "center", behavior: "smooth" }); } catch (e) { } }, 280); });
+        if (window.EyeDropper) { eye.hidden = !1; eye.addEventListener("click", function () { try { new window.EyeDropper().open().then(function (r) { var h = mkcpNorm(r && r.sRGBHex); h && setHex(h); }).catch(function () { }); } catch (e) { } }); }
+        function apply(off) {
+            if (!off && !st.hex) return;
+            var hex = st.hex, nn = off ? 0 : COLS.indexOf(hex) + 1, val = off ? 0 : nn || hex;
+            close();
+            try {
+                if (isTitle) mkTitleColorAction(id, box, "tcolor:" + val);
+                else {
+                    var t = D2.getElementById("text-" + id);
+                    if (t && t.getAttribute("contenteditable") === "true") { try { H.softFocus(t); } catch (e) { } if (snap && snap.startContainer.isConnected && snap.endContainer.isConnected && t.contains(snap.startContainer) && t.contains(snap.endContainer)) { try { var s2 = window.getSelection(); s2.removeAllRanges(), s2.addRange(snap), lastRange = snap.cloneRange(), lastId = id; } catch (e) { } } }
+                    mkColorAction(id, box, "color:" + val);
+                }
+            } catch (e) { console.error(e); }
+            !off && !nn && mkcpPush(hex);
+        }
+        // clicks are handled by the window-level capture listener below (ov.__mkAct): the app closes the open note on any click outside
+        // the editor (document capture listener), which would re-render the note and drop the selection
+        ov.__mkAct = function (e) {
+            var b = e.target && e.target.closest ? e.target.closest("[data-a]") : null;
+            if (!b) { e.target === ov && close(); return; }
+            var a = b.getAttribute("data-a"); e.preventDefault();
+            if (a === "x") close(); else if (a === "ok") apply(!1); else if (a === "off") apply(!0); else if (a === "tab") tab(b.getAttribute("data-t")); else if (a === "pick") { var h = mkcpNorm(b.getAttribute("data-h")); h && setHex(h); }
+        };
+        ov.addEventListener("keydown", function (e) { e.key === "Escape" && (e.stopPropagation(), close()); });
+        D2.body.appendChild(ov);
+        paint("init");
+        // a colour that is not in the palette (an earlier custom one) opens straight on the custom tab
+        cur && !ov.querySelector('.mkcp-sw[data-h="' + mkcpNorm(cur) + '"]') && tab("cus");
+        try { ov.focus({ preventScroll: !0 }); } catch (e) { }
+        return !0;
+    }
+    window.mkOpenColorPicker = function (id, isTitle) { try { var bx = D2.getElementById("container-" + id); return mkcpOpen(id, bx || D2.body, !!isTitle); } catch (e) { return !1; } };
+    window.mkApplyTextColor = function (id, n) { try { var bx = D2.getElementById("container-" + id); return mkColorAction(id, bx || D2.body, "color:" + n); } catch { return !1; } };
+    D2.addEventListener("DOMContentLoaded", function () { mkColPaintCur(D2); }), mkColPaintCur(D2);
+    
     window.mkToggleHighlight = toggleHighlight;
     // quote: a real <blockquote> built by hand (execCommand('formatBlock') can't switch a quote off, does
     // nothing on an empty line and quotes selections unreliably)
@@ -34622,7 +35077,7 @@ catch { } };
     } return null; }
     // which formats are active at the caret (pure DOM, so it never steals focus / opens the keyboard)
     function fmtState(t2, anchor) { var st = {}, el = anchor && (anchor.nodeType === 1 ? anchor : anchor.parentElement); if (!el || !t2.contains(el))
-        return st; var up = function (sel) { var x = el.closest(sel); return x && t2.contains(x) && x !== t2 ? x : null; }, b = up("b,strong"); st.bold = !!b, st.italic = !!up("i,em"), st.underline = !!up("u"), st.strike = !!up("s,strike,del"), st.ul = !!up("ul"), st.ol = !!up("ol"), st.quote = !!up("blockquote"), st.link = !!up("a"), st.highlight = !!up(".mk-hl"), st.code = !!up("code"), st.codeMode = st.code || !!codeModeId && t2.id === "text-" + codeModeId, st.heading = !!up(".mxe-h"), st.table = !!up("table"); try {
+        return st; var up = function (sel) { var x = el.closest(sel); return x && t2.contains(x) && x !== t2 ? x : null; }, b = up("b,strong"); st.bold = !!b, st.italic = !!up("i,em"), st.underline = !!up("u"), st.strike = !!up("s,strike,del"), st.ul = !!up("ul"), st.ol = !!up("ol"), st.quote = !!up("blockquote"), st.link = !!up("a"), st.highlight = !!up(".mk-hl"), st.color = !!up(".mk-c"), st.colorEl = up(".mk-c"), st.code = !!up("code"), st.codeMode = st.code || !!codeModeId && t2.id === "text-" + codeModeId, st.heading = !!up(".mxe-h"), st.table = !!up("table"); try {
         var ls = window.getSelection();
         if (ls && ls.rangeCount && t2.contains(ls.anchorNode)) {
             var q = function (c) { try {
@@ -34636,7 +35091,7 @@ catch { } };
     }
     catch { } var todoTextNode = lineFirstText(t2, anchor); return st.todo = !!(todoTextNode && /^[☐☑]/.test(todoTextNode.nodeValue)), st; }
     // Mark (class "on", aria-pressed) the writing-popover buttons whose format is active at the caret; runs when the popover opens and shortly after each tap
-    function syncFmt(box) { var id = idOf(box), t = D2.getElementById("text-" + id), anchor = null, s2 = window.getSelection(); t && s2 && s2.rangeCount && t.contains(s2.anchorNode) ? anchor = s2.anchorNode : t && lastRange && lastId === id && t.contains(lastRange.startContainer) && (anchor = lastRange.startContainer); var st = t ? fmtState(t, anchor) : {}; box.querySelectorAll(".mxe-pop [data-fmtk]").forEach(function (b) { var k = b.getAttribute("data-fmtk"), on = !!st[k]; b.classList.toggle("on", on), b.setAttribute("aria-pressed", on ? "true" : "false"); }); }
+    function syncFmt(box) { var id = idOf(box), t = D2.getElementById("text-" + id), anchor = null, s2 = window.getSelection(); t && s2 && s2.rangeCount && t.contains(s2.anchorNode) ? anchor = s2.anchorNode : t && lastRange && lastId === id && t.contains(lastRange.startContainer) && (anchor = lastRange.startContainer); var st = t ? fmtState(t, anchor) : {}; try { mkColSync(box, st); } catch { } box.querySelectorAll(".mxe-pop [data-fmtk]").forEach(function (b) { var k = b.getAttribute("data-fmtk"), on = !!st[k]; b.classList.toggle("on", on), b.setAttribute("aria-pressed", on ? "true" : "false"); }); }
     // tap the ☐ / ☑ of a checklist line to tick / untick it
     D2.addEventListener("click", function (e) { var t = e.target && e.target.closest ? e.target.closest('.text-box[contenteditable="true"]') : null; if (!(!t || !t.id || t.id.indexOf("text-") !== 0)) {
         var node = null;
@@ -34683,7 +35138,9 @@ catch { } };
         var ks = window.getSelection();
         ks.rangeCount && ks.isCollapsed && ks.anchorNode && ks.anchorNode.nodeType === 3 && ks.anchorNode.parentElement && ks.anchorNode.parentElement.closest('.text-box[contenteditable="true"]') ? window.__mkKeep = { n: ks.anchorNode, o: ks.anchorOffset } : lastRange && lastId === id && lastRange.collapsed && lastRange.startContainer.nodeType === 3 && (window.__mkKeep = { n: lastRange.startContainer, o: lastRange.startOffset });
     }
-    catch { } if (k === "normal") {
+    catch { } if (k === "cpick" || k === "tcpick") return mkcpOpen(id, box, k === "tcpick"); if (k.indexOf("tcolor:") === 0)
+        return mkTitleColorAction(id, box, k); if (k === "color" || k.indexOf("color:") === 0)
+        return mkColorAction(id, box, k); if (k === "normal") {
         try {
             var nt = restoreText(id);
             nt && H.normalText(nt), saved(id);
@@ -34697,7 +35154,7 @@ catch { } };
             try {
                 var ct = restoreText(id), cs = window.getSelection();
                 try {
-                    ct && cs.rangeCount && !cs.isCollapsed && hlApply(ct, cs.getRangeAt(0), "off");
+                    ct && cs.rangeCount && !cs.isCollapsed && hlApply(ct, cs.getRangeAt(0), "off"), ct && cs.rangeCount && !cs.isCollapsed && mkColApply(ct, cs.getRangeAt(0), 0);
                 }
                 catch { }
                 var can = ct && cs.rangeCount && cs.anchorNode, cel = can && (can.nodeType === 1 ? can : can.parentElement), ch = cel && cel.closest && cel.closest(".mxe-h");
@@ -34733,7 +35190,7 @@ catch { } };
         return it && setSize(id, (Number(it.fontSize) || 13) + (k === "bigger" ? 1 : -1)), !1;
     } return !0; }
     // Formats after which the writing popover stays open, so several can be applied in a row
-    var KEEPOPEN = { normal: 1, highlight: 1, bold: 1, italic: 1, underline: 1, strike: 1, heading: 1, todo: 1, ul: 1, ol: 1, quote: 1, code: 1, codeMode: 1 };
+    var KEEPOPEN = { normal: 1, highlight: 1, bold: 1, italic: 1, underline: 1, strike: 1, heading: 1, todo: 1, ul: 1, ol: 1, quote: 1, code: 1, codeMode: 1, color: 1 };
     // fmt0 + refresh of the active-format marks once the editor has settled
     function fmt(id, box, k) { var r = fmt0(id, box, k); return KEEPOPEN[k] ? (setTimeout(function () { syncFmt(box); }, 40), setTimeout(function () { syncFmt(box); }, 200), !1) : r; }
     // Enter on a checklist line: the next line starts with a checkbox too (Enter on an empty item ends the
@@ -36219,21 +36676,29 @@ var now = Date.now(); if (!(window.__muNfsSbAt && now - window.__muNfsSbAt < 500
     color:var(--nfs-bar)!important;
 }
 </style>
+<style id="muNfsSoftTone">
+/* resting notes: title a touch softer, preview text a little softer than full white/black; selected note keeps full strength */
+#muNotesFs[data-theme=dark] .mu-nfs-card:not(.mu-nfs-sel) .mu-nfs-ttl{color:rgba(255,255,255,.9)!important;-webkit-text-fill-color:rgba(255,255,255,.9)!important;font-weight:600!important}
+#muNotesFs[data-theme=dark] .mu-nfs-card:not(.mu-nfs-sel) .mu-nfs-txt,#muNotesFs[data-theme=dark] .mu-nfs-card:not(.mu-nfs-sel) .mu-nfs-txt .mu-nfs-ln{color:rgba(255,255,255,.8)!important;-webkit-text-fill-color:rgba(255,255,255,.8)!important}
+#muNotesFs[data-theme=light] .mu-nfs-card:not(.mu-nfs-sel) .mu-nfs-ttl{color:rgba(0,0,0,.82)!important;-webkit-text-fill-color:rgba(0,0,0,.82)!important;font-weight:700!important}
+#muNotesFs[data-theme=light] .mu-nfs-card:not(.mu-nfs-sel) .mu-nfs-txt,#muNotesFs[data-theme=light] .mu-nfs-card:not(.mu-nfs-sel) .mu-nfs-txt .mu-nfs-ln{color:rgba(0,0,0,.74)!important;-webkit-text-fill-color:rgba(0,0,0,.74)!important}
+</style>
 <div id="muNotesFs" class="mu-nfs" data-theme="dark" role="dialog" aria-modal="true" aria-label="Notes Manager (New version – Home)">
   <div class="mu-nfs-top">
+    <div class="mu-nfs-row">
+      <button type="button" id="muNfsMenuBtn" class="mu-nfs-themeout" onclick="muNotesFs.menu()"></button>
     <div class="mu-nfs-bar">
       <button type="button" id="muNfsSearchBack" class="mu-nfs-sback" aria-label="بازگشت" onmousedown="event.preventDefault()" onclick="muNfsSearchCancel(event)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M19 12H5M11 6l-6 6 6 6"/></svg></button>
-      <button type="button" id="muNfsMenuBtn" onclick="muNotesFs.menu()"></button>
       <input type="search" id="muNfsSearch" class="mu-nfs-input" autocomplete="off" dir="rtl" oninput="muNotesFs.onSearch()" onfocus="this.parentNode.classList.add('mu-sfocus')" onblur="this.parentNode.classList.remove('mu-sfocus')">
       <div id="muNfsBkBar" class="mu-nfs-bk" role="status" aria-live="polite" aria-hidden="true" data-state="run" data-ind="0"><div class="mu-nfs-bk-t" id="muNfsBkText" dir="auto"></div><div class="mu-nfs-bk-track"><div class="mu-nfs-bk-fill" id="muNfsBkFill"></div></div></div>
       <button type="button" id="muNfsListBtn" onclick="muNotesFs.openList()"></button>
       <button type="button" id="muNfsSortBtn" onclick="muNotesFs.sheet('sort')"></button>
       <button type="button" id="muNfsPrevBtn" onclick="muNotesFs.sheet('lines')"></button>
       <button type="button" id="muNfsViewBtn" onclick="muNotesFs.toggleView()"></button>
-      <button type="button" id="muNfsDashBtn" onclick="muNav.go('dash')"></button>
-      <button type="button" id="muNfsBackupBtn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><g transform="translate(12 12) scale(1.04) translate(-12 -12)"><g class="mu-bk-arr"><path d="M11 3A9 9 0 0 0 8.7 20.2"/><path d="M9.2 .9l3 2.2-2.6 2.3"/><path d="M13 21A9 9 0 0 0 15.3 3.8"/><path d="M14.8 23.1l-3-2.2 2.6-2.3"/></g></g><path transform="translate(12 12.6) scale(1) translate(-12 -12.6)" d="M16.2 15.4H9.1a2.7 2.7 0 0 1-.4-5.3 3.6 3.6 0 0 1 6.8-.4 2.9 2.9 0 0 1 .7 5.7z" stroke-width="1.8"/></svg></button>
       <button type="button" id="muNfsFolderBtn"></button>
-      <button type="button" id="muNfsThemeBtn" onclick="muNotesFs.toggleTheme()"></button>
+    </div>
+      <button type="button" id="muNfsBackupBtn" class="mu-nfs-themeout"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><g class="mu-bk-arr"><path transform="translate(12 12) scale(1.63) translate(-12.51 -11.43)" d="M16.2 15.4H9.1a2.7 2.7 0 0 1-.4-5.3 3.6 3.6 0 0 1 6.8-.4 2.9 2.9 0 0 1 .7 5.7z" stroke-width="1.05"/></g></svg></button>
+      <button type="button" id="muNfsThemeBtn" class="mu-nfs-themeout" onclick="muNotesFs.toggleTheme()"></button>
     </div>
     <div class="mu-nfs-selbar" id="muNfsSelBar"></div>
     <div id="muNfsFStrip"></div>
@@ -36247,13 +36712,27 @@ var now = Date.now(); if (!(window.__muNfsSbAt && now - window.__muNfsSbAt < 500
   <div class="mu-nfs-sheet" id="muNfsSheet"></div>
 </div>
 
+<style id="muNfsThemeOutCss">
+/* Day / night button sits beside the search pill (outside it) */
+.mu-nfs-row { display:flex; align-items:center; gap:8px; }
+.mu-nfs-row > .mu-nfs-bar { flex:1 1 0; min-width:0; }
+.mu-nfs-row > .mu-nfs-themeout { position:relative; flex:0 0 auto; width:52px; height:52px; border:0; border-radius:50%; padding:0; display:flex; align-items:center; justify-content:center; cursor:pointer; color:var(--nfs-text); background:var(--nfs-bar); box-shadow:0 1px 4px #00000040; touch-action:manipulation; -webkit-tap-highlight-color:transparent; }
+.mu-nfs-row > .mu-nfs-themeout svg { width:22px; height:22px; }
+.mu-nfs-row > .mu-nfs-themeout:active { background:#7f7f7f40; }
+@media (max-width:440px) { .mu-nfs-row .mu-nfs-bar > button:not(.mu-nfs-sback) { width:27px; } .mu-nfs-row { gap:4px; } .mu-nfs-row > .mu-nfs-themeout { width:38px; height:38px; } .mu-nfs-row > .mu-nfs-themeout svg { width:19px; height:19px; } }
+.mu-nfs-row:has(.mu-nfs-bar.mu-sfocus) > .mu-nfs-themeout,
+.mu-nfs-row:has(.mu-nfs-bar.mu-bkmode) > .mu-nfs-themeout:not(#muNfsBackupBtn) { display:none; }
+#muNfsBackupBtn.mu-nfs-themeout svg { width:24px; height:24px; }
+@media (max-width:440px) { #muNfsBackupBtn.mu-nfs-themeout svg { width:21px; height:21px; } }
+#muNotesFs.mu-selecting .mu-nfs-row { display:none; }
+</style>
 <style id="muNfsBackupCss">
 /* Cloud button + the search box that turns into the auto-backup action bar */
 #muNfsBackupBtn svg { width:26px; height:26px; overflow:visible; }
 #muNfsBackupBtn.mu-on { background:#7f7f7f33; }
 #muNfsBackupBtn[aria-busy=true] { cursor:progress; }
 #muNfsBackupBtn .mu-bk-arr { transform-box:view-box; transform-origin:50% 50%; }
-#muNfsBackupBtn.mu-run .mu-bk-arr { animation:muNfsBkSpin 1.4s linear infinite; }
+#muNfsBackupBtn.mu-run .mu-bk-arr { animation:muNfsBkPulse 1.4s ease-in-out infinite; }
 .mu-nfs-bk { display:none; flex:1 1 auto; min-width:0; box-sizing:border-box; flex-direction:column; justify-content:center; gap:5px; padding:0 12px; min-height:40px; color:var(--nfs-text); cursor:default; -webkit-tap-highlight-color:transparent; }
 .mu-nfs-bk-t { color:var(--nfs-text); font-size:12.5px; line-height:1.35; text-align:start; overflow:hidden; display:-webkit-box; -webkit-box-orient:vertical; -webkit-line-clamp:2; overflow-wrap:anywhere; }
 .mu-nfs-bk-track { flex:0 0 auto; height:4px; border-radius:2px; background:#7f7f7f40; overflow:hidden; }
@@ -36268,7 +36747,7 @@ var now = Date.now(); if (!(window.__muNfsSbAt && now - window.__muNfsSbAt < 500
 body.mu-nfsbk-on #mkBackupBar { display:none!important; }
 @keyframes muNfsBkIn { from { opacity:0; transform:translateY(3px); } to { opacity:1; transform:none; } }
 @keyframes muNfsBkSlide { 0% { margin-inline-start:-35%; } to { margin-inline-start:100%; } }
-@keyframes muNfsBkSpin { to { transform:rotate(360deg); } }
+@keyframes muNfsBkPulse { 0%,100% { opacity:1; transform:scale(1); } 50% { opacity:.45; transform:scale(.93); } }
 /* one more icon in the bar: slim the buttons on phones so the search box keeps its width */
 @media (max-width:440px) {
     .mu-nfs-bar > button:not(.mu-nfs-sback) { width:32px; }
@@ -36614,9 +37093,12 @@ body.mu-nfsbk-on #mkBackupBar { display:none!important; }
     // in the note stays an empty line in the preview (plain() above collapses blank lines, so it is only
     // used for search)
     var BCACHE = Object.create(null), BSKIP = /^(IMG|AUDIO|VIDEO|CANVAS|BUTTON|INPUT|SELECT|TEXTAREA|SCRIPT|STYLE|SVG|IFRAME)$/, BBLK = /^(DIV|P|LI|UL|OL|H[1-6]|BLOCKQUOTE|PRE|TR|TABLE|SECTION|ARTICLE|HR)$/;
+    // text colour (<span class="mk-c mk-cN|mk-cx">) -> hex, so the card preview keeps the note's text colours
+    var PVPAL = ["#ef4444", "#f97316", "#eab308", "#22c55e", "#14b8a6", "#3b82f6", "#8b5cf6", "#ec4899", "#9ca3af"];
+    function pvColOf(el) { try { if (el.classList.contains("mk-cx")) { var m = /--mk-x:\s*(#[0-9a-f]{6})/i.exec(el.getAttribute("style") || ""); if (m) return m[1].toLowerCase(); } for (var i = 0; i < el.classList.length; i++) { var m2 = /^mk-c([1-9])$/.exec(el.classList[i]); if (m2) return PVPAL[m2[1] - 1]; } } catch { } return ""; }
     function htmlLines(html, full) {
         var src = String(html);
-        (full || src.length > 3e4) && (src = src.replace(/\s(?:src|href|style)=(?:"[^"]*"|'[^']*')/g, "")), !full && src.length > 12e4 && (src = src.slice(0, 12e4));
+        (full || src.length > 3e4) && (src = src.replace(/\s(?:src|href|style)=(?:"[^"]*"|'[^']*')/g, function (m) { return !full && /^\sstyle=["']\s*--mk-x:\s*#[0-9a-f]{6};?\s*["']$/i.test(m) ? m : ""; })), !full && src.length > 12e4 && (src = src.slice(0, 12e4));
         var doc = null;
         try {
             doc = new DOMParser().parseFromString(src, "text/html");
@@ -36625,11 +37107,13 @@ body.mu-nfsbk-on #mkBackupBar { display:none!important; }
         if (!doc || !doc.body)
             return String(htmlToText(src)).split(`
 `);
-        var lines = [], cur = "", n = 0;
-        function push() { lines.push(cur.replace(/\s+$/, "").replace(/^\s+/, "")), cur = ""; }
-        function walk(el) { for (var k = el.firstChild; k && (full || n < 400); k = k.nextSibling)
-            if (k.nodeType === 3)
-                cur += String(k.nodeValue).replace(/\u00A0/g, " ").replace(/[ \t\r\n]+/g, " ");
+        var lines = [], cur = "", curC = [], cmaps = [], wantC = !full && src.indexOf("mk-c") >= 0, n = 0;
+        function push() { var lead = cur.length - cur.replace(/^\s+/, "").length, t = cur.replace(/\s+$/, "").replace(/^\s+/, ""); lines.push(t), wantC && cmaps.push(curC.slice(lead, lead + t.length)), cur = "", curC = []; }
+        function walk(el, col) { for (var k = el.firstChild; k && (full || n < 400); k = k.nextSibling)
+            if (k.nodeType === 3) {
+                var tx = String(k.nodeValue).replace(/\u00A0/g, " ").replace(/[ \t\r\n]+/g, " ");
+                if (cur += tx, wantC) for (var q = 0; q < tx.length; q++) curC.push(col || "");
+            }
             else if (k.nodeType === 1) {
                 var tg = k.nodeName.toUpperCase();
                 if (tg === "BR") {
@@ -36642,23 +37126,25 @@ body.mu-nfsbk-on #mkBackupBar { display:none!important; }
                 if (typeof cl == "string" && /(?:^|\s)(?:img-toolbar|audio-wrapper|img-drag-wrapper|mu-img-row|img-top-divider|img-above-line|img-below-line)(?:\s|$)/.test(cl))
                     continue;
                 // table cells never glue together ("..p" + "ri.." must not look like "pri")
-                (tg === "TD" || tg === "TH") && (cur += " "), BBLK.test(tg) ? (cur.trim() && (push(), n++), walk(k), cur.trim() && (push(), n++)) : walk(k);
+                var nc = col; wantC && k.classList && k.classList.contains("mk-c") && (nc = pvColOf(k) || col);
+                (tg === "TD" || tg === "TH") && (cur += " ", wantC && curC.push("")), BBLK.test(tg) ? (cur.trim() && (push(), n++), walk(k, nc), cur.trim() && (push(), n++)) : walk(k, nc);
             } }
-        return walk(doc.body), cur.trim() && push(), lines;
+        return walk(doc.body, ""), cur.trim() && push(), wantC && (lines.cm = cmaps), lines;
     }
     function previewText(c2) {
         var raw = c2.text || c2.html || "", sig = String(c2.lastEdited || "") + "|" + String(raw).length + "|" + (c2.text ? 1 : 0), hit = BCACHE[c2.id];
         if (hit && hit.s === sig)
             return hit.v;
-        for (var lines = c2.html && String(c2.html).trim() ? htmlLines(c2.html) : String(c2.text || "").split(/\r?\n/).map(function (l) { return l.trim(); }); lines.length && !lines[0];)
-            lines.shift();
+        for (var lines = c2.html && String(c2.html).trim() ? htmlLines(c2.html) : String(c2.text || "").split(/\r?\n/).map(function (l) { return l.trim(); }), cms = lines.cm || null; lines.length && !lines[0];)
+            lines.shift(), cms && cms.shift();
         for (; lines.length && !lines[lines.length - 1];)
-            lines.pop();
+            lines.pop(), cms && cms.pop();
         for (var out = [], total = 0, i = 0; i < lines.length && (out.push(lines[i]), total += lines[i].length + 1, !(total >= 900)); i++)
             ;
         var v = out.join(`
-`);
-        return BCACHE[c2.id] = { s: sig, v: v }, v;
+`), flat = null;
+        if (cms) { var fc = [], any2 = !1; out.forEach(function (ln, ii) { var m2 = cms[ii] || []; for (var z = 0; z < ln.length; z++) { var cc = m2[z] || ""; cc && (any2 = !0), fc.push(cc); } ii < out.length - 1 && fc.push(""); }), flat = any2 ? fc : null; }
+        return BCACHE[c2.id] = { s: sig, v: v, cm: flat }, v;
     }
     // Search text = exactly what is VISIBLE in the note (same extraction as the card preview, but the
     // whole note, not only the first 900 chars)
@@ -36671,7 +37157,7 @@ body.mu-nfsbk-on #mkBackupBar { display:none!important; }
 `);
         return FCACHE[c.id] = { s: sig, v: v }, v;
     }
-    function info(c) { var locked = isLocked(c), title = c.titleHidden ? "•••••" : String(c.name || "").trim(), noPv = !!(locked || c.titleHidden || c.fakeContent || capsule(c)), body = noPv ? "" : (previewText(c).match(/^[\s\S]{0,900}/u) || [""])[0], flags = (locked ? "🔒 " : "") + (c.pinned ? "📌 " : "") + (c.favorite ? "⭐ " : ""), media = noPv || S2.lines <= 0 ? null : mediaOf(c), o = { id: c.id, media: media, title: (H.get("mkCl") && H.get("mkCl").parse(c) && H.get("mkCl").isDef(title)) ? "" : title, body: body, flags: flags, locked: locked, fl: noteFolders(c), pin: !!c.pinned, fav: !!c.favorite, col: /^[a-z]+$/.test(c.color || "") ? c.color : "", cl: H.get("mkCl") ? H.get("mkCl").parse(c) : null }; return Object.defineProperty(o, "searchable", { enumerable: !0, get: function () { return noPv ? "" : searchText(c, title); } }), Object.defineProperty(o, "full", { enumerable: !0, get: function () { return noPv ? "" : fullText(c); } }), o; }
+    function info(c) { var locked = isLocked(c), title = c.titleHidden ? "•••••" : String(c.name || "").trim(), noPv = !!(locked || c.titleHidden || c.fakeContent || capsule(c)), body = noPv ? "" : (previewText(c).match(/^[\s\S]{0,900}/u) || [""])[0], bcm = noPv ? null : BCACHE[c.id] && BCACHE[c.id].cm || null, flags = (locked ? "🔒 " : "") + (c.pinned ? "📌 " : "") + (c.favorite ? "⭐ " : ""), media = noPv || S2.lines <= 0 ? null : mediaOf(c), o = { id: c.id, bcm: bcm, media: media, title: (H.get("mkCl") && H.get("mkCl").parse(c) && H.get("mkCl").isDef(title)) ? "" : title, body: body, flags: flags, locked: locked, fl: noteFolders(c), pin: !!c.pinned, fav: !!c.favorite, col: /^[a-z]+$/.test(c.color || "") ? c.color : "", cl: H.get("mkCl") ? H.get("mkCl").parse(c) : null }; return Object.defineProperty(o, "searchable", { enumerable: !0, get: function () { return noPv ? "" : searchText(c, title); } }), Object.defineProperty(o, "full", { enumerable: !0, get: function () { return noPv ? "" : fullText(c); } }), o; }
     var SRCACHE = Object.create(null);
     function searchText(c, title) { var raw = c.text || c.html || "", sig = String(c.lastEdited || "") + "|" + String(raw).length + "|" + String(c.text || "").length + "|" + String(c.html || "").length + "|" + (c.text ? 1 : 0) + "|" + title, hit = SRCACHE[c.id]; if (hit && hit.s === sig)
         return hit.v; var v = norm(title) + " " + norm(fullText(c)); return SRCACHE[c.id] = { s: sig, v: v }, v; }
@@ -37081,7 +37567,21 @@ body.mu-nfsbk-on #mkBackupBar { display:none!important; }
             }
         return out;
     }
-    function cardHtml(inf) { return hlPrep(inf), '<button type="button" class="mu-nfs-card' + (inf.cl ? " mu-nfs-cl" : "") + (inf.pin && inf.fav ? " mu-nfs-both" : inf.pin ? " mu-nfs-pinned" : inf.fav ? " mu-nfs-faved" : "") + (isSel(inf.id) ? " mu-nfs-sel" : "") + '" data-id="' + esc(inf.id) + '" data-g="' + (inf.pin ? 1 : 0) + (inf.fav ? 1 : 0) + (inf.col ? '" data-mk-color="' + esc(inf.col) : "") + '"><div class="mu-nfs-ttl" dir="auto">' + (inf.locked || !inf.title && !inf.cl ? esc((inf.locked ? "🔒 " : "") + (inf.title || (fa2() ? "بدون عنوان" : "Untitled"))) : hl(inf.title)) + "</div>" + (inf.cl ? H.get("mkCl").rows(inf) : inf.body && S2.lines > 0 ? '<div class="mu-nfs-txt">' + bodyLines(inf).map(function (l) { return l = l.trim(), '<span class="mu-nfs-ln" dir="auto">' + (l ? inf.locked ? esc(l) : hl(l) : "&#8203;") + "</span>"; }).join("") + "</div>" : "") + mediaHtml(inf) + "</button>"; }
+    // like hl(), but also paints the note's text colours (cm = per-character colours of the whole body, base = offset of this line)
+    function hlc(text, cm, base) { text = String(text ?? ""); var n = text.length, any = !1, i, j, x, h, c, seg, out = ""; for (i = 0; i < n; i++)
+        if (cm[base + i]) {
+            any = !0;
+            break;
+        } if (!any)
+        return hl(text); var rg = occIn(text), hit = new Uint8Array(n + 1); for (i = 0; i < rg.length; i++)
+        for (x = rg[i][0]; x < rg[i][1]; x++)
+            hit[x] = 1; for (i = 0; i < n;) {
+        for (h = hit[i], c = cm[base + i] || "", j = i + 1; j < n && hit[j] === h && (cm[base + j] || "") === c;)
+            j++;
+        seg = esc(text.slice(i, j)), c && /^#[0-9a-f]{6}$/i.test(c) && (seg = '<span class="mu-nfs-c" style="--pv:' + c + '">' + seg + "</span>"), h && (seg = '<mark class="mu-nfs-hit">' + seg + "</mark>"), out += seg, i = j;
+    } return out; }
+    function bodyHtml(inf) { var bl = bodyLines(inf), cm = !inf.locked && inf.bcm && bl.join("\n") === inf.body ? inf.bcm : null, off = 0; return bl.map(function (l) { var o0 = off + (l.length - l.replace(/^\s+/, "").length); return off += l.length + 1, l = l.trim(), '<span class="mu-nfs-ln" dir="auto">' + (l ? inf.locked ? esc(l) : cm ? hlc(l, cm, o0) : hl(l) : "&#8203;") + "</span>"; }).join(""); }
+    function cardHtml(inf) { return hlPrep(inf), '<button type="button" class="mu-nfs-card' + (inf.cl ? " mu-nfs-cl" : "") + (inf.pin && inf.fav ? " mu-nfs-both" : inf.pin ? " mu-nfs-pinned" : inf.fav ? " mu-nfs-faved" : "") + (isSel(inf.id) ? " mu-nfs-sel" : "") + '" data-id="' + esc(inf.id) + '" data-g="' + (inf.pin ? 1 : 0) + (inf.fav ? 1 : 0) + (inf.col ? '" data-mk-color="' + esc(inf.col) : "") + '"><div class="mu-nfs-ttl" dir="auto">' + (inf.locked || !inf.title && !inf.cl ? esc((inf.locked ? "🔒 " : "") + (inf.title || (fa2() ? "بدون عنوان" : "Untitled"))) : hl(inf.title)) + "</div>" + (inf.cl ? H.get("mkCl").rows(inf) : inf.body && S2.lines > 0 ? '<div class="mu-nfs-txt">' + bodyHtml(inf) + "</div>" : "") + mediaHtml(inf) + "</button>"; }
     function colCount() { return S2.view === "list" ? 1 : 2; }
     function colsHtml(items) { var n2 = colCount(), bufs = [], h = [], k, i, c2, m; for (k = 0; k < n2; k++)
         bufs.push(""), h.push(0); for (i = 0; i < items.length; i++) {
@@ -37167,8 +37667,6 @@ body.mu-nfsbk-on #mkBackupBar { display:none!important; }
         sbk && (sbk.setAttribute("aria-label", fa2() ? "بازگشت" : "Back"), sbk.title = fa2() ? "لغو جستجو" : "Cancel search");
         var sb = $2("muNfsSortBtn");
         sb && (sb.innerHTML = ICONS.sort, sb.setAttribute("aria-label", fa2() ? "ترتیب نمایش" : "Sort order"), sb.title = fa2() ? "ترتیب نمایش" : "Sort order");
-        var db = $2("muNfsDashBtn");
-        db && (db.innerHTML = ICONS.dash, db.setAttribute("aria-label", fa2() ? "داشبورد" : "Dashboard"), db.title = fa2() ? "داشبورد" : "Dashboard");
         var lb = $2("muNfsListBtn");
         lb && (lb.innerHTML = ICONS.list, lb.setAttribute("aria-label", fa2() ? "لیست" : "List"), lb.title = fa2() ? "لیست" : "List");
         var pb = $2("muNfsPrevBtn");
@@ -37275,7 +37773,7 @@ body.mu-nfsbk-on #mkBackupBar { display:none!important; }
     } }
     function buildNav() { var p = $2("muNavPanel"); if (p) {
         var cur = curPage();
-        p.classList.toggle("mu-nav-paired", pairOn()), p.innerHTML = '<div class="mu-nav-head"><button type="button" class="mu-nav-set' + (cur === "settings" ? " on" : "") + '" data-nav="settings" aria-label="' + (fa2() ? "تنظیمات" : "Settings") + '" title="' + (fa2() ? "تنظیمات" : "Settings") + '">' + ICONS.gear + '</button><button type="button" class="mu-nav-layout" data-nav="layout" aria-label="' + (fa2() ? "تغییر نمایش منو" : "Change menu layout") + '" title="' + (fa2() ? "تغییر نمایش منو" : "Change menu layout") + '">' + (pairOn() ? ICONS.rows : ICONS.grid) + "<span>" + (fa2() ? "نمایش" : "Layout") + '</span></button><span class="mu-nav-hspacer" aria-hidden="true" style="flex:1 1 0;min-width:0"></span><button type="button" class="mu-nav-lang" data-nav="lang" aria-label="' + (fa2() ? "تغییر زبان" : "Change language") + '">' + ICONS.globe + '<span dir="auto">' + (fa2() ? "English" : "فارسی") + "</span></button></div>" + NAV_GROUPS.map(function (g, gi) { return (gi ? '<div class="mu-nav-sep"></div>' : "") + '<div class="mu-nav-grp"><div class="mu-nav-sec">' + esc(fa2() ? g.fa : g.en) + "</div>" + (function () { for (var out = [], i = 0, its = g.items; i < its.length;)
+        p.classList.toggle("mu-nav-paired", pairOn()), p.innerHTML = '<div class="mu-nav-head"><button type="button" class="mu-nav-set' + (cur === "settings" ? " on" : "") + '" data-nav="settings" aria-label="' + (fa2() ? "تنظیمات" : "Settings") + '" title="' + (fa2() ? "تنظیمات" : "Settings") + '">' + ICONS.gear + '</button><button type="button" class="mu-nav-layout" data-nav="layout" aria-label="' + (fa2() ? "تغییر نمایش منو" : "Change menu layout") + '" title="' + (fa2() ? "تغییر نمایش منو" : "Change menu layout") + '">' + (pairOn() ? ICONS.rows : ICONS.grid) + "<span>" + (fa2() ? "نمایش" : "Layout") + '</span></button><button type="button" class="mu-nav-dash' + (cur === "dash" ? " on" : "") + '" data-nav="dash" aria-label="' + (fa2() ? "داشبورد" : "Dashboard") + '" title="' + (fa2() ? "داشبورد" : "Dashboard") + '"><span dir="auto">' + (fa2() ? "داشبورد" : "Dashboard") + '</span></button><span class="mu-nav-hspacer" aria-hidden="true" style="flex:1 1 0;min-width:0"></span><button type="button" class="mu-nav-lang" data-nav="lang" aria-label="' + (fa2() ? "تغییر زبان" : "Change language") + '">' + ICONS.globe + '<span dir="auto">' + (fa2() ? "English" : "فارسی") + "</span></button></div>" + NAV_GROUPS.map(function (g, gi) { return (gi ? '<div class="mu-nav-sep"></div>' : "") + '<div class="mu-nav-grp"><div class="mu-nav-sec">' + esc(fa2() ? g.fa : g.en) + "</div>" + (function () { for (var out = [], i = 0, its = g.items; i < its.length;)
             pairOn() && its[i].pr && its[i + 1] && its[i + 1].pr === its[i].pr ? (out.push('<div class="mu-nav-pair">' + navItemHtml(its[i], cur) + navItemHtml(its[i + 1], cur) + "</div>"), i += 2) : pairOn() ? (out.push('<div class="mu-nav-pair mu-nav-solo">' + navItemHtml(its[i], cur) + "</div>"), i++) : (out.push(navItemHtml(its[i], cur)), i++); return out.join(""); })() + "</div>"; }).join("");
     } }
     // Markhin sigil: a black & white emblem at the bottom of the menu (grid layout only). Tap it and it
@@ -37492,7 +37990,7 @@ body.mu-nfsbk-on #mkBackupBar { display:none!important; }
     (function () { var later = navGo, lk = 0; navGo = function (menuAction) { var isNavOpen = !1; try {
         isNavOpen = window.muNav && window.muNav.isOpen && window.muNav.isOpen();
     }
-    catch (error) { } if (!isNavOpen || menuAction === "layout" || menuAction === "lang")
+    catch (error) { } if (!isNavOpen || menuAction === "layout" || menuAction === "lang" || menuAction === "dash")
         return later.apply(this, arguments); if (lk)
         return; lk = 1; setTimeout(function () { lk = 0; }, 420); var savedArgs = arguments, savedThis = this; try {
         navClose();
@@ -38085,9 +38583,9 @@ body.mu-nfsbk-on #mkBackupBar { display:none!important; }
             navGo(nv.getAttribute("data-nav"));
             return;
         }
-        // tapping empty space on the notes page while notes are selected cancels the selection (only the
+        // tapping anywhere on the notes page except the two bars (selection bar / top bar), the notes themselves (multi-select) and open sheets/dialogs cancels the selection (only the
         // selection mode ends; nothing is changed or lost - pin / favorite / lock edits are already saved)
-        S2.sel != null && fsOpen() && !modalVisible() && t.closest("#muNfsBody") && !t.closest("button, a, input, textarea, select, label, .mu-nfs-card, .mu-nfs-fh, .mu-nfs-fall, .mu-nfs-fadd, .mu-nfs-more, #muNfsSheet") && clearSel();
+        S2.sel != null && fsOpen() && !modalVisible() && t.isConnected && !t.closest("#muNfsSelBar, .mu-nfs-bar, .mu-nfs-card, #muNfsSheet, #muNav, input, textarea, select, [data-sel-act], [class*=modal], [class*=overlay], [class*=popup], [class*=toast], [class*=backdrop]") && clearSel();
     } }), document.addEventListener("input", function (e) { var t = e.target; if (!(!t || t.id !== "muNfsPickQ")) {
         var q = norm(t.value).trim();
         Array.prototype.forEach.call(document.querySelectorAll("#muNfsSheet .mu-nfs-pk"), function (b) { b.style.display = !q || (b.getAttribute("data-q") || "").indexOf(q) > -1 ? "" : "none"; });
@@ -41074,7 +41572,7 @@ html.mu-tg-fs .mklk .mklk-col {
                     return c[i]; return null; }, close: function (el) { var b = closeBtnIn(el); b ? b.click() : el.remove(); } }, { name: "moveMenu", find: function () { return document.getElementsByClassName("markhin-move-menu")[0] || null; }, z: 2147483e3, close: function () { try {
                 document.body.dispatchEvent(new Event("pointerdown", { bubbles: !0 }));
             }
-            catch { } var menu = document.querySelector(".markhin-move-menu"); menu && menu.remove(); } }, { name: "noteColor", find: function () { return $("mkColorSheet"); }, z: 60, close: function (el) { el.remove(); } }, { name: "editorPop", find: function () { var b = openEditorBox(); return b ? b.querySelector(".mxe-pop.open") : null; }, z: 50, close: function () { document.querySelectorAll(".mxe-pop.open").forEach(function (p) { p.classList.remove("open"); }); } }, { name: "folderPicker", find: function () { return $("muFolderPickerOverlay"); }, close: function (el) { el.remove(); } }, { name: "imgLightbox", find: function () { var e = $("muImgLightbox"); return shown(e) ? e : null; }, close: function () { try {
+            catch { } var menu = document.querySelector(".markhin-move-menu"); menu && menu.remove(); } }, { name: "textColor", find: function () { return $("mkTcs"); }, z: 2147483e3, close: function (el) { try { el.__mkClose ? el.__mkClose() : el.remove(); } catch (e) { el.remove(); } } }, { name: "noteColor", find: function () { return $("mkColorSheet"); }, z: 60, close: function (el) { el.remove(); } }, { name: "editorPop", find: function () { var b = openEditorBox(); return b ? b.querySelector(".mxe-pop.open") : null; }, z: 50, close: function () { document.querySelectorAll(".mxe-pop.open").forEach(function (p) { p.classList.remove("open"); }); } }, { name: "folderPicker", find: function () { return $("muFolderPickerOverlay"); }, close: function (el) { el.remove(); } }, { name: "imgLightbox", find: function () { var e = $("muImgLightbox"); return shown(e) ? e : null; }, close: function () { try {
                 mu_closeImageLightbox();
             }
             catch {
@@ -42812,10 +43310,10 @@ catch {
             return !1;
         }
     } var tok = b64(crypto.getRandomValues(new Uint8Array(32))); return await updateToken(tok) ? (saveSavedPasswords({}), lsSet(FLAG, "1"), lsDel(NEVER), quiet || toast(fa ? "✅ روشن شد. بعد از وارد کردن درست رمز یک یادداشت، پیشنهاد ذخیره با اثر انگشت می‌آید." : "✅ Turned on. After you enter a note password correctly, you can save it for fingerprint unlock."), tok) : (toast(fa ? "فعال‌سازی انجام نشد." : "Could not turn it on."), !1); }
-    async function disable() { var isPersian = isFa(); try {
+    async function disable(quiet) { var isPersian = isFa(); try {
         bm() && await updateToken("");
     }
-    catch { } resetLocal(), toast(isPersian ? "اثر انگشت خاموش شد و رمزهای ذخیره‌شده پاک شدند." : "Fingerprint unlock is off and saved passwords were removed."); }
+    catch { } resetLocal(), quiet || toast(isPersian ? "اثر انگشت خاموش شد و رمزهای ذخیره‌شده پاک شدند." : "Fingerprint unlock is off and saved passwords were removed."); }
     async function toggle() { if (!busy) {
         busy = !0;
         try {
@@ -42826,7 +43324,7 @@ catch {
     } }
     async function clearAll() { var fa = isFa(); await ask(fa ? "همه‌ی رمزهای ذخیره‌شده پاک شوند؟ (اثر انگشت روشن می‌ماند.)" : "Remove all saved passwords? (Fingerprint unlock stays on.)") && (saveSavedPasswords({}), declined = {}, refreshBioUi()); }
     function settingsHtml(fa) { prune(); var on = isOn(), n = count(); return '<div class="mu-set-row"><div class="mu-set-text"><div class="mu-set-title">' + (fa ? "باز کردن قفل با اثر انگشت" : "Unlock with fingerprint") + '<span class="mu-set-badge" id="mkBioBadge">' + (on ? fa ? "روشن" : "ON" : fa ? "خاموش" : "OFF") + '</span></div><div class="mu-set-desc">' + (fa ? "بعد از وارد کردن درست رمز یک یادداشت قفل‌شده، می‌توانی انتخاب کنی دفعه‌های بعد با اثر انگشت (یا چهره) باز شود. رمز فقط روی همین گوشی و رمزنگاری‌شده ذخیره می‌شود. فقط داخل تلگرام (نسخه 7.2 به بالا) کار می‌کند." : "After you enter a locked note's password correctly, you can choose to open it with your fingerprint (or face) next time. The password is stored encrypted on this phone only. Works only inside Telegram (version 7.2 or newer).") + '</div><button type="button" class="btn-main" id="mkBioClear" style="margin-top:8px;font-size:11px;padding:6px 12px;' + (on && n ? "" : "display:none") + '" onclick="MK_Bio.clearAll()">🗑 ' + (fa ? "حذف رمزهای ذخیره‌شده" : "Remove saved passwords") + " (" + n + ')</button></div><button type="button" class="mu-switch" id="mkBioSwitch" role="switch" aria-checked="' + (on ? "true" : "false") + '" aria-label="' + (fa ? "باز کردن قفل با اثر انگشت" : "Unlock with fingerprint") + '" onclick="MK_Bio.toggle()"></button></div>'; }
-    window.MK_Bio = MK.bio = {  /* MK.bio is the module API; window.MK_Bio is the legacy alias (same object) */ wrapPrompt: wrapPrompt, settingsHtml: settingsHtml, toggle: toggle, clearAll: clearAll, forget: forget, isOn: isOn, has: has };
+    window.MK_Bio = MK.bio = {  /* MK.bio is the module API; window.MK_Bio is the legacy alias (same object) */ wrapPrompt: wrapPrompt, settingsHtml: settingsHtml, toggle: toggle, disable: disable, clearAll: clearAll, forget: forget, isOn: isOn, has: has };
 })();
 </script>
 
@@ -46472,7 +46970,7 @@ catch { } })();
 </script>
 <script id="mk-clearfmt-table-patch">
 (function () { if (window.mkClearFormat)
-    return; var INL = "b,strong,i,em,u,s,strike,del,ins,font,mark,code,kbd,samp,tt,small,big,cite,var,a,sub,sup,.mk-hl", BLK = ".mxe-h,blockquote,pre,h1,h2,h3,h4,h5,h6", PROPS = ["color", "background", "background-color", "font-size", "font-family", "font-weight", "font-style", "text-decoration", "text-decoration-line", "-webkit-text-fill-color", "text-shadow", "text-transform", "letter-spacing", "font-variant", "vertical-align"]; function el(n) { return n && (n.nodeType === 1 ? n : n.parentElement); } function toast(m) { try {
+    return; var INL = "b,strong,i,em,u,s,strike,del,ins,font,mark,code,kbd,samp,tt,small,big,cite,var,a,sub,sup,.mk-hl,.mk-c", BLK = ".mxe-h,blockquote,pre,h1,h2,h3,h4,h5,h6", PROPS = ["color", "background", "background-color", "font-size", "font-family", "font-weight", "font-style", "text-decoration", "text-decoration-line", "-webkit-text-fill-color", "text-shadow", "text-transform", "letter-spacing", "font-variant", "vertical-align"]; function el(n) { return n && (n.nodeType === 1 ? n : n.parentElement); } function toast(m) { try {
     typeof showToast == "function" && showToast(m);
 }
 catch { } } function fa() { try {
@@ -50056,5 +50554,284 @@ html body #advancedCard.mdx:has(#mkfRoot[data-kind="folder"]) .mkf-empty-ico svg
 html body #advancedCard.mdx .mkf-empty-t{font-weight:500;font-size:13.5px}
 @media (prefers-reduced-motion:reduce){html body #advancedCard.mdx .mkf-card,html body #advancedCard.mdx .mkf-chip{transition:none}}
 </style>
+<style id="mkSelBarsCss">
+#mkSelBars{position:fixed;z-index:99990;left:0;top:0;display:none;flex-direction:column;gap:6px;align-items:stretch;
+  -webkit-user-select:none;user-select:none;-webkit-touch-callout:none;-webkit-tap-highlight-color:transparent;
+  font-family:inherit;--sb-bg:rgba(36,37,43,.97);--sb-fg:#f3f4f7;--sb-line:rgba(255,255,255,.10);--sb-on:rgba(99,179,255,.28);--sb-press:rgba(255,255,255,.14)}
+html[data-mxe-theme=light] #mkSelBars{--sb-bg:rgba(255,255,255,.98);--sb-fg:#1b1c21;--sb-line:rgba(0,0,0,.14);--sb-on:rgba(37,99,235,.18);--sb-press:rgba(0,0,0,.09)}
+#mkSelBars.show{display:flex}
+#mkSelBars .sb-row{display:flex;align-items:center;background:var(--sb-bg);color:var(--sb-fg);border:1px solid var(--sb-line);
+  border-radius:22px;box-shadow:0 6px 22px rgba(0,0,0,.35);padding:4px;min-height:44px;box-sizing:border-box}
+#mkSelBars .sb-main{justify-content:space-between;gap:2px}
+#mkSelBars .sb-fmt{flex-direction:column;align-items:stretch;gap:2px;padding:4px}
+#mkSelBars .sb-line{display:flex;align-items:center;width:100%}
+#mkSelBars button{all:unset;box-sizing:border-box;cursor:pointer;color:inherit;display:flex;align-items:center;justify-content:center;gap:5px;
+  border-radius:16px;font-size:13.5px;line-height:1;white-space:nowrap;-webkit-tap-highlight-color:transparent}
+#mkSelBars .sb-main button{flex:1 1 auto;min-width:0;height:36px;padding:0 7px;font-size:12.5px;gap:3px}
+#mkSelBars .sb-main svg{width:16px;height:16px}
+#mkSelBars .sb-fmt button{flex:1 1 0;min-width:0;height:36px;padding:0;font-size:16px}
+#mkSelBars button:active,#mkSelBars button.press{background:var(--sb-press)}
+#mkSelBars button.on{background:var(--sb-on)}
+#mkSelBars button[disabled]{opacity:.45;pointer-events:none}
+#mkSelBars svg{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;flex:0 0 auto}
+#mkSelBars .sb-sep{flex:0 0 1px;align-self:stretch;margin:7px 3px;background:var(--sb-line)}
+#mkSelBars .sw::before{content:"";width:22px;height:22px;border-radius:50%;background:var(--c);box-shadow:inset 0 0 0 1px rgba(127,127,127,.45)}
+#mkSelBars .sw.none::before{content:"✕";display:flex;align-items:center;justify-content:center;font-size:11px;background:transparent;box-shadow:inset 0 0 0 2px currentColor;opacity:.75}
+#mkSelBars .sw.rainbow::before{background:conic-gradient(#ef4444,#f97316,#eab308,#22c55e,#14b8a6,#3b82f6,#8b5cf6,#ec4899,#ef4444)}
+#mkSelBars.narrow .sw::before{width:19px;height:19px}
+#mkSelBars .hl{background:#ffeb3b;color:#111;border-radius:4px;padding:2px 6px;font-weight:800;font-size:14px}
+#mkSelBars .busy{opacity:.55;pointer-events:none}
+#mkSelBars.narrow .sb-main svg{display:none}
+.text-box[contenteditable=true]{-webkit-touch-callout:none}
+</style>
+<script id="mkSelBarsJs">
+(function () {
+  "use strict";
+  if (window.__mkSelBars) return; window.__mkSelBars = 1;
+  var D = document, COLORS = ["#ef4444", "#f97316", "#eab308", "#22c55e", "#14b8a6", "#3b82f6", "#8b5cf6", "#ec4899", "#9ca3af"];
+  function lang() { try { if (typeof currentLang === "string") return currentLang; } catch (e) { } return (D.documentElement.lang || "fa").slice(0, 2); }
+  function fa() { return lang() === "fa"; }
+  function L() { return fa() ? { cut: "برش", copy: "کپی", paste: "چسباندن", all: "انتخاب همه", tr: "ترجمه", noPaste: "اجازه‌ی چسباندن داده نشد؛ روی متن نگه دارید و «چسباندن» را بزنید.", trying: "در حال ترجمه…", trFail: "ترجمه انجام نشد." }
+    : { cut: "Cut", copy: "Copy", paste: "Paste", all: "Select all", tr: "Translate", noPaste: "Paste isn't allowed here; long-press in the text and choose Paste.", trying: "Translating…", trFail: "Translation failed." }; }
+  function toast(m) { try { if (typeof showToast === "function") return showToast(m); } catch (e) { } }
+
+  var IC = {
+    cut: '<svg viewBox="0 0 24 24"><circle cx="6" cy="6.5" r="2.5"/><circle cx="6" cy="17.5" r="2.5"/><path d="M8 8l12 9M8 16l12-9"/></svg>',
+    copy: '<svg viewBox="0 0 24 24"><rect x="8.5" y="8.5" width="12" height="12" rx="2.2"/><path d="M15.5 8.5V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7.5a2 2 0 002 2h2.5"/></svg>',
+    paste: '<svg viewBox="0 0 24 24"><rect x="5" y="4.5" width="14" height="16.5" rx="2"/><rect x="9" y="2.8" width="6" height="3.6" rx="1.2"/></svg>',
+    all: '<svg viewBox="0 0 24 24"><rect x="4" y="4" width="16" height="16" rx="2.5" stroke-dasharray="3 2.6"/><path d="M8.5 12.2l2.5 2.6 4.5-5"/></svg>',
+    tr: '<svg viewBox="0 0 24 24"><path d="M4 6h9M8.5 4v2M6 6c.5 3 2.5 5.5 5.5 7M11 6c-.5 3-3 6-6.5 7.5M13 20l4-9 4 9M14.4 17h5.2"/></svg>',
+    link: '<svg viewBox="0 0 24 24"><path d="M10 14a4 4 0 005.7 0l3-3a4 4 0 00-5.7-5.7l-1 1M14 10a4 4 0 00-5.7 0l-3 3A4 4 0 0011 18.7l1-1"/></svg>'
+  };
+
+  // [label html, data-mxe key, optional command for the "on" state, aria label]
+  function fmtItems() {
+    var f = fa(), items = [
+      ['<b>B</b>', "fmt:bold", "bold", f ? "پررنگ" : "Bold"],
+      ['<i style="font-family:serif">I</i>', "fmt:italic", "italic", f ? "کج" : "Italic"],
+      ['<u>U</u>', "fmt:underline", "underline", f ? "زیرخط" : "Underline"],
+      ['<s>S</s>', "fmt:strike", "strikeThrough", f ? "خط‌خورده" : "Strike"],
+      ['<span class="hl">A</span>', "fmt:highlight", "", f ? "هایلایت" : "Highlight"],
+      ['<b>H</b>', "fmt:heading", "", f ? "عنوان" : "Heading"],
+      ['•', "fmt:ul", "", f ? "فهرست" : "List"],
+      ['1.', "fmt:ol", "", f ? "شماره‌دار" : "Numbered"],
+      ['☐', "fmt:todo", "", f ? "چک‌لیست" : "Checklist"],
+      ['”', "fmt:quote", "", f ? "نقل‌قول" : "Quote"],
+      ['<span style="font:600 12px monospace">&lt;/&gt;</span>', "fmt:code", "", f ? "کد" : "Code"],
+      [IC.link, "fmt:link", "", f ? "لینک" : "Link"],
+      "\n",
+      ['<span style="font:800 14px monospace">`·`</span>', "fmt:codeMode", "", f ? "تایپ کپی‌شو" : "Tap-copy"],
+      ['<b style="font-size:13px">A-</b>', "fmt:smaller", "", f ? "کوچک‌تر" : "Smaller"],
+      ['<b style="font-size:15px">A+</b>', "fmt:bigger", "", f ? "بزرگ‌تر" : "Bigger"],
+      ['<span style="font-weight:700">Aa</span>', "fmt:normal", "", f ? "معمولی" : "Normal"],
+      ['<span style="font-size:14px">✕</span>', "fmt:clear", "", f ? "حذف قالب" : "Clear format"]
+    ];
+    COLORS.forEach(function (c, i) { items.push({ sw: c, key: "fmt:color:" + (i + 1), label: (f ? "رنگ متن " : "Text color ") + (i + 1) }); });
+    items.push({ sw: "rainbow", key: "fmt:cpick", label: f ? "رنگ دلخواه" : "Custom color" });
+    items.push({ sw: "none", key: "fmt:color:0", label: f ? "بدون رنگ" : "No color" });
+    return items;
+  }
+
+  var bar = null, mainRow = null, fmtRow = null, ctx = null, timer = 0, saved = null, lastKey = "", touching = false, internal = false, builtLang = "";
+
+  function build() {
+    if (bar && builtLang === lang()) return; builtLang = lang();
+    if (!bar) { bar = D.createElement("div"); bar.id = "mkSelBars"; (D.body || D.documentElement).appendChild(bar); wire(); }
+    var t = L(), rtl = fa();
+    bar.setAttribute("dir", rtl ? "rtl" : "ltr");
+    var main = [["cut", t.cut], ["copy", t.copy], ["paste", t.paste], ["all", t.all], ["tr", t.tr]];
+    var h = '<div class="sb-row sb-main" role="toolbar">' + main.map(function (m) { return '<button type="button" data-sb="' + m[0] + '">' + IC[m[0]] + '<span>' + m[1] + '</span></button>'; }).join("") + '</div>';
+    h += '<div class="sb-row sb-fmt" role="toolbar"><div class="sb-line">' + fmtItems().map(function (it) {
+      if (it === "\n") return '</div><div class="sb-line">';
+      if (it.sw) return '<button type="button" class="sw ' + (it.sw === "none" ? "none" : it.sw === "rainbow" ? "rainbow" : "") + '" ' + (it.sw[0] === "#" ? 'style="--c:' + it.sw + '"' : '') + ' data-sbk="' + it.key + '" aria-label="' + it.label + '"></button>';
+      return '<button type="button" data-sbk="' + it[1] + '"' + (it[2] ? ' data-cmd="' + it[2] + '"' : '') + ' aria-label="' + it[3] + '" title="' + it[3] + '">' + it[0] + '</button>';
+    }).join("") + '</div></div>';
+    bar.innerHTML = h; mainRow = bar.querySelector(".sb-main"); fmtRow = bar.querySelector(".sb-fmt");
+  }
+
+  // ---------- which selection counts ----------
+  function current() {
+    var s = window.getSelection(); if (!s || !s.rangeCount || s.isCollapsed) return null;
+    var n = s.anchorNode, el = n && (n.nodeType === 1 ? n : n.parentElement), tb = el && el.closest && el.closest('.text-box[contenteditable="true"]');
+    if (!tb) return null;
+    var f = s.focusNode, fe = f && (f.nodeType === 1 ? f : f.parentElement); if (!fe || !tb.contains(fe)) return null;
+    var box = tb.closest(".content-container.mxe"); if (!box) return null;
+    var r = s.getRangeAt(0); if (!s.toString().replace(/[\u200b\s]/g, "") && !r.cloneContents().querySelector("img,table")) return null;
+    return { sel: s, range: r, tb: tb, box: box };
+  }
+
+  // ---------- show / hide / place ----------
+  function show(c) {
+    build(); ctx = c; saved = c.range.cloneRange(); bar.classList.add("show"); place(); markOn();
+  }
+  function hide() { if (bar) bar.classList.remove("show"); ctx = null; lastKey = ""; }
+  function place() {
+    if (!bar || !ctx || !bar.classList.contains("show")) return;
+    if (!ctx.box.classList.contains("show") || !ctx.tb.isConnected) { hide(); return; }
+    var s = window.getSelection(), live = s.rangeCount && !s.isCollapsed && ctx.tb.contains(s.anchorNode);
+    var r = live ? s.getRangeAt(0) : saved; if (!r) return;
+    var rects = r.getClientRects(), br = r.getBoundingClientRect();
+    var first = rects.length ? rects[0] : br, last = rects.length ? rects[rects.length - 1] : br;
+    var vv = window.visualViewport, vw = vv ? vv.width : innerWidth, vh = vv ? vv.height : innerHeight, ot = vv ? vv.offsetTop : 0, ol = vv ? vv.offsetLeft : 0;
+    var W = Math.min(vw - 16, 440), minLeft = ol + 8;
+    bar.style.width = W + "px"; bar.classList.remove("narrow");
+    var bh = bar.offsetHeight, cx = (first.left + last.right) / 2;
+    var top = last.bottom + 46;                         // below the selection (leaves room for the handles)
+    if (top + bh > ot + vh - 8) top = first.top - bh - 14; // otherwise above it
+    top = Math.max(ot + 8, Math.min(top, ot + vh - bh - 8));
+    // the app's floating "back" button (#muHostBack) sits above everything at the left edge: never go under it,
+    // a tap there would leave the note
+    try {
+      var hb = D.getElementById("muHostBack");
+      if (hb && getComputedStyle(hb).display !== "none") {
+        var hr = hb.getBoundingClientRect();
+        if (top < hr.bottom + 8 && top + bh > hr.top - 8) {
+          var lim = hr.right + 8; if (hr.left > vw / 2) { lim = minLeft; W = Math.min(W, hr.left - 8 - minLeft); } else { minLeft = Math.max(minLeft, lim); W = Math.min(W, ol + vw - 8 - minLeft); }
+          bar.style.width = W + "px"; bar.classList.toggle("narrow", W < 350);
+        }
+      }
+    } catch (e) { }
+    var bw = bar.offsetWidth, left = Math.max(minLeft, Math.min(cx - bw / 2, ol + vw - bw - 8));
+    bh = bar.offsetHeight;
+    bar.style.left = Math.round(left) + "px"; bar.style.top = Math.round(top) + "px";
+  }
+  var raf = 0; function placeSoon() { raf || (raf = requestAnimationFrame(function () { raf = 0; place(); })); }
+
+  function markOn() {
+    if (!bar) return;
+    bar.querySelectorAll("[data-cmd]").forEach(function (b) { var cmd = b.getAttribute("data-cmd"), on = false; try { on = D.queryCommandState(cmd); } catch (e) { }
+    // Chrome reports "bold" whenever the computed weight is >= 600; the light theme sets the note text itself to 600, so plain text looked bold.
+    // Count it as bold only when it is really heavier than the note text or sits inside <b>/<strong>.
+    if (on && cmd === "bold") { try { var sl = D.getSelection(), nd = sl && sl.anchorNode, el = nd && (nd.nodeType === 1 ? nd : nd.parentElement), tb = el && el.closest && el.closest(".text-box"); if (tb && !el.closest("b,strong") && (parseInt(getComputedStyle(el).fontWeight, 10) || 400) <= (parseInt(getComputedStyle(tb).fontWeight, 10) || 400)) on = false; } catch (e) { } }
+    b.classList.toggle("on", !!on); });
+  }
+
+  // best effort: a script-made re-selection makes Chrome/Android drop its own floating menu (handles stay)
+  function hideNative(c) {
+    try {
+      if (localStorage.getItem("mksb_native") === "1") return;
+      var r = c.range, key = [r.startOffset, r.endOffset, c.sel.toString().length].join(":");
+      if (key === lastKey || touching) return; lastKey = key;
+      var rr = r.cloneRange(); internal = true; c.sel.removeAllRanges(); c.sel.addRange(rr); setTimeout(function () { internal = false; }, 60);
+    } catch (e) { internal = false; }
+  }
+
+  function onSel() {
+    if (internal) return;
+    try { if (localStorage.getItem("mksb_off") === "1") return; } catch (e) { }
+    clearTimeout(timer);
+    timer = setTimeout(function () {
+      var c = current();
+      if (!c) { if (bar && bar.classList.contains("show") && ctx && saved && saved.startContainer.isConnected && ctx.tb.isConnected) { placeSoon(); return; } hide(); return; }
+      show(c); hideNative(c); setTimeout(place, 30);
+    }, 280);
+
+  }
+
+  // ---------- actions ----------
+  function restore(needFocus) {
+    if (!ctx || !saved) return null;
+    needFocus || hush();
+    var s = window.getSelection();
+    try {
+      if (!(s.rangeCount && !s.isCollapsed && ctx.tb.contains(s.anchorNode))) {
+        if (needFocus && D.activeElement !== ctx.tb) { try { ctx.tb.focus({ preventScroll: true }); } catch (e) { } }
+        s.removeAllRanges(); s.addRange(saved.cloneRange());
+      }
+    } catch (e) { }
+    return s;
+  }
+  // Run an action without letting the on-screen keyboard rise: while the text box is not focused, give it
+  // inputmode="none" for the moment the app focuses it, drop the focus again, then put the attribute back.
+  var qTimers = [], qTb = null, qHad = null;
+  function unquiet() {
+    qTimers.forEach(clearTimeout); qTimers = [];
+    if (qTb) { qHad === null ? qTb.removeAttribute("inputmode") : qTb.setAttribute("inputmode", qHad); qTb = null; }
+  }
+  function hush() {
+    var tb = ctx && ctx.tb;
+    if (!tb || D.activeElement === tb && !qTb) return;
+    if (qTb !== tb) { unquiet(); qTb = tb; qHad = tb.getAttribute("inputmode"); tb.setAttribute("inputmode", "none"); }
+    qTimers.forEach(clearTimeout); qTimers = [];
+    [100, 300, 650].forEach(function (ms) { qTimers.push(setTimeout(function () { if (D.activeElement === tb) { try { tb.blur(); } catch (e) { } } }, ms)); });
+    qTimers.push(setTimeout(unquiet, 900));
+  }
+  function quiet(run) { hush(); run(); }
+  function selText() { var s = restore(); return s ? s.toString() : ""; }
+  function legacyCopy(t) { var ta = D.createElement("textarea"); ta.value = t; ta.setAttribute("readonly", ""); ta.style.cssText = "position:fixed;opacity:0;top:0;left:0"; D.body.appendChild(ta); ta.select(); var ok = false; try { ok = D.execCommand("copy"); } catch (e) { } ta.remove(); return ok; }
+  function writeClip(t) {
+    if (navigator.clipboard && navigator.clipboard.writeText) return navigator.clipboard.writeText(t).then(function () { return true; }, function () { return legacyCopy(t); });
+    return Promise.resolve(legacyCopy(t));
+  }
+  function actCopy() { var t = selText(); if (!t) return; var ok = false; try { ok = D.execCommand("copy"); } catch (e) { } ok ? 0 : writeClip(t); }
+  function actCut() { var t = selText(); if (!t) return; setTimeout(hide, 60); quiet(function () { cutNow(t); }); }
+  function cutNow(t) { var ok = false; try { ok = D.execCommand("cut"); } catch (e) { } if (ok) return; writeClip(t).then(function () { restore(); try { D.execCommand("delete"); } catch (e) { } }); }
+  function actPaste() {
+    var T = L(); restore(); setTimeout(hide, 60);
+    if (navigator.clipboard && navigator.clipboard.readText) {
+      navigator.clipboard.readText().then(function (t) { if (!t) return; quiet(function () { restore(true); try { D.execCommand("insertText", false, t); } catch (e) { } }); }, function () { toast(T.noPaste); });
+    } else { var ok = false; try { ok = D.execCommand("paste"); } catch (e) { } ok || toast(T.noPaste); }
+  }
+  function actAll() { if (!ctx) return; restore(); var s = window.getSelection(), r = D.createRange(); r.selectNodeContents(ctx.tb); s.removeAllRanges(); s.addRange(r); saved = r.cloneRange(); lastKey = ""; setTimeout(function () { var c = current(); c && (ctx = c, saved = c.range.cloneRange(), place()); }, 30); }
+  function actTr(btn) {
+    var T = L(), text = selText().trim(); if (!text) return;
+    if (typeof mu_translateAny !== "function") { toast(T.trFail); return; }
+    var ar = (text.match(/[\u0600-\u06FF]/g) || []).length, sl = ar > text.length * 0.3 ? "fa" : "en", tl = sl === "fa" ? "en" : "fa", my = saved && saved.cloneRange(), tb = ctx && ctx.tb;
+    btn.classList.add("busy"); toast(T.trying);
+    Promise.resolve(mu_translateAny(text, sl, tl)).then(function (out) {
+      btn.classList.remove("busy"); hide(); out = (typeof out === "string" ? out : (out && out.text)) || ""; if (!out || !tb || !tb.isConnected) { out || toast(T.trFail); return; }
+      try { ctx = { tb: tb, box: tb.closest(".content-container.mxe") }; quiet(function () { tb.focus({ preventScroll: true }); var s = window.getSelection(); s.removeAllRanges(); s.addRange(my); D.execCommand("insertText", false, out); }); } catch (e) { toast(T.trFail); }
+    }, function () { btn.classList.remove("busy"); toast(T.trFail); });
+  }
+  // formatting: click the editor's own (hidden) button, so every format behaves exactly like the writing-tools sheet
+  function actFmt(key) {
+    if (!ctx) return; restore();
+    var q = '[data-mxe="' + key + '"]', src = ctx.box.querySelector('.mxe-pop[data-pop="write"] ' + q) || ctx.box.querySelector(q);
+    if (src) quiet(function () { src.click(); });
+    setTimeout(function () { var c = current(); c && (ctx = c, saved = c.range.cloneRange()); markOn(); placeSoon(); }, 80);
+  }
+
+  // ---------- wiring ----------
+  function wire() {
+    // keep the text selection alive while a button is pressed
+    ["mousedown", "pointerdown"].forEach(function (ev) { bar.addEventListener(ev, function (e) { if (e.target.closest("button")) e.preventDefault(); }); });
+    ["touchstart", "touchend", "pointerup", "mouseup"].forEach(function (ev) { bar.addEventListener(ev, function (e) { e.stopPropagation(); }, { passive: true }); });
+    bar.addEventListener("contextmenu", function (e) { e.preventDefault(); });
+    // The app closes the open note on any tap outside its panel when the keyboard is down (a document-level capture
+    // click handler). Listening on window in the capture phase runs before it, and the tap stops here.
+    window.addEventListener("click", function (e) {
+      if (!bar || !bar.contains(e.target)) return; e.preventDefault(); e.stopPropagation(); e.stopImmediatePropagation();
+      var b = e.target.closest("button"); if (!b) return;
+      var a = b.getAttribute("data-sb"), k = b.getAttribute("data-sbk");
+      if (k) return actFmt(k);
+      if (a === "cut") actCut(); else if (a === "copy") actCopy(); else if (a === "paste") actPaste(); else if (a === "all") actAll(); else if (a === "tr") actTr(b);
+    }, true);
+  }
+
+  D.addEventListener("selectionchange", onSel);
+  D.addEventListener("touchstart", function (e) { if (!(bar && bar.contains(e.target))) { touching = true; unquiet(); if (bar && bar.classList.contains("show")) hide(); } }, { passive: true, capture: true });
+  D.addEventListener("mousedown", function (e) { if (bar && bar.classList.contains("show") && !bar.contains(e.target)) hide(); }, true);
+  ["touchend", "touchcancel"].forEach(function (ev) { D.addEventListener(ev, function () { touching = false; if (current()) onSel(); }, { passive: true, capture: true }); });
+  D.addEventListener("scroll", placeSoon, true);
+  window.addEventListener("resize", placeSoon);
+  if (window.visualViewport) { window.visualViewport.addEventListener("resize", placeSoon); window.visualViewport.addEventListener("scroll", placeSoon); }
+  D.addEventListener("keydown", function (e) { if (e.key && e.key.length === 1 || e.key === "Backspace" || e.key === "Delete" || e.key === "Enter") { if (bar && bar.classList.contains("show") && !e.ctrlKey && !e.metaKey) hide(); } }, true);
+  // while a text selection exists, stop the system long-press menu from covering these bars
+  D.addEventListener("contextmenu", function (e) { if (current() && e.target.closest && e.target.closest('.text-box[contenteditable="true"]')) { try { if (localStorage.getItem("mksb_native") !== "1") e.preventDefault(); } catch (x) { } } }, true);
+  // A tap anywhere else clears the text selection (and the bars with it). Left alone: the bars themselves and the editor's own
+  // tools / panels / dialogs (they act on the selection). Drags, scrolls and long-presses are not taps, so they never clear it.
+  var tapD = null;
+  D.addEventListener("pointerdown", function (e) { tapD = { x: e.clientX, y: e.clientY, t: Date.now(), had: !!current() && !(bar && bar.contains(e.target)) }; }, true);
+  D.addEventListener("pointerup", function (e) {
+    var d = tapD; tapD = null;
+    if (!d || !d.had || Date.now() - d.t > 500 || Math.abs(e.clientX - d.x) > 10 || Math.abs(e.clientY - d.y) > 10) return;
+    var t = e.target; if (!t || !t.closest || t.closest("#mkSelBars, button, a, input, textarea, select, label, .mxe-pop, .mxe-bottom, [class*=modal], [class*=overlay], [class*=popup], [class*=toast]")) return;
+    setTimeout(function () { try { var s = window.getSelection(); if (s && s.rangeCount && !s.isCollapsed && current()) { s.removeAllRanges(); hide(); } } catch (x) { } }, 0);
+  }, true);
+  window.mkSelBars = { off: function () { try { localStorage.setItem("mksb_off", "1"); } catch (e) { } hide(); }, on: function () { try { localStorage.removeItem("mksb_off"); } catch (e) { } },
+    keepNativeMenu: function (v) { try { v ? localStorage.setItem("mksb_native", "1") : localStorage.removeItem("mksb_native"); } catch (e) { } } };
+})();
+</script>
+
 </body>
 </html>
