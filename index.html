@@ -33198,7 +33198,7 @@ window.muIcon = function (name) { var P = { trash: '<path d="M4 7h16"/><path d="
         "mu_notesfs_theme_v1", "mxe_theme", "mu_nfs_edtheme_sync_v1",
         // notes page: display order, preview, grid/list view, menu layout
         "mu_notesfs_sort_v1", "markhin_note_sort_mode_v1", "mu_notesfs_lines_v1", "markhin_note_preview_enabled_v1",
-        "markhin_note_preview_lines_v1", "mu_notesfs_view_v1", "mu_nav_pair_v1", "mu_ab_sections_v1",
+        "markhin_note_preview_lines_v1", "mu_notesfs_view_v1", "mu_nav_pair_v1", "mu_ab_sections_v1", "mu_nfs_toolbar_v1",
         // note viewer
         "markhin_viewer_style_v1", "markhin_viewer_fs_v1", "mu_live_mode",
         // font, eco, zoom, language
@@ -33225,7 +33225,7 @@ window.muIcon = function (name) { var P = { trash: '<path d="M4 7h16"/><path d="
         var desc = isFa
             ? '<div style="margin:0 0 4px">این موارد به پیش‌فرض برمی‌گردد:</div>'
               + ln("🎨", "ظاهر", "تم، سبک کادر نمایش، فونت برنامه، زوم، زبان، حالت سبک")
-              + ln("🗂", "صفحه‌ی یادداشت‌ها", "ترتیب نمایش، پیش‌نمایش، نمای لیست/شبکه، چیدمان منو")
+              + ln("🗂", "صفحه‌ی یادداشت‌ها", "ترتیب نمایش، پیش‌نمایش، نمای لیست/شبکه، چیدمان منو، چیدمان نوار صفحه‌ی اصلی")
               + ln("📖", "نمایش یادداشت", "سبک و اندازه‌ی متن، حالت تایپ زنده")
               + ln("🔒", "امنیت", "اثر انگشت (رمزهای ذخیره‌شده‌ی آن هم پاک می‌شود)")
               + ln("🔧", "ابزار و جستجو", "مورس/باینری، جستجوی آنلاین، حالت صرفه‌جویی")
@@ -33233,7 +33233,7 @@ window.muIcon = function (name) { var P = { trash: '<path d="M4 7h16"/><path d="
               + '<div style="margin:6px 0 0">✅ <b>دست‌نخورده:</b> یادداشت‌ها، پوشه‌ها، گاوصندوق، لیست‌ها، همه‌ی بکاپ‌ها' + (ai ? "، تنظیمات و کلید هوش مصنوعی" : "") + ".</div>"
             : '<div style="margin:0 0 4px">These go back to their defaults:</div>'
               + ln("🎨", "Look", "theme, viewer frame style, app font, zoom, language, lite mode")
-              + ln("🗂", "Notes page", "display order, preview, list/grid view, menu layout")
+              + ln("🗂", "Notes page", "display order, preview, list/grid view, menu layout, home bar layout")
               + ln("📖", "Note viewer", "text style and size, live-typing mode")
               + ln("🔒", "Security", "fingerprint unlock (its saved passwords are removed too)")
               + ln("🔧", "Tools & search", "morse/binary, online search, eco options")
@@ -33463,7 +33463,7 @@ function initZoomWatch() { syncMode(), initSoftPinch(), zoomWatchDone || (zoomWa
         catch { }
     }
 }
-catch { } } function gearSvg() { return '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3.2"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>'; } function closeBtn() { return '<button class="btn-main" onclick="MK.liteHost.closeDialog()" aria-label="' + (isFa() ? "بستن" : "Close") + '">✕</button>'; } function openSettings() { var fa = isFa(), card = document.getElementById("advancedCard"), skinRow = '<div class="mu-set-row" style="flex-direction:column;align-items:stretch"><div class="mu-set-text"><div class="mu-set-title">' + (fa ? "تم ورژن جدید" : "New version theme") + '</div><div class="mu-set-desc">' + (fa ? "یکی از تم‌های برنامه را انتخاب کنید. با زدن دکمه روز/شب در صفحه یادداشت‌ها دوباره به حالت روز و شب برمی‌گردد." : "Pick one of the app themes. Tapping the day / night button on the Notes page goes back to plain day / night.") + "</div></div>" + (MK.nfsSkin ? MK.nfsSkin.chipsHtml(fa) : "") + "</div>"; MK.liteHost.showDialog('<div class="advanced-head"><h3>' + (fa ? "تنظیمات" : "Settings") + "</h3>" + closeBtn() + "</div>" + skinRow + '<div class="mu-set-row" style="flex-direction:column;align-items:stretch"><div class="mu-set-text"><div class="mu-set-title">زبان / Language</div><div class="mu-set-desc"><div dir="rtl" style="text-align:right">زبان برنامه را انتخاب کنید.</div><div dir="ltr" style="text-align:left">Choose the app language.</div></div></div><div class="mu-vs-seg" id="muLangSeg" role="group" aria-label="زبان / Language">' + [["fa", "فارسی (Persian)"], ["en", "English (انگلیسی)"]].map(function (o) { return '<button type="button" class="mu-vs-opt" data-lang="' + o[0] + '" aria-pressed="' + ((fa ? "fa" : "en") === o[0] ? "true" : "false") + `" onclick="MU_Lite.setLang('` + o[0] + `')">` + o[1] + "</button>"; }).join("") + '</div></div><div class="mu-set-row"><div class="mu-set-text"><div class="mu-set-title">' + (fa ? "زوم صفحه" : "Page zoom") + '<span class="mu-set-badge" id="muZoomBadge">' + (zoomOn() ? fa ? "روشن" : "ON" : fa ? "خاموش" : "OFF") + '</span></div><div class="mu-set-desc">' + (fa ? "وقتی روشن باشد می‌توانید با دو انگشت روی صفحه زوم کنید (از 100٪ تا 5 برابر). پیش‌فرض: در تلگرام خاموش، در بقیه‌ی جاها روشن. «شبکه دانش» همیشه زوم مخصوص خودش را دارد و به این گزینه وابسته نیست. داخل تلگرام هم کار می‌کند." : "When on, you can pinch-zoom the page (100% up to 5x). Default: off in Telegram, on elsewhere. The Knowledge Graph always has its own zoom and does not depend on this option. Works inside Telegram too.") + '</div><button type="button" class="btn-main" id="muZoomReset" style="margin-top:8px;font-size:11px;padding:6px 12px;' + (zoomOn() ? "" : "display:none") + '" onclick="MU_Lite.resetZoom()">↺ ' + (fa ? "بازنشانی زوم (100٪)" : "Reset zoom (100%)") + '</button></div><button type="button" class="mu-switch" id="muZoomSwitch" role="switch" aria-checked="' + (zoomOn() ? "true" : "false") + '" aria-label="' + (fa ? "زوم صفحه" : "Page zoom") + '" onclick="MU_Lite.toggleZoom()"></button></div><div class="mu-set-row" style="flex-direction:column;align-items:stretch"><div class="mu-set-text"><div class="mu-set-title">' + (fa ? "سبک کادر نمایش یادداشت" : "Note viewer style") + '</div><div class="mu-set-desc">' + (fa ? "با «نمایش یادداشت» هر بار بپرسد، یا همیشه با یک سبک ثابت باز شود." : "Ask each time you press “View note”, or always open with one fixed style.") + '</div></div><div class="mu-vs-seg" id="muViewerStyleSeg" role="group">' + [["ocean", fa ? "ساده" : "Simple"], ["retro", fa ? "ویندوز 95" : "Windows 95"], ["ask", fa ? "انتخاب هر بار (پیش‌فرض)" : "Ask each time (default)"]].map(function (o) { return '<button type="button" class="mu-vs-opt" data-vs="' + o[0] + '" aria-pressed="' + (window.mu_getViewerStyle && window.mu_getViewerStyle() === o[0] ? "true" : "false") + `" onclick="MU_Lite.setViewerStyle('` + o[0] + `')">` + o[1] + "</button>"; }).join("") + "</div></div>" + (window.MU_NDot ? MU_NDot.html(fa) : "") + (window.MK_Bio ? MK_Bio.settingsHtml(fa) : "") + (window.MU_Eco ? MU_Eco.html(fa, ["all", "viewer"]) : "") + (window.mu_imgOptRowHtml ? mu_imgOptRowHtml(fa) : "") + (window.MU_ResetSettings ? MU_ResetSettings.html(fa) : "") + "<div class='mu-morse-line' dir='ltr' role='img' aria-label='MARKHIN' style='flex:none;min-height:13px;display:flex;justify-content:center;align-items:center;gap:14px;flex-wrap:nowrap;white-space:nowrap;overflow:hidden;margin:20px 0 8px;font:700 14px/1 monospace;opacity:.55;-webkit-user-select:none;user-select:none;pointer-events:none'><span style='letter-spacing:4px'>\u2014\u2014</span><span style='letter-spacing:4px'>\u2022\u2014</span><span style='letter-spacing:4px'>\u2022\u2014\u2022</span><span style='letter-spacing:4px'>\u2014\u2022\u2014</span><span style='letter-spacing:4px'>\u2022\u2022\u2022\u2022</span><span style='letter-spacing:4px'>\u2022\u2022</span><span style='letter-spacing:4px'>\u2014\u2022</span></div>"), card && card.classList.remove("kg-wide"); } window.MU_Lite = { openSettings: openSettings, setZoom: function (on) { return setZoomState(on); }, toggleZoom: function () { return setZoomState(!zoomOn()); }, resetZoom: function () { resetZoom(); }, getZoomScale: pageScale, isZoomOn: zoomOn, setLang: function (l) { try {
+catch { } } function gearSvg() { return '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3.2"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>'; } function closeBtn() { return '<button class="btn-main" onclick="MK.liteHost.closeDialog()" aria-label="' + (isFa() ? "بستن" : "Close") + '">✕</button>'; } function openSettings() { var fa = isFa(), card = document.getElementById("advancedCard"), skinRow = '<div class="mu-set-row" style="flex-direction:column;align-items:stretch"><div class="mu-set-text"><div class="mu-set-title">' + (fa ? "تم ورژن جدید" : "New version theme") + '</div><div class="mu-set-desc">' + (fa ? "یکی از تم‌های برنامه را انتخاب کنید. با زدن دکمه روز/شب در صفحه یادداشت‌ها دوباره به حالت روز و شب برمی‌گردد." : "Pick one of the app themes. Tapping the day / night button on the Notes page goes back to plain day / night.") + "</div></div>" + (MK.nfsSkin ? MK.nfsSkin.chipsHtml(fa) : "") + "</div>"; MK.liteHost.showDialog('<div class="advanced-head"><h3>' + (fa ? "تنظیمات" : "Settings") + "</h3>" + closeBtn() + "</div>" + skinRow + '<div class="mu-set-row" style="flex-direction:column;align-items:stretch"><div class="mu-set-text"><div class="mu-set-title">زبان / Language</div><div class="mu-set-desc"><div dir="rtl" style="text-align:right">زبان برنامه را انتخاب کنید.</div><div dir="ltr" style="text-align:left">Choose the app language.</div></div></div><div class="mu-vs-seg" id="muLangSeg" role="group" aria-label="زبان / Language">' + [["fa", "فارسی (Persian)"], ["en", "English (انگلیسی)"]].map(function (o) { return '<button type="button" class="mu-vs-opt" data-lang="' + o[0] + '" aria-pressed="' + ((fa ? "fa" : "en") === o[0] ? "true" : "false") + `" onclick="MU_Lite.setLang('` + o[0] + `')">` + o[1] + "</button>"; }).join("") + '</div></div><div class="mu-set-row"><div class="mu-set-text"><div class="mu-set-title">' + (fa ? "زوم صفحه" : "Page zoom") + '<span class="mu-set-badge" id="muZoomBadge">' + (zoomOn() ? fa ? "روشن" : "ON" : fa ? "خاموش" : "OFF") + '</span></div><div class="mu-set-desc">' + (fa ? "وقتی روشن باشد می‌توانید با دو انگشت روی صفحه زوم کنید (از 100٪ تا 5 برابر). پیش‌فرض: در تلگرام خاموش، در بقیه‌ی جاها روشن. «شبکه دانش» همیشه زوم مخصوص خودش را دارد و به این گزینه وابسته نیست. داخل تلگرام هم کار می‌کند." : "When on, you can pinch-zoom the page (100% up to 5x). Default: off in Telegram, on elsewhere. The Knowledge Graph always has its own zoom and does not depend on this option. Works inside Telegram too.") + '</div><button type="button" class="btn-main" id="muZoomReset" style="margin-top:8px;font-size:11px;padding:6px 12px;' + (zoomOn() ? "" : "display:none") + '" onclick="MU_Lite.resetZoom()">↺ ' + (fa ? "بازنشانی زوم (100٪)" : "Reset zoom (100%)") + '</button></div><button type="button" class="mu-switch" id="muZoomSwitch" role="switch" aria-checked="' + (zoomOn() ? "true" : "false") + '" aria-label="' + (fa ? "زوم صفحه" : "Page zoom") + '" onclick="MU_Lite.toggleZoom()"></button></div><div class="mu-set-row" style="flex-direction:column;align-items:stretch"><div class="mu-set-text"><div class="mu-set-title">' + (fa ? "سبک کادر نمایش یادداشت" : "Note viewer style") + '</div><div class="mu-set-desc">' + (fa ? "با «نمایش یادداشت» هر بار بپرسد، یا همیشه با یک سبک ثابت باز شود." : "Ask each time you press “View note”, or always open with one fixed style.") + '</div></div><div class="mu-vs-seg" id="muViewerStyleSeg" role="group">' + [["ocean", fa ? "ساده" : "Simple"], ["retro", fa ? "ویندوز 95" : "Windows 95"], ["ask", fa ? "انتخاب هر بار (پیش‌فرض)" : "Ask each time (default)"]].map(function (o) { return '<button type="button" class="mu-vs-opt" data-vs="' + o[0] + '" aria-pressed="' + (window.mu_getViewerStyle && window.mu_getViewerStyle() === o[0] ? "true" : "false") + `" onclick="MU_Lite.setViewerStyle('` + o[0] + `')">` + o[1] + "</button>"; }).join("") + "</div></div>" + (window.MU_NDot ? MU_NDot.html(fa) : "") + (window.MK_Bio ? MK_Bio.settingsHtml(fa) : "") + (window.MU_Eco ? MU_Eco.html(fa, ["all", "viewer"]) : "") + (window.mu_imgOptRowHtml ? mu_imgOptRowHtml(fa) : "") + (window.MU_NfsToolbar ? MU_NfsToolbar.html(fa) : "") + (window.MU_ResetSettings ? MU_ResetSettings.html(fa) : "") + "<div class='mu-morse-line' dir='ltr' role='img' aria-label='MARKHIN' style='flex:none;min-height:13px;display:flex;justify-content:center;align-items:center;gap:14px;flex-wrap:nowrap;white-space:nowrap;overflow:hidden;margin:20px 0 8px;font:700 14px/1 monospace;opacity:.55;-webkit-user-select:none;user-select:none;pointer-events:none'><span style='letter-spacing:4px'>\u2014\u2014</span><span style='letter-spacing:4px'>\u2022\u2014</span><span style='letter-spacing:4px'>\u2022\u2014\u2022</span><span style='letter-spacing:4px'>\u2014\u2022\u2014</span><span style='letter-spacing:4px'>\u2022\u2022\u2022\u2022</span><span style='letter-spacing:4px'>\u2022\u2022</span><span style='letter-spacing:4px'>\u2014\u2022</span></div>"), card && card.classList.remove("kg-wide"); } window.MU_Lite = { openSettings: openSettings, setZoom: function (on) { return setZoomState(on); }, toggleZoom: function () { return setZoomState(!zoomOn()); }, resetZoom: function () { resetZoom(); }, getZoomScale: pageScale, isZoomOn: zoomOn, setLang: function (l) { try {
         if (MK.liteHost.lang() === l)
             return;
     }
@@ -36740,12 +36740,14 @@ var now = Date.now(); if (!(window.__muNfsSbAt && now - window.__muNfsSbAt < 500
       <button type="button" id="muNfsSearchBack" class="mu-nfs-sback" aria-label="بازگشت" onmousedown="event.preventDefault()" onclick="muNfsSearchCancel(event)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M19 12H5M11 6l-6 6 6 6"/></svg></button>
       <input type="search" id="muNfsSearch" class="mu-nfs-input" autocomplete="off" dir="rtl" oninput="muNotesFs.onSearch()" onfocus="this.parentNode.classList.add('mu-sfocus')" onblur="this.parentNode.classList.remove('mu-sfocus')">
       <div id="muNfsBkBar" class="mu-nfs-bk" role="status" aria-live="polite" aria-hidden="true" data-state="run" data-ind="0"><div class="mu-nfs-bk-t" id="muNfsBkText" dir="auto"></div><div class="mu-nfs-bk-track"><div class="mu-nfs-bk-fill" id="muNfsBkFill"></div></div></div>
-      <button type="button" id="muNfsListBtn" onclick="muNotesFs.openList()"></button>
       <button type="button" id="muNfsSortBtn" onclick="muNotesFs.sheet('sort')"></button>
       <button type="button" id="muNfsPrevBtn" onclick="muNotesFs.sheet('lines')"></button>
       <button type="button" id="muNfsViewBtn" onclick="muNotesFs.toggleView()"></button>
-      <button type="button" id="muNfsFolderBtn"></button>
     </div>
+      <div class="mu-nfs-bar mu-nfs-bar2" id="muNfsBar2">
+      <button type="button" id="muNfsListBtn" onclick="muNotesFs.openList()"></button>
+      <button type="button" id="muNfsFolderBtn"></button>
+      </div>
       <button type="button" id="muNfsBackupBtn" class="mu-nfs-themeout"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><g class="mu-bk-arr"><path transform="translate(12 12) scale(1.63) translate(-12.51 -11.43)" d="M16.2 15.4H9.1a2.7 2.7 0 0 1-.4-5.3 3.6 3.6 0 0 1 6.8-.4 2.9 2.9 0 0 1 .7 5.7z" stroke-width="1.05"/></g></svg></button>
       <button type="button" id="muNfsThemeBtn" class="mu-nfs-themeout" onclick="muNotesFs.toggleTheme()"></button>
     </div>
@@ -36761,6 +36763,161 @@ var now = Date.now(); if (!(window.__muNfsSbAt && now - window.__muNfsSbAt < 500
   <div class="mu-nfs-sheet" id="muNfsSheet"></div>
 </div>
 
+<style id="muNfsPillSplit">
+/* Folder + List live in their own pill beside the search pill, on the same row */
+.mu-nfs-row > .mu-nfs-bar.mu-nfs-bar2 { flex:0 0 auto; min-width:0; padding:0 4px; }
+.mu-nfs-row:has(.mu-nfs-bar:not(.mu-nfs-bar2).mu-sfocus) > .mu-nfs-bar2,
+.mu-nfs-row:has(.mu-nfs-bar:not(.mu-nfs-bar2).mu-bkmode) > .mu-nfs-bar2:not(:has(#muNfsBackupBtn)) { display:none; }
+</style>
+<style id="muNfsTbCss">
+.mu-nfs-bar2:not(:has(> button:not([style*="display: none"]))) { display:none!important; }
+.mu-nfs-row > .mu-nfs-bar.mu-nfs-bar2.mu-nfs-one { flex:0 0 auto; width:52px; height:52px; padding:0; border-radius:50%; justify-content:center; gap:0; }
+.mu-nfs-row > .mu-nfs-bar.mu-nfs-bar2.mu-nfs-one > button { width:100%!important; height:100%!important; border-radius:50%; }
+.mu-nfs-row > .mu-nfs-bar.mu-nfs-bar2.mu-nfs-one > button svg { width:22px; height:22px; }
+@media (max-width:440px) { .mu-nfs-row > .mu-nfs-bar.mu-nfs-bar2.mu-nfs-one { width:38px; height:38px; } .mu-nfs-row > .mu-nfs-bar.mu-nfs-bar2.mu-nfs-one > button svg { width:19px; height:19px; } }
+.mu-nfs-bar > button.mu-nfs-sicon { display:none!important; }
+.mu-nfs-row > .mu-nfs-bar.mu-nfs-solo.mu-nfs-tiny:not(.mu-nfs-sopen):not(.mu-sfocus):not(.mu-bkmode) { flex:0 0 auto; width:52px; height:52px; box-sizing:border-box; padding:0; border-radius:50%; justify-content:center; gap:0; }
+.mu-nfs-bar.mu-nfs-solo.mu-nfs-tiny:not(.mu-nfs-sopen):not(.mu-sfocus):not(.mu-bkmode) > .mu-nfs-input { display:none!important; }
+.mu-nfs-bar.mu-nfs-solo.mu-nfs-tiny:not(.mu-nfs-sopen):not(.mu-sfocus):not(.mu-bkmode) > button.mu-nfs-sicon { display:flex!important; width:100%!important; height:100%!important; }
+.mu-nfs-bar > button.mu-nfs-sicon svg { width:22px; height:22px; }
+@media (max-width:440px) { .mu-nfs-row > .mu-nfs-bar.mu-nfs-solo.mu-nfs-tiny:not(.mu-nfs-sopen):not(.mu-sfocus):not(.mu-bkmode) { width:38px; height:38px; } .mu-nfs-bar > button.mu-nfs-sicon svg { width:19px; height:19px; } }
+.mu-tbc-box { margin:8px 0 0; padding:8px 10px; border:1px solid rgba(127,127,127,.3); border-radius:12px; }
+.mu-tbc-head { display:flex; align-items:center; justify-content:space-between; gap:8px; margin-bottom:4px; font-size:13px; }
+.mu-tbc-item { display:flex; flex-wrap:wrap; align-items:center; gap:6px 8px; padding:7px 0; border-top:1px solid rgba(127,127,127,.18); }
+.mu-tbc-ic svg { width:20px; height:20px; display:block; }
+.mu-tbc-lbl { flex:1 1 90px; font-size:13px; }
+.mu-tbc-mv, .mu-tbc-to { display:flex; gap:4px; align-items:center; flex-wrap:wrap; }
+.mu-tbc-to { flex:1 1 100%; }
+.mu-tbc-to > span { font-size:11px; opacity:.7; margin-inline-end:2px; }
+.mu-tbc-box button[disabled] { opacity:.35; pointer-events:none; }
+.mu-tbc-actions { display:flex; gap:8px; flex-wrap:wrap; margin-top:10px; }
+</style>
+<script id="muNfsToolbarJs">
+/* Home-page bar customisation (Settings -> "Home bar").
+   Items: sort, preview, grid/list view, list, folders. Box 0 = inside the search pill, boxes 1..4 = separate pills on the same row.
+   Stored in localStorage "mu_nfs_toolbar_v1" (removed by Settings -> Reset settings). */
+(function () {
+    "use strict";
+    var KEY = "mu_nfs_toolbar_v1", MAXSEP = 7, IDS = ["sort", "prev", "view", "list", "folder", "backup", "theme"];
+    var BTN = { sort: "muNfsSortBtn", prev: "muNfsPrevBtn", view: "muNfsViewBtn", list: "muNfsListBtn", folder: "muNfsFolderBtn", backup: "muNfsBackupBtn", theme: "muNfsThemeBtn" };
+    var LBL = { sort: ["ترتیب نمایش", "Sort order"], prev: ["پیش‌نمایش یادداشت‌ها", "Note preview"], view: ["نمای شبکه‌ای / لیستی", "Grid / list view"], list: ["لیست", "List"], folder: ["پوشه‌ها", "Folders"], backup: ["بکاپ ابری", "Cloud backup"], theme: ["تم شب و روز", "Day / night theme"] };
+    function fa() { try { return MK.liteHost.isFa(); } catch (e) { return true; } }
+    function T(f, e) { return fa() ? f : e; }
+    function def() { return { pills: [["sort", "prev", "view"], ["list", "folder"], ["backup", "theme"]] }; }
+    function norm(c) {
+        if (!c || !Array.isArray(c.pills)) return def();
+        var seen = {}, pills = [];
+        c.pills.slice(0, MAXSEP + 1).forEach(function (p) {
+            var out = [];
+            (Array.isArray(p) ? p : []).forEach(function (id) { if (IDS.indexOf(id) >= 0 && !seen[id]) { seen[id] = 1; out.push(id); } });
+            pills.push(out);
+        });
+        if (!pills.length) pills.push([]);
+        IDS.forEach(function (id) { if (seen[id]) return; if ((id === "backup" || id === "theme") && pills.length < MAXSEP + 1) pills.push([id]); else pills[0].push(id); });
+        return { pills: pills };
+    }
+    function load() { try { var v = localStorage.getItem(KEY); return v ? norm(JSON.parse(v)) : def(); } catch (e) { return def(); } }
+    function save(c) {
+        try { localStorage.setItem(KEY, JSON.stringify(c)); } catch (e) { }
+        try { typeof mu_flushStorage === "function" && mu_flushStorage(); } catch (e) { }
+    }
+    function apply() {
+        var row = document.querySelector("#muNotesFs .mu-nfs-row"); if (!row) return;
+        var bar = row.querySelector(".mu-nfs-bar:not(.mu-nfs-bar2)"); if (!bar) return;
+        var c = load(), last = bar, old = [].slice.call(row.querySelectorAll(":scope > .mu-nfs-bar2"));
+        c.pills.forEach(function (ids, i) {
+            if (i === 0) { ids.forEach(function (id) { var b = document.getElementById(BTN[id]); b && bar.appendChild(b); }); return; }
+            if (!ids.length) return;
+            var p = document.createElement("div"); p.className = "mu-nfs-bar mu-nfs-bar2";
+            ids.forEach(function (id) { var b = document.getElementById(BTN[id]); b && p.appendChild(b); });
+            p.classList.toggle("mu-nfs-one", ids.length === 1);
+            row.insertBefore(p, last.nextSibling); last = p;
+        });
+        old.forEach(function (p) { p.parentNode && p.parentNode.removeChild(p); });
+        var solo = !c.pills[0].length;
+        bar.classList.toggle("mu-nfs-solo", solo); solo || bar.classList.remove("mu-nfs-sopen");
+        ensureIcon(bar); fitSearch(); observe();
+    }
+    // Search box alone: it grows into any free space on the row; only when less than ~84px is left does it shrink to the magnifier circle
+    var ro = null;
+    function fitSearch() {
+        var row = document.querySelector("#muNotesFs .mu-nfs-row"), bar = barEl(); if (!row || !bar) return;
+        if (!bar.classList.contains("mu-nfs-solo")) { bar.classList.remove("mu-nfs-tiny"); return; }
+        if (bar.classList.contains("mu-nfs-sopen") || bar.classList.contains("mu-sfocus") || bar.classList.contains("mu-bkmode")) return;
+        var kids = [].slice.call(row.children).filter(function (k) { return k !== bar && k.offsetWidth > 0; }), used = 0;
+        kids.forEach(function (k) { used += k.offsetWidth; });
+        var gap = parseFloat(getComputedStyle(row).columnGap) || 0, avail = row.clientWidth - used - gap * kids.length;
+        if (row.clientWidth > 0) bar.classList.toggle("mu-nfs-tiny", avail < 84);
+    }
+    function observe() {
+        if (typeof ResizeObserver !== "function") return;
+        var row = document.querySelector("#muNotesFs .mu-nfs-row"); if (!row) return;
+        try { ro && ro.disconnect(); } catch (e) { }
+        ro = new ResizeObserver(function () { fitSearch(); });
+        ro.observe(row); [].slice.call(row.children).forEach(function (k) { if (k !== barEl()) ro.observe(k); });
+    }
+    window.addEventListener("resize", fitSearch);
+    var MAG = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="6.5"/><path d="M16 16l4.5 4.5"/></svg>';
+    function barEl() { return document.querySelector("#muNotesFs .mu-nfs-bar:not(.mu-nfs-bar2)"); }
+    // search box with nothing else inside: shown as a magnifier circle; a tap expands it to full size and focuses the field
+    function openSearch() { var bar = barEl(), inp = document.getElementById("muNfsSearch"); if (!bar || !inp) return; bar.classList.add("mu-nfs-sopen"); try { inp.focus(); } catch (e) { } }
+    function syncSearch() { var bar = barEl(), inp = document.getElementById("muNfsSearch"); if (bar && inp && bar.classList.contains("mu-nfs-sopen") && document.activeElement !== inp && !inp.value) bar.classList.remove("mu-nfs-sopen"); fitSearch(); }
+    function ensureIcon(bar) {
+        var ic = document.getElementById("muNfsSearchIcon");
+        if (!ic) {
+            ic = document.createElement("button"); ic.type = "button"; ic.id = "muNfsSearchIcon"; ic.className = "mu-nfs-sicon"; ic.innerHTML = MAG;
+            ic.addEventListener("click", openSearch);
+            var inp = document.getElementById("muNfsSearch"); bar.insertBefore(ic, inp && inp.parentNode === bar ? inp : null);
+        }
+        var t = T("جستجو", "Search"); ic.setAttribute("aria-label", t); ic.title = t;
+    }
+    document.addEventListener("focusout", function (e) { e.target && e.target.id === "muNfsSearch" && setTimeout(syncSearch, 0); });
+    function iconOf(id) { var b = document.getElementById(BTN[id]), s = b && b.querySelector("svg"); return s ? s.outerHTML : ""; }
+    function boxName(i) { return i === 0 ? T("داخل کادر جستجو", "Inside the search box") : T("کادر جدا ", "Separate box ") + i; }
+    function chipName(i) { return i === 0 ? T("جستجو", "Search") : String(i); }
+    var SM = "font-size:12px;padding:4px 10px;min-width:32px;";
+    function inner() {
+        var c = load(), h = "";
+        c.pills.forEach(function (ids, pi) {
+            h += '<div class="mu-tbc-box"><div class="mu-tbc-head"><b>' + boxName(pi) + "</b>"
+                + (pi > 0 ? '<button type="button" class="btn-main" style="' + SM + '" onclick="MU_NfsToolbar.delBox(' + pi + ')">✕ ' + T("حذف کادر", "Remove box") + "</button>" : "") + "</div>";
+            if (!ids.length) h += '<div class="mu-set-desc">' + (pi === 0 ? T("خالی است؛ کادر جستجو به یک ذره‌بین تبدیل می‌شود و با لمس باز می‌شود.", "Empty: the search box becomes a magnifier icon and expands when tapped.") : T("خالی است", "Empty")) + "</div>";
+            ids.forEach(function (id, ii) {
+                h += '<div class="mu-tbc-item"><span class="mu-tbc-ic">' + iconOf(id) + '</span><span class="mu-tbc-lbl">' + (fa() ? LBL[id][0] : LBL[id][1]) + "</span>"
+                    + '<span class="mu-tbc-mv"><button type="button" class="btn-main" style="' + SM + '" ' + (ii === 0 ? "disabled " : "") + "onclick=\"MU_NfsToolbar.move('" + id + "',-1)\">▲</button>"
+                    + '<button type="button" class="btn-main" style="' + SM + '" ' + (ii === ids.length - 1 ? "disabled " : "") + "onclick=\"MU_NfsToolbar.move('" + id + "',1)\">▼</button></span>"
+                    + '<span class="mu-tbc-to"><span>' + T("انتقال به:", "Move to:") + "</span>"
+                    + c.pills.map(function (_, k) { return '<button type="button" class="mu-vs-opt" aria-pressed="' + (k === pi ? "true" : "false") + '" style="flex:0 0 auto;font-size:12px;padding:4px 10px;min-width:32px" onclick="MU_NfsToolbar.to(\'' + id + "'," + k + ')">' + chipName(k) + "</button>"; }).join("") + "</span></div>";
+            });
+            h += "</div>";
+        });
+        h += '<div class="mu-tbc-actions">'
+            + (c.pills.length - 1 < MAXSEP ? '<button type="button" class="btn-main" style="font-size:12px;padding:8px 14px" onclick="MU_NfsToolbar.addBox()">＋ ' + T("کادر جدید", "New box") + "</button>" : "")
+            + '<button type="button" class="btn-main" style="font-size:12px;padding:8px 14px" onclick="MU_NfsToolbar.reset()">↺ ' + T("پیش‌فرض این بخش", "Defaults for this section") + "</button></div>";
+        return h;
+    }
+    function paint() { var b = document.getElementById("muTbBody"); b && (b.innerHTML = inner()); }
+    function commit(c) { save(c); apply(); paint(); }
+    function find(c, id) { for (var i = 0; i < c.pills.length; i++) { var j = c.pills[i].indexOf(id); if (j >= 0) return [i, j]; } return null; }
+    function html(isFa) {
+        return '<div class="mu-set-row" style="flex-direction:column;align-items:stretch"><div class="mu-set-text"><div class="mu-set-title">' + (isFa ? "نوار صفحه‌ی اصلی" : "Home bar") + '</div><div class="mu-set-desc">'
+            + (isFa ? "دکمه‌های کنار کادر جستجو را به کادر جستجو اضافه کن، در چند کادر جدا بچین یا ترتیبشان را عوض کن. ترتیب از بالا به پایین همان ترتیب از راست به چپ روی نوار است. تغییرها همان لحظه اعمال می‌شود."
+                : "Put the buttons next to the search box inside it, split them into separate boxes, or reorder them. Top-to-bottom here matches start-to-end on the bar. Changes apply instantly.")
+            + '</div></div><div id="muTbBody">' + inner() + "</div></div>";
+    }
+    window.MU_NfsToolbar = {
+        html: html, apply: apply, key: KEY,
+        move: function (id, d) { var c = load(), p = find(c, id); if (!p) return; var a = c.pills[p[0]], j = p[1] + d; if (j < 0 || j >= a.length) return; a.splice(p[1], 1); a.splice(j, 0, id); commit(c); },
+        to: function (id, k) { var c = load(), p = find(c, id); if (!p || !c.pills[k] || p[0] === k) return; c.pills[p[0]].splice(p[1], 1); c.pills[k].push(id); commit(c); },
+        addBox: function () { var c = load(); if (c.pills.length - 1 >= MAXSEP) return; c.pills.push([]); commit(c); },
+        delBox: function (k) { var c = load(); if (k < 1 || !c.pills[k]) return; c.pills[0] = c.pills[0].concat(c.pills[k]); c.pills.splice(k, 1); commit(c); },
+        reset: function () { try { localStorage.removeItem(KEY); } catch (e) { } try { typeof mu_flushStorage === "function" && mu_flushStorage(); } catch (e) { } apply(); paint(); }
+    };
+    apply();
+    document.addEventListener("DOMContentLoaded", apply);
+    window.addEventListener("load", function () { fitSearch(); observe(); });
+})();
+</script>
 <style id="muNfsThemeOutCss">
 /* Day / night button sits beside the search pill (outside it) */
 .mu-nfs-row { display:flex; align-items:center; gap:8px; }
