@@ -13460,6 +13460,12 @@ html body #contentsContainer .content-container.mxe .text-box .mk-hl::selection,
     margin-top:2px;
 }
 </style>
+<style id="mkBarKbSmooth">
+/* The bottom bar's padding-bottom used to flip (12px + safe-area <-> 10px) the instant the keyboard class toggled, while the panel was still resizing.
+   That moved the bar's layout position in one step and made the keyboard engine glide it a second time (a visible jump). Ease the padding instead,
+   (no hold during closing: holding it made the bar sit too low and then rise when the hold ended). */
+html body #contentsContainer .mxe .mxe-bottom{transition:padding-bottom .22s ease}
+</style>
 <style id="muKbLiftCss">
 html.mu-kb body #contentsContainer .content-container.mxe.show {
     padding-bottom:0!important;
@@ -20939,7 +20945,7 @@ function cloudB85Dec(encodedStr) { const length = encodedStr.length, remainder =
 function cloudPackOn() { return typeof CompressionStream < "u"; }
 function cloudPackNote(note) { const packed = { i: note.id, n: note.name }; return note.folder && (packed.f = note.folder), note.extraFolders && note.extraFolders.length && (packed.x = note.extraFolders), note.html ? packed.h = note.html : note.text && (packed.t = note.text), note.encrypted && (packed.e = note.encrypted), note.hint && (packed.k = note.hint), note.tags && note.tags.length && (packed.g = note.tags), note.pinned && (packed.p = 1), note.favorite && (packed.v = 1), note.archived && (packed.a = 1), note.order && (packed.o = note.order), note.fontFamily && (packed.ff = note.fontFamily), note.fontSize && note.fontSize !== 13 && (packed.fs = note.fontSize), note.color && (packed.c = note.color), note.titleColor ? packed.tc = note.titleColor : note.titleColor === null && (packed.tc = ""), note.fakeContent && (packed.fk = note.fakeContent), note.unlockAt && (packed.ua = note.unlockAt), note.ghostUntil && (packed.gu = note.ghostUntil), note.lastEdited && (packed.le = note.lastEdited), note.metaEditedAt && note.metaEditedAt !== note.lastEdited && (packed.me = note.metaEditedAt), packed; }
 function cloudUnpackNote(packedNote) { if (!packedNote || typeof packedNote != "object")
-    return packedNote; const note = { id: packedNote.i, name: packedNote.n, folder: packedNote.f || "", extraFolders: packedNote.x || [], html: packedNote.h || "", encrypted: packedNote.e || null, hint: packedNote.k || "", tags: packedNote.g || [], pinned: !!packedNote.p, favorite: !!packedNote.v, archived: !!packedNote.a, order: packedNote.o || 0, fontFamily: packedNote.ff || "", fontSize: packedNote.fs || 13, color: packedNote.c || "", titleColor: packedNote.tc === void 0 ? void 0 : packedNote.tc || null, fakeContent: packedNote.fk || "", unlockAt: packedNote.ua || "", ghostUntil: packedNote.gu || "", lastEdited: packedNote.le || "", metaEditedAt: packedNote.me || packedNote.le || "" }; let plainText = packedNote.t; return Object.defineProperty(note, "text", { enumerable: !0, configurable: !0, get() { return plainText === void 0 && (plainText = note.html ? htmlToPlainText(note.html) : ""), plainText; }, set(newText) { plainText = newText; } }), note; }
+    return packedNote; const note = { id: packedNote.i, name: packedNote.n, folder: packedNote.f || "", extraFolders: packedNote.x || [], html: packedNote.h || "", encrypted: packedNote.e || null, hint: packedNote.k || "", tags: packedNote.g || [], pinned: !!packedNote.p, favorite: !!packedNote.v, archived: !!packedNote.a, order: packedNote.o || 0, fontFamily: packedNote.ff || "", fontSize: packedNote.fs || 16, color: packedNote.c || "", titleColor: packedNote.tc === void 0 ? void 0 : packedNote.tc || null, fakeContent: packedNote.fk || "", unlockAt: packedNote.ua || "", ghostUntil: packedNote.gu || "", lastEdited: packedNote.le || "", metaEditedAt: packedNote.me || packedNote.le || "" }; let plainText = packedNote.t; return Object.defineProperty(note, "text", { enumerable: !0, configurable: !0, get() { return plainText === void 0 && (plainText = note.html ? htmlToPlainText(note.html) : ""), plainText; }, set(newText) { plainText = newText; } }), note; }
 // Persian byte codec: common Persian letters, digits and punctuation are stored as ONE byte (128+index)
 // instead of two UTF-8 bytes, before gzip / LZMA compression.
 const CLOUD_FA = "\u0627\u0628\u067E\u062A\u062B\u062C\u0686\u062D\u062E\u062F\u0630\u0631\u0632\u0698\u0633\u0634\u0635\u0636\u0637\u0638\u0639\u063A\u0641\u0642\u06A9\u06AF\u0644\u0645\u0646\u0648\u0647\u06CC\u0621\u0622\u0623\u0624\u0625\u0626\u0629\u0643\u0649\u064A\u06C0\u200C\u060C\u061F\u061B\u00AB\u00BB\u00A0\u0640\u06F0\u06F1\u06F2\u06F3\u06F4\u06F5\u06F6\u06F7\u06F8\u06F9\u0660\u0661\u0662\u0663\u0664\u0665\u0666\u0667\u0668\u0669\u064B\u064C\u064D\u064E\u064F\u0650\u0651\u0652\u066A\u066B\u066C\u200F\u200E\u2026\u2013\u2014\u2018\u2019\u201C\u201D\u2022\u00B0\u00D7\u00F7", CLOUD_FA_MAP = (() => { const codeToIndex = new Map; for (let index = 0; index < CLOUD_FA.length; index++)
@@ -22971,7 +22977,7 @@ function mu_sanitizeNoteId(s, index) { return (s == null ? "" : String(s)).repla
 // into the complete, current note shape.
 // Separate "when did the metadata (pin/favorite/archive/tags/folder) last change" stamp, kept apart from
 // `lastEdited` (which is only for title/body text) so cloud merge can compare and apply each half.
-function normalizeCategory(item, index) { const src = item && typeof item == "object" ? item : {}; return { id: mu_sanitizeNoteId(src.id, index), name: String(src.name ?? `Note ${index + 1}`), folder: typeof src.folder == "string" ? src.folder : "", extraFolders: Array.isArray(src.extraFolders) ? [...new Set(src.extraFolders.filter(f => typeof f == "string" && f && f !== src.folder))] : [], text: String(src.text ?? ""), html: String(src.html ?? src.text ?? ""), lastEdited: src.lastEdited ? String(src.lastEdited) : "", metaEditedAt: src.metaEditedAt ? String(src.metaEditedAt) : src.lastEdited ? String(src.lastEdited) : "", password: typeof src.password == "string" ? src.password : "", encrypted: src.encrypted && typeof src.encrypted == "object" ? { ...src.encrypted } : null, hint: typeof src.hint == "string" ? src.hint : "", isDecoy: !1, unlockAt: src.unlockAt ?? "", ghostUntil: src.ghostUntil ?? "", tags: Array.isArray(src.tags) ? src.tags.filter(Boolean).map(String) : [], pinned: !!src.pinned, favorite: !!src.favorite, archived: !!src.archived, order: Number(src.order) || 0, fakeContent: typeof src.fakeContent == "string" ? src.fakeContent : "", fontFamily: typeof src.fontFamily == "string" ? src.fontFamily : "", fontSize: Number(src.fontSize) || 13, color: typeof src.color == "string" && /^[a-z]*$/.test(src.color) ? src.color : "", titleColor: typeof src.titleColor == "string" && /^(#[0-9a-f]{6}|[1-9])$/i.test(src.titleColor) ? src.titleColor : null }; }
+function normalizeCategory(item, index) { const src = item && typeof item == "object" ? item : {}; return { id: mu_sanitizeNoteId(src.id, index), name: String(src.name ?? `Note ${index + 1}`), folder: typeof src.folder == "string" ? src.folder : "", extraFolders: Array.isArray(src.extraFolders) ? [...new Set(src.extraFolders.filter(f => typeof f == "string" && f && f !== src.folder))] : [], text: String(src.text ?? ""), html: String(src.html ?? src.text ?? ""), lastEdited: src.lastEdited ? String(src.lastEdited) : "", metaEditedAt: src.metaEditedAt ? String(src.metaEditedAt) : src.lastEdited ? String(src.lastEdited) : "", password: typeof src.password == "string" ? src.password : "", encrypted: src.encrypted && typeof src.encrypted == "object" ? { ...src.encrypted } : null, hint: typeof src.hint == "string" ? src.hint : "", isDecoy: !1, unlockAt: src.unlockAt ?? "", ghostUntil: src.ghostUntil ?? "", tags: Array.isArray(src.tags) ? src.tags.filter(Boolean).map(String) : [], pinned: !!src.pinned, favorite: !!src.favorite, archived: !!src.archived, order: Number(src.order) || 0, fakeContent: typeof src.fakeContent == "string" ? src.fakeContent : "", fontFamily: typeof src.fontFamily == "string" ? src.fontFamily : "", fsv: 3, fontSize: src.fsv === 3 ? (Number(src.fontSize) || 16) : (!Number(src.fontSize) || Number(src.fontSize) === 13 || Number(src.fontSize) === 15 ? 16 : Number(src.fontSize)), color: typeof src.color == "string" && /^[a-z]*$/.test(src.color) ? src.color : "", titleColor: typeof src.titleColor == "string" && /^(#[0-9a-f]{6}|[1-9])$/i.test(src.titleColor) ? src.titleColor : null }; }
 // Stamps a note's metadata-only edit time
 function mu_touchMeta(item) { item && (item.metaEditedAt = new Date().toUTCString()); }
 // Lock / unlock / hint changes must travel to other devices: stamp BOTH lastEdited and metaEditedAt, strictly newer
@@ -23580,7 +23586,7 @@ catch {
 // top: back, A+ / A-, focus, day / night, favorite, pin, lock, archive, save.
 // bottom: media, writing tools, undo / redo, copy, delete, view, more (each popover opens upward).
 // ctx: { fa, t, isHidden, isRecordingThis, lastEditedText }
-function mxe_markup(item, ctx) { const fa = !!ctx.fa, L = MXE_L[fa ? "fa" : "en"], t = ctx.t || {}, locked = isNoteLocked(item), focusOn = !!(window.__mxeFocus && window.__mxeFocus.has(String(item.id))), q = s => escapeHtml(String(s)), btn = (act, cls, label, icon, extra) => `<button type="button" class="mxe-btn ${cls || ""}" data-mxe="${act}" aria-label="${q(label)}" title="${q(label)}" ${extra || ""}>${icon}</button>`, pitem = (act, icon, label, cls, extra) => `<button type="button" class="${cls || ""}" data-mxe="${act}" ${extra || ""}>${icon}<span>${q(label)}</span></button>`, fmt = (k, glyph, label) => `<button type="button" data-mxe="fmt:${k}" data-fmtk="${k}">${glyph}<span>${q(label)}</span></button>`, top = '<div class="mxe-top">' + btn("back", "mxe-back", L.back, MXE_IC.back) + btn("fmt:bigger", "mxe-txt", L.bigger, "<b>A+</b>") + btn("fmt:smaller", "mxe-txt", L.smaller, "<b>A-</b>") + btn("focus", focusOn ? "on" : "", L.focus, MXE_IC.focus, `aria-pressed="${focusOn}"`) + btn("theme:toggle", "mxe-theme-btn", L.toDay + " / " + L.toNight, MXE_IC.sun.replace("<svg ", '<svg class="ic-sun" ') + MXE_IC.moon.replace("<svg ", '<svg class="ic-moon" ')) + btn("flag:favorite", "mxe-fillon" + (item.favorite ? " mc-icon-active" : ""), L.fav, MXE_IC.fav, 'data-flag="favorite"') + btn("flag:pinned", "mxe-fillon" + (item.pinned ? " mc-icon-active" : ""), L.pin, MXE_IC.pin, 'data-flag="pinned"') + btn("lock", locked ? "on" : "", L.enc, locked ? MXE_IC.lockOn : MXE_IC.lockOff) + btn("archive", item.archived ? "on" : "", L.arc, MXE_IC.arc) + btn("save", "", L.save, MXE_IC.save) + "</div>", sizes = [12, 13, 15, 16, 18, 22, 28], curSize = Number(item.fontSize) || 13; sizes.indexOf(curSize) < 0 && (sizes.push(curSize), sizes.sort((a, b) => a - b)); const sizeOpts = sizes.map(n => `<option value="${n}" ${n === curSize ? "selected" : ""}>${n}</option>`).join(""), rec = !!ctx.isRecordingThis, bottom = '<div class="mxe-bottom"><div class="mxe-pop l" data-pop="media">' + pitem("media:image", MXE_IC.image, L.image) + pitem("media:voice", rec ? MXE_IC.stop : MXE_IC.mic, rec ? L.voiceStop : L.voice, rec ? "danger" : "") + pitem("media:draw", MXE_IC.draw, L.draw) + '</div><div class="mxe-pop l" data-pop="write"><div class="grid">' + fmt("color", '<span class="mxe-cico">A</span>', L.color) + fmt("normal", '<span style="font-size:15px;font-weight:700">Aa</span>', L.normal) + fmt("table", '<svg width="22" height="22" viewBox="0 0 22 22" aria-hidden="true" fill="none"><rect x="2.5" y="3.5" width="17" height="15" rx="3" stroke="currentColor" stroke-width="1.5"/><path d="M5.5 3.5h11a3 3 0 0 1 3 3V9h-17V6.5a3 3 0 0 1 3-3z" fill="#4cc9f0" fill-opacity=".55"/><path d="M2.5 9h17M2.5 13.75h17M9 9v9.5M14.5 9v9.5" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg>', L.table) + fmt("bold", '<b style="font-size:18px">B</b>', L.bold) + fmt("italic", '<i style="font-size:18px;font-family:serif">I</i>', L.italic) + fmt("strike", '<s style="font-size:18px">S</s>', L.strike) + fmt("heading", '<b style="font-size:16px">H</b>', L.heading) + fmt("ul", '<span style="font-size:18px">•</span>', L.ul) + fmt("todo", '<span style="font-size:18px">☐</span>', L.todo) + fmt("quote", '<span style="font-size:20px">”</span>', L.quote) + fmt("code", '<span style="font-size:14px;font-family:monospace">&lt;/&gt;</span>', L.code) + fmt("codeMode", '<span style="font-size:15px;font-family:monospace;font-weight:800">`·`</span>', L.codeMode) + fmt("underline", '<u style="font-size:18px">U</u>', L.underline) + fmt("highlight", '<span style="font-size:15px;font-weight:800;background:#ffeb3b;color:#111;padding:0 6px;border-radius:4px;line-height:1.4">A</span>', L.highlight) + fmt("ol", '<span style="font-size:15px">1.</span>', L.ol) + fmt("link", MXE_IC.link, L.linkf) + fmt("clear", '<span style="font-size:18px">✕</span>', L.clearf) + `</div><div class="mxe-colors" role="group" aria-label="${q(L.color)}"><span class="mxe-collab">${q(L.color)}</span>${MXE_COLORS.map((c, i) => `<button type="button" class="mxe-sw" data-mxe="fmt:color:${i + 1}" data-sw="${i + 1}" style="--sw:${c}" aria-label="${q(L.color)} ${i + 1}"></button>`).join("")}<button type="button" class="mxe-sw custom" data-mxe="fmt:cpick" title="${q(L.colorCustom)}" aria-label="${q(L.colorCustom)}"></button><button type="button" class="mxe-sw none" data-mxe="fmt:color:0" data-sw="0" title="${q(L.colorOff)}" aria-label="${q(L.colorOff)}">✕</button></div><div class="mxe-colors tt" role="group" aria-label="${q(L.titleColor)}"><span class="mxe-collab">${q(L.titleColor)}</span>${MXE_COLORS.map((c, i) => `<button type="button" class="mxe-sw" data-mxe="fmt:tcolor:${i + 1}" data-tsw="${i + 1}" style="--sw:${c}" aria-label="${q(L.titleColor)} ${i + 1}"></button>`).join("")}<button type="button" class="mxe-sw custom" data-mxe="fmt:tcpick" title="${q(L.colorCustom)}" aria-label="${q(L.colorCustom)}"></button><button type="button" class="mxe-sw none" data-mxe="fmt:tcolor:0" data-tsw="0" title="${q(L.colorOff)}" aria-label="${q(L.colorOff)}">✕</button></div><div class="szrow"><label>${q(L.size)}</label><select class="mxe-size" data-mxe-size="1">${sizeOpts}</select></div></div><div class="mxe-pop r" data-pop="trash">` + pitem("clear", MXE_IC.trash, fa ? "حذف متن یادداشت" : "Delete note text") + pitem("more:delete", MXE_IC.trash, fa ? "حذف خود یادداشت" : "Delete the note itself", "danger") + '</div><div class="mxe-pop r" data-pop="more"><span class="mxm-handle" aria-hidden="true"></span>' + pitem("more:find", MXE_IC.search, fa ? "جستجو در یادداشت" : "Search in note", "mxm-search") + '<div class="mxm-quick">' + pitem("save", MXE_IC.save, L.save) + pitem("archive", MXE_IC.arc, L.arc, item.archived ? "on" : "") + pitem("more:view", MXE_IC.eye, fa ? "نمایش" : "View") + pitem("focus", MXE_IC.focus, fa ? "تمرکز" : "Focus", focusOn ? "on" : "") + pitem("flag:pinned", MXE_IC.pin, L.pin, "mxe-fillon") + pitem("flag:favorite", MXE_IC.fav, L.fav, "mxe-fillon") + '</div><div class="mxm-seg" role="group">' + pitem("theme:light", MXE_IC.sun, L.toDay, "", 'data-theme-opt="light"') + pitem("theme:dark", MXE_IC.moon, L.toNight, "", 'data-theme-opt="dark"') + `</div><div class="mxm-sec"><div class="grp">${q(L.gOrganize)}</div><div class="mxm-list">` + pitem("more:folder", MXE_IC.folder, L.folder) + pitem("more:tags", MXE_IC.tag, L.tags) + pitem("more:color", MXE_IC.palette, fa ? "رنگ یادداشت" : "Colour") + pitem("more:dup", MXE_IC.dup, L.dup) + `</div></div><div class="mxm-sec"><div class="grp">${q(L.gManage)}</div><div class="mxm-list">` + pitem("more:hide", MXE_IC.hide, ctx.isHidden ? t.show || "Show" : t.hide || "Hide") + pitem("more:link", MXE_IC.link, t.previewLink || "Link preview") + pitem("more:dna", MXE_IC.dna, "DNA") + `</div></div><div class="mxm-sec"><div class="grp">${q(L.gSecurity)}</div><div class="mxm-list">` + pitem("lock", locked ? MXE_IC.lockOn : MXE_IC.lockOff, L.enc) + (locked ? pitem("more:hint", MXE_IC.hint, t.changeHint || "Change hint") : "") + pitem("more:fake", MXE_IC.doc, item.fakeContent ? L.fakeEdit : L.fake) + pitem("more:vault", MXE_IC.lockOn, L.vault) + `</div></div><div class="mxm-sec"><div class="grp">${q(L.gTr)}</div><div class="mxm-list">` + pitem("more:toen", MXE_IC.trEn, L.toEn) + pitem("more:tofa", MXE_IC.trFa, L.toFa) + `</div></div><div class="mxm-sec"><div class="grp">${q(L.gSpecial)}</div><div class="mxm-list">` + pitem("more:capsule", MXE_IC.capsule, L.capsule) + pitem("more:ghost", MXE_IC.ghost, L.ghost) + "</div></div>" + pitem("more:delete", MXE_IC.trash, L.del, "danger mxm-danger") + `<div class="info">${q(L.last)} <span dir="ltr" class="mxe-info-val">${q(ctx.lastEditedText || L.never)}</span></div></div>` + btn("pop:media", rec ? "warn" : "", L.media, MXE_IC.image) + btn("pop:write", "", L.write, MXE_IC.write) + btn("undo", "mxe-undo", L.undo, MXE_IC.undo) + btn("redo", "mxe-redo", L.redo, MXE_IC.redo) + btn("copy", "", L.copy, MXE_IC.copy) + btn("pop:trash", "", fa ? "حذف" : "Delete", MXE_IC.trash) + '<span class="mxe-sp"></span>' + btn("more:view", "mxe-viewnote", L.view, MXE_IC.eye + `<span class="mxe-vlbl">${fa ? "نمایش" : "View"}</span>`) + btn("pop:more", "mxe-more", L.more, MXE_IC.more) + "</div>"; return { top: top, bottom: bottom }; }
+function mxe_markup(item, ctx) { const fa = !!ctx.fa, L = MXE_L[fa ? "fa" : "en"], t = ctx.t || {}, locked = isNoteLocked(item), focusOn = !!(window.__mxeFocus && window.__mxeFocus.has(String(item.id))), q = s => escapeHtml(String(s)), btn = (act, cls, label, icon, extra) => `<button type="button" class="mxe-btn ${cls || ""}" data-mxe="${act}" aria-label="${q(label)}" title="${q(label)}" ${extra || ""}>${icon}</button>`, pitem = (act, icon, label, cls, extra) => `<button type="button" class="${cls || ""}" data-mxe="${act}" ${extra || ""}>${icon}<span>${q(label)}</span></button>`, fmt = (k, glyph, label) => `<button type="button" data-mxe="fmt:${k}" data-fmtk="${k}">${glyph}<span>${q(label)}</span></button>`, top = '<div class="mxe-top">' + btn("back", "mxe-back", L.back, MXE_IC.back) + '<div class="mxe-grp mxe-grp-t">' + btn("fmt:bigger", "mxe-txt", L.bigger, "<b>A+</b>") + btn("fmt:smaller", "mxe-txt", L.smaller, "<b>A-</b>") + btn("focus", focusOn ? "on" : "", L.focus, MXE_IC.focus, `aria-pressed="${focusOn}"`) + btn("flag:favorite", "mxe-fillon" + (item.favorite ? " mc-icon-active" : ""), L.fav, MXE_IC.fav, 'data-flag="favorite"') + btn("flag:pinned", "mxe-fillon" + (item.pinned ? " mc-icon-active" : ""), L.pin, MXE_IC.pin, 'data-flag="pinned"') + btn("archive", item.archived ? "on" : "", L.arc, MXE_IC.arc) + btn("lock", locked ? "on" : "", L.enc, locked ? MXE_IC.lockOn : MXE_IC.lockOff) + '</div>' + btn("theme:toggle", "mxe-theme-btn", L.toDay + " / " + L.toNight, MXE_IC.sun.replace("<svg ", '<svg class="ic-sun" ') + MXE_IC.moon.replace("<svg ", '<svg class="ic-moon" ')) + btn("save", "", L.save, MXE_IC.save) + "</div>", sizes = [12, 13, 15, 16, 18, 22, 28], curSize = Number(item.fontSize) || 16; sizes.indexOf(curSize) < 0 && (sizes.push(curSize), sizes.sort((a, b) => a - b)); const sizeOpts = sizes.map(n => `<option value="${n}" ${n === curSize ? "selected" : ""}>${n}</option>`).join(""), rec = !!ctx.isRecordingThis, bottom = '<div class="mxe-bottom"><div class="mxe-pop l" data-pop="media">' + pitem("media:image", MXE_IC.image, L.image) + pitem("media:voice", rec ? MXE_IC.stop : MXE_IC.mic, rec ? L.voiceStop : L.voice, rec ? "danger" : "") + pitem("media:draw", MXE_IC.draw, L.draw) + '</div><div class="mxe-pop l" data-pop="write"><div class="grid">' + fmt("color", '<span class="mxe-cico">A</span>', L.color) + fmt("normal", '<span style="font-size:15px;font-weight:700">Aa</span>', L.normal) + fmt("table", '<svg width="22" height="22" viewBox="0 0 22 22" aria-hidden="true" fill="none"><rect x="2.5" y="3.5" width="17" height="15" rx="3" stroke="currentColor" stroke-width="1.5"/><path d="M5.5 3.5h11a3 3 0 0 1 3 3V9h-17V6.5a3 3 0 0 1 3-3z" fill="#4cc9f0" fill-opacity=".55"/><path d="M2.5 9h17M2.5 13.75h17M9 9v9.5M14.5 9v9.5" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg>', L.table) + fmt("bold", '<b style="font-size:18px">B</b>', L.bold) + fmt("italic", '<i style="font-size:18px;font-family:serif">I</i>', L.italic) + fmt("strike", '<s style="font-size:18px">S</s>', L.strike) + fmt("heading", '<b style="font-size:16px">H</b>', L.heading) + fmt("ul", '<span style="font-size:18px">•</span>', L.ul) + fmt("todo", '<span style="font-size:18px">☐</span>', L.todo) + fmt("quote", '<span style="font-size:20px">”</span>', L.quote) + fmt("code", '<span style="font-size:14px;font-family:monospace">&lt;/&gt;</span>', L.code) + fmt("codeMode", '<span style="font-size:15px;font-family:monospace;font-weight:800">`·`</span>', L.codeMode) + fmt("underline", '<u style="font-size:18px">U</u>', L.underline) + fmt("highlight", '<span style="font-size:15px;font-weight:800;background:#ffeb3b;color:#111;padding:0 6px;border-radius:4px;line-height:1.4">A</span>', L.highlight) + fmt("ol", '<span style="font-size:15px">1.</span>', L.ol) + fmt("link", MXE_IC.link, L.linkf) + fmt("clear", '<span style="font-size:18px">✕</span>', L.clearf) + `</div><div class="mxe-colors" role="group" aria-label="${q(L.color)}"><span class="mxe-collab">${q(L.color)}</span>${MXE_COLORS.map((c, i) => `<button type="button" class="mxe-sw" data-mxe="fmt:color:${i + 1}" data-sw="${i + 1}" style="--sw:${c}" aria-label="${q(L.color)} ${i + 1}"></button>`).join("")}<button type="button" class="mxe-sw custom" data-mxe="fmt:cpick" title="${q(L.colorCustom)}" aria-label="${q(L.colorCustom)}"></button><button type="button" class="mxe-sw none" data-mxe="fmt:color:0" data-sw="0" title="${q(L.colorOff)}" aria-label="${q(L.colorOff)}">✕</button></div><div class="mxe-colors tt" role="group" aria-label="${q(L.titleColor)}"><span class="mxe-collab">${q(L.titleColor)}</span>${MXE_COLORS.map((c, i) => `<button type="button" class="mxe-sw" data-mxe="fmt:tcolor:${i + 1}" data-tsw="${i + 1}" style="--sw:${c}" aria-label="${q(L.titleColor)} ${i + 1}"></button>`).join("")}<button type="button" class="mxe-sw custom" data-mxe="fmt:tcpick" title="${q(L.colorCustom)}" aria-label="${q(L.colorCustom)}"></button><button type="button" class="mxe-sw none" data-mxe="fmt:tcolor:0" data-tsw="0" title="${q(L.colorOff)}" aria-label="${q(L.colorOff)}">✕</button></div><div class="szrow"><label>${q(L.size)}</label><select class="mxe-size" data-mxe-size="1">${sizeOpts}</select></div></div><div class="mxe-pop r" data-pop="trash">` + pitem("clear", MXE_IC.trash, fa ? "حذف متن یادداشت" : "Delete note text") + pitem("more:delete", MXE_IC.trash, fa ? "حذف خود یادداشت" : "Delete the note itself", "danger") + '</div><div class="mxe-pop r" data-pop="more"><span class="mxm-handle" aria-hidden="true"></span>' + pitem("more:find", MXE_IC.search, fa ? "جستجو در یادداشت" : "Search in note", "mxm-search") + '<div class="mxm-quick">' + pitem("save", MXE_IC.save, L.save) + pitem("archive", MXE_IC.arc, L.arc, item.archived ? "on" : "") + pitem("more:view", MXE_IC.eye, fa ? "نمایش" : "View") + pitem("focus", MXE_IC.focus, fa ? "تمرکز" : "Focus", focusOn ? "on" : "") + pitem("flag:pinned", MXE_IC.pin, L.pin, "mxe-fillon") + pitem("flag:favorite", MXE_IC.fav, L.fav, "mxe-fillon") + '</div><div class="mxm-seg" role="group">' + pitem("theme:light", MXE_IC.sun, L.toDay, "", 'data-theme-opt="light"') + pitem("theme:dark", MXE_IC.moon, L.toNight, "", 'data-theme-opt="dark"') + `</div><div class="mxm-sec"><div class="grp">${q(L.gOrganize)}</div><div class="mxm-list">` + pitem("more:folder", MXE_IC.folder, L.folder) + pitem("more:tags", MXE_IC.tag, L.tags) + pitem("more:color", MXE_IC.palette, fa ? "رنگ یادداشت" : "Colour") + pitem("more:dup", MXE_IC.dup, L.dup) + `</div></div><div class="mxm-sec"><div class="grp">${q(L.gManage)}</div><div class="mxm-list">` + pitem("more:hide", MXE_IC.hide, ctx.isHidden ? t.show || "Show" : t.hide || "Hide") + pitem("more:link", MXE_IC.link, t.previewLink || "Link preview") + pitem("more:dna", MXE_IC.dna, "DNA") + `</div></div><div class="mxm-sec"><div class="grp">${q(L.gSecurity)}</div><div class="mxm-list">` + pitem("lock", locked ? MXE_IC.lockOn : MXE_IC.lockOff, L.enc) + (locked ? pitem("more:hint", MXE_IC.hint, t.changeHint || "Change hint") : "") + pitem("more:fake", MXE_IC.doc, item.fakeContent ? L.fakeEdit : L.fake) + pitem("more:vault", MXE_IC.lockOn, L.vault) + `</div></div><div class="mxm-sec"><div class="grp">${q(L.gTr)}</div><div class="mxm-list">` + pitem("more:toen", MXE_IC.trEn, L.toEn) + pitem("more:tofa", MXE_IC.trFa, L.toFa) + `</div></div><div class="mxm-sec"><div class="grp">${q(L.gSpecial)}</div><div class="mxm-list">` + pitem("more:capsule", MXE_IC.capsule, L.capsule) + pitem("more:ghost", MXE_IC.ghost, L.ghost) + "</div></div>" + pitem("more:delete", MXE_IC.trash, L.del, "danger mxm-danger") + `<div class="info">${q(L.last)} <span dir="ltr" class="mxe-info-val">${q(ctx.lastEditedText || L.never)}</span></div></div>` + '<div class="mxe-grp mxe-grp-a">' + btn("pop:media", rec ? "warn" : "", L.media, MXE_IC.image) + btn("pop:write", "", L.write, MXE_IC.write) + btn("undo", "mxe-undo", L.undo, MXE_IC.undo) + btn("redo", "mxe-redo", L.redo, MXE_IC.redo) + btn("copy", "", L.copy, MXE_IC.copy) + btn("pop:trash", "", fa ? "حذف" : "Delete", MXE_IC.trash) + '</div><span class="mxe-sp"></span><div class="mxe-grp mxe-grp-b">' + btn("more:view", "mxe-viewnote", L.view, MXE_IC.eye + `<span class="mxe-vlbl">${fa ? "نمایش" : "View"}</span>`) + btn("pop:more", "mxe-more", L.more, MXE_IC.more) + "</div></div>"; return { top: top, bottom: bottom }; }
 // Slim tag row just above the bottom bar: one #tag chip per tag (tap / long-press opens Edit / Delete).
 // Empty — and hidden by CSS :empty — when the note has no tags, is a fake (decoy) note or is hidden.
 function mxe_tagbarInner(item) { try {
@@ -23632,23 +23638,23 @@ function renderContents(filtered = getVisibleCategories()) {
                                 <option value="circle">${t.toolCircle}</option>
                             </select>
 
-                            <input type="color" id="draw-color-${item.id}" value="#000000">
+                            <input type="color" id="draw-color-${item.id}" value="${window.mkDrawColor ? mkDrawColor() : '#000000'}" style="display:none">
+                            ${window.mkDrawPaletteHtml ? mkDrawPaletteHtml(item.id) : ""}
 
                             <label>${t.toolSize}</label>
                             <input type="number" id="draw-size-${item.id}" value="3" min="1" max="100" style="width: 42px;">
 
-                            <label>${t.canvasDimensions}</label>
-                            <input type="number" id="draw-w-${item.id}" value="350" style="width: 52px;" placeholder="عرض" onchange="resizeCanvas('${item.id}')">
-                            ×
-                            <input type="number" id="draw-h-${item.id}" value="180" style="width: 52px;" placeholder="ارتفاع" onchange="resizeCanvas('${item.id}')">
+                            ${mkDrawDimHtml(item.id, t)}
 
-                            <button type="button" class="img-btn" onclick="undoCanvas('${item.id}')">${t.undoCanvas}</button>
-                            <button type="button" class="img-btn" onclick="clearCanvas('${item.id}')">${t.clearCanvas}</button>
-                            <button type="button" class="img-btn" onclick="downloadCanvasDirect('${item.id}')">${t.downloadCanvas}</button>
-                            <button type="button" class="img-btn" onclick="addCanvasToText('${item.id}')">${t.insertDrawing}</button>
                         </div>
 
                         <canvas id="canvas-${item.id}" width="350" height="180"></canvas>
+                        <div class="draw-actions">
+                            <button type="button" class="img-btn" onclick="undoCanvas('${item.id}')">${t.undoCanvas}</button>
+                            <button type="button" class="img-btn" onclick="clearCanvas('${item.id}')">${t.clearCanvas}</button>
+                            <button type="button" class="img-btn" onclick="downloadCanvasDirect('${item.id}')">${t.downloadCanvas}</button>
+                            <button type="button" class="img-btn draw-insert-btn" onclick="mkDrawInsert('${item.id}')">${t.insertDrawing}</button>
+                        </div>
                     </div>
 
                     <input type="text"
@@ -23896,7 +23902,7 @@ function insertAudioToNote(id, audioSrc, mediaId) { const textBox = document.get
     // Same top dashed-line frame images/drawings get: a blank writable line above (if the note is empty so
     // far) or just a plain dashed divider under existing text
     const wrapper = document.createElement("div"); wrapper.className = "audio-wrapper", wrapper.contentEditable = "false"; const audioEl = document.createElement("audio"); audioEl.controls = !0, audioEl.src = audioSrc, mediaId && (audioEl.dataset.muMedia = mediaId), mu_fixAudioDuration(audioEl); const delBtn = document.createElement("button"); delBtn.className = "img-btn", delBtn.innerText = "✖", delBtn.onclick = () => { confirm(i18n[currentLang].confirmDelete) && (mu_removeMediaWrapper(wrapper), saveCategory(id)); }, wrapper.appendChild(audioEl), wrapper.appendChild(delBtn), mu_prepareImgAboveInsertion(textBox), textBox.appendChild(wrapper); const belowLine = mu_createImgBelowLine(); textBox.appendChild(belowLine), saveCategory(id), setTimeout(() => mu_focusImgBelowLine(belowLine), 30); }
-function toggleDrawingBox(id) { const drawBox = document.getElementById(`draw-box-${id}`); drawBox && (drawBox.style.display === "block" ? drawBox.style.display = "none" : (drawBox.style.display = "block", initCanvas(id))); }
+function toggleDrawingBox(id) { const drawBox = document.getElementById(`draw-box-${id}`); drawBox && (drawBox.style.display === "block" ? drawBox.style.display = "none" : (drawBox.style.display = "block", initCanvas(id), window.mkDrawReveal && window.mkDrawReveal(id))); }
 function initCanvas(id) { const canvas = document.getElementById(`canvas-${id}`); if (!canvas)
     return; const ctx = canvas.getContext("2d"); canvas.dataset.ready !== "1" && (canvasStates[id] = { isDrawing: !1, startX: 0, startY: 0, snapshot: null, history: [], maxHistory: 20 }, canvas.dataset.ready = "1", ctx.fillStyle = "#ffffff", ctx.fillRect(0, 0, canvas.width, canvas.height), saveCanvasState(id)); function getPos(e) { const rect = canvas.getBoundingClientRect(), clientX = e.touches ? e.touches[0].clientX : e.clientX, clientY = e.touches ? e.touches[0].clientY : e.clientY; return { x: clientX - rect.left, y: clientY - rect.top }; } function startDraw(e) { const st = canvasStates[id]; st.isDrawing = !0; const pos = getPos(e); st.startX = pos.x, st.startY = pos.y, ctx.beginPath(), ctx.moveTo(st.startX, st.startY), st.snapshot = ctx.getImageData(0, 0, canvas.width, canvas.height); } function moveDraw(e) { const st = canvasStates[id]; if (!st.isDrawing)
     return; const pos = getPos(e), modeEl = document.getElementById(`draw-mode-${id}`), colorEl = document.getElementById(`draw-color-${id}`), sizeEl = document.getElementById(`draw-size-${id}`), mode = modeEl?.value || "draw", color = colorEl?.value || "#000000", size = Math.max(1, Math.min(100, parseInt(sizeEl?.value, 10) || 3)); if (ctx.lineWidth = size, ctx.lineCap = "round", ctx.lineJoin = "round", mode === "draw")
@@ -28136,7 +28142,7 @@ document.addEventListener("DOMContentLoaded", () => { initAdvancedSystems(); });
     // Same legacy fallback as normalizeCategory: an item that reaches here without ever having gone
     // through normalizeCategory (e.g. very old persisted data) still needs a metaEditedAt to compare
     // against in cloud merge
-    function ensureItem(item) { item && (item.metaEditedAt || (item.metaEditedAt = item.lastEdited || ""), item.tags = Array.isArray(item.tags) ? item.tags.filter(Boolean).map(String) : [], item.pinned = !!item.pinned, item.favorite = !!item.favorite, item.archived = !!item.archived, item.order = Number(item.order) || 0, item.fakeContent = typeof item.fakeContent == "string" ? item.fakeContent : "", item.fontFamily = typeof item.fontFamily == "string" ? item.fontFamily : "", item.fontSize = Number(item.fontSize) || 13, item.color = typeof item.color == "string" && /^[a-z]*$/.test(item.color) ? item.color : ""); }
+    function ensureItem(item) { item && (item.metaEditedAt || (item.metaEditedAt = item.lastEdited || ""), item.tags = Array.isArray(item.tags) ? item.tags.filter(Boolean).map(String) : [], item.pinned = !!item.pinned, item.favorite = !!item.favorite, item.archived = !!item.archived, item.order = Number(item.order) || 0, item.fakeContent = typeof item.fakeContent == "string" ? item.fakeContent : "", item.fontFamily = typeof item.fontFamily == "string" ? item.fontFamily : "", item.fontSize = Number(item.fontSize) || 16, item.color = typeof item.color == "string" && /^[a-z]*$/.test(item.color) ? item.color : ""); }
     // Exposed on window: this whole script tag is wrapped in its own IIFE, so without this, a bare
     // `ensureItem` reference from a different <script> tag
     window.ensureItem = ensureItem;
@@ -28286,7 +28292,7 @@ document.addEventListener("DOMContentLoaded", () => { initAdvancedSystems(); });
     } }, btns[7].onclick = () => cmd("strikeThrough"), btns[8].onclick = () => cmd("insertOrderedList"), btns[9].onclick = () => { restoreSel(); let _ok = !1; try {
         _ok = window.mkClearFormat && window.mkClearFormat(text);
     }
-    catch { } _ok || document.execCommand("removeFormat"), HX().autosaveCategory(item.id); }, btns[10].onclick = () => { restoreSel(), window.mkToggleHighlight && window.mkToggleHighlight(item.id); }; const selects = row.querySelectorAll("select"); selects[0].value = String(item.fontSize || 13), selects[0].onchange = () => { item.fontSize = Number(selects[0].value) || 13, text.style.fontSize = item.fontSize + "px", window.mu_touchMeta && window.mu_touchMeta(item), HX().saveToLocalStorage(); }; {
+    catch { } _ok || document.execCommand("removeFormat"), HX().autosaveCategory(item.id); }, btns[10].onclick = () => { restoreSel(), window.mkToggleHighlight && window.mkToggleHighlight(item.id); }; const selects = row.querySelectorAll("select"); selects[0].value = String(item.fontSize || 16), selects[0].onchange = () => { item.fontSize = Number(selects[0].value) || 13, text.style.fontSize = item.fontSize + "px", window.mu_touchMeta && window.mu_touchMeta(item), HX().saveToLocalStorage(); }; {
         // Writing tools: mark the toolbar buttons whose format is ON at the caret / selection (Bold, Italic, Underline,
         // Quote, List, Link...). The full-screen editor drives this row through FM and marks its own popover (syncFmt)
         const fmtBtns = row.querySelectorAll("button"), inText = () => { const sel = window.getSelection(); return !!(sel && sel.rangeCount && text.contains(sel.anchorNode)); };
@@ -28307,7 +28313,7 @@ document.addEventListener("DOMContentLoaded", () => { initAdvancedSystems(); });
     } {
         const wSlot = box.querySelector(".mc-writing-slot");
         wSlot ? wSlot.appendChild(row) : tools.parentNode.insertBefore(row, tools.nextSibling);
-    } text.style.fontFamily = item.fontFamily || "", text.style.fontSize = (item.fontSize || 13) + "px"; const undoRedoRow = document.createElement("div"); undoRedoRow.className = "markhin-undo-redo-row", undoRedoRow.innerHTML = `<button type="button" class="img-btn" title="${fa ? "حذف متن یادداشت" : "Delete note text"}" onclick="clearNoteText('${item.id}')">${MK.icon("trash")}</button><button type="button" class="img-btn" title="${fa ? "کپی متن" : "Copy text"}" onclick="copyCategory('${item.id}')">${MK.icon("copy")}</button><button type="button" id="mu-undo-${item.id}" class="img-btn mu-undo-redo-btn" title="${fa ? "واگرد (بازگشت به مرحله قبل)" : "Undo (step back)"}">${MK.icon("undo")}</button><button type="button" id="mu-redo-${item.id}" class="img-btn mu-undo-redo-btn" title="${fa ? "ازنو (رفتن به مرحله بعد)" : "Redo (step forward)"}">${MK.icon("redo")}</button><button type="button" class="img-btn" title="${t.draw}" onclick="toggleDrawingBox('${item.id}')">${MK.icon("draw")}</button><button type="button" id="mu-rec-${item.id}" class="img-btn" title="${isRecordingThis ? t.stopAudio : t.recAudio}" style="${isRecordingThis ? "background:rgba(239,68,68,0.75);color:#fff;" : ""}" onclick="toggleAudioRecording('${item.id}')">${MK.icon(isRecordingThis ? "stop" : "mic")}</button><button type="button" class="img-btn" title="${t.addImage}" onclick="triggerImageUpload('${item.id}')">${MK.icon("image")}</button><input type="file" id="img-input-${item.id}" style="display:none" accept="image/*" onchange="insertImageToText('${item.id}', event)">`, undoRedoRow.querySelector("#mu-undo-" + item.id).onclick = () => HX().mu_undoText(item.id), undoRedoRow.querySelector("#mu-redo-" + item.id).onclick = () => HX().mu_redoText(item.id); {
+    } text.style.fontFamily = item.fontFamily || "", text.style.fontSize = (item.fontSize || 16) + "px"; const undoRedoRow = document.createElement("div"); undoRedoRow.className = "markhin-undo-redo-row", undoRedoRow.innerHTML = `<button type="button" class="img-btn" title="${fa ? "حذف متن یادداشت" : "Delete note text"}" onclick="clearNoteText('${item.id}')">${MK.icon("trash")}</button><button type="button" class="img-btn" title="${fa ? "کپی متن" : "Copy text"}" onclick="copyCategory('${item.id}')">${MK.icon("copy")}</button><button type="button" id="mu-undo-${item.id}" class="img-btn mu-undo-redo-btn" title="${fa ? "واگرد (بازگشت به مرحله قبل)" : "Undo (step back)"}">${MK.icon("undo")}</button><button type="button" id="mu-redo-${item.id}" class="img-btn mu-undo-redo-btn" title="${fa ? "ازنو (رفتن به مرحله بعد)" : "Redo (step forward)"}">${MK.icon("redo")}</button><button type="button" class="img-btn" title="${t.draw}" onclick="toggleDrawingBox('${item.id}')">${MK.icon("draw")}</button><button type="button" id="mu-rec-${item.id}" class="img-btn" title="${isRecordingThis ? t.stopAudio : t.recAudio}" style="${isRecordingThis ? "background:rgba(239,68,68,0.75);color:#fff;" : ""}" onclick="toggleAudioRecording('${item.id}')">${MK.icon(isRecordingThis ? "stop" : "mic")}</button><button type="button" class="img-btn" title="${t.addImage}" onclick="triggerImageUpload('${item.id}')">${MK.icon("image")}</button><input type="file" id="img-input-${item.id}" style="display:none" accept="image/*" onchange="insertImageToText('${item.id}', event)">`, undoRedoRow.querySelector("#mu-undo-" + item.id).onclick = () => HX().mu_undoText(item.id), undoRedoRow.querySelector("#mu-redo-" + item.id).onclick = () => HX().mu_redoText(item.id); {
         // Tools line at the very top of the note card: DNA button (left) + undo-row (right)
         const dnaBtn = box.querySelector('.mc-head-actions [onclick^="openNoteDNA"]'), toolsLine = document.createElement("div");
         if (toolsLine.className = "mu-tools-line", dnaBtn) {
@@ -28325,7 +28331,7 @@ document.addEventListener("DOMContentLoaded", () => { initAdvancedSystems(); });
                 // uses)
                 const grp = document.createElement("div");
                 grp.className = "mu-fs-group";
-                const mk = (lbl, d, ttl) => { const b = document.createElement("button"); return b.type = "button", b.className = "mode-toggle-btn mu-fs-btn", b.textContent = lbl, b.title = ttl, b.setAttribute("aria-label", ttl), b.addEventListener("click", e => { e.preventDefault(), e.stopPropagation(); const cur = Number(item.fontSize) || 13, nxt = Math.max(9, Math.min(40, cur + d)); if (nxt === cur)
+                const mk = (lbl, d, ttl) => { const b = document.createElement("button"); return b.type = "button", b.className = "mode-toggle-btn mu-fs-btn", b.textContent = lbl, b.title = ttl, b.setAttribute("aria-label", ttl), b.addEventListener("click", e => { e.preventDefault(), e.stopPropagation(); const cur = Number(item.fontSize) || 16, nxt = Math.max(9, Math.min(40, cur + d)); if (nxt === cur)
                     return; item.fontSize = nxt, text.style.fontSize = nxt + "px"; const sel = box.querySelector(".markhin-editor-tools select"); if (sel) {
                     let o = [...sel.options].find(x => Number(x.value) === nxt);
                     if (!o) {
@@ -34793,11 +34799,11 @@ catch { } };
     function mkcpPaintRecent(box) { try { var rec = mkcpRecent().filter(function (h) { return mkcpCols().indexOf(h) < 0; }).slice(0, 6); box.querySelectorAll(".mxe-colors").forEach(function (row) { row.querySelectorAll(".mxe-rec").forEach(function (n) { n.parentNode && n.parentNode.removeChild(n); }); var tt = row.classList.contains("tt"), anchor = row.querySelector(".custom"); if (!anchor) return; rec.forEach(function (h) { var b = D2.createElement("button"); b.type = "button"; b.className = "mxe-sw mxe-rec"; b.setAttribute("data-mxe", "fmt:" + (tt ? "tcolor:" : "color:") + h); b.style.setProperty("--sw", h); b.setAttribute("aria-label", h); b.title = h; row.insertBefore(b, anchor); }); }); } catch (e) { } }
     function mkcpMark(box, tt, cur) { try { box.querySelectorAll(".mxe-colors" + (tt ? ".tt" : ":not(.tt)") + " .mxe-rec").forEach(function (b) { var h = (b.getAttribute("data-mxe") || "").slice(-7).toLowerCase(), on = typeof cur == "string" && cur.toLowerCase() === h; b.classList.toggle("on", on); b.setAttribute("aria-pressed", on ? "true" : "false"); }); } catch (e) { } }
     if (!window.__mkcpClickHook) { window.__mkcpClickHook = 1, window.addEventListener("click", function (e) { var ov = e.target && e.target.closest ? e.target.closest("#mkTcs") : null; ov && ov.__mkAct && (e.stopPropagation(), ov.__mkAct(e)); }, !0); }
-    function mkcpOpen(id, box, isTitle) {
+    function mkcpOpen(id, box, isTitle, isDraw) {
         var old = D2.getElementById("mkTcs"); old && old.parentNode && old.parentNode.removeChild(old);
         var dark = mkIsDark(), isFa = fa(), COLS = mkcpCols(), t0 = D2.getElementById("text-" + id), it = itemOf(id), sel = window.getSelection(), snap = null;
         // remember what was selected NOW: the HEX field takes focus and some phones collapse the selection
-        if (!isTitle && t0) { try {
+        if (!isTitle && !isDraw && t0) { try {
             if (sel && sel.rangeCount && t0.contains(sel.anchorNode) && !sel.getRangeAt(0).collapsed) snap = sel.getRangeAt(0).cloneRange();
             else if (expSnap && expSnap.id === id && !expSnap.r.collapsed && t0.contains(expSnap.r.startContainer) && t0.contains(expSnap.r.endContainer)) snap = expSnap.r.cloneRange();
             else if (lastRange && lastId === id && t0.contains(lastRange.startContainer) && t0.contains(lastRange.endContainer)) snap = lastRange.cloneRange();
@@ -34805,12 +34811,12 @@ catch { } };
         } catch (e) { snap = null; } }
         var cur = null;
         try {
-            if (isTitle) cur = it && it.titleColor ? mkcpTitleHex(it.titleColor) : null;
+            if (isDraw) { var _dc = D2.getElementById("draw-color-" + id); cur = _dc ? _dc.value : null; } else if (isTitle) cur = it && it.titleColor ? mkcpTitleHex(it.titleColor) : null;
             else if (snap) { var he = mkColOf(snap.startContainer, t0), sp = he ? mkColSpec(he) : 0; cur = sp ? (typeof sp == "number" ? COLS[sp - 1] : sp) : null; }
         } catch (e) { cur = null; }
         var init = mkcpNorm(cur) || (typeof mkCurCol == "string" ? mkcpNorm(mkCurCol) : COLS[mkCurCol - 1]) || COLS[0];
-        var S = isFa ? { ttl: isTitle ? "رنگ عنوان" : "رنگ متن", pal: "پالت", cus: "دلخواه", base: "رنگ‌های پایه", gray: "خاکستری", spec: "طیف رنگ‌ها", rec: "اخیراً استفاده‌شده", hexl: "کد رنگ", off: "بدون رنگ", cancel: "انصراف", ok: "اعمال", eye: "قطره‌چکان", sample: "نمونهٔ متن Aa 123", g: "خوانایی عالی", m: "خوانایی متوسط", b: "خوانایی ضعیف", lnote: "در تم روشن، رنگ‌ها برای خوانایی بهتر کمی تیره‌تر نمایش داده می‌شوند.", sv: "روشنایی و اشباع", hue: "طیف" }
-            : { ttl: isTitle ? "Title colour" : "Text colour", pal: "Palette", cus: "Custom", base: "Basic", gray: "Greys", spec: "Spectrum", rec: "Recent", hexl: "Hex code", off: "No colour", cancel: "Cancel", ok: "Apply", eye: "Eyedropper", sample: "Sample text Aa 123", g: "Great contrast", m: "Fair contrast", b: "Low contrast", lnote: "In the light theme colours are shown a bit darker for readability.", sv: "Shade", hue: "Hue" };
+        var S = isFa ? { ttl: isDraw ? "رنگ قلم" : isTitle ? "رنگ عنوان" : "رنگ متن", pal: "پالت", cus: "دلخواه", base: "رنگ‌های پایه", gray: "خاکستری", spec: "طیف رنگ‌ها", rec: "اخیراً استفاده‌شده", hexl: "کد رنگ", off: "بدون رنگ", cancel: "انصراف", ok: "اعمال", eye: "قطره‌چکان", sample: "نمونهٔ متن Aa 123", g: "خوانایی عالی", m: "خوانایی متوسط", b: "خوانایی ضعیف", lnote: "در تم روشن، رنگ‌ها برای خوانایی بهتر کمی تیره‌تر نمایش داده می‌شوند.", sv: "روشنایی و اشباع", hue: "طیف" }
+            : { ttl: isDraw ? "Pen colour" : isTitle ? "Title colour" : "Text colour", pal: "Palette", cus: "Custom", base: "Basic", gray: "Greys", spec: "Spectrum", rec: "Recent", hexl: "Hex code", off: "No colour", cancel: "Cancel", ok: "Apply", eye: "Eyedropper", sample: "Sample text Aa 123", g: "Great contrast", m: "Fair contrast", b: "Low contrast", lnote: "In the light theme colours are shown a bit darker for readability.", sv: "Shade", hue: "Hue" };
         function sw(hex, extra) { return '<button type="button" class="mkcp-sw' + (extra ? " " + extra : "") + '" data-a="pick" data-h="' + hex + '" style="--c:' + hex + '" aria-label="' + hex + '"></button>'; }
         var grays = ["#ffffff", "#e5e7eb", "#cbd5e1", "#9ca3af", "#6b7280", "#4b5563", "#374151", "#1f2937", "#111827", "#000000"], hues = [0, 24, 46, 68, 100, 150, 178, 205, 255, 322], lights = [82, 70, 58, 46, 34];
         var hb = '<div class="mkcp-lab">' + S.base + '</div><div class="mkcp-grid">' + COLS.map(function (c) { return sw(c); }).join("") + '<button type="button" class="mkcp-sw mkcp-plus" data-a="tab" data-t="cus" aria-label="' + S.cus + '">+</button></div>'
@@ -34823,16 +34829,16 @@ catch { } };
             + '<div class="mkcp-hd"><span class="mkcp-ttl">' + S.ttl + '</span><button type="button" class="mkcp-x" data-a="x" aria-label="close">✕</button></div>'
             + '<div class="mkcp-prev"><span class="mkcp-smp">' + S.sample + '</span></div>'
             + '<div class="mkcp-meta"><span class="mkcp-chip"><i class="mkcp-dot"></i><b class="mkcp-hexlab"></b></span><span class="mkcp-cr"></span></div>'
-            + (!dark && !isTitle ? '<div class="mkcp-note">' + S.lnote + '</div>' : '')
+            + (!dark && !isTitle && !isDraw ? '<div class="mkcp-note">' + S.lnote + '</div>' : '')
             + '<div class="mkcp-tabs" role="tablist"><button type="button" class="on" data-a="tab" data-t="pal" role="tab">' + S.pal + '</button><button type="button" data-a="tab" data-t="cus" role="tab">' + S.cus + '</button></div>'
             + '<div class="mkcp-pane" data-pane="pal">' + hb + '</div>'
             + '<div class="mkcp-pane" data-pane="cus" hidden><div class="mkcp-sv" aria-label="' + S.sv + '"><i class="mkcp-svk"></i></div><div class="mkcp-hue" aria-label="' + S.hue + '"><i class="mkcp-huek"></i></div>'
             + '<div class="mkcp-row"><label class="mkcp-hl">' + S.hexl + '</label><input type="text" class="mkcp-hex" maxlength="7" inputmode="text" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" dir="ltr" aria-label="' + S.hexl + '"><button type="button" class="mkcp-eye" data-a="eye" hidden aria-label="' + S.eye + '" title="' + S.eye + '">&#9678;</button></div></div>'
             + '<div class="mkcp-ft"><button type="button" class="mkcp-ok" data-a="ok">' + S.ok + '</button><button type="button" class="mkcp-ghost" data-a="x">' + S.cancel + '</button><button type="button" class="mkcp-ghost mkcp-off" data-a="off">' + S.off + '</button></div></div>';
         var q1 = function (s) { return ov.querySelector(s); }, prev = q1(".mkcp-prev"), smp = q1(".mkcp-smp"), dot = q1(".mkcp-dot"), hexLab = q1(".mkcp-hexlab"), cr = q1(".mkcp-cr"), sv = q1(".mkcp-sv"), svk = q1(".mkcp-svk"), hueEl = q1(".mkcp-hue"), huek = q1(".mkcp-huek"), hexIn = q1(".mkcp-hex"), eye = q1(".mkcp-eye");
-        var bgHex = mkcpBg(t0 || box, dark), st = { h: 0, s: 1, v: 1, hex: init };
+        var bgHex = isDraw ? "#ffffff" : mkcpBg(t0 || box, dark), st = { h: 0, s: 1, v: 1, hex: init };
         function paint(src) {
-            var shown = isTitle ? st.hex : mkcpShown(st.hex, dark), ratio = mkcpContrast(shown, bgHex), lv = ratio >= 4.5 ? "g" : ratio >= 3 ? "m" : "b";
+            var shown = isTitle || isDraw ? st.hex : mkcpShown(st.hex, dark), ratio = mkcpContrast(shown, bgHex), lv = ratio >= 4.5 ? "g" : ratio >= 3 ? "m" : "b";
             smp.style.setProperty("color", shown, "important"), smp.style.setProperty("-webkit-text-fill-color", shown, "important"), prev.style.setProperty("background", bgHex, "important");
             dot.style.background = st.hex, hexLab.textContent = st.hex.toUpperCase(), cr.setAttribute("data-l", lv), cr.textContent = S[lv] + " · " + (Math.round(ratio * 10) / 10) + ":1";
             ov.querySelectorAll(".mkcp-sw[data-h]").forEach(function (b) { b.classList.toggle("on", b.getAttribute("data-h") === st.hex); });
@@ -34842,7 +34848,7 @@ catch { } };
         function setHex(hex, src) { st.hex = hex; var hv = mkcpHsv(hex); hv[1] > .03 && hv[2] > .03 && (st.h = hv[0]), st.s = hv[1], st.v = hv[2], paint(src); }
         function setHsv() { st.hex = mkcpFromHsv(st.h, st.s, st.v), paint("hsv"); }
         function close() { try { ov.parentNode && ov.parentNode.removeChild(ov); } catch (e) { } }
-        ov.__mkClose = close;
+        ov.__mkClose = close; isDraw && (function () { var o = ov.querySelector(".mkcp-off"); o && (o.style.display = "none"); })();
         function tab(t) { ov.querySelectorAll(".mkcp-tabs button").forEach(function (b) { var on = b.getAttribute("data-t") === t; b.classList.toggle("on", on), b.setAttribute("aria-selected", on ? "true" : "false"); }); ov.querySelectorAll(".mkcp-pane").forEach(function (p) { p.hidden = p.getAttribute("data-pane") !== t; }); t === "cus" && paint("tab"); }
         function drag(el, fn) { var mv = null; el.addEventListener("pointerdown", function (e) { e.preventDefault(); try { el.setPointerCapture(e.pointerId); } catch (x) { } mv = function (ev) { var r = el.getBoundingClientRect(); fn(Math.max(0, Math.min(1, (ev.clientX - r.left) / (r.width || 1))), Math.max(0, Math.min(1, (ev.clientY - r.top) / (r.height || 1)))); }; mv(e); }); el.addEventListener("pointermove", function (e) { mv && mv(e); }); ["pointerup", "pointercancel", "lostpointercapture"].forEach(function (n) { el.addEventListener(n, function () { mv = null; }); }); }
         drag(sv, function (x, y) { st.s = x, st.v = 1 - y, setHsv(); });
@@ -34857,7 +34863,7 @@ catch { } };
             var hex = st.hex, nn = off ? 0 : COLS.indexOf(hex) + 1, val = off ? 0 : nn || hex;
             close();
             try {
-                if (isTitle) mkTitleColorAction(id, box, "tcolor:" + val);
+                if (isDraw) { if (!off) { mkcpPush(hex); window.mkDrawPick && window.mkDrawPick(id, hex); } } else if (isTitle) mkTitleColorAction(id, box, "tcolor:" + val);
                 else {
                     var t = D2.getElementById("text-" + id);
                     if (t && t.getAttribute("contenteditable") === "true") { try { H.softFocus(t); } catch (e) { } if (snap && snap.startContainer.isConnected && snap.endContainer.isConnected && t.contains(snap.startContainer) && t.contains(snap.endContainer)) { try { var s2 = window.getSelection(); s2.removeAllRanges(), s2.addRange(snap), lastRange = snap.cloneRange(), lastId = id; } catch (e) { } } }
@@ -34882,6 +34888,7 @@ catch { } };
         try { ov.focus({ preventScroll: !0 }); } catch (e) { }
         return !0;
     }
+    window.mkOpenDrawColorPicker = function (id) { try { var bx = D2.getElementById("draw-box-" + id) || D2.body; return mkcpOpen(id, bx, !1, !0); } catch (e) { return !1; } };
     window.mkOpenColorPicker = function (id, isTitle) { try { var bx = D2.getElementById("container-" + id); return mkcpOpen(id, bx || D2.body, !!isTitle); } catch (e) { return !1; } };
     window.mkApplyTextColor = function (id, n) { try { var bx = D2.getElementById("container-" + id); return mkColorAction(id, bx || D2.body, "color:" + n); } catch { return !1; } };
     D2.addEventListener("DOMContentLoaded", function () { mkColPaintCur(D2); }), mkColPaintCur(D2);
@@ -35076,7 +35083,7 @@ catch { } };
     // Font size (9–40, stored as item.fontSize): one setter for A- / A+, the Size menu of the writing popover
     // and the hidden toolbar's select, so all three stay in sync
     function setSize(id, n2) { var it = itemOf(id), t = D2.getElementById("text-" + id), box = D2.getElementById("container-" + id); if (!(!it || !t || it.isDecoy)) {
-        n2 = Math.max(9, Math.min(40, Number(n2) || 13)), it.fontSize = n2, t.style.fontSize = n2 + "px", [box && box.querySelector(".mxe-size"), box && box.querySelector(".markhin-editor-tools select")].forEach(function (sel) { if (sel) {
+        n2 = Math.max(9, Math.min(40, Number(n2) || 16)), it.fontSize = n2, t.style.fontSize = n2 + "px", [box && box.querySelector(".mxe-size"), box && box.querySelector(".markhin-editor-tools select")].forEach(function (sel) { if (sel) {
             var o = Array.prototype.filter.call(sel.options, function (x) { return Number(x.value) === n2; })[0];
             if (!o) {
                 o = D2.createElement("option"), o.value = String(n2), o.textContent = String(n2);
@@ -35224,7 +35231,7 @@ catch { } };
         }
         var it = itemOf(id);
         // keep the menu open, like the design
-        return it && setSize(id, (Number(it.fontSize) || 13) + (k === "bigger" ? 1 : -1)), !1;
+        return it && setSize(id, (Number(it.fontSize) || 16) + (k === "bigger" ? 1 : -1)), !1;
     } return !0; }
     // Formats after which the writing popover stays open, so several can be applied in a row
     var KEEPOPEN = { normal: 1, highlight: 1, bold: 1, italic: 1, underline: 1, strike: 1, heading: 1, todo: 1, ul: 1, ol: 1, quote: 1, code: 1, codeMode: 1, color: 1 };
@@ -35562,7 +35569,7 @@ catch { } };
     // resize with the keyboard (Android / Telegram) lift it by exactly the amount the panel is about to shrink; the lift is
     // removed in the same frame the new height is applied, so the bar never jumps.
     function mxeLayEnv() { try { var st = window.__muKbSync && window.__muKbSync.state(); return !!(st && st.layEnv); } catch { return !1; } }
-    function mxeLift(box, px) { try { if (!box || !mxeLayEnv() || !(px > 40 && px < 900)) return; var b = box.querySelector(".mxe-bottom"); if (!b) return; box.__mxeLb = b; b.style.setProperty("transition", "none", "important"); b.style.setProperty("translate", "0 " + (-Math.round(px)) + "px", "important"); } catch { } }
+    function mxeLift(box, px) { try { if (!box || !mxeLayEnv() || !(px > 40 && px < 900)) return; var b = box.querySelector(".mxe-bottom"); if (!b) return; box.__mxeLb = b; try { b.style.removeProperty("translate"); var _tb = box.querySelector(".mxe-top"), _br = b.getBoundingClientRect(), _mt = _tb ? _tb.getBoundingClientRect().bottom + 30 : 0; px = Math.min(px, Math.max(0, _br.top - _mt)); } catch (e) { } b.style.setProperty("transition", "none", "important"); b.style.setProperty("translate", "0 " + (-Math.round(px)) + "px", "important"); } catch { } }
     function mxeUnlift(box) { try { var b = box && box.__mxeLb; if (!b) return; box.__mxeLb = null; b.style.removeProperty("translate"); b.style.removeProperty("transition"); } catch { } }
     function mxeHold(h, box) { try {
         if (__mxeForce)
@@ -35642,6 +35649,9 @@ catch { } };
             // the page itself already shrank with the keyboard: CSS (mxe-lay) keeps the panel and its bottom bar in step in the
             // same frame, so there is nothing to hold back (holding is what hid the bar under the keyboard)
             if (Math.abs((window.innerHeight || 0) - (bottom + gapUsed)) < 4) {
+                mxeUnlift(container), __mxeApp = h, h > __mxeFull && (__mxeFull = h);
+            }
+            else if (!mxeLayEnv()) {
                 mxeUnlift(container), __mxeApp = h, h > __mxeFull && (__mxeFull = h);
             }
             else if (mxeHold(h, container))
@@ -36108,6 +36118,7 @@ html.mu-kbanim body #contentsContainer .content-container.mxe.show,html.mu-kbani
                 st.S = tgt;
             // never draw it below the visible page area (it would be hidden by the keyboard and pop in later)
             st.S > maxS + .5 && (st.S = Math.min(maxS, tgt), st.dur = 0);
+            if (!list[i][1] && el.classList && el.classList.contains("mxe-bottom")) { try { var _bx = el.closest(".content-container.mxe"), _tb = _bx && _bx.querySelector(".mxe-top"); if (_tb) { var _mt = _tb.getBoundingClientRect().bottom + 30; if (st.S < _mt && L >= _mt) { st.S = _mt; st.dur = 0; } } } catch (_) { } }
             tr = st.S - L;
             Math.abs(tr) < .25 && (tr = 0, st.dur || (st.S = L));
             apply(el, st, tr);
@@ -50806,6 +50817,163 @@ html.mxe-open:not([data-mxe-theme=light]) #advancedModal,html.mxe-open:not([data
 html.mxe-open:not([data-mxe-theme=light]) #advancedModal .advanced-card.mdx{--text-color:#EEF2FB}
 .mkt-dlg span,.mkt-dlg b,.mkt-dlg label{color:inherit}
 html body .markhin-drop-zone{color:#fff!important;-webkit-text-fill-color:#fff!important;border-color:#fff}
+</style>
+<script id="mkDrawInsertJs">
+/* "insert drawing into note": insert it, then close the drawing panel. The editor re-renders right after the insert and re-opens the panel, so keep it closed until the re-render has happened. */
+
+/* smart canvas size, pick-don't-type: ratio tiles + size steps (no typing) */
+
+/* ---- drawing colour palette: the same colours / custom picker sheet as the note text colour ---- */
+(function () {
+  if (window.__mkDrawPal) return; window.__mkDrawPal = 1;
+  var BASE = ["#000000"].concat((typeof MXE_COLORS !== "undefined" && MXE_COLORS && MXE_COLORS.length) ? MXE_COLORS : ["#ef4444", "#f97316", "#eab308", "#22c55e", "#14b8a6", "#3b82f6", "#8b5cf6", "#ec4899", "#9ca3af"]);
+  var KEY = "mxe_drawcolor", REC = "mxe_recent_colors";
+  function isFa() { return (typeof currentLang === "string" ? currentLang : "fa") === "fa"; }
+  function norm(v) { v = String(v == null ? "" : v).trim().toLowerCase(); return /^#[0-9a-f]{6}$/.test(v) ? v : null; }
+  function cur() { try { return norm(localStorage.getItem(KEY)) || "#000000"; } catch (e) { return "#000000"; } }
+  function recent() { try { var a = JSON.parse(localStorage.getItem(REC) || "[]"); return (Array.isArray(a) ? a : []).map(function (x) { x = String(x || "").toLowerCase(); return x.charAt(0) === "#" ? x : "#" + x; }).map(norm).filter(function (h) { return h && BASE.indexOf(h) < 0; }).slice(0, 5); } catch (e) { return []; } }
+  function sw(id, c, on) { return '<button type="button" class="mk-dsw' + (on ? " on" : "") + '" data-c="' + c + '" style="--sw:' + c + '" aria-label="' + c + '" onclick="mkDrawPick(\'' + id + '\',\'' + c + '\')"></button>'; }
+  function recHtml(id, c) { return recent().map(function (h) { return sw(id, h, h === c); }).join(""); }
+  window.mkDrawColor = cur;
+  /* opening the drawing panel scrolls the note up so the whole panel is in view (again after its slide-down animation) */
+  window.mkDrawReveal = function (id) {
+    var go = function () { try { var el = document.getElementById("draw-box-" + id); el && el.style.display === "block" && el.scrollIntoView({ block: "start", behavior: "smooth" }); } catch (e) { } };
+    requestAnimationFrame(go); setTimeout(go, 340);
+  };
+  window.mkDrawPaletteHtml = function (id) {
+    var c = cur(), fa = isFa();
+    return '<div class="mk-dpal" data-dpal="' + id + '" role="group" aria-label="' + (fa ? "رنگ قلم" : "Pen colour") + '"><span class="mk-dlab">' + (fa ? "رنگ قلم" : "Pen colour") + '</span>'
+      + BASE.map(function (b) { return sw(id, b, b === c); }).join("")
+      + '<button type="button" class="mk-dsw mk-dcustom" aria-label="' + (fa ? "رنگ دلخواه" : "Custom colour") + '" title="' + (fa ? "رنگ دلخواه" : "Custom colour") + '" onclick="mkOpenDrawColorPicker(\'' + id + '\')"></button>'
+      + '<span class="mk-drec">' + recHtml(id, c) + '</span></div>';
+  };
+  window.mkDrawPick = function (id, hex) {
+    hex = norm(hex); if (!hex) return;
+    var ip = document.getElementById("draw-color-" + id); if (ip) { ip.value = hex; try { ip.dispatchEvent(new Event("input", { bubbles: true })); } catch (e) { } }
+    try { localStorage.setItem(KEY, hex); } catch (e) { }
+    var p = document.querySelector('.mk-dpal[data-dpal="' + id + '"]'); if (!p) return;
+    var rc = p.querySelector(".mk-drec"); if (rc) rc.innerHTML = recHtml(id, hex);
+    p.querySelectorAll(".mk-dsw[data-c]").forEach(function (b) { var on = b.getAttribute("data-c") === hex; b.classList.toggle("on", on); b.setAttribute("aria-pressed", on ? "true" : "false"); });
+  };
+  var st = document.createElement("style"); st.id = "mkDrawPalCss";
+  var P = "html body #contentsContainer .mxe .drawing-box .draw-toolbar .mk-dpal";
+  st.textContent = P + "{flex:1 1 100%;display:flex;flex-wrap:wrap;gap:7px;justify-content:center;align-items:center;padding:4px 0}"
+    + P + " .mk-dlab{flex:0 0 100%;font-size:12px;opacity:.65;text-align:center}"
+    + P + " .mk-drec{display:contents}"
+    + P + " button.mk-dsw{display:block!important;width:28px!important;height:28px!important;min-width:28px!important;min-height:28px!important;padding:0!important;margin:0!important;border-radius:50%!important;border:0!important;background:var(--sw)!important;box-shadow:inset 0 0 0 1px rgba(127,127,127,.5)!important;position:relative}"
+    + P + " button.mk-dsw.on{box-shadow:0 0 0 2px var(--mx-pop,#fff),0 0 0 4px var(--mx-icon,#888)!important}"
+    + P + " button.mk-dsw.mk-dcustom{background:conic-gradient(#ef4444,#f97316,#eab308,#22c55e,#14b8a6,#3b82f6,#8b5cf6,#ec4899,#ef4444)!important;overflow:hidden}"
+    + P + " button.mk-dsw.mk-dcustom::after{content:'+';position:absolute;inset:4px;border-radius:50%;background:var(--mx-pop,#fff);color:var(--mx-icon,#000);font-size:14px;font-weight:800;line-height:20px;text-align:center}";
+  var A = "html body #contentsContainer .mxe .drawing-box .draw-actions";
+  st.textContent += A + "{display:flex;flex-wrap:wrap;gap:8px;justify-content:center;align-items:center;margin-top:12px}"
+    + A + " button{padding:7px 12px!important;font-size:12px!important;font-family:inherit;border-radius:8px!important;border:1px solid var(--panel-border,rgba(127,127,127,.4))!important;background:var(--mx-chip-on,rgba(127,127,127,.2))!important;color:var(--mx-icon)!important;-webkit-text-fill-color:var(--mx-icon)!important;opacity:1}"
+    + A + " button.draw-insert-btn{flex:1 1 100%;order:99;display:flex!important;align-items:center;justify-content:center;text-align:center;min-height:46px;margin-top:4px;border-radius:14px!important;font-size:14px!important;font-weight:800!important;background:var(--mx-icon)!important;color:var(--mx-bg,#fff)!important;-webkit-text-fill-color:var(--mx-bg,#fff)!important;border:0!important;box-shadow:0 2px 6px rgba(0,0,0,.25)}"
+    + A + " button.draw-insert-btn:active{opacity:.82}";
+  (document.head || document.documentElement).appendChild(st);
+})();
+
+window.mkDrawDimHtml = function (id, t) {
+  var fa = (typeof currentLang === "string" ? currentLang : "fa") === "fa";
+  var L = fa ? { dim: (t && t.canvasDimensions) || "ابعاد:", rt: "شکل", sz: "اندازه", s: "کوچک", m: "متوسط", l: "بزرگ", f: "تمام‌عرض" }
+             : { dim: (t && t.canvasDimensions) || "Size:", rt: "Shape", sz: "Size", s: "Small", m: "Medium", l: "Large", f: "Full width" };
+  var rat = [[1, 1], [4, 3], [16, 9], [3, 1], [3, 4], [9, 16]];
+  var tiles = rat.map(function (r) {
+    var k = 30 / Math.max(r[0], r[1]), w = Math.round(r[0] * k), h = Math.round(r[1] * k);
+    return '<button type="button" class="dd-tile" data-r="r:' + r[0] + ':' + r[1] + '" onclick="mkDrawDim(\'' + id + '\',\'r:' + r[0] + ':' + r[1] + '\')"><span class="dd-shape" style="width:' + w + 'px;height:' + h + 'px"></span><span class="dd-tl">' + r[0] + ':' + r[1] + '</span></button>';
+  }).join("");
+  var sizes = [["240", L.s], ["350", L.m], ["520", L.l], ["fit", L.f]].map(function (z) {
+    return '<button type="button" class="dd-seg' + (z[0] === "350" ? " on" : "") + '" data-r="s:' + z[0] + '" onclick="mkDrawDim(\'' + id + '\',\'s:' + z[0] + '\')">' + z[1] + '</button>';
+  }).join("");
+  return '<div class="draw-dim" data-dim="' + id + '" data-s="350"><input type="hidden" id="draw-w-' + id + '" value="350"><input type="hidden" id="draw-h-' + id + '" value="180">' +
+    '<div class="dd-head"><span>' + L.dim + '</span><b class="dd-read" dir="ltr">350 × 180</b></div>' +
+    '<div class="dd-tiles" role="group" aria-label="' + L.rt + '">' + tiles + '</div>' +
+    '<div class="dd-segs" role="group" aria-label="' + L.sz + '">' + sizes + '</div></div>';
+};
+window.mkDrawDim = function (id, act) {
+  var g = function (x) { return document.getElementById(x + id); }, W = g("draw-w-"), H = g("draw-h-"), c = g("canvas-"), box = document.querySelector('.draw-dim[data-dim="' + id + '"]');
+  if (!W || !H || !c || !box) return;
+  var clamp = function (v) { return Math.max(120, Math.min(1200, Math.round(v))); };
+  var a = +box.dataset.a || 0, b = +box.dataset.b || 0, s = box.dataset.s || "350";
+  if (act.indexOf("r:") === 0) { var p = act.split(":"); a = +p[1]; b = +p[2]; box.dataset.a = a; box.dataset.b = b; }
+  else if (act.indexOf("s:") === 0) { s = act.slice(2); box.dataset.s = s; }
+  if (!a || !b) { a = c.width; b = c.height; }
+  var avail = Math.floor((c.parentElement ? c.parentElement.clientWidth : 350) - 22);
+  var w = s === "fit" ? avail : parseInt(s, 10) || 350, h = w * b / a;
+  if (h > 1200) { h = 1200; w = h * a / b; } else if (h < 120) { h = 120; w = h * a / b; }
+  w = clamp(w); h = clamp(h);
+  W.value = w; H.value = h;
+  try { resizeCanvas(id); } catch (e) { }
+  var rd = box.querySelector(".dd-read"); if (rd) rd.textContent = w + " × " + h;
+  box.querySelectorAll(".dd-tile").forEach(function (t) { t.classList.toggle("on", t.getAttribute("data-r") === "r:" + box.dataset.a + ":" + box.dataset.b); });
+  box.querySelectorAll(".dd-seg").forEach(function (t) { t.classList.toggle("on", t.getAttribute("data-r") === "s:" + s); });
+};
+window.mkDrawInsert = function (id) {
+  try { addCanvasToText(id); } catch (e) { }
+  var first = null, t0 = Date.now(), seenNew = false;
+  (function tick() {
+    var el = document.getElementById("draw-box-" + id);
+    if (el) { if (!first) first = el; else if (el !== first) seenNew = true; el.style.display = "none"; }
+    if (!seenNew && Date.now() - t0 < 3000) setTimeout(tick, 120);
+  })();
+};
+</script>
+<style id="mkDrawFix">
+/* drawing panel (light theme): a global white -webkit-text-fill-color hid the labels, inputs and buttons */
+html body #contentsContainer .mxe .drawing-box .draw-toolbar,html body #contentsContainer .mxe .drawing-box .draw-toolbar *,html body #contentsContainer .mxe .drawing-box select,html body #contentsContainer .mxe .drawing-box input,html body #contentsContainer .mxe .drawing-box button,html body #contentsContainer .mxe .drawing-box label{-webkit-text-fill-color:var(--mx-icon)!important;color:var(--mx-icon)!important}
+html body #contentsContainer .mxe .drawing-box select option{color:var(--mx-icon);background:var(--mx-pop,#fff)}
+html body #contentsContainer .mxe .drawing-box .draw-toolbar button{background:var(--mx-chip-on,rgba(127,127,127,.2))!important;opacity:1}
+html body #contentsContainer .mxe .drawing-box input[type=color]{-webkit-text-fill-color:initial!important}
+html body #contentsContainer .mxe .drawing-box .draw-toolbar button.draw-insert-btn{flex:1 1 100%;width:100%;order:99;min-height:46px;margin-top:4px;border-radius:14px!important;font-size:14px!important;font-weight:800!important;
+  background:var(--mx-icon)!important;color:var(--mx-bg,#fff)!important;-webkit-text-fill-color:var(--mx-bg,#fff)!important;box-shadow:0 2px 6px rgba(0,0,0,.25)!important}
+html body #contentsContainer .mxe .drawing-box .draw-toolbar button.draw-insert-btn:active{opacity:.82}
+html body #contentsContainer .mxe .drawing-box .draw-dim{flex:1 1 100%;display:flex;flex-direction:column;align-items:center;gap:8px;padding:2px 0}
+html body #contentsContainer .mxe .drawing-box .dd-head{display:flex;align-items:center;gap:8px;font-size:12px}
+html body #contentsContainer .mxe .drawing-box .dd-read{font-size:12px;font-weight:800;letter-spacing:.3px;padding:2px 10px;border-radius:999px;background:var(--mx-chip-on,rgba(127,127,127,.2))}
+html body #contentsContainer .mxe .drawing-box .dd-tiles{display:flex;gap:6px;justify-content:center;flex-wrap:wrap}
+html body #contentsContainer .mxe .drawing-box .dd-tile{display:flex!important;flex-direction:column;align-items:center;justify-content:center;gap:5px;width:54px;height:56px;padding:4px 2px!important;border-radius:12px!important}
+html body #contentsContainer .mxe .drawing-box .dd-shape{display:block;box-sizing:border-box;border:2px solid currentColor;border-radius:3px;background:color-mix(in srgb,currentColor 14%,transparent);flex:0 0 auto}
+html body #contentsContainer .mxe .drawing-box .dd-tl{font-size:10.5px;font-weight:700;line-height:1}
+html body #contentsContainer .mxe .drawing-box .dd-segs{display:flex;width:100%;max-width:340px;padding:3px;border-radius:999px;background:var(--mx-chip-on,rgba(127,127,127,.2));gap:2px}
+html body #contentsContainer .mxe .drawing-box .draw-toolbar .dd-segs .dd-seg{flex:1 1 0;min-width:0;padding:6px 4px!important;border-radius:999px!important;font-size:11.5px!important;background:transparent!important;border:0!important;text-align:center}
+html body #contentsContainer .mxe .drawing-box .draw-toolbar .dd-tile.on *{color:var(--mx-bg,#fff)!important;-webkit-text-fill-color:var(--mx-bg,#fff)!important}
+html body #contentsContainer .mxe .drawing-box .draw-toolbar .dd-tile.on,html body #contentsContainer .mxe .drawing-box .draw-toolbar .dd-segs .dd-seg.on{background:var(--mx-icon)!important;color:var(--mx-bg,#fff)!important;-webkit-text-fill-color:var(--mx-bg,#fff)!important}
+
+
+html body #contentsContainer .mxe .drawing-box .draw-toolbar button.draw-insert-btn{display:flex!important;align-items:center;justify-content:center!important;text-align:center!important}
+</style>
+<style id="mkKeepTop">
+/* top bar, Keep style: [back] [pill: A+ A- focus theme fav pin archive lock] [save] (lock and archive swapped) */
+html body #contentsContainer .mxe .mxe-top{gap:8px!important;padding:8px 10px 0 10px!important;min-height:54px!important}
+html body #contentsContainer .mxe .mxe-top .mxe-grp{display:flex;align-items:center;gap:1px;padding:3px 4px;border-radius:999px;box-sizing:border-box;flex:1 1 auto;min-width:0;justify-content:space-between;max-width:340px;
+  background:color-mix(in srgb,var(--mx-icon,#888) 9%,transparent);box-shadow:0 1px 3px rgba(0,0,0,.16),0 3px 10px rgba(0,0,0,.08)}
+html body #contentsContainer .mxe .mxe-top .mxe-grp .mxe-btn{width:32px!important;height:32px!important;border-radius:50%!important;flex:0 1 32px!important;min-width:24px!important}
+html body #contentsContainer .mxe .mxe-top .mxe-grp .mxe-btn:not(.on):not(.mc-icon-active){background:transparent!important;box-shadow:none!important}
+html body #contentsContainer .mxe .mxe-top .mxe-grp .mxe-btn.on,html body #contentsContainer .mxe .mxe-top .mxe-grp .mxe-btn.mc-icon-active{background:color-mix(in srgb,var(--mx-icon,#888) 15%,transparent)!important;box-shadow:none!important}
+html body #contentsContainer .mxe .mxe-top .mxe-grp .mxe-btn:active{background:color-mix(in srgb,var(--mx-icon,#888) 16%,transparent)!important}
+html body #contentsContainer .mxe .mxe-top .mxe-grp .mxe-btn svg{width:19px!important;height:19px!important}
+html body #contentsContainer .mxe .mxe-top .mxe-btn[data-mxe=save]{width:38px!important;height:38px!important;border-radius:50%!important;flex:0 0 38px!important;margin-inline-start:auto;box-shadow:0 1px 3px rgba(0,0,0,.25)!important}
+html body #contentsContainer .mxe .mxe-top>.mxe-theme-btn{width:38px!important;height:38px!important;border-radius:50%!important;flex:0 0 38px!important;margin-inline-start:auto;
+  background:color-mix(in srgb,var(--mx-icon,#888) 9%,transparent)!important;box-shadow:0 1px 3px rgba(0,0,0,.16),0 3px 10px rgba(0,0,0,.08)!important}
+html body #contentsContainer .mxe .mxe-top>.mxe-theme-btn+.mxe-btn[data-mxe=save]{margin-inline-start:0!important}
+html body #contentsContainer .mxe .mxe-top>.mxe-theme-btn svg{width:19px!important;height:19px!important}
+</style>
+<style id="mkKeepBar">
+/* Google-Keep-style bottom bar: two small rounded "pills" (media..delete | view + more) instead of separate boxed buttons */
+html body #contentsContainer .mxe .mxe-bottom{gap:8px!important;padding:8px 12px calc(12px + env(safe-area-inset-bottom,0px))!important;justify-content:space-between}
+html body #contentsContainer .mxe .mxe-bottom .mxe-sp{flex:1 1 0!important;min-width:0}
+html body #contentsContainer .mxe .mxe-bottom .mxe-grp{display:flex;align-items:center;gap:2px;padding:3px 5px;border-radius:999px;box-sizing:border-box;flex:0 0 auto;
+  background:color-mix(in srgb,var(--mx-icon,#888) 9%,transparent);box-shadow:0 1px 3px rgba(0,0,0,.16),0 3px 10px rgba(0,0,0,.08);min-width:0}
+html body #contentsContainer .mxe .mxe-bottom .mxe-grp-a{flex:0 1 auto}
+html body #contentsContainer .mxe .mxe-bottom .mxe-grp .mxe-btn{width:34px!important;height:34px!important;border-radius:50%!important;background:transparent!important;box-shadow:none!important;flex:0 0 auto}
+html body #contentsContainer .mxe .mxe-bottom .mxe-grp .mxe-btn.mxe-more{width:32px!important}
+html body #contentsContainer .mxe .mxe-bottom .mxe-grp .mxe-btn.mxe-viewnote{width:auto!important;padding:0 10px!important;border-radius:999px!important;background:transparent!important;box-shadow:none!important}
+html body #contentsContainer .mxe .mxe-bottom .mxe-grp .mxe-btn:active{background:color-mix(in srgb,var(--mx-icon,#888) 16%,transparent)!important}
+html body #contentsContainer .mxe .mxe-bottom .mxe-grp .mxe-btn.warn{box-shadow:inset 0 0 0 1.5px var(--mxb-danger-ring,#e5484d)!important}
+html body #contentsContainer .mxe .mxe-bottom .mxe-grp .mxe-btn svg{width:20px!important;height:20px!important}
+@media(max-width:380px){html body #contentsContainer .mxe .mxe-bottom{gap:6px!important;padding-left:8px!important;padding-right:8px!important}
+ html body #contentsContainer .mxe .mxe-bottom .mxe-grp{padding:3px 3px}
+ html body #contentsContainer .mxe .mxe-bottom .mxe-grp .mxe-btn:not(.mxe-viewnote){width:30px!important;height:30px!important}
+ html body #contentsContainer .mxe .mxe-bottom .mxe-grp .mxe-btn.mxe-viewnote{padding:0 7px!important}}
 </style>
 <style id="mkFixV23">
 /* note text is normal weight unless the person makes it bold; the title is a little lighter */
