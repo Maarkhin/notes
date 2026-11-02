@@ -11953,30 +11953,51 @@ html body .advanced-card .mkl-wrap .mkl-items {
     justify-content:space-between;
     gap:10px;
     padding:10px 14px;
-    background:#000;
-    color:#fff;
+    background:var(--pp-ink,#000);
+    color:var(--pp-bg,#fff);
     font-size:13px;
     z-index:5;
     box-shadow:4px 4px #281e1433;
 }
-.mkc-snack span {
-    color:#fff;
-}
 .mkc-snack.on {
     display:flex;
 }
-.mkc-snack button {
-    all:unset;
+/* Undo bar: bar = text colour of the current theme, text = page colour, so it is readable in every light/dark theme.
+   The selectors are deliberately heavy: they must beat "body.theme-bw .advanced-card button {background:#eee!important;
+   color:#1f1f1f!important}" and the generic ".mk-paper span/div { color:var(--ink) }" rules, which used to paint dark text on the black bar. html:not(#_mkcs) adds ID-level weight to also beat the
+   dark-mode "html.mu-nfs-dark:not(#_bw) body.theme-bw .advanced-card button" rule. */
+html:not(#_mkcs) body .advanced-modal .advanced-card .mkc .mkc-snack.mkc-snack,html:not(#_mkcs) body .advanced-card .mkc .mkc-snack.mkc-snack {
+    background:var(--pp-ink,#000)!important;
+    color:var(--pp-bg,#fff)!important;
+}
+html:not(#_mkcs) body .advanced-modal .advanced-card .mkc .mkc-snack.mkc-snack>span,html:not(#_mkcs) body .advanced-card .mkc .mkc-snack.mkc-snack>span {
+    color:var(--pp-bg,#fff)!important;
+    background:transparent!important;
+    font-weight:700;
+}
+html:not(#_mkcs) body .advanced-modal .advanced-card .mkc .mkc-snack.mkc-snack.mkc-snack>button[data-act="undo"],html:not(#_mkcs) body .advanced-card .mkc .mkc-snack.mkc-snack.mkc-snack>button[data-act="undo"] {
     display:inline-flex;
     align-items:center;
     gap:6px;
+    box-sizing:border-box;
+    margin:0;
+    font:inherit;
     font-weight:800;
-    color:#ffd08a;
     cursor:pointer;
-    padding:2px 6px;
+    padding:4px 10px;
+    background:transparent!important;
+    color:var(--pp-bg,#fff)!important;
+    border:1px solid var(--pp-bg,#fff)!important;
+    box-shadow:none!important;
+    outline:0;
 }
-.mkc-snack button span {
-    color:#ffd08a;
+html:not(#_mkcs) body .advanced-modal .advanced-card .mkc .mkc-snack.mkc-snack.mkc-snack>button[data-act="undo"] *,html:not(#_mkcs) body .advanced-card .mkc .mkc-snack.mkc-snack.mkc-snack>button[data-act="undo"] * {
+    color:var(--pp-bg,#fff)!important;
+    background:transparent!important;
+    stroke:currentColor;
+}
+html:not(#_mkcs) body .advanced-modal .advanced-card .mkc .mkc-snack.mkc-snack.mkc-snack>button[data-act="undo"]:active {
+    opacity:.7;
 }
 @media(max-width:600px) {
     .mkc-act span {
@@ -11985,6 +12006,13 @@ html body .advanced-card .mkl-wrap .mkl-items {
     .mkc-act {
         padding:8px 10px;
     }
+}
+</style>
+<style id="mkContrastFix">
+/* Light mode: the Telegram-blue (#3390EC) section headings of the Cloud backup panel / help were only 2.9:1 on the light paper.
+   A darker blue of the same hue reaches > 4.5:1. Night mode / full-screen themes keep their own colours (--nfs-muted). */
+html:not(.mu-nfs-open):not(.mu-nfs-dark):not(#_mkcf) body .advanced-card.mk-page.mk-paper:has(>.advanced-head[data-mkcloud]) :is(h4,.mkc2-sh) {
+    color:#1763b0!important;
 }
 </style>
 <style id="muNoAnimModal">
