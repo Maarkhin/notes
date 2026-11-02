@@ -21836,7 +21836,7 @@ if (window.__mkNoSchedule > 0 || window.__mkStartupBusy || __cloudBackupPending 
 if (Date.now() - (window.__mkLastTypeAt || 0) < CLOUD_LIVE.typingQuietMs)
     return "skip"; const lastOk = window.__mkSync && window.__mkSync.lastOk || 0; lastOk !== s.lastOkSeen && (s.lastOkSeen = lastOk, cloudLiveHot()); s.busy = !0, s.busyAt = Date.now(); try {
     const vals = await Promise.race([cloudGetItemsRaw([CLOUD_INDEX_KEY, CLOUD_LIST_META_KEY, CLOUD_CONFIG_KEY]), cloudSleep(6e3).then(() => null)]); if (!vals)
-        return s.fails++, "fail"; s.fails = 0, s.probes++, s.lastProbeAt = Date.now(); const rawIdx = vals[CLOUD_INDEX_KEY] || "", rawList = vals[CLOUD_LIST_META_KEY] || "", rawCfg = vals[CLOUD_CONFIG_KEY] || "", sig = rawIdx + "\u0001" + rawList + "\u0001" + rawCfg; if (sig === s.sig)
+        return s.fails++, "fail"; s.fails = 0, s.probes++, s.lastProbeAt = Date.now(); const rawIdx = vals[CLOUD_INDEX_KEY] || "", rawList = vals[CLOUD_LIST_META_KEY] || "", rawCfg = vals[CLOUD_CONFIG_KEY] || "", sig = rawIdx + "\u0001" + rawList + "\u0001" + rawCfg; s.cloudTs = (cloudLiveAuto(rawIdx) || {}).ts || 0, s.okAt = Date.now(); if (sig === s.sig)
         return "same";
     // What exactly changed (idx = notes + manual backups, list = the List slot, cfg = shared settings)
     const P = s.parts, idxChanged = !!P && P[0] !== rawIdx, listChanged = !!P && P[1] !== rawList, cfgChanged = !!P && P[2] !== rawCfg;
@@ -22040,10 +22040,51 @@ window.mkLiveSyncNow = function () { __cloudLive.sig = null, __cloudLive.parts =
     catch { } };
     setInterval(wd, 3e3);
 }
+// ===== LIVE SUPERVISOR (v9): self-healing =====
+// Whatever makes this device "deaf" (a stuck flag, a hung queue task, a lost timer, a pull that silently did
+// nothing), it is detected from the OUTSIDE by comparing the Cloud's auto-copy stamp with the one this device
+// has applied, and repaired: flags reset, queue replaced, engine restarted, a forced pull + full repaint run.
+{
+    let deafSince = 0, lastHeal = 0, pendSince = 0, lpSince = 0, healing = !1;
+    const heal = async (why) => { if (healing) return; healing = !0, lastHeal = Date.now(); try {
+        const s = __cloudLive;
+        s.busy = !1, s.fails = 0, s.tries = 0, s.sig = null, s.parts = null, s.pendingSig = null, window.__mkSyncBusy = !1, window.__mkStartupBusy = !1, window.__mkNoSchedule = 0, window.__mkIdxHint = null, __cloudOpChain = Promise.resolve();
+        if (!window.__mkAutoBk || !window.__mkAutoBk.active) { }
+        s.running = !0, cloudLiveSchedule(1200);
+        window.__mkHealLog = (window.__mkHealLog || []).concat([[Date.now(), why]]).slice(-20);
+        await Promise.race([cloudSilentPullMerge(), cloudSleep(6e4)]);
+        try { mkLiveRepaint(); } catch { }
+    }
+    catch { }
+    finally { healing = !1; } };
+    window.mkLiveHeal = heal;
+    let ownBusy = !1;
+    const ownProbe = async () => { if (ownBusy) return; ownBusy = !0; try {
+        const v = await cloudGetItemsRaw([CLOUD_INDEX_KEY]);
+        if (v) { const ae = cloudLiveAuto(v[CLOUD_INDEX_KEY] || ""); __cloudLive.cloudTs = ae && ae.ts || 0; }
+    }
+    catch { }
+    finally { ownBusy = !1; } };
+    setInterval(() => { try {
+        if (!IS_TELEGRAM || !hasCloudStorage || navigator.onLine === !1) return;
+        const s = __cloudLive, now = Date.now();
+        now - (s.okAt || 0) > 4e3 && ownProbe();
+        // a backup that has been "pending" for a long time is flushed
+        if (__cloudBackupPending) { pendSince || (pendSince = now), now - pendSince > 12e3 && (pendSince = 0, cloudFlushBackup()); } else pendSince = 0;
+        if (__cloudListPending) { lpSince || (lpSince = now), now - lpSince > 12e3 && (lpSince = 0, cloudFlushListBackup()); } else lpSince = 0;
+        const pushing = __cloudBackupPending || __cloudListPending || window.__mkAutoBk && window.__mkAutoBk.active || window.__mkManualBk && window.__mkManualBk.active;
+        if (s.cloudTs && s.cloudTs !== (window.__mkSeenAutoTs || 0) && !pushing && !(s.busy && now - s.busyAt < 15e3) && cloudIsLinked()) { deafSince || (deafSince = now); }
+        else deafSince = 0;
+        if (deafSince && now - deafSince > 5e3 && now - lastHeal > 8e3) { deafSince = 0, heal("stamp-mismatch"); return; }
+        // engine silent for a long time while it should be running
+        if (s.okAt && now - s.okAt > 45e3 && now - lastHeal > 3e4 && document.visibilityState !== "hidden") heal("probe-silent");
+    }
+    catch { } }, 2500);
+}
 // Serialisation: every operation that reads-then-writes the shared index (backup, delete, edit, settings
 // change, restore reads, health check) runs one at a time.
 let __cloudOpChain = Promise.resolve();
-function cloudSerial(task) { const run = __cloudOpChain.then(task); return __cloudOpChain = run.then(() => { }, () => { }), run; }
+function cloudSerial(task) { const run = __cloudOpChain.then(() => { let tm; return Promise.race([Promise.resolve().then(task), new Promise((_, rej) => { tm = setTimeout(() => rej(new Error("serial-timeout")), 24e4); })]).finally(() => clearTimeout(tm)); }); return __cloudOpChain = run.then(() => { }, () => { }), run; }
 // Settings (manual backup count; shared through Cloud so every device uses the same limit)
 let __cloudSettingsLoaded = !1;
 // Reads the shared setting (manual-backup count) from Telegram Cloud (mk_cfg) and keeps a local copy; on a
@@ -27526,7 +27567,7 @@ async function mu_getMdOrderedItems() { const all = getBackupCategories(), plain
 function openHtmlAllExportChoice() {
     const fa = currentLang === "fa";
     showAdvanced(`
-                <div class="advanced-head image-export-picker-head"><h3>?? ${fa ? "خروجی HTML" : "HTML Export"}</h3><button class="btn-main" onclick="closeAdvancedModal()">✕</button></div>
+                <div class="advanced-head image-export-picker-head"><h3>📤 ${fa ? "خروجی HTML" : "HTML Export"}</h3><button class="btn-main" onclick="closeAdvancedModal()">✕</button></div>
                 <div class="image-export-choice-grid">
                     <button type="button" class="image-export-choice" onclick="downloadHtmlAllIndividualZip()">
                         <span class="image-export-choice-icon">🗂️</span>
