@@ -21796,18 +21796,21 @@ document.addEventListener("visibilitychange", () => { document.visibilityState =
 //   idle (15 s) / deep idle (45 s): when nobody touches this device for 3 / 15 min (wakes up at once on touch)
 // It never runs while hidden/offline, never while a backup is running or waiting, and never while the user
 // is typing (so an incoming change can't steal the caret). Failures back off automatically.
-const CLOUD_LIVE = { hotMs: 750, burstMs: 550, burstWindowMs: 15e3, normalMs: 1600, idleMs: 3500, deepMs: 8e3, unlinkedMs: 3e4, hotWindowMs: 18e4, idleAfterMs: 3e5, deepAfterMs: 18e5, typingQuietMs: 600, maxBackoffMs: 6e4, maxPullTries: 3 };
+const CLOUD_LIVE = { hotMs: 750, burstMs: 550, burstWindowMs: 15e3, normalMs: 1600, idleMs: 3500, deepMs: 8e3, unlinkedMs: 3e4, hotWindowMs: 18e4, idleAfterMs: 3e5, deepAfterMs: 18e5, typingQuietMs: 600, maxBackoffMs: 6e4, maxPullTries: 3, bgMs: 5e3, pullTimeoutMs: 9e4, busyStuckMs: 12e4, staleMs: 18e4 };
 const CLOUD_POLL_INTERVAL_MS = CLOUD_LIVE.normalMs;
 let __cloudPollTimer = null;
-const __cloudLive = window.__mkLive = { running: !1, busy: !1, sig: null, parts: null, ids: null, pendingSig: null, tries: 0, fails: 0, lastUserAt: Date.now(), hotUntil: 0, lastOkSeen: 0, lastProbeAt: 0, lastChangeAt: 0, probes: 0, pulls: 0, tgBound: !1 };
+const __cloudLive = window.__mkLive = { running: !1, busy: !1, sig: null, parts: null, ids: null, pendingSig: null, tries: 0, fails: 0, lastUserAt: Date.now(), hotUntil: 0, lastOkSeen: 0, lastProbeAt: 0, lastChangeAt: 0, probes: 0, pulls: 0, tgBound: !1, inactive: !1, busyAt: 0, wdAt: 0 };
 function cloudLiveHot(ms) { __cloudLive.hotUntil = Math.max(__cloudLive.hotUntil, Date.now() + (ms || CLOUD_LIVE.hotWindowMs)); }
 function cloudLiveDelay() { const s = __cloudLive, now = Date.now(), idleFor = now - s.lastUserAt; let d = now - (s.lastChangeAt || 0) < CLOUD_LIVE.burstWindowMs && s.lastChangeAt ? CLOUD_LIVE.burstMs : now < s.hotUntil ? CLOUD_LIVE.hotMs : idleFor > CLOUD_LIVE.deepAfterMs ? CLOUD_LIVE.deepMs : idleFor > CLOUD_LIVE.idleAfterMs ? CLOUD_LIVE.idleMs : CLOUD_LIVE.normalMs; try {
     cloudIsLinked() || mkCloudFreshDevice() || (d = Math.max(d, CLOUD_LIVE.unlinkedMs));
 }
+catch { } try {
+    document.visibilityState === "hidden" && (d = Math.max(d, CLOUD_LIVE.bgMs));
+}
 catch { } s.fails > 0 && (d = Math.min(CLOUD_LIVE.maxBackoffMs, d * Math.pow(2, Math.min(s.fails, 4)))); return Math.round(d * (.85 + Math.random() * .3)); }
 function cloudLiveSchedule(ms) { clearTimeout(__cloudPollTimer), __cloudPollTimer = null, __cloudLive.running && (__cloudPollTimer = setTimeout(cloudLiveTick, Math.max(0, ms))); }
 // Run a check as soon as possible (visible again, focus, online, first touch after a long idle...)
-function cloudLiveKick(ms) { if (!IS_TELEGRAM || !hasCloudStorage || document.visibilityState === "hidden")
+function cloudLiveKick(ms) { if (!IS_TELEGRAM || !hasCloudStorage)
     return; __cloudLive.running || cloudStartPolling(), cloudLiveSchedule(ms || 0); }
 async function cloudLiveTick() { __cloudPollTimer = null; const s = __cloudLive; if (!s.running)
     return; let r; const __t0 = Date.now(); try {
@@ -21824,14 +21827,14 @@ catch {
     return null;
 } }
 async function cloudLiveProbe() { const s = __cloudLive; if (s.busy)
-    return "skip"; if (!IS_TELEGRAM || !hasCloudStorage || document.visibilityState !== "visible" || typeof navigator < "u" && navigator.onLine === !1)
+    return "skip"; if (!IS_TELEGRAM || !hasCloudStorage || typeof navigator < "u" && navigator.onLine === !1)
     return "skip";
 // Never interfere with (or race) our own writes
 if (window.__mkNoSchedule > 0 || window.__mkStartupBusy || __cloudBackupPending || __cloudListPending || window.__mkAutoBk && window.__mkAutoBk.active || window.__mkManualBk && window.__mkManualBk.active || window.__mkSyncBusy)
     return "skip";
 // Never swap the screen while the user is typing
 if (Date.now() - (window.__mkLastTypeAt || 0) < CLOUD_LIVE.typingQuietMs)
-    return "skip"; const lastOk = window.__mkSync && window.__mkSync.lastOk || 0; lastOk !== s.lastOkSeen && (s.lastOkSeen = lastOk, cloudLiveHot()); s.busy = !0; try {
+    return "skip"; const lastOk = window.__mkSync && window.__mkSync.lastOk || 0; lastOk !== s.lastOkSeen && (s.lastOkSeen = lastOk, cloudLiveHot()); s.busy = !0, s.busyAt = Date.now(); try {
     const vals = await Promise.race([cloudGetItemsRaw([CLOUD_INDEX_KEY, CLOUD_LIST_META_KEY, CLOUD_CONFIG_KEY]), cloudSleep(6e3).then(() => null)]); if (!vals)
         return s.fails++, "fail"; s.fails = 0, s.probes++, s.lastProbeAt = Date.now(); const rawIdx = vals[CLOUD_INDEX_KEY] || "", rawList = vals[CLOUD_LIST_META_KEY] || "", rawCfg = vals[CLOUD_CONFIG_KEY] || "", sig = rawIdx + "\u0001" + rawList + "\u0001" + rawCfg; if (sig === s.sig)
         return "same";
@@ -21858,7 +21861,7 @@ if (Date.now() - (window.__mkLastTypeAt || 0) < CLOUD_LIVE.typingQuietMs)
         catch { }
     s.__chg = { idxChanged, listChanged, cfgChanged };
     // Something changed in the Cloud (or this is the first probe): pull + merge now
-    if (s.pendingSig !== sig && (s.pendingSig = sig, s.tries = 0), s.tries++, s.lastChangeAt = Date.now(), s.pulls++, cloudLiveHot(), window.__mkIdxHint = { raw: rawIdx, readList: !P || listChanged, t: Date.now() }, await cloudSilentPullMerge(), cloudIsLinked() || mkCloudFreshDevice()) {
+    if (s.pendingSig !== sig && (s.pendingSig = sig, s.tries = 0), s.tries++, s.lastChangeAt = Date.now(), s.pulls++, cloudLiveHot(), window.__mkIdxHint = { raw: rawIdx, readList: !P || listChanged, t: Date.now() }, await Promise.race([cloudSilentPullMerge(), cloudSleep(CLOUD_LIVE.pullTimeoutMs)]), cloudIsLinked() || mkCloudFreshDevice()) {
         // A pull that failed silently must not mark the change as seen: retry (a few times) with a normal delay
         const ae = cloudLiveAuto(rawIdx);
         if (ae && ae.ts && window.__mkSeenAutoTs !== ae.ts)
@@ -21879,15 +21882,15 @@ function cloudStartPolling() { if (!IS_TELEGRAM || !hasCloudStorage)
     return; const s = __cloudLive; try {
     // Telegram's own foreground/background events (desktop clients don't always fire visibilitychange)
     if (!s.tgBound && TG && typeof TG.onEvent == "function")
-        s.tgBound = !0, TG.onEvent("activated", () => { cloudStartPolling(), cloudLiveKick(0); }), TG.onEvent("deactivated", () => { cloudStopPolling(); });
+        s.tgBound = !0, TG.onEvent("activated", () => { s.inactive = !1, s.fails = 0, cloudStartPolling(), cloudLiveKick(0); }), TG.onEvent("deactivated", () => { s.inactive = !0; });
 }
 catch { } s.running || (s.running = !0, cloudLiveSchedule(1500)); }
 function cloudStopPolling() { __cloudLive.running = !1, clearTimeout(__cloudPollTimer), __cloudPollTimer = null; }
-document.addEventListener("visibilitychange", () => { document.visibilityState === "visible" ? (__cloudLive.fails = 0, cloudStartPolling(), cloudLiveKick(0)) : cloudStopPolling(); });
+document.addEventListener("visibilitychange", () => { document.visibilityState === "visible" ? (__cloudLive.inactive = !1, __cloudLive.fails = 0, cloudStartPolling(), cloudLiveKick(0)) : __cloudLive.running || cloudStartPolling(); });
 window.addEventListener("focus", () => { cloudLiveKick(0); }), window.addEventListener("pageshow", () => { cloudLiveKick(0); }), window.addEventListener("online", () => { __cloudLive.fails = 0, cloudLiveKick(0); });
 // User activity: typing guard + wake-up from idle
 {
-    const typed = () => { window.__mkLastTypeAt = Date.now(); }, touched = () => { const s = __cloudLive, now = Date.now(), wasIdle = now - s.lastUserAt > CLOUD_LIVE.idleAfterMs; s.lastUserAt = now, wasIdle && cloudLiveKick(0); }, o = { passive: !0, capture: !0 };
+    const typed = () => { window.__mkLastTypeAt = Date.now(); }, touched = () => { const s = __cloudLive, now = Date.now(), wasIdle = now - s.lastUserAt > CLOUD_LIVE.idleAfterMs; s.lastUserAt = now, s.inactive = !1, !s.running ? cloudLiveKick(0) : wasIdle && cloudLiveKick(0); }, o = { passive: !0, capture: !0 };
     ["keydown", "input", "compositionupdate", "beforeinput"].forEach(ev => document.addEventListener(ev, typed, o)), ["pointerdown", "touchstart", "keydown", "wheel"].forEach(ev => document.addEventListener(ev, touched, o));
 }
 // Small, non-blocking notice when another device's changes arrive (also a hook for other modules)
@@ -22011,6 +22014,32 @@ catch { } }
     catch { }
 }
 window.mkLiveSyncNow = function () { __cloudLive.sig = null, __cloudLive.parts = null, __cloudLive.fails = 0, cloudLiveKick(0); };
+// ===== LIVE WATCHDOG (v8): the engine can never stay dead =====
+// Telegram clients (desktop especially) fire "deactivated" / hide the page when the person is working on ANOTHER
+// device, and do not always send "activated" back: the old code stopped polling on those events, so this device
+// stayed deaf until the mini app was closed and opened again. Now the engine only slows down in the background
+// and this watchdog (every 3 s) restarts it if it is stopped, lost its timer, got stuck, or the device just woke up.
+{
+    const wd = () => { try {
+        if (!IS_TELEGRAM || !hasCloudStorage)
+            return;
+        const s = __cloudLive, now = Date.now(), gap = s.wdAt ? now - s.wdAt : 0; s.wdAt = now;
+        if (s.busy && s.busyAt && now - s.busyAt > CLOUD_LIVE.busyStuckMs)
+            s.busy = !1, s.fails = 0;
+        if (!s.running) {
+            s.running = !0, cloudLiveSchedule(0);
+            return;
+        }
+        if (!s.busy && !__cloudPollTimer) {
+            cloudLiveSchedule(0);
+            return;
+        }
+        if (gap > 15e3 || !s.busy && s.lastProbeAt && now - s.lastProbeAt > CLOUD_LIVE.staleMs && navigator.onLine !== !1)
+            s.fails = 0, cloudLiveSchedule(0);
+    }
+    catch { } };
+    setInterval(wd, 3e3);
+}
 // Serialisation: every operation that reads-then-writes the shared index (backup, delete, edit, settings
 // change, restore reads, health check) runs one at a time.
 let __cloudOpChain = Promise.resolve();
@@ -27497,7 +27526,7 @@ async function mu_getMdOrderedItems() { const all = getBackupCategories(), plain
 function openHtmlAllExportChoice() {
     const fa = currentLang === "fa";
     showAdvanced(`
-                <div class="advanced-head image-export-picker-head"><h3>📤 ${fa ? "خروجی HTML" : "HTML Export"}</h3><button class="btn-main" onclick="closeAdvancedModal()">✕</button></div>
+                <div class="advanced-head image-export-picker-head"><h3>?? ${fa ? "خروجی HTML" : "HTML Export"}</h3><button class="btn-main" onclick="closeAdvancedModal()">✕</button></div>
                 <div class="image-export-choice-grid">
                     <button type="button" class="image-export-choice" onclick="downloadHtmlAllIndividualZip()">
                         <span class="image-export-choice-icon">🗂️</span>
