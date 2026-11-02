@@ -18201,6 +18201,27 @@ html.mu-nfs-open:not(#_nfs) body .advanced-card.mk-page.xp-card {
     accent-color:var(--nfs-fab);
     --mk-fs-bg:var(--nfs-bg);
 }
+/* Export pages (HTML, PDF, DOCX, JSON, ...): the header band follows the day / night theme. It used to take a fixed dark
+   fallback colour while its text used the theme ink, so in the light theme it was dark text on a near-black band. */
+html.mu-nfs-open:not(#_nfs) body .advanced-card.mk-page.xp-card>.advanced-head,
+html.mu-nfs-open:not(#_nfs) body .advanced-card.mk-page:not(.mk-paper):not(.mcx-card):not(.mdx):not(.kg-card)>.advanced-head.image-export-picker-head:not([data-mkcloud]) {
+    background:var(--nfs-bg)!important;
+    color:var(--nfs-text)!important;
+}
+html.mu-nfs-open:not(#_nfs) body .advanced-card.mk-page.xp-card>.advanced-head p,
+html.mu-nfs-open:not(#_nfs) body .advanced-card.mk-page:not(.mk-paper):not(.mcx-card):not(.mdx):not(.kg-card)>.advanced-head.image-export-picker-head:not([data-mkcloud]) p {
+    color:var(--nfs-muted)!important;
+    opacity:1!important;
+}
+html.mu-nfs-open:not(#_nfs) body .advanced-card.mk-page:not(.mk-paper):not(.mcx-card):not(.mdx):not(.kg-card)>.advanced-head.image-export-picker-head:not([data-mkcloud]) h3 {
+    color:var(--nfs-text)!important;
+    text-shadow:none!important;
+}
+html.mu-nfs-open:not(#_nfs) body .advanced-card.mk-page:not(.mk-paper):not(.mcx-card):not(.mdx):not(.kg-card)>.advanced-head.image-export-picker-head:not([data-mkcloud])>.btn-main:last-child {
+    background:var(--nfs-bar)!important;
+    border:0!important;
+    color:var(--nfs-text)!important;
+}
 html.mu-nfs-open:not(#_nfs) body .advanced-card.mk-page.xp-card>.advanced-head h3 {
     color:var(--nfs-text)!important;
     font-size:15px!important;
@@ -20532,7 +20553,10 @@ catch { } try {
 }
 catch { }
 // SDK is ready now: re-send header / background / bottom-bar colours
-mu_tgFsSync(), mu_syncTgHeaderColor(!0); }
+mu_tgFsSync(), mu_syncTgHeaderColor(!0); try {
+    window.__mkCloudLateBoot && window.__mkCloudLateBoot();
+}
+catch { } }
 // If telegram-web-app.js only finished loading AFTER the 2.5 s wait above (slow network), the setup ran
 // with TG = null and cloud backup stayed off for the whole session
 window.__muTgLoaded ? window.__muTgLoaded.then(mu_applyTelegramSetup) : mu_applyTelegramSetup(), window.mu_lateTelegramSetup = function () { !TG && window.Telegram && window.Telegram.WebApp && mu_applyTelegramSetup(); }, (function () { var n = 0, iv = setInterval(function () { if (TG || ++n > 90) {
@@ -20901,43 +20925,90 @@ catch {
 // On a device with NO notes that has never synced (and where the person did not decline the restore), silently
 // auto-restore ONLY the "auto" Cloud slot, no tap needed; manual snapshots always need a tap. The List slot is
 // pulled right after, even when there were no notes to restore.
-async function cloudStartupCheck() { try {
-    if (window.__muTgLoaded && await window.__muTgLoaded, !IS_TELEGRAM || !hasCloudStorage || categories.length > 0 || cloudIsLinked())
+// ===== FIRST SYNC ON A NEW / RESET DEVICE =====
+// "Fresh" = nothing local to protect: never linked to the Cloud, no notes, and the person did not decline.
+function mkCloudFreshDevice() { try {
+    if (cloudIsLinked() || categories.length > 0)
+        return !1;
+    return localStorage.getItem("mk_cloud_declined_v1") !== "1";
+}
+catch {
+    return !1;
+} }
+window.__mkStartupBusy = !1;
+// Takes the Cloud auto copy into a fresh device. It is a merge (nothing is ever removed), runs quietly so the
+// restored notes are NOT immediately re-uploaded as a new auto backup, marks the device as linked and records
+// the Cloud copy's timestamp so the next background pull does not download the same backup again.
+// Returns {added, updated, ...} or null when there was nothing usable (the caller then retries).
+function cloudAdoptFresh(result) { if (!result || !result.data || !Array.isArray(result.data.notes) || !result.data.notes.length)
+    return null; let r = null; try {
+    cloudQuiet(() => { r = cloudApplyMergeData(result.data), saveToLocalStorage(), saveFoldersToLocalStorage(); });
+}
+catch (e) {
+    console.warn("first sync: merge failed", e);
+    return null;
+} cloudSetLinked(), result.meta && result.meta.ts && (window.__mkSeenAutoTs = result.meta.ts); try {
+    renderApp();
+}
+catch { } return r; }
+function cloudFirstSyncToast(r) { try {
+    showToast(currentLang === "fa" ? `☁️ بکاپ خودکار Cloud بازیابی شد — ${r.added} یادداشت جدید، ${r.updated} به‌روزرسانی شد.` : `☁️ Auto-restored from Cloud — ${r.added} new, ${r.updated} updated.`, 4200);
+}
+catch { } }
+// Retry delays when the first read / download fails (offline, slow bridge, the other device is still writing).
+const CLOUD_FIRST_RETRY_MS = [2500, 5000, 10000, 20000, 40000, 60000];
+let __cloudStartupP = null;
+// On a device with NO notes that has never synced (and where the person did not decline the restore), silently
+// auto-restore ONLY the "auto" Cloud slot, no tap needed; manual snapshots always need a tap. A single run at a
+// time (re-entrant calls share it); a failed read/download is retried with back-off instead of giving up.
+function cloudStartupCheck(attempt) { if (__cloudStartupP)
+    return __cloudStartupP; const done = () => { __cloudStartupP = null; }; return __cloudStartupP = cloudStartupCheckImpl(attempt | 0).then(done, done); }
+async function cloudStartupCheckImpl(attempt) { let retry = !1; window.__mkStartupBusy = !0; try {
+    if (window.__muTgLoaded && await window.__muTgLoaded, !IS_TELEGRAM || !hasCloudStorage)
         return;
+    window.__mkCloudBootDone = !0;
+    if (!mkCloudFreshDevice())
+        return;
+    let idxOk = !1, autoHasNotes = !1;
     try {
-        if (localStorage.getItem("mk_cloud_declined_v1") === "1")
-            return;
-    }
-    catch { }
-    let autoHasNotes = !1;
-    try {
-        const autoEntry = (await cloudSerial(() => cloudReadIndex())).find(e => e && e.id === "auto");
-        if (autoHasNotes = !!(autoEntry && autoEntry.notes > 0), autoHasNotes && categories.length === 0) {
-            const result = await cloudSerial(() => cloudRestoreBackup("auto"));
-            // No usable data back — leave the notes exactly as they were; the ☁️ button and its Restore
-            // action are still there for a manual retry
-            if (result && Array.isArray(result.data.notes) && result.data.notes.length) {
-                const { updated: updated, added: added } = cloudApplyMergeData(result.data);
-                if (updated || added) {
-                    saveToLocalStorage(), saveFoldersToLocalStorage(), cloudSetLinked();
-                    try {
-                        renderApp();
-                    }
-                    catch { }
-                    showToast(currentLang === "fa" ? `☁️ بکاپ خودکار Cloud بازیابی شد — ${added} یادداشت جدید، ${updated} به‌روزرسانی شد.` : `☁️ Auto-restored from Cloud — ${added} new, ${updated} updated.`, 4200);
-                }
+        // ONE job in the serial queue: index read + full download, so nothing else can slip in between
+        const out = await cloudSerial(async () => { const ae = (await cloudReadIndex()).find(e => e && e.id === "auto"); if (!(ae && ae.notes > 0))
+            return { has: !1 }; if (cloudIsLinked())
+            return { has: !0, skipped: !0 }; if (attempt === 0)
+            try {
+                showToast(currentLang === "fa" ? "☁️ در حال دریافت یادداشت‌ها از Cloud…" : "☁️ Getting your notes from Cloud…", 2600);
             }
+            catch { } return { has: !0, result: await cloudRestoreBackup("auto") }; });
+        idxOk = !0, autoHasNotes = out.has;
+        if (out.has && !out.skipped) {
+            // No usable data back (missing chunk, timeout) — leave the notes exactly as they were, retry shortly
+            const r = cloudAdoptFresh(out.result);
+            r ? cloudFirstSyncToast(r) : retry = !0;
         }
     }
     catch {
-        // the notes step is best-effort; the List below must still get its chance
+        // the index could not be read (offline / hung bridge): not the same as "nothing in the Cloud"
+        retry = !0;
     }
-    // The List has its own slot: pull it even when there were no notes to restore
-    await cloudFreshListPull(!autoHasNotes);
+    // The List has its own slot: pull it even when there were no notes to restore. The device is only marked
+    // as linked through the List when we KNOW the Cloud holds no auto backup (a failed read proves nothing).
+    await cloudFreshListPull(idxOk && !autoHasNotes);
 }
 catch {
     // best-effort; the manual ☁️ Restore panel is always still there as a fallback
+}
+finally {
+    window.__mkStartupBusy = !1, retry && attempt < CLOUD_FIRST_RETRY_MS.length && setTimeout(() => { cloudStartupCheck(attempt + 1); }, CLOUD_FIRST_RETRY_MS[attempt]);
 } }
+// Telegram's SDK can finish loading AFTER the first boot pass (slow network). Then neither the startup restore nor
+// the live polling had started, so a brand-new device stayed empty until the next app launch. Called from
+// mu_applyTelegramSetup() once the SDK + CloudStorage are really there.
+window.__mkCloudLateBoot = function () { try {
+    if (!window.__mkAppBooted || !IS_TELEGRAM || !hasCloudStorage || window.__mkCloudBootDone && window.__mkLive && window.__mkLive.running)
+        return;
+    Promise.resolve(cloudStartupCheck()).then(() => cloudSilentPullMerge()), cloudStartPolling();
+}
+catch { } };
 function cloudBackupChunkKeys(id, count) { const keys = []; for (let i = 0; i < count; i++)
     keys.push(CLOUD_BACKUP_PREFIX + id + "_" + i); return keys; }
 // Chunked byte<->base64 conversion — chunked so a call stack limit on String.fromCharCode.apply is never
@@ -20948,7 +21019,7 @@ function cloudBase64ToBytes(b64) { const binary = atob(b64), bytes = new Uint8Ar
     bytes[i] = binary.charCodeAt(i); return bytes; }
 // Base85 alphabet (no quotes, backslash, < > & or space): ~25% size overhead vs ~33% for base64. Compression
 // modes stored in entry.c: 0 none, 1 gzip+base64 (legacy), 2 gzip+base85, 3 gzip+Persian byte codec+base85,
-// 4 LZMA+Persian codec+base85 (manual backups only, chosen in the panel).
+// 4 LZMA+Persian codec+base85 (manual backups only, chosen in the panel), 5 delta blocks (gzip + base85), 6 delta blocks that may be wide-packed (14 bits per char).
 const CLOUD_B85 = "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ!$()*+,-./:;=?@[]^_{|}~", CLOUD_B85_MAP = (() => { const charMap = Object.create(null); for (let index = 0; index < 85; index++)
     charMap[CLOUD_B85.charAt(index)] = index; return charMap; })();
 function cloudB85Enc(bytes) { const length = bytes.length, remainder = length % 4, mainLength = length - remainder, parts = []; let encoded = ""; for (let i = 0; i < mainLength; i += 4) {
@@ -21081,7 +21152,7 @@ catch (ex) {
 catch {
     return { data: str, compressed: !1 };
 } }
-async function cloudDecompress(b64, mode) { if (mode === 5) {
+async function cloudDecompress(b64, mode) { if (mode === 5 || mode === 6) {
     // Delta backup: independent gzip blocks separated by "#" (not part of the base85 alphabet), each one a whole
     // number of JSON pieces; the decoded pieces simply concatenate into the normal payload JSON.
     try {
@@ -21090,7 +21161,7 @@ async function cloudDecompress(b64, mode) { if (mode === 5) {
             if (!seg)
                 continue;
             const ds = new DecompressionStream("gzip"), writer = ds.writable.getWriter();
-            writer.write(cloudB85Dec(seg)), writer.close();
+            writer.write(seg.charCodeAt(0) >= CLOUD_W_BASE ? cloudW14Dec(seg) : cloudB85Dec(seg)), writer.close();
             out += cloudFaDec(new Uint8Array(await new Response(ds.readable).arrayBuffer()));
         }
         return out;
@@ -21163,21 +21234,103 @@ function cloudHashStr(str) { let h1 = 3735928559, h2 = 1103547991; for (let i = 
 // Notes are ordered oldest-edit-first, so the note you are editing (always the newest) sits at the end and only
 // the last group + a tiny timestamp block change. Unchanged chunks keep their content-addressed key.
 async function cloudHash12(str) { const b = new Uint8Array(await crypto.subtle.digest("SHA-256", new TextEncoder().encode(str))); return btoa(String.fromCharCode(b[0], b[1], b[2], b[3], b[4], b[5], b[6], b[7], b[8])).replace(/\+/g, "-").replace(/\//g, "_"); }
-async function cloudBlockEnc(text) { const cs = new CompressionStream("gzip"), w = cs.writable.getWriter(); w.write(cloudFaEnc(text)), w.close(); return cloudB85Enc(new Uint8Array(await new Response(cs.readable).arrayBuffer())); }
+// ---- Wide packing (mode 6): 14 bits per character --------------------------------------------------------------
+// Base85 carries ~6.4 bits per character. Telegram limits a CloudStorage value to 4096 CHARACTERS, so if the server
+// really counts characters (not bytes) the same chunk can hold ~2.2x more data using plain CJK ideographs
+// (U+4E00..U+8DFF: BMP, no surrogates, no normalisation). Nothing is assumed: cloudWideOk() writes a full-size
+// probe value once, reads it back and only then enables it (re-checked every 14 days; a failure is retried after 6 h).
+// Off switch: localStorage mk_no_wide_v1 = "1". Each block is detected by its first character, so wide and base85
+// blocks can live side by side in one entry (entry.c is 6 when wide blocks may be present, 5 otherwise).
+const CLOUD_W_BASE = 19968, CLOUD_W_KEY = "mk_wide_v1", CLOUD_W_PROBE_KEY = "mk_probe";
+function cloudW14Enc(bytes) { const n = bytes.length, out = []; let acc = 0, bits = 0; for (let i = 0; i < n; i++) {
+    acc = acc << 8 | bytes[i], bits += 8;
+    while (bits >= 14) {
+        bits -= 14, out.push(String.fromCharCode(CLOUD_W_BASE + (acc >> bits & 16383)));
+    }
+    acc &= (1 << bits) - 1;
+} let pad = 0; if (bits > 0) {
+    pad = 14 - bits, out.push(String.fromCharCode(CLOUD_W_BASE + (acc << pad & 16383)));
+} out.push(String.fromCharCode(CLOUD_W_BASE + pad)); return out.join(""); }
+function cloudW14Dec(str) { const m = str.length - 1; if (m < 0)
+    return new Uint8Array(0); const pad = str.charCodeAt(m) - CLOUD_W_BASE, total = m * 14 - pad; if (pad < 0 || pad > 13 || total < 0 || total % 8)
+    throw new Error("w14"); const n = total / 8, out = new Uint8Array(n); let acc = 0, bits = 0, o = 0; for (let i = 0; i < m && o < n; i++) {
+    const v = str.charCodeAt(i) - CLOUD_W_BASE;
+    if (v < 0 || v > 16383)
+        throw new Error("w14");
+    acc = acc << 14 | v, bits += 14;
+    while (bits >= 8 && o < n) {
+        bits -= 8, out[o++] = acc >> bits & 255;
+    }
+    acc &= (1 << bits) - 1;
+} return out; }
+async function cloudWideOk() { try {
+    if (!hasCloudStorage || !TG || !TG.CloudStorage || localStorage.getItem("mk_no_wide_v1") === "1")
+        return !1;
+    const rec = JSON.parse(localStorage.getItem(CLOUD_W_KEY) || "null");
+    if (rec && typeof rec.t == "number" && Date.now() - rec.t < (rec.ok ? 12096e5 : 216e5))
+        return !!rec.ok;
+}
+catch { } let ok = !1; try {
+    const arr = new Array(CLOUD_CHUNK_SIZE); let x = 12345;
+    for (let i = 0; i < arr.length; i++) {
+        x = Math.imul(x, 1103515245) + 12345 >>> 0, arr[i] = String.fromCharCode(CLOUD_W_BASE + (x >>> 8 & 16383));
+    }
+    const val = arr.join("");
+    if (await cloudSetItem(CLOUD_W_PROBE_KEY, val))
+        ok = await cloudGetItem(CLOUD_W_PROBE_KEY) === val;
+    await cloudRemoveItemsRaw([CLOUD_W_PROBE_KEY]);
+}
+catch {
+    ok = !1;
+} try {
+    localStorage.setItem(CLOUD_W_KEY, JSON.stringify({ ok: ok ? 1 : 0, t: Date.now() }));
+}
+catch { } return ok; }
+async function cloudBlockEnc(text, wide) { const cs = new CompressionStream("gzip"), w = cs.writable.getWriter(); w.write(cloudFaEnc(text)), w.close(); const bytes = new Uint8Array(await new Response(cs.readable).arrayBuffer()); return wide ? cloudW14Enc(bytes) : cloudB85Enc(bytes); }
+// Verified + memoised block encoder: a block whose text did not change is neither re-compressed nor re-verified
+// (both are the main CPU cost of a backup); a new block is decoded again and must give back exactly its source text.
+async function cloudBlockEncV(text, wide) { const k = (wide ? "w" : "b") + cloudHashStr(text), memo = window.__mkBlkMemo || (window.__mkBlkMemo = new Map), hit = memo.get(k); if (hit)
+    return hit; const enc = await cloudBlockEnc(text, wide); if (await cloudDecompress(enc + CLOUD_DELTA_SEP, 5) !== text)
+    throw new Error("delta-block-verify"); memo.size > 900 && memo.clear(), memo.set(k, enc); return enc; }
+// Group-size estimate (encoded chars per raw char). It is kept stable on purpose (learned value, changes only when
+// it drifts by more than 20%) because it decides where groups are cut.
+function cloudDRatioKey(wide) { return "mk_dratio_" + (wide ? "w" : "b") + "_v1"; }
+function cloudDRatio(wide) { try {
+    const v = parseFloat(localStorage.getItem(cloudDRatioKey(wide)));
+    if (v >= .05 && v <= 1)
+        return v;
+}
+catch { } return wide ? .16 : .34; }
+function cloudDRatioLearn(wide, used, actual) { try {
+    actual > 0 && Math.abs(actual - used) > used * .2 && localStorage.setItem(cloudDRatioKey(wide), String(Math.round(Math.min(1, Math.max(.05, actual)) * 100) / 100));
+}
+catch { } }
+// Stable partitioning: notes are ordered by a hash of their id (NOT by edit time) and the groups are cut with
+// content-defined boundaries (a group may be cut only after ~65% of the target size, at a note whose id-hash has its
+// low bits zero; hard cap 130%). Editing a note therefore only changes its own group (a neighbour at worst) instead of
+// shifting every group after it. Folders / pins / tombstones / lists live in the tail so the first group is not
+// touched by them, and a small tail is merged with the timestamp so a normal backup writes one chunk less.
 async function cloudDeltaBuild(all, c) { if (!cloudPackOn() || typeof DecompressionStream > "u" || typeof crypto > "u" || !crypto.subtle)
-    return null; const CH = CLOUD_CHUNK_SIZE - 1, sorted = all.slice().sort((a, b) => (Date.parse(a.le) || 0) - (Date.parse(b.le) || 0) || (String(a.i) < String(b.i) ? -1 : String(a.i) > String(b.i) ? 1 : 0)), FP = window.MU_FolderPins, head = JSON.stringify({ v: 2, folders: c.customFolders, pinnedFolders: FP ? FP.list() : [], pinnedFoldersTs: FP && FP.ts ? FP.ts() : 0 }).slice(0, -1) + ',"notes":[', inner = JSON.stringify({ vault: c.vaultRec || void 0, tombstones: c.tombstones, folderTombstones: c.folderTombstones, lists: window.MK_List ? window.MK_List.snapshot() : void 0 }).slice(1, -1), close = "]" + (inner ? "," + inner : ""), parts = sorted.map((n, i) => (i ? "," : "") + JSON.stringify(n)), hash = cloudHashStr(head + parts.join("") + close), tsPiece = ',"ts":' + Date.now() + "}"; const encGroup = async (strs) => { const enc = await cloudBlockEnc(strs.join("")); if (enc.length > CH && strs.length > 1) {
+    return null; const wide = !!c.wide, CH = CLOUD_CHUNK_SIZE - 1, est = cloudDRatio(wide), hid = v => { let h = 2166136261; const t = String(v); for (let i = 0; i < t.length; i++)
+    h = Math.imul(h ^ t.charCodeAt(i), 16777619); h ^= h >>> 15, h = Math.imul(h, 2246822507), h ^= h >>> 13; return h >>> 0; }, keyed = all.map(n => ({ n: n, h: hid(n.i), s: String(n.i) })).sort((a, b) => a.h - b.h || (a.s < b.s ? -1 : a.s > b.s ? 1 : 0)), sorted = keyed.map(k => k.n), FP = window.MU_FolderPins, head = '{"v":2,"notes":[', inner = JSON.stringify({ folders: c.customFolders, pinnedFolders: FP ? FP.list() : [], pinnedFoldersTs: FP && FP.ts ? FP.ts() : 0, vault: c.vaultRec || void 0, tombstones: c.tombstones, folderTombstones: c.folderTombstones, lists: window.MK_List ? window.MK_List.snapshot() : void 0 }).slice(1, -1), close = "]," + inner, parts = sorted.map((n, i) => (i ? "," : "") + JSON.stringify(n)), body = parts.join(""), hash = cloudHashStr(head + body + close), tsPiece = ',"ts":' + Date.now() + "}"; const full = head + body + close + tsPiece; try {
+    const o = JSON.parse(full);
+    if (!o || !Array.isArray(o.notes) || o.notes.length !== sorted.length)
+        return null;
+}
+catch {
+    return null;
+} const encGroup = async (strs) => { const enc = await cloudBlockEncV(strs.join(""), wide); if (enc.length > CH && strs.length > 1) {
     const m = strs.length >> 1;
     return (await encGroup(strs.slice(0, m))).concat(await encGroup(strs.slice(m)));
-} return [enc]; }; const blocks = []; let est = .34, rawSum = 0, encSum = 0, cur = [head], curLen = head.length, curNotes = 0; const flush = async () => { const encs = await encGroup(cur); blocks.push(...encs), rawSum += curLen, encSum += encs.reduce((s, e) => s + e.length, 0), est = Math.min(1, Math.max(.05, encSum / Math.max(1, rawSum))), cur = [], curLen = 0, curNotes = 0; }; for (const p of parts) {
-    curNotes > 0 && (curLen + p.length) * est > CH * .9 && await flush();
+} return [enc]; }; const avg = Math.max(1, body.length / Math.max(1, parts.length)), tgt = CH * .85 / est, M = Math.pow(2, Math.max(0, Math.round(Math.log2(Math.max(1, tgt * .35 / avg))))), blocks = []; let rawSum = 0, encSum = 0, cur = [head], curLen = head.length, curNotes = 0; const flush = async () => { const encs = await encGroup(cur); blocks.push(...encs), rawSum += curLen, encSum += encs.reduce((s, e) => s + e.length, 0), cur = [], curLen = 0, curNotes = 0; }; for (let i = 0; i < parts.length; i++) {
+    const p = parts[i];
+    curNotes > 0 && (curLen + p.length > tgt * 1.3 || curLen >= tgt * .65 && (keyed[i].h & M - 1) === 0) && await flush();
     cur.push(p), curLen += p.length, curNotes++;
-} cur.length && await flush(); blocks.push(...await encGroup([close])), blocks.push(...await encGroup([tsPiece])); const chunks = []; for (const b of blocks)
-    cloudSplitChunks(b + CLOUD_DELTA_SEP).forEach(x => chunks.push(x)); const joined = chunks.join(""); 
-// Safety: the stored form must decode back to exactly the payload text, or the delta path is not used
-if (await cloudDecompress(joined, 5) !== head + parts.join("") + close + tsPiece)
-    return null; const ids = []; for (const x of chunks)
-    ids.push(await cloudHash12(x)); return { delta: !0, joined: joined, chunks: chunks, ids: ids, hash: hash, totalNotes: sorted.length, skipped: 0, vaultSkipped: !!c.vaultSkipped }; }
-async function cloudBuildPayload(maxChunks, lz, delta) { const all = categories.slice().sort((a, b) => (Date.parse(b.lastEdited) || 0) - (Date.parse(a.lastEdited) || 0)).map(item => { const persisted = getPersistedCategory(item); const totalNotes = { id: persisted.id, name: persisted.name, folder: persisted.folder, extraFolders: persisted.extraFolders || [], text: persisted.text, html: cloudStripImages(persisted.html), encrypted: persisted.encrypted, hint: persisted.hint, tags: persisted.tags, pinned: persisted.pinned, favorite: persisted.favorite, archived: persisted.archived, order: persisted.order, fontFamily: persisted.fontFamily, fontSize: persisted.fontSize, color: persisted.color, fakeContent: persisted.fakeContent, unlockAt: persisted.unlockAt, ghostUntil: persisted.ghostUntil, lastEdited: persisted.lastEdited, metaEditedAt: persisted.metaEditedAt }; return cloudPackOn() ? cloudPackNote(totalNotes) : totalNotes; }), totalNotes2 = all.length, customFolders = folders.filter(f => f !== DEFAULT_FOLDER), budget = CLOUD_CHUNK_SIZE * Math.max(1, maxChunks || MAX_CHUNKS_PER_BACKUP); let vaultRec = null, vaultSkipped = !1; try {
+} cur.length && await flush(); cloudDRatioLearn(wide, est, encSum / Math.max(1, rawSum)); for (const t of close.length < 800 ? [close + tsPiece] : [close, tsPiece])
+    blocks.push(...await encGroup([t])); const chunks = []; for (const b of blocks)
+    cloudSplitChunks(b + CLOUD_DELTA_SEP).forEach(x => chunks.push(x)); const joined = chunks.join(""), ids = []; for (const x of chunks)
+    ids.push(await cloudHash12(x)); return { delta: !0, wide: wide, joined: joined, chunks: chunks, ids: ids, hash: hash, totalNotes: sorted.length, skipped: 0, vaultSkipped: !!c.vaultSkipped }; }
+async function cloudBuildPayload(maxChunks, lz, delta, wide) { const all = categories.slice().sort((a, b) => (Date.parse(b.lastEdited) || 0) - (Date.parse(a.lastEdited) || 0)).map(item => { const persisted = getPersistedCategory(item); const totalNotes = { id: persisted.id, name: persisted.name, folder: persisted.folder, extraFolders: persisted.extraFolders || [], text: persisted.text, html: cloudStripImages(persisted.html), encrypted: persisted.encrypted, hint: persisted.hint, tags: persisted.tags, pinned: persisted.pinned, favorite: persisted.favorite, archived: persisted.archived, order: persisted.order, fontFamily: persisted.fontFamily, fontSize: persisted.fontSize, color: persisted.color, fakeContent: persisted.fakeContent, unlockAt: persisted.unlockAt, ghostUntil: persisted.ghostUntil, lastEdited: persisted.lastEdited, metaEditedAt: persisted.metaEditedAt }; return cloudPackOn() ? cloudPackNote(totalNotes) : totalNotes; }), totalNotes2 = all.length, customFolders = folders.filter(f => f !== DEFAULT_FOLDER), budget = CLOUD_CHUNK_SIZE * Math.max(1, maxChunks || MAX_CHUNKS_PER_BACKUP); let vaultRec = null, vaultSkipped = !1; try {
     window.MK?.vault?.sync && (vaultRec = await window.MK?.vault?.sync.getRecord());
 }
 catch {
@@ -21186,7 +21339,7 @@ catch {
 // The backup carries this device's tombstones, so a note deleted here also disappears on other devices
 // instead of the delete staying local.
 const tombstones = loadTombstones(), folderTombstones = loadFolderTombstones(), pack = async (list) => { const body = JSON.stringify({ v: cloudPackOn() ? 2 : 1, folders: customFolders, pinnedFolders: window.MU_FolderPins ? window.MU_FolderPins.list() : [], pinnedFoldersTs: window.MU_FolderPins && window.MU_FolderPins.ts ? window.MU_FolderPins.ts() : 0, notes: list, vault: vaultRec || void 0, tombstones: tombstones, folderTombstones: folderTombstones, lists: window.MK_List ? window.MK_List.snapshot() : void 0 }), raw = body.slice(0, -1) + ',"ts":' + Date.now() + "}", out = await cloudCompress(raw, lz); return out.body = body, out; }, fits = p => p.data.length <= budget; if (delta) {
-    const dr = await cloudDeltaBuild(all, { customFolders: customFolders, vaultRec: vaultRec, vaultSkipped: vaultSkipped, tombstones: tombstones, folderTombstones: folderTombstones });
+    const dr = await cloudDeltaBuild(all, { wide: !!wide, customFolders: customFolders, vaultRec: vaultRec, vaultSkipped: vaultSkipped, tombstones: tombstones, folderTombstones: folderTombstones });
     if (dr)
         return dr;
 } let included = all, skipped = 0, packed = await pack(included); if (!fits(packed) && included.length) {
@@ -21368,7 +21521,7 @@ let __cloudPollTimer = null;
 const __cloudLive = window.__mkLive = { running: !1, busy: !1, sig: null, parts: null, ids: null, pendingSig: null, tries: 0, fails: 0, lastUserAt: Date.now(), hotUntil: 0, lastOkSeen: 0, lastProbeAt: 0, lastChangeAt: 0, probes: 0, pulls: 0, tgBound: !1 };
 function cloudLiveHot(ms) { __cloudLive.hotUntil = Math.max(__cloudLive.hotUntil, Date.now() + (ms || CLOUD_LIVE.hotWindowMs)); }
 function cloudLiveDelay() { const s = __cloudLive, now = Date.now(), idleFor = now - s.lastUserAt; let d = now < s.hotUntil ? CLOUD_LIVE.hotMs : idleFor > CLOUD_LIVE.deepAfterMs ? CLOUD_LIVE.deepMs : idleFor > CLOUD_LIVE.idleAfterMs ? CLOUD_LIVE.idleMs : CLOUD_LIVE.normalMs; try {
-    cloudIsLinked() || (d = Math.max(d, CLOUD_LIVE.unlinkedMs));
+    cloudIsLinked() || mkCloudFreshDevice() || (d = Math.max(d, CLOUD_LIVE.unlinkedMs));
 }
 catch { } s.fails > 0 && (d = Math.min(CLOUD_LIVE.maxBackoffMs, d * Math.pow(2, Math.min(s.fails, 4)))); return Math.round(d * (.85 + Math.random() * .3)); }
 function cloudLiveSchedule(ms) { clearTimeout(__cloudPollTimer), __cloudPollTimer = null, __cloudLive.running && (__cloudPollTimer = setTimeout(cloudLiveTick, Math.max(0, ms))); }
@@ -21393,7 +21546,7 @@ async function cloudLiveProbe() { const s = __cloudLive; if (s.busy)
     return "skip"; if (!IS_TELEGRAM || !hasCloudStorage || document.visibilityState !== "visible" || typeof navigator < "u" && navigator.onLine === !1)
     return "skip";
 // Never interfere with (or race) our own writes
-if (window.__mkNoSchedule > 0 || __cloudBackupPending || __cloudListPending || window.__mkAutoBk && window.__mkAutoBk.active || window.__mkManualBk && window.__mkManualBk.active || window.__mkSyncBusy)
+if (window.__mkNoSchedule > 0 || window.__mkStartupBusy || __cloudBackupPending || __cloudListPending || window.__mkAutoBk && window.__mkAutoBk.active || window.__mkManualBk && window.__mkManualBk.active || window.__mkSyncBusy)
     return "skip";
 // Never swap the screen while the user is typing
 if (Date.now() - (window.__mkLastTypeAt || 0) < CLOUD_LIVE.typingQuietMs)
@@ -21424,7 +21577,7 @@ if (Date.now() - (window.__mkLastTypeAt || 0) < CLOUD_LIVE.typingQuietMs)
         catch { }
     s.__chg = { idxChanged, listChanged, cfgChanged };
     // Something changed in the Cloud (or this is the first probe): pull + merge now
-    if (s.pendingSig !== sig && (s.pendingSig = sig, s.tries = 0), s.tries++, s.lastChangeAt = Date.now(), s.pulls++, cloudLiveHot(), await cloudSilentPullMerge(), cloudIsLinked()) {
+    if (s.pendingSig !== sig && (s.pendingSig = sig, s.tries = 0), s.tries++, s.lastChangeAt = Date.now(), s.pulls++, cloudLiveHot(), await cloudSilentPullMerge(), cloudIsLinked() || mkCloudFreshDevice()) {
         // A pull that failed silently must not mark the change as seen: retry (a few times) with a normal delay
         const ae = cloudLiveAuto(rawIdx);
         if (ae && ae.ts && window.__mkSeenAutoTs !== ae.ts && s.tries < CLOUD_LIVE.maxPullTries)
@@ -22243,30 +22396,43 @@ function cloudDeltaOn() { try {
 catch {
     return !0;
 } }
-async function cloudDeltaTry(idx, prevEntry, allowed) { try {
+async function cloudDeltaTry(idx, prevEntry, allowed, noWide) { try {
     if (!cloudDeltaOn())
         return null;
-    const lim = Math.min(allowed, CLOUD_DELTA_MAX), d = await cloudBuildPayload(lim, !1, !0);
+    // the previous backup's old-chunk cleanup runs in the background; it must be finished before we decide
+    // which chunks already exist (otherwise a chunk could be skipped and then deleted)
+    if (window.__mkCleanP)
+        await Promise.race([window.__mkCleanP, cloudSleep(8e3)]);
+    // key listing runs while the payload is being compressed / hashed
+    const haveP = cloudGetKeys(), wide = !noWide && await cloudWideOk();
+    const lim = Math.min(allowed, CLOUD_DELTA_MAX), d = await cloudBuildPayload(lim, !1, !0, wide);
     if (!d || !d.delta || d.vaultSkipped || !d.chunks.length || d.chunks.length > lim)
         return null;
     if (prevEntry && prevEntry.km && prevEntry.h === d.hash && prevEntry.chunks && !(prevEntry.skipped || 0))
         return window.__mkSeenAutoTs = prevEntry.ts || 0, { ok: !0, meta: prevEntry, unchanged: !0 };
-    const have = await cloudGetKeys(), haveSet = have ? new Set(have) : null, seen = new Set(), todo = [];
+    // a wide-packed write that fails is retried once with plain base85; if that works, wide packing is switched off for a while
+    const wideFail = async (r) => { if (!d.wide)
+        return r; const r2 = await cloudDeltaTry(idx, prevEntry, allowed, !0); if (r2 && r2.ok)
+        try {
+            localStorage.setItem(CLOUD_W_KEY, JSON.stringify({ ok: 0, t: Date.now() }));
+        }
+        catch { } return r2 || r; };
+    const have = await haveP, haveSet = have ? new Set(have) : null, seen = new Set(), todo = [];
     d.ids.forEach((id, i) => { const k = CLOUD_DELTA_PFX + id; seen.has(k) || (seen.add(k), (!haveSet || !haveSet.has(k)) && todo.push([k, d.chunks[i]])); });
     const keysNow = have ? have.length : CLOUD_RESERVED_KEYS + idx.reduce((s, e) => s + (e.chunks || 0), 0);
     if (keysNow + todo.length > 1e3)
         return null;
-    const entry = { id: "auto", kind: "auto", ts: Date.now(), notes: d.totalNotes, skipped: 0, chunks: d.chunks.length, c: 5, len: d.joined.length, label: "", km: d.ids.join(""), h: d.hash };
+    const entry = { id: "auto", kind: "auto", ts: Date.now(), notes: d.totalNotes, skipped: 0, chunks: d.chunks.length, c: d.wide ? 6 : 5, len: d.joined.length, label: "", km: d.ids.join(""), h: d.hash };
     if (JSON.stringify(idx.filter(e => e.id !== "auto").concat([entry])).length > 3900)
         return null;
     mkBkSetFor("auto", { phase: "writing", done: 0, total: todo.length, notes: d.totalNotes });
     if (todo.length && !await cloudSetMany(todo.map(p => p[0]), todo.map(p => p[1]), n => mkBkSetFor("auto", { done: n })))
-        return { ok: !1, reason: "write-failed" };
+        return await wideFail({ ok: !1, reason: "write-failed" });
     mkBkSetFor("auto", { phase: "verifying" });
     if (todo.length) {
         const got = await cloudGetItems(todo.map(p => p[0]));
         if (!todo.every(p => got[p[0]] === p[1]))
-            return { ok: !1, reason: "verify-failed" };
+            return await wideFail({ ok: !1, reason: "verify-failed" });
     }
     mkBkSetFor("auto", { phase: "finalizing" });
     let fresh;
@@ -22284,7 +22450,9 @@ async function cloudDeltaTry(idx, prevEntry, allowed) { try {
         return { ok: !1, reason: "write-failed" };
     window.__cloudIdxCache = nextIdx.slice(), cloudSetLinked(), window.__mkSeenAutoTs = entry.ts;
     const keep = new Set(d.ids.map(id => CLOUD_DELTA_PFX + id));
-    try {
+    // The backup is committed here. Removing the previous copy's unused chunks (and the occasional orphan sweep) now
+    // happens in the background so the user is not kept waiting; the next backup waits for it (see top).
+    const cleanup = async () => { try {
         if (prevFresh) {
             const old = cloudEntryKeys(prevFresh).filter(k => !keep.has(k));
             old.length && await cloudRemoveItems(old);
@@ -22309,7 +22477,9 @@ async function cloudDeltaTry(idx, prevEntry, allowed) { try {
             dead.length && await cloudRemoveItems(dead);
         }
     }
-    catch { }
+    catch { } };
+    const cp = cleanup().then(() => { window.__mkCleanP === cp && (window.__mkCleanP = null); });
+    window.__mkCleanP = cp;
     return { ok: !0, meta: entry };
 }
 catch (e) {
@@ -22493,7 +22663,7 @@ catch {
 else
     json = entry.c ? await cloudDecompress(raw, entry.c) : raw; if (json == null)
     return null; const data = safeParseJSON(json, null); if (!data || !Array.isArray(data.notes))
-    return null; data.v >= 2 && (data.notes = data.notes.map(cloudUnpackNote)), +entry.c === 5 && data.notes.reverse(); return { meta: entry, data: data }; }
+    return null; data.v >= 2 && (data.notes = data.notes.map(cloudUnpackNote)), (+entry.c === 5 || +entry.c === 6) && data.notes.sort((x, y) => (Date.parse(y.lastEdited) || 0) - (Date.parse(x.lastEdited) || 0)); return { meta: entry, data: data }; }
 // Merge-restore ("newer wins", nothing is removed). Per note, body and metadata (folder, tags, pin / favorite /
 // archive, color...) are compared separately (lastEdited vs metaEditedAt). Notes deleted here after their last
 // edit stay deleted (tombstones) unless `force`; notes hidden in the vault never come back into the list;
@@ -22662,8 +22832,11 @@ catch (error) {
 // copy and the List slot in, only when the Cloud copy changed; a device that never synced only adopts the
 // Cloud's deletion history and never merges notes by itself. Best effort, never interrupts the app.
 async function cloudSilentPullMerge() { try {
-    if (window.__muTgLoaded && await window.__muTgLoaded, !IS_TELEGRAM || !hasCloudStorage)
+    if (window.__muTgLoaded && await window.__muTgLoaded, !IS_TELEGRAM || !hasCloudStorage || window.__mkStartupBusy)
         return;
+    // A device that is still empty + never synced adopts the Cloud copy as soon as it appears (e.g. the other
+    // device only finished its first backup after this one was opened)
+    const freshAtStart = mkCloudFreshDevice();
     let listSlot = null;
     // lets the ☁️ panel open at once meanwhile
     const result = await cloudSerial(async () => { window.__mkSyncBusy = !0; try {
@@ -22697,6 +22870,13 @@ async function cloudSilentPullMerge() { try {
     catch { } }), !result || !result.data)
         return;
     if (!cloudIsLinked()) {
+        if (freshAtStart && Array.isArray(result.data.notes) && result.data.notes.length) {
+            const r = cloudAdoptFresh(result);
+            if (r) {
+                cloudFirstSyncToast(r);
+                return;
+            }
+        }
         cloudQuiet(() => { if (cloudMergeTombstones(result.data.tombstones)) {
             saveToLocalStorage(), saveFoldersToLocalStorage();
             try {
@@ -23306,10 +23486,7 @@ catch { } try {
     window.__mkAppReady && window.__mkAppReady();
 }
 catch { } try {
-    cloudStartupCheck();
-}
-catch { } try {
-    cloudSilentPullMerge();
+    Promise.resolve(cloudStartupCheck()).then(() => cloudSilentPullMerge());
 }
 catch { } try {
     cloudStartPolling();
@@ -28113,7 +28290,7 @@ function mu_nudgeRepaint(scrollEl) { try {
 }
 catch { } }
 window.mu_nudgeRepaint = mu_nudgeRepaint, window.mu_markPage = function (card, m) { if (m = m || document.getElementById("advancedModal"), !card)
-    return; card.classList.add("mk-page"); let bg = getComputedStyle(document.body).backgroundColor; const mm = bg.match(/rgba?\(([^)]+)\)/), al = mm && mm[1].split(",")[3]; (!mm || al !== void 0 && parseFloat(al) < .97) && (bg = "#0b0e16"), card.style.setProperty("--mk-fs-bg", bg), m && m.style.setProperty("--mk-fs-bg", bg), card.scrollTop = 0; }, window.mu_xpDecorate = function (card, m, xt) { const fa = typeof currentLang < "u" && currentLang === "fa", T = { json: { a: "#fbbf24", b: "#f97316", g: "{ }", l: "JSON", fa: "داده‌ی ساخت‌یافته · بکاپ کامل و سازگار", en: "Structured data · full, compatible backup" }, csv: { a: "#34d399", b: "#22d3ee", g: "CSV", l: "CSV", fa: "جدول · باز شدن در Excel و Google Sheets", en: "Spreadsheet · opens in Excel & Google Sheets" }, markdown: { a: "#c4b5fd", b: "#f0abfc", g: "M↓", l: "MARKDOWN", fa: "متن قالب‌دار · تیتر، لیست و کد", en: "Formatted text · headings, lists & code" }, txt: { a: "#7dd3fc", b: "#a3b1cf", g: "Aa", l: "TXT", fa: "متن ساده · سبک و سازگار با همه‌چیز", en: "Plain text · light and universal" }, html: { a: "#fb923c", b: "#f43f5e", g: "</>", l: "HTML", fa: "صفحه‌ی وب تمیز · فقط محتوا، بدون برنامه", en: "Clean web page · content only, no app" }, pdf: { a: "#f87171", b: "#fb7185", g: "PDF", l: "PDF", fa: "سند ثابت و حرفه‌ای · مناسب چاپ و ارسال", en: "Fixed, professional document · print & share" }, docx: { a: "#60a5fa", b: "#818cf8", g: "W", l: "DOCX", fa: "سند Word · کاملاً قابل‌ویرایش", en: "Word document · fully editable" }, png: { a: "#2dd4bf", b: "#38bdf8", g: "PNG", l: "PNG", fa: "تصویر شفاف و باکیفیت", en: "Crisp, lossless image" }, jpg: { a: "#f472b6", b: "#fb923c", g: "JPG", l: "JPG", fa: "تصویر فشرده · کم‌حجم", en: "Compact, small-size image" }, zip: { a: "#fbbf24", b: "#f59e0b", g: "ZIP", l: "ZIP", fa: "بسته‌ی کامل · هرچه می‌خواهی در یک فایل", en: "Complete bundle · everything in one file" } }; let key = null; for (const k of ["json", "csv", "markdown", "txt", "html", "pdf", "docx", "png", "jpg", "zip"])
+    return; card.classList.add("mk-page"); let bg = getComputedStyle(document.body).backgroundColor; const mm = bg.match(/rgba?\(([^)]+)\)/), al = mm && mm[1].split(",")[3]; (!mm || al !== void 0 && parseFloat(al) < .97) && (bg = "#0b0e16"), document.documentElement.classList.contains("mu-nfs-open") && (bg = "var(--nfs-bg)"), card.style.setProperty("--mk-fs-bg", bg), m && m.style.setProperty("--mk-fs-bg", bg), card.scrollTop = 0; }, window.mu_xpDecorate = function (card, m, xt) { const fa = typeof currentLang < "u" && currentLang === "fa", T = { json: { a: "#fbbf24", b: "#f97316", g: "{ }", l: "JSON", fa: "داده‌ی ساخت‌یافته · بکاپ کامل و سازگار", en: "Structured data · full, compatible backup" }, csv: { a: "#34d399", b: "#22d3ee", g: "CSV", l: "CSV", fa: "جدول · باز شدن در Excel و Google Sheets", en: "Spreadsheet · opens in Excel & Google Sheets" }, markdown: { a: "#c4b5fd", b: "#f0abfc", g: "M↓", l: "MARKDOWN", fa: "متن قالب‌دار · تیتر، لیست و کد", en: "Formatted text · headings, lists & code" }, txt: { a: "#7dd3fc", b: "#a3b1cf", g: "Aa", l: "TXT", fa: "متن ساده · سبک و سازگار با همه‌چیز", en: "Plain text · light and universal" }, html: { a: "#fb923c", b: "#f43f5e", g: "</>", l: "HTML", fa: "صفحه‌ی وب تمیز · فقط محتوا، بدون برنامه", en: "Clean web page · content only, no app" }, pdf: { a: "#f87171", b: "#fb7185", g: "PDF", l: "PDF", fa: "سند ثابت و حرفه‌ای · مناسب چاپ و ارسال", en: "Fixed, professional document · print & share" }, docx: { a: "#60a5fa", b: "#818cf8", g: "W", l: "DOCX", fa: "سند Word · کاملاً قابل‌ویرایش", en: "Word document · fully editable" }, png: { a: "#2dd4bf", b: "#38bdf8", g: "PNG", l: "PNG", fa: "تصویر شفاف و باکیفیت", en: "Crisp, lossless image" }, jpg: { a: "#f472b6", b: "#fb923c", g: "JPG", l: "JPG", fa: "تصویر فشرده · کم‌حجم", en: "Compact, small-size image" }, zip: { a: "#fbbf24", b: "#f59e0b", g: "ZIP", l: "ZIP", fa: "بسته‌ی کامل · هرچه می‌خواهی در یک فایل", en: "Complete bundle · everything in one file" } }; let key = null; for (const k of ["json", "csv", "markdown", "txt", "html", "pdf", "docx", "png", "jpg", "zip"])
     if (xt.indexOf(k) > -1) {
         key = k;
         break;
