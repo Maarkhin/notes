@@ -6163,18 +6163,10 @@ html.mu-tg-fs .advanced-card.mk-page.mk-paper>.advanced-head {
 
 <style id="markhinFeatureStyles">
 .custom-btn.note-pinned {
-    border-color:#ff7aa8;
-    box-shadow:0 0 10px #ff7aa81f;
-    border-inline-start:3px solid #ff7aa8;
 }
 .custom-btn.note-favorite {
-    border-color:#ffd166;
-    box-shadow:0 0 10px #ffd1661f;
-    border-inline-start:3px solid #ffd166;
 }
 .custom-btn.note-pinned.note-favorite {
-    border-inline-start:3px solid transparent;
-    border-image:linear-gradient(180deg,#ff7aa8 50%,#ffd166 50%) 1;
 }
 .markhin-tag {
     display:inline-flex;
@@ -13826,13 +13818,13 @@ html:not([dir=ltr]) .mu-nb-en {
     background-clip:padding-box,border-box;
 }
 #muNotesFs .mu-nfs-card.mu-nfs-pinned {
-    background-image:linear-gradient(var(--nfs-card),var(--nfs-card)),linear-gradient(#ff7aa8,#ff7aa8);
+    background-image:linear-gradient(var(--nfs-card),var(--nfs-card)),linear-gradient(var(--nfs-border),var(--nfs-border));
 }
 #muNotesFs .mu-nfs-card.mu-nfs-faved {
     background-image:linear-gradient(var(--nfs-card),var(--nfs-card)),linear-gradient(#ffd166,#ffd166);
 }
 #muNotesFs .mu-nfs-card.mu-nfs-both {
-    background-image:linear-gradient(var(--nfs-card),var(--nfs-card)),linear-gradient(180deg,#ff7aa8 50%,#ffd166 50%);
+    background-image:linear-gradient(var(--nfs-card),var(--nfs-card)),linear-gradient(#ffd166,#ffd166);
 }
 #muNotesFs .mu-nfs-selbar {
     display:none;
@@ -19346,7 +19338,20 @@ html.mu-lang-sw #muNav,html.mu-lang-sw #muNav *,html.mu-lang-sw #muNotesFs,html.
     catch (error) { } return originalScrollIntoView.apply(this, arguments); };
 }
 catch (mu_openSmartSearchModal) { } })();
-</script></head>
+</script><style id="muNfsPinSecCss">
+#muNotesFs .mu-nfs-sechd{padding:4px 6px 8px;font-size:12.5px;font-weight:700;color:var(--nfs-muted);opacity:.9}
+#muNfsPinCols{margin-bottom:10px}
+</style>
+<style id="muHlIconFixCss">
+html body:not(#_m1):not(#_m2):not(#_m3) #contentsContainer .mxe .mxe-pop .grid button[data-fmtk=highlight]>span:first-child{color:#111!important;-webkit-text-fill-color:#111!important}
+</style>
+<style id="muNfsStarCss">
+#muNotesFs .mu-nfs-card{position:relative}
+#muNotesFs .mu-nfs-card.mu-nfs-hasstar{overflow:visible}
+#muNotesFs[data-theme=dark] .mu-nfs-star,html.mu-nfs-dark #muNotesFs .mu-nfs-star{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cdefs%3E%3ClinearGradient id='g' x1='0' y1='0' x2='0' y2='1'%3E%3Cstop offset='0' stop-color='%23ffcc00'/%3E%3Cstop offset='1' stop-color='%23ff8f00'/%3E%3C/linearGradient%3E%3C/defs%3E%3Cpath d='M12 2.8l2.75 5.88 6.45.78-4.76 4.4 1.26 6.4L12 17.1l-5.7 3.16 1.26-6.4L2.8 9.46l6.45-.78z' fill='url(%23g)' stroke='%23fff' stroke-width='1' stroke-linejoin='round'/%3E%3C/svg%3E")}
+#muNotesFs .mu-nfs-star{position:absolute;top:5px;inset-inline-end:5px;width:19px;height:19px;margin:0;padding:0;pointer-events:none;z-index:2;transform:rotate(-15deg);background:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cdefs%3E%3ClinearGradient id='g' x1='0' y1='0' x2='0' y2='1'%3E%3Cstop offset='0' stop-color='%23ffcc00'/%3E%3Cstop offset='1' stop-color='%23ff8f00'/%3E%3C/linearGradient%3E%3C/defs%3E%3Cpath d='M12 2.8l2.75 5.88 6.45.78-4.76 4.4 1.26 6.4L12 17.1l-5.7 3.16 1.26-6.4L2.8 9.46l6.45-.78z' fill='url(%23g)' stroke='%23000' stroke-width='1' stroke-linejoin='round'/%3E%3C/svg%3E") center/contain no-repeat}
+</style>
+</head>
 <body class="theme-oceanic">
 <script id="mkThemeBoot">
 // Apply the saved theme class immediately, before the rest of the page renders
@@ -23586,7 +23591,7 @@ catch {
 // top: back, A+ / A-, focus, day / night, favorite, pin, lock, archive, save.
 // bottom: media, writing tools, undo / redo, copy, delete, view, more (each popover opens upward).
 // ctx: { fa, t, isHidden, isRecordingThis, lastEditedText }
-function mxe_markup(item, ctx) { const fa = !!ctx.fa, L = MXE_L[fa ? "fa" : "en"], t = ctx.t || {}, locked = isNoteLocked(item), focusOn = !!(window.__mxeFocus && window.__mxeFocus.has(String(item.id))), q = s => escapeHtml(String(s)), btn = (act, cls, label, icon, extra) => `<button type="button" class="mxe-btn ${cls || ""}" data-mxe="${act}" aria-label="${q(label)}" title="${q(label)}" ${extra || ""}>${icon}</button>`, pitem = (act, icon, label, cls, extra) => `<button type="button" class="${cls || ""}" data-mxe="${act}" ${extra || ""}>${icon}<span>${q(label)}</span></button>`, fmt = (k, glyph, label) => `<button type="button" data-mxe="fmt:${k}" data-fmtk="${k}">${glyph}<span>${q(label)}</span></button>`, top = '<div class="mxe-top">' + btn("back", "mxe-back", L.back, MXE_IC.back) + btn("focus", "mxe-focus-btn" + (focusOn ? " on" : ""), L.focus, MXE_IC.focus, `aria-pressed="${focusOn}"`) + '<div class="mxe-grp mxe-grp-t">' + btn("fmt:bigger", "mxe-txt", L.bigger, "<b>A+</b>") + btn("fmt:smaller", "mxe-txt", L.smaller, "<b>A-</b>") + '</div><div class="mxe-grp mxe-grp-t">' + btn("flag:favorite", "mxe-fillon" + (item.favorite ? " mc-icon-active" : ""), L.fav, MXE_IC.fav, 'data-flag="favorite"') + btn("flag:pinned", "mxe-fillon" + (item.pinned ? " mc-icon-active" : ""), L.pin, MXE_IC.pin, 'data-flag="pinned"') + '</div>' + btn("archive", "mxe-lock-btn mxe-arc-btn" + (item.archived ? " on" : ""), L.arc, MXE_IC.arc) + btn("lock", "mxe-lock-btn" + (locked ? " on" : ""), L.enc, locked ? MXE_IC.lockOn : MXE_IC.lockOff) + btn("theme:toggle", "mxe-theme-btn", L.toDay + " / " + L.toNight, MXE_IC.sun.replace("<svg ", '<svg class="ic-sun" ') + MXE_IC.moon.replace("<svg ", '<svg class="ic-moon" ')) + btn("save", "", L.save, MXE_IC.save) + "</div>", sizes = [12, 13, 15, 16, 18, 22, 28], curSize = Number(item.fontSize) || 16; sizes.indexOf(curSize) < 0 && (sizes.push(curSize), sizes.sort((a, b) => a - b)); const sizeOpts = sizes.map(n => `<option value="${n}" ${n === curSize ? "selected" : ""}>${n}</option>`).join(""), rec = !!ctx.isRecordingThis, bottom = '<div class="mxe-bottom"><div class="mxe-pop l" data-pop="media">' + pitem("media:image", MXE_IC.image, L.image) + pitem("media:voice", rec ? MXE_IC.stop : MXE_IC.mic, rec ? L.voiceStop : L.voice, rec ? "danger" : "") + pitem("media:draw", MXE_IC.draw, L.draw) + '</div><div class="mxe-pop l" data-pop="write"><div class="grid">' + fmt("color", '<span class="mxe-cico">A</span>', L.color) + fmt("normal", '<span style="font-size:15px;font-weight:700">Aa</span>', L.normal) + fmt("table", '<svg width="22" height="22" viewBox="0 0 22 22" aria-hidden="true" fill="none"><rect x="2.5" y="3.5" width="17" height="15" rx="3" stroke="currentColor" stroke-width="1.5"/><path d="M5.5 3.5h11a3 3 0 0 1 3 3V9h-17V6.5a3 3 0 0 1 3-3z" fill="#4cc9f0" fill-opacity=".55"/><path d="M2.5 9h17M2.5 13.75h17M9 9v9.5M14.5 9v9.5" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg>', L.table) + fmt("bold", '<b style="font-size:18px">B</b>', L.bold) + fmt("italic", '<i style="font-size:18px;font-family:serif">I</i>', L.italic) + fmt("strike", '<s style="font-size:18px">S</s>', L.strike) + fmt("heading", '<b style="font-size:16px">H</b>', L.heading) + fmt("ul", '<span style="font-size:18px">•</span>', L.ul) + fmt("todo", '<span style="font-size:18px">☐</span>', L.todo) + fmt("quote", '<span style="font-size:20px">”</span>', L.quote) + fmt("code", '<span style="font-size:14px;font-family:monospace">&lt;/&gt;</span>', L.code) + fmt("codeMode", '<span style="font-size:15px;font-family:monospace;font-weight:800">`·`</span>', L.codeMode) + fmt("underline", '<u style="font-size:18px">U</u>', L.underline) + fmt("highlight", '<span style="font-size:15px;font-weight:800;background:#ffeb3b;color:#111;padding:0 6px;border-radius:4px;line-height:1.4">A</span>', L.highlight) + fmt("ol", '<span style="font-size:15px">1.</span>', L.ol) + fmt("link", MXE_IC.link, L.linkf) + fmt("clear", '<span style="font-size:18px">✕</span>', L.clearf) + `</div><div class="mxe-colors" role="group" aria-label="${q(L.color)}"><span class="mxe-collab">${q(L.color)}</span>${MXE_COLORS.map((c, i) => `<button type="button" class="mxe-sw" data-mxe="fmt:color:${i + 1}" data-sw="${i + 1}" style="--sw:${c}" aria-label="${q(L.color)} ${i + 1}"></button>`).join("")}<button type="button" class="mxe-sw custom" data-mxe="fmt:cpick" title="${q(L.colorCustom)}" aria-label="${q(L.colorCustom)}"></button><button type="button" class="mxe-sw none" data-mxe="fmt:color:0" data-sw="0" title="${q(L.colorOff)}" aria-label="${q(L.colorOff)}">✕</button></div><div class="mxe-colors tt" role="group" aria-label="${q(L.titleColor)}"><span class="mxe-collab">${q(L.titleColor)}</span>${MXE_COLORS.map((c, i) => `<button type="button" class="mxe-sw" data-mxe="fmt:tcolor:${i + 1}" data-tsw="${i + 1}" style="--sw:${c}" aria-label="${q(L.titleColor)} ${i + 1}"></button>`).join("")}<button type="button" class="mxe-sw custom" data-mxe="fmt:tcpick" title="${q(L.colorCustom)}" aria-label="${q(L.colorCustom)}"></button><button type="button" class="mxe-sw none" data-mxe="fmt:tcolor:0" data-tsw="0" title="${q(L.colorOff)}" aria-label="${q(L.colorOff)}">✕</button></div><div class="szrow"><label>${q(L.size)}</label><select class="mxe-size" data-mxe-size="1">${sizeOpts}</select></div></div><div class="mxe-pop r" data-pop="trash">` + pitem("clear", MXE_IC.trash, fa ? "حذف متن یادداشت" : "Delete note text") + pitem("more:delete", MXE_IC.trash, fa ? "حذف خود یادداشت" : "Delete the note itself", "danger") + '</div><div class="mxe-pop r" data-pop="more"><span class="mxm-handle" aria-hidden="true"></span>' + pitem("more:find", MXE_IC.search, fa ? "جستجو در یادداشت" : "Search in note", "mxm-search") + '<div class="mxm-quick">' + pitem("save", MXE_IC.save, L.save) + pitem("archive", MXE_IC.arc, L.arc, item.archived ? "on" : "") + pitem("more:view", MXE_IC.eye, fa ? "نمایش" : "View") + pitem("focus", MXE_IC.focus, fa ? "تمرکز" : "Focus", focusOn ? "on" : "") + pitem("flag:pinned", MXE_IC.pin, L.pin, "mxe-fillon") + pitem("flag:favorite", MXE_IC.fav, L.fav, "mxe-fillon") + '</div><div class="mxm-seg" role="group">' + pitem("theme:light", MXE_IC.sun, L.toDay, "", 'data-theme-opt="light"') + pitem("theme:dark", MXE_IC.moon, L.toNight, "", 'data-theme-opt="dark"') + `</div><div class="mxm-sec"><div class="grp">${q(L.gOrganize)}</div><div class="mxm-list">` + pitem("more:folder", MXE_IC.folder, L.folder) + pitem("more:tags", MXE_IC.tag, L.tags) + pitem("more:color", MXE_IC.palette, fa ? "رنگ یادداشت" : "Colour") + pitem("more:dup", MXE_IC.dup, L.dup) + `</div></div><div class="mxm-sec"><div class="grp">${q(L.gManage)}</div><div class="mxm-list">` + pitem("more:hide", MXE_IC.hide, ctx.isHidden ? t.show || "Show" : t.hide || "Hide") + pitem("more:link", MXE_IC.link, t.previewLink || "Link preview") + pitem("more:dna", MXE_IC.dna, "DNA") + `</div></div><div class="mxm-sec"><div class="grp">${q(L.gSecurity)}</div><div class="mxm-list">` + pitem("lock", locked ? MXE_IC.lockOn : MXE_IC.lockOff, L.enc) + (locked ? pitem("more:hint", MXE_IC.hint, t.changeHint || "Change hint") : "") + pitem("more:fake", MXE_IC.doc, item.fakeContent ? L.fakeEdit : L.fake) + pitem("more:vault", MXE_IC.lockOn, L.vault) + `</div></div><div class="mxm-sec"><div class="grp">${q(L.gTr)}</div><div class="mxm-list">` + pitem("more:toen", MXE_IC.trEn, L.toEn) + pitem("more:tofa", MXE_IC.trFa, L.toFa) + `</div></div><div class="mxm-sec"><div class="grp">${q(L.gSpecial)}</div><div class="mxm-list">` + pitem("more:capsule", MXE_IC.capsule, L.capsule) + pitem("more:ghost", MXE_IC.ghost, L.ghost) + "</div></div>" + pitem("more:delete", MXE_IC.trash, L.del, "danger mxm-danger") + `<div class="info">${q(L.last)} <span dir="ltr" class="mxe-info-val">${q(ctx.lastEditedText || L.never)}</span></div></div>` + '<div class="mxe-grp mxe-grp-a">' + btn("pop:media", rec ? "warn" : "", L.media, MXE_IC.image) + btn("pop:write", "", L.write, MXE_IC.write) + btn("undo", "mxe-undo", L.undo, MXE_IC.undo) + btn("redo", "mxe-redo", L.redo, MXE_IC.redo) + btn("more:tags", "", L.tags, MXE_IC.tag) + btn("copy", "", L.copy, MXE_IC.copy) + btn("pop:trash", "", fa ? "حذف" : "Delete", MXE_IC.trash) + '</div><span class="mxe-sp"></span><div class="mxe-grp mxe-grp-b">' + btn("more:view", "mxe-viewnote", L.view, `<span class="mxe-vlbl">${fa ? "نمایش" : "View"}</span>`) + btn("pop:more", "mxe-more", L.more, MXE_IC.more) + "</div></div>"; return { top: top, bottom: bottom }; }
+function mxe_markup(item, ctx) { const fa = !!ctx.fa, L = MXE_L[fa ? "fa" : "en"], t = ctx.t || {}, locked = isNoteLocked(item), focusOn = !!(window.__mxeFocus && window.__mxeFocus.has(String(item.id))), q = s => escapeHtml(String(s)), btn = (act, cls, label, icon, extra) => `<button type="button" class="mxe-btn ${cls || ""}" data-mxe="${act}" aria-label="${q(label)}" title="${q(label)}" ${extra || ""}>${icon}</button>`, pitem = (act, icon, label, cls, extra) => `<button type="button" class="${cls || ""}" data-mxe="${act}" ${extra || ""}>${icon}<span>${q(label)}</span></button>`, fmt = (k, glyph, label) => `<button type="button" data-mxe="fmt:${k}" data-fmtk="${k}">${glyph}<span>${q(label)}</span></button>`, top = '<div class="mxe-top">' + btn("back", "mxe-back", L.back, MXE_IC.back) + btn("focus", "mxe-focus-btn" + (focusOn ? " on" : ""), L.focus, MXE_IC.focus, `aria-pressed="${focusOn}"`) + '<div class="mxe-grp mxe-grp-t">' + btn("fmt:bigger", "mxe-txt", L.bigger, "<b>A+</b>") + btn("fmt:smaller", "mxe-txt", L.smaller, "<b>A-</b>") + '</div><div class="mxe-grp mxe-grp-t mxe-grp-s">' + btn("flag:favorite", "mxe-fillon" + (item.favorite ? " mc-icon-active" : ""), L.fav, MXE_IC.fav, 'data-flag="favorite"') + btn("flag:pinned", "mxe-fillon" + (item.pinned ? " mc-icon-active" : ""), L.pin, MXE_IC.pin, 'data-flag="pinned"') + btn("archive", "mxe-lock-btn mxe-arc-btn" + (item.archived ? " on" : ""), L.arc, MXE_IC.arc) + btn("lock", "mxe-lock-btn" + (locked ? " on" : ""), L.enc, locked ? MXE_IC.lockOn : MXE_IC.lockOff) + '</div>' + btn("theme:toggle", "mxe-theme-btn", L.toDay + " / " + L.toNight, MXE_IC.sun.replace("<svg ", '<svg class="ic-sun" ') + MXE_IC.moon.replace("<svg ", '<svg class="ic-moon" ')) + btn("save", "", L.save, MXE_IC.save) + "</div>", sizes = [12, 13, 15, 16, 18, 22, 28], curSize = Number(item.fontSize) || 16; sizes.indexOf(curSize) < 0 && (sizes.push(curSize), sizes.sort((a, b) => a - b)); const sizeOpts = sizes.map(n => `<option value="${n}" ${n === curSize ? "selected" : ""}>${n}</option>`).join(""), rec = !!ctx.isRecordingThis, bottom = '<div class="mxe-bottom"><div class="mxe-pop l" data-pop="media">' + pitem("media:image", MXE_IC.image, L.image) + pitem("media:voice", rec ? MXE_IC.stop : MXE_IC.mic, rec ? L.voiceStop : L.voice, rec ? "danger" : "") + pitem("media:draw", MXE_IC.draw, L.draw) + '</div><div class="mxe-pop l" data-pop="write"><div class="grid">' + fmt("color", '<span class="mxe-cico">A</span>', L.color) + fmt("normal", '<span style="font-size:15px;font-weight:700">Aa</span>', L.normal) + fmt("table", '<svg width="22" height="22" viewBox="0 0 22 22" aria-hidden="true" fill="none"><rect x="2.5" y="3.5" width="17" height="15" rx="3" stroke="currentColor" stroke-width="1.5"/><path d="M5.5 3.5h11a3 3 0 0 1 3 3V9h-17V6.5a3 3 0 0 1 3-3z" fill="#4cc9f0" fill-opacity=".55"/><path d="M2.5 9h17M2.5 13.75h17M9 9v9.5M14.5 9v9.5" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg>', L.table) + fmt("bold", '<b style="font-size:18px">B</b>', L.bold) + fmt("italic", '<i style="font-size:18px;font-family:serif">I</i>', L.italic) + fmt("strike", '<s style="font-size:18px">S</s>', L.strike) + fmt("heading", '<b style="font-size:16px">H</b>', L.heading) + fmt("ul", '<span style="font-size:18px">•</span>', L.ul) + fmt("todo", '<span style="font-size:18px">☐</span>', L.todo) + fmt("quote", '<span style="font-size:20px">”</span>', L.quote) + fmt("code", '<span style="font-size:14px;font-family:monospace">&lt;/&gt;</span>', L.code) + fmt("codeMode", '<span style="font-size:15px;font-family:monospace;font-weight:800">`·`</span>', L.codeMode) + fmt("underline", '<u style="font-size:18px">U</u>', L.underline) + fmt("highlight", '<span style="font-size:15px;font-weight:800;background:#ffeb3b;color:#111;padding:0 6px;border-radius:4px;line-height:1.4">A</span>', L.highlight) + fmt("ol", '<span style="font-size:15px">1.</span>', L.ol) + fmt("link", MXE_IC.link, L.linkf) + fmt("clear", '<span style="font-size:18px">✕</span>', L.clearf) + `</div><div class="mxe-colors" role="group" aria-label="${q(L.color)}"><span class="mxe-collab">${q(L.color)}</span>${MXE_COLORS.map((c, i) => `<button type="button" class="mxe-sw" data-mxe="fmt:color:${i + 1}" data-sw="${i + 1}" style="--sw:${c}" aria-label="${q(L.color)} ${i + 1}"></button>`).join("")}<button type="button" class="mxe-sw custom" data-mxe="fmt:cpick" title="${q(L.colorCustom)}" aria-label="${q(L.colorCustom)}"></button><button type="button" class="mxe-sw none" data-mxe="fmt:color:0" data-sw="0" title="${q(L.colorOff)}" aria-label="${q(L.colorOff)}">✕</button></div><div class="mxe-colors tt" role="group" aria-label="${q(L.titleColor)}"><span class="mxe-collab">${q(L.titleColor)}</span>${MXE_COLORS.map((c, i) => `<button type="button" class="mxe-sw" data-mxe="fmt:tcolor:${i + 1}" data-tsw="${i + 1}" style="--sw:${c}" aria-label="${q(L.titleColor)} ${i + 1}"></button>`).join("")}<button type="button" class="mxe-sw custom" data-mxe="fmt:tcpick" title="${q(L.colorCustom)}" aria-label="${q(L.colorCustom)}"></button><button type="button" class="mxe-sw none" data-mxe="fmt:tcolor:0" data-tsw="0" title="${q(L.colorOff)}" aria-label="${q(L.colorOff)}">✕</button></div><div class="szrow"><label>${q(L.size)}</label><select class="mxe-size" data-mxe-size="1">${sizeOpts}</select></div></div><div class="mxe-pop r" data-pop="trash">` + pitem("clear", MXE_IC.trash, fa ? "حذف متن یادداشت" : "Delete note text") + pitem("more:delete", MXE_IC.trash, fa ? "حذف خود یادداشت" : "Delete the note itself", "danger") + '</div><div class="mxe-pop r" data-pop="more"><span class="mxm-handle" aria-hidden="true"></span>' + pitem("more:find", MXE_IC.search, fa ? "جستجو در یادداشت" : "Search in note", "mxm-search") + '<div class="mxm-quick">' + pitem("save", MXE_IC.save, L.save) + pitem("archive", MXE_IC.arc, L.arc, item.archived ? "on" : "") + pitem("more:view", MXE_IC.eye, fa ? "نمایش" : "View") + pitem("focus", MXE_IC.focus, fa ? "تمرکز" : "Focus", focusOn ? "on" : "") + pitem("flag:pinned", MXE_IC.pin, L.pin, "mxe-fillon") + pitem("flag:favorite", MXE_IC.fav, L.fav, "mxe-fillon") + '</div><div class="mxm-seg" role="group">' + pitem("theme:light", MXE_IC.sun, L.toDay, "", 'data-theme-opt="light"') + pitem("theme:dark", MXE_IC.moon, L.toNight, "", 'data-theme-opt="dark"') + `</div><div class="mxm-sec"><div class="grp">${q(L.gOrganize)}</div><div class="mxm-list">` + pitem("more:folder", MXE_IC.folder, L.folder) + pitem("more:tags", MXE_IC.tag, L.tags) + pitem("more:color", MXE_IC.palette, fa ? "رنگ یادداشت" : "Colour") + pitem("more:dup", MXE_IC.dup, L.dup) + `</div></div><div class="mxm-sec"><div class="grp">${q(L.gManage)}</div><div class="mxm-list">` + pitem("more:hide", MXE_IC.hide, ctx.isHidden ? t.show || "Show" : t.hide || "Hide") + pitem("more:link", MXE_IC.link, t.previewLink || "Link preview") + pitem("more:dna", MXE_IC.dna, "DNA") + `</div></div><div class="mxm-sec"><div class="grp">${q(L.gSecurity)}</div><div class="mxm-list">` + pitem("lock", locked ? MXE_IC.lockOn : MXE_IC.lockOff, L.enc) + (locked ? pitem("more:hint", MXE_IC.hint, t.changeHint || "Change hint") : "") + pitem("more:fake", MXE_IC.doc, item.fakeContent ? L.fakeEdit : L.fake) + pitem("more:vault", MXE_IC.lockOn, L.vault) + `</div></div><div class="mxm-sec"><div class="grp">${q(L.gTr)}</div><div class="mxm-list">` + pitem("more:toen", MXE_IC.trEn, L.toEn) + pitem("more:tofa", MXE_IC.trFa, L.toFa) + `</div></div><div class="mxm-sec"><div class="grp">${q(L.gSpecial)}</div><div class="mxm-list">` + pitem("more:capsule", MXE_IC.capsule, L.capsule) + pitem("more:ghost", MXE_IC.ghost, L.ghost) + "</div></div>" + pitem("more:delete", MXE_IC.trash, L.del, "danger mxm-danger") + `<div class="info">${q(L.last)} <span dir="ltr" class="mxe-info-val">${q(ctx.lastEditedText || L.never)}</span></div></div>` + '<div class="mxe-grp mxe-grp-a">' + btn("pop:media", rec ? "warn" : "", L.media, MXE_IC.image) + btn("pop:write", "", L.write, MXE_IC.write) + btn("undo", "mxe-undo", L.undo, MXE_IC.undo) + btn("redo", "mxe-redo", L.redo, MXE_IC.redo) + btn("more:tags", "", L.tags, MXE_IC.tag) + btn("copy", "", L.copy, MXE_IC.copy) + btn("pop:trash", "", fa ? "حذف" : "Delete", MXE_IC.trash) + '</div><span class="mxe-sp"></span><div class="mxe-grp mxe-grp-b">' + btn("more:view", "mxe-viewnote", L.view, `<span class="mxe-vlbl">${fa ? "نمایش" : "View"}</span>`) + btn("pop:more", "mxe-more", L.more, MXE_IC.more) + "</div></div>"; return { top: top, bottom: bottom }; }
 // Slim tag row just above the bottom bar: one #tag chip per tag (tap / long-press opens Edit / Delete).
 // Empty — and hidden by CSS :empty — when the note has no tags, is a fake (decoy) note or is hidden.
 function mxe_tagbarInner(item) { try {
@@ -28778,7 +28783,7 @@ document.addEventListener("DOMContentLoaded", () => { initAdvancedSystems(); });
         // the main page). Cancel keeps you on the Dashboard
         async function markhinDash_openNote(id) { try {
             const _it = HX().categories.find(c => String(c.id) === String(id)), _cap = _it && _it.unlockAt && Date.now() < Number(_it.unlockAt), _dm = document.getElementById("advancedModal");
-            if (window.__mkDashOpen && _it && !_cap && HX().isNoteLocked(_it) && window.mu_delOverlay && _dm && _dm.style.display === "flex") {
+            if ((window.__mkDashOpen || (_dm && _dm.querySelector("#mklkRoot, #mkcRoot, #mkfRoot"))) && _it && !_cap && HX().isNoteLocked(_it) && window.mu_delOverlay && _dm && _dm.style.display === "flex") {
                 const fa = HX().currentLang === "fa", hint = String(_it.hint || "").trim(), pw = await window.mu_delOverlay({ title: "🔒 " + (_it.name || (fa ? "یادداشت" : "Note")), message: fa ? "برای باز کردن یادداشت، رمز عبور را وارد کنید." : "Enter the password to unlock this note.", input: !0, inputType: "password", placeholder: hint ? hint + (fa ? " (راهنما)" : " (hint)") : fa ? "🔐 رمز عبور را وارد کنید" : "🔐 Enter password", okText: fa ? "🔓 باز کردن" : "🔓 Unlock", neutralOk: !0 });
                 if (pw === null)
                     return;
@@ -28786,7 +28791,7 @@ document.addEventListener("DOMContentLoaded", () => { initAdvancedSystems(); });
             }
         }
         catch { } try {
-            window.__mkDashRet = window.__mkDashOpen ? mkDashSnapshot() : null;
+            { const _m = document.getElementById("advancedModal"); window.__mkDashRetFlags = { d: !!window.__mkDashOpen, t: window.__mkTagsFrom }, window.__mkDashRet = _m && _m.style.display === "flex" ? mkDashSnapshot() : null; }
         }
         catch {
             window.__mkDashRet = null;
@@ -28808,11 +28813,17 @@ document.addEventListener("DOMContentLoaded", () => { initAdvancedSystems(); });
             const r = window.__mkDashRet;
             if (window.__mkDashRet = null, r)
                 try {
-                    window.__mkDashOpen = !0, r();
+                    window.__mkDashApplyFlags(window.__mkDashRetFlags), r();
                 }
                 catch { }
         } }
-        window.markhinDash_openNote = markhinDash_openNote;
+        window.markhinDash_openNote = markhinDash_openNote, window.__mkDashApplyFlags = function (f) { window.__mkDashOpen = f ? f.d : !0, f && (window.__mkTagsFrom = f.t); }, window.__mkViewRestore = function (a) { try {
+            const m = document.getElementById("advancedModal"), card = document.getElementById("advancedCard");
+            if (m && m.style.display === "flex" && card && card.querySelector("#mkcRoot"))
+                return;
+            window.__mkDashApplyFlags(a.f), window.__mkNoAnimNext = !0, a.r && a.r();
+        }
+        catch { } };
         function markhinDash_headHtml(title, back, backFn, paper) {
             const closeAction = back ? backFn || "markhinDashboardMain()" : "closeAdvancedModal()", __mkCloudHd = /CloudPanel/.test(String(backFn || "")) || /(Cloud|ابری)/.test(String(title || "")) && /(بکاپ|Backup)/.test(String(title || ""));
             return `<div class="advanced-head" data-mkpage="1"${paper ? ' data-mkpaper="1"' : ""}${__mkCloudHd ? ' data-mkcloud="1"' : ""}>
@@ -28949,13 +28960,7 @@ document.addEventListener("DOMContentLoaded", () => { initAdvancedSystems(); });
                     }
                     if (isPick)
                         return;
-                    if (isFav || isPin || isTag)
-                        markhinDash_openNote(id);
-                    else
-                        try {
-                            window.mu_openNoteViewer(id);
-                        }
-                        catch { }
+                    mkc_askOpen(id);
                 }
                 return;
             } const a = t.dataset.act, id2 = rowEl && rowEl.dataset.id; if (a === "close")
@@ -29189,11 +29194,67 @@ document.addEventListener("DOMContentLoaded", () => { initAdvancedSystems(); });
         }
         catch { } markhinDash_bindRows(document.getElementById("advancedCard")), window.__mkDashOpen = !0; }
         // Back to the Dashboard: every page opened from the Dashboard returns to it.
+        // Archive / Favorites / Pinned / Tags: tapping a note asks "Edit" or "View" first (small box on top of the
+        // page, so the page stays behind it). View -> Simple / Windows 95 picker -> read-only viewer; closing the
+        // viewer returns to this same page. Cancel / outside tap / Escape just closes the box.
+        function mkc_askOpen(id) {
+            const fa = HX().currentLang === "fa", esc = HX().escapeHtml, it = HX().categories.find(c => String(c.id) === String(id));
+            if (!it)
+                return;
+            const rt = document.getElementById("mkcRoot"), cs = rt ? getComputedStyle(rt) : null, gv = (n, d) => (cs && cs.getPropertyValue(n).trim()) || d;
+            const old = document.getElementById("mkOpenAsk");
+            old && old.remove();
+            const ov = document.createElement("div");
+            ov.id = "mkOpenAsk", ov.setAttribute("dir", fa ? "rtl" : "ltr"), ov.setAttribute("role", "dialog"), ov.setAttribute("aria-modal", "true");
+            ov.style.cssText = "position:fixed;inset:0;z-index:10300;display:flex;align-items:center;justify-content:center;padding:16px;box-sizing:border-box;background:rgba(0,0,0,.55);";
+            [["--oa-sf", "--kc-sf", "#ffffff"], ["--oa-ln", "--kc-ln2", "#c4c4c4"], ["--oa-hv", "--kc-hv", "#eeeeee"], ["--oa-ink", "--kc-ink", "#111111"], ["--oa-soft", "--kc-soft", "#444444"], ["--oa-ac", "--kc-ac", "#222222"], ["--oa-acd", "--kc-acd", "#000000"], ["--oa-onac", "--kc-onac", "#ffffff"]].forEach(p => ov.style.setProperty(p[0], gv(p[1], p[2])));
+            const name = (it.titleHidden ? "•••••" : String(it.name || "")) || (fa ? "یادداشت" : "Note"), lock = HX().isNoteLocked(it) ? "🔒 " : "";
+            const bs = "all:unset;box-sizing:border-box;display:flex;align-items:center;justify-content:center;gap:8px;width:100%;min-height:48px;padding:8px 12px;font-size:15px;font-weight:700;cursor:pointer;text-align:center;border:1px solid var(--oa-ln);background:var(--oa-sf);color:var(--oa-ink);-webkit-text-fill-color:var(--oa-ink);";
+            const bp = "all:unset;box-sizing:border-box;display:flex;align-items:center;justify-content:center;gap:8px;width:100%;min-height:48px;padding:8px 12px;font-size:15px;font-weight:700;cursor:pointer;text-align:center;border:1px solid var(--oa-acd);background:var(--oa-ac);color:var(--oa-onac);-webkit-text-fill-color:var(--oa-onac);";
+            const close = () => { document.removeEventListener("keydown", onKey, !0), ov.remove(); }, onKey = e => { e.key === "Escape" && (e.preventDefault(), e.stopPropagation(), close()); };
+            const paint = step => {
+                const choose = step === 1;
+                ov.innerHTML = `<div style="width:min(380px,100%);box-sizing:border-box;background:var(--oa-sf);color:var(--oa-ink);border:1px solid var(--oa-ln);padding:16px;display:flex;flex-direction:column;gap:10px;box-shadow:0 12px 40px rgba(0,0,0,.45)">
+                    <div style="font-size:15px;font-weight:800;line-height:1.8;color:var(--oa-ink);overflow-wrap:anywhere">${esc(lock + name)}</div>
+                    <div style="font-size:12.5px;line-height:1.8;color:var(--oa-soft);margin-top:-4px">${choose ? (fa ? "با این یادداشت چه کار کنم؟" : "What do you want to do with this note?") : (fa ? "نمایش یادداشت با کدام ظاهر باشد؟" : "Which look do you want for viewing?")}</div>
+                    ${choose ? `<button type="button" data-a="edit" style="${bp}">✏️ ${fa ? "ویرایش یادداشت" : "Edit note"}</button>
+                    <button type="button" data-a="view" style="${bs}">👁️ ${fa ? "نمایش یادداشت" : "View note"}</button>
+                    <button type="button" data-a="cancel" style="${bs}">${fa ? "انصراف" : "Cancel"}</button>` : `<button type="button" data-a="ocean" style="${bp}">${fa ? "ساده" : "Simple"}</button>
+                    <button type="button" data-a="retro" style="${bs}">${fa ? "ویندوز 95" : "Windows 95"}</button>
+                    <button type="button" data-a="back" style="${bs}">${fa ? "بازگشت" : "Back"}</button>`}
+                </div>`;
+            };
+            const go = async style => {
+                close();
+                const arm = { id: String(id), t: Date.now(), r: mkDashSnapshot(), f: { d: !!window.__mkDashOpen, t: window.__mkTagsFrom } };
+                window.__mkViewArm = arm;
+                // the viewer sits below the full-screen page, so the page is closed first (the snapshot above reopens it when the viewer closes)
+                try {
+                    HX().closeAdvancedModal();
+                }
+                catch { }
+                try {
+                    await window.mu_openNoteViewer(id, style);
+                }
+                catch { }
+                // the viewer did not open (cancelled password, time capsule...): make sure the person is still on this page
+                setTimeout(() => { const v = document.querySelector(".mu-viewer"); if (v && !v.hidden)
+                    return; window.__mkViewArm === arm && (window.__mkViewArm = null), window.__mkViewRestore && window.__mkViewRestore(arm); }, 80);
+            };
+            ov.addEventListener("click", e => { if (e.target === ov) {
+                close();
+                return;
+            } const b = e.target.closest("[data-a]"); if (!b)
+                return; const a = b.dataset.a; a === "cancel" ? close() : a === "edit" ? (close(), markhinDash_openNote(id)) : a === "view" ? paint(2) : a === "back" ? paint(1) : go(a); });
+            document.addEventListener("keydown", onKey, !0), paint(1), document.body.appendChild(ov);
+        }
         function mkDashSnapshot() { const card = document.getElementById("advancedCard"); if (!card)
             return null; const f = card.querySelector("#mkfRoot"); if (f) {
             const k = f.dataset.kind, v = f.dataset.val;
             return () => mkf_open(k, v);
-        } if (card.querySelector("#mkcRoot") && window.__mkcLast) {
+        } if (card.querySelector("#mkcRoot.mkc-tags") && window.mkc_tags)
+            return () => window.mkc_tags(); if (card.querySelector("#mklkRoot") && window.mklk_open)
+            return () => window.mklk_open(); if (card.querySelector("#mkcRoot") && window.__mkcLast) {
             const a = window.__mkcLast.slice();
             return () => mkc_open(a[0], a[1], a[2]);
         } return card.querySelector(".mdb-secs") ? () => markhinDashboardMain() : null; }
@@ -29208,17 +29269,17 @@ document.addEventListener("DOMContentLoaded", () => { initAdvancedSystems(); });
             // Archive / Favorites / Pinned / Tag (also "pick" mode): leaving the note editor with its
             // Back button returns to the page the note was opened from.
             let b = card.querySelector('#mkcRoot [data-act="close"]'); return b || (b = card.querySelector("#mkvX"), b) || (b = card.querySelector('.mklk [data-act="back"]'), b) ? (b.click(), !0) : card.querySelector("#mkfRoot") || card.querySelector("#mdShowListBody") ? (markhinDashboardMain(), !0) : !1; }, document.addEventListener("click", function (e) { if (!(e.target && e.target.closest && e.target.closest('[data-mxe="back"]')))
-            return; const r = window.__mkDashRet; if (r) {
+            return; const r = window.__mkDashRet, fl = window.__mkDashRetFlags; if (r) {
             window.__mkDashRet = null;
             // Reopen the page we came from right away (it covers the editor while it closes); waiting
             // would let the main page flash.
             try {
-                window.__mkDashOpen = !0, window.__mkNoAnimNext = !0, r();
+                window.__mkDashApplyFlags(fl), window.__mkNoAnimNext = !0, r();
             }
             catch { }
             setTimeout(function () { try {
                 const m = document.getElementById("advancedModal");
-                (!m || m.style.display !== "flex") && (window.__mkDashOpen = !0, window.__mkNoAnimNext = !0, r());
+                (!m || m.style.display !== "flex") && (window.__mkDashApplyFlags(fl), window.__mkNoAnimNext = !0, r());
             }
             catch { } }, 350);
         } }, !0);
@@ -32925,7 +32986,7 @@ catch { } }, (function () {
     // Editing (pencil / add image) needs the complete note in the DOM: finish the typing first
     root.querySelector(".mu-viewer-tools").addEventListener("click", function (e) { var b = e.target.closest && e.target.closest('[data-act="edit"],[data-act="img"]'); b && root.__live && !root.__live.done && liveEnd(root.__live); }, !0); })(), document.body.appendChild(root), setupEdit(root), root; }
     // Close the viewer: leaves edit mode (saving) and live typing first, clears the body, restores the previous focus
-    function close() { if (!(!root || root.hidden)) {
+    function close() { if (!(!root || root.hidden)) { var __ret = root.__ret; root.__ret = null, __ret && setTimeout(function () { window.__mkViewRestore && window.__mkViewRestore(__ret); }, 0);
         if (root.__ed && root.__ed.active && root.__ed.exit(), root.__live) {
             try {
                 clearTimeout(root.__live.t);
@@ -33214,7 +33275,7 @@ catch { } }, (function () {
             root.__ed.reset({ id: item.id, canEdit: !decoy && !VH.hiddenState()[item.id], pass: wasLocked && !decoy && typeof pass == "string" ? pass.trim() : null, fallbackTitle: !String(item.name || "").trim() });
         }
         catch { }
-        root.hidden = !1, document.documentElement.classList.add("mu-viewer-open"), root.__applyScale && root.__applyScale(), root.__updProg && root.__updProg(), root.querySelector(".mu-viewer-close").focus({ preventScroll: !0 });
+        (function () { var arm = window.__mkViewArm; window.__mkViewArm = null, root.__ret = arm && String(arm.id) === String(item.id) && Date.now() - arm.t < 9e4 ? arm : null; })(), root.hidden = !1, document.documentElement.classList.add("mu-viewer-open"), root.__applyScale && root.__applyScale(), root.__updProg && root.__updProg(), root.querySelector(".mu-viewer-close").focus({ preventScroll: !0 });
     } };
 })();
 
@@ -35398,9 +35459,12 @@ catch { } };
             callFn("ensureItem", it);
         }
         catch { }
-        var v = await H.promptStyledText({ title: "🏷️ " + (fa() ? "برچسب‌ها" : "Tags"), placeholder: fa() ? "با ویرگول جدا کن، مثلاً: کار, مهم" : "Comma separated, e.g. work, important", defaultValue: (it.tags || []).join(", "), okText: fa() ? "✔️ تأیید" : "✔️ OK" });
+        var v = await H.promptStyledText({ title: "🏷️ " + (fa() ? "برچسب جدید" : "New tag"), placeholder: fa() ? "نام برچسب جدید (برای چند برچسب با ویرگول جدا کن)" : "New tag (separate several with commas)", defaultValue: "", okText: fa() ? "✔️ افزودن" : "✔️ Add" });
         if (v != null) {
-            it.tags = String(v).split(/[,،؛;]/).map(function (x) { return x.trim(); }).filter(Boolean).slice(0, 30);
+            var _old = Array.isArray(it.tags) ? it.tags.slice() : [], _seen = {}, _out = [];
+            _old.concat(String(v).split(/[,،؛;]/).map(function (x) { return x.replace(/^#+/, "").trim(); })).forEach(function (x) { var k = String(x || "").trim(); if (!k) return; var lk = k.toLowerCase(); if (_seen[lk]) return; _seen[lk] = 1; _out.push(k); });
+            if (_out.length === _old.length) return;
+            it.tags = _out.slice(0, 30);
             try {
                 H.touchMeta(it);
             }
@@ -35412,7 +35476,7 @@ catch { } };
                 H.refreshTagbar(id);
             }
             catch { }
-            msg("برچسب‌ها ذخیره شد", "Tags saved");
+            msg("برچسب اضافه شد", "Tag added");
         }
     } }
     // Fill the "Last edited" line at the bottom of the More menu
@@ -35560,7 +35624,7 @@ catch { } };
             closeTagMenu(), closePops();
             var m = D2.createElement("div");
             m.className = "mxe-tagmenu", m.setAttribute("role", "menu"), m.innerHTML = '<button type="button" data-tm="edit">✏️ ' + (fa() ? "ویرایش" : "Edit") + '</button><button type="button" data-tm="del" class="danger">🗑️ ' + (fa() ? "حذف" : "Delete") + "</button>", m.style.visibility = "hidden", box.appendChild(m);
-            var br = box.getBoundingClientRect(), cr = chip.getBoundingClientRect(), mw = m.offsetWidth, left = Math.max(8, Math.min(cr.left - br.left + cr.width / 2 - mw / 2, br.width - mw - 8));
+            var br = box.getBoundingClientRect(), cr = chip.getBoundingClientRect(), mw = m.offsetWidth, left = Math.max(22, Math.min(cr.left - br.left + cr.width / 2 - mw / 2, br.width - mw - 22));
             m.style.left = left + "px", m.style.bottom = Math.max(4, br.bottom - cr.top + 6) + "px", m.style.visibility = "", m.__id = id, m.__tag = String(tag), tagMenu = m;
         }
     } }
@@ -36422,10 +36486,43 @@ var now = Date.now(); if (!(window.__muNfsSbAt && now - window.__muNfsSbAt < 500
 }
 </style>
 <style id="muFStripCss">
-#muNfsFolderBtn.mu-on {
-    background:#7f7f7f33;
+#muNfsFolderBtn.mu-on,#muNfsFolderBtn.mu-on:active {
+    background:transparent!important;
+    box-shadow:none!important;
+}
+.mu-fbi {
+    display:block;
+    flex:0 0 auto;
+    width:22px;
+    height:22px;
+    font-style:normal;
+    background:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='-3 -3 54 54'%3E%3Cdefs%3E%3ClinearGradient id='b' x1='0' y1='0' x2='0' y2='1'%3E%3Cstop offset='0' stop-color='%23E8A500'/%3E%3Cstop offset='1' stop-color='%23CC8A00'/%3E%3C/linearGradient%3E%3ClinearGradient id='f' x1='0' y1='0' x2='0' y2='1'%3E%3Cstop offset='0' stop-color='%23FFE585'/%3E%3Cstop offset='1' stop-color='%23FFC531'/%3E%3C/linearGradient%3E%3C/defs%3E%3Cpath d='M6 7h12.4c.9 0 1.7.4 2.3 1l2.6 3H42a3 3 0 013 3v23a4 4 0 01-4 4H7a4 4 0 01-4-4V10a3 3 0 013-3z' fill='url(%23b)'/%3E%3Cpath d='M3 17.5a3 3 0 013-3h36a3 3 0 013 3V37a4 4 0 01-4 4H7a4 4 0 01-4-4z' fill='url(%23f)'/%3E%3C/svg%3E") center/contain no-repeat;
+    filter:drop-shadow(0 1px 1px rgba(0,0,0,.3));
+}
+.mu-fbi.mu-op {
+    background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='-3 -3 54 54'%3E%3Cdefs%3E%3ClinearGradient id='b' x1='0' y1='0' x2='0' y2='1'%3E%3Cstop offset='0' stop-color='%23E8A500'/%3E%3Cstop offset='1' stop-color='%23CC8A00'/%3E%3C/linearGradient%3E%3ClinearGradient id='f' x1='0' y1='0' x2='0' y2='1'%3E%3Cstop offset='0' stop-color='%23FFE585'/%3E%3Cstop offset='1' stop-color='%23FFC531'/%3E%3C/linearGradient%3E%3C/defs%3E%3Cpath d='M6 7h12.4c.9 0 1.7.4 2.3 1l2.6 3H42a3 3 0 013 3v23a4 4 0 01-4 4H7a4 4 0 01-4-4V10a3 3 0 013-3z' fill='url(%23b)'/%3E%3Crect x='9' y='10.5' width='29' height='13' rx='2' fill='%23fbfbfb'/%3E%3Cpath d='M9.4 20.4A3 3 0 0112.3 18H44.6a2.4 2.4 0 012.3 3.1L42.3 38.3A4 4 0 0138.4 41.3H7.6A4.2 4.2 0 013.5 36.1z' fill='url(%23f)'/%3E%3C/svg%3E");
+}
+.mu-fc .mu-fbi {
+    width:24px;
+    height:24px;
+}
+#muNfsFolderBtn.mu-on .mu-fbi {
+    transform:none!important;
+    animation:none!important;
+}
+#muNfsFolderBtn.mu-on svg {
+    animation:muFbPop .32s cubic-bezier(.3,1.5,.5,1);
+}
+@keyframes muFbPop {
+    0% {
+        transform:scale(.8);
+    }
+    100% {
+        transform:scale(1.12);
+    }
 }
 #muNfsFolderBtn.mu-has::after {
+    display:none!important;
     content:"";
     position:absolute;
     top:7px;
@@ -36832,6 +36929,9 @@ var now = Date.now(); if (!(window.__muNfsSbAt && now - window.__muNfsSbAt < 500
     <div id="muNfsFStrip"></div>
   </div>
   <div class="mu-nfs-body" id="muNfsBody" onscroll="muNotesFs.onScroll()">
+    <div class="mu-nfs-sechd" id="muNfsPinHd" style="display:none"></div>
+    <div id="muNfsPinCols" style="display:none"></div>
+    <div class="mu-nfs-sechd" id="muNfsOthHd" style="display:none"></div>
     <div class="mu-nfs-cols" id="muNfsCols"></div>
     <div id="muNfsFolders" style="display:none"></div>
     <div class="mu-nfs-empty" id="muNfsEmpty" style="display:none"></div>
@@ -37458,7 +37558,8 @@ body.mu-nfsbk-on #mkBackupBar { display:none!important; }
     // Splits a search into: plain words, "quoted phrases", -excluded words and tag:/folder:/is: operators
     // (all normalized)
     function parseQ(raw) { var plain = [], phr = [], negs = [], ops = [], rest = String(raw).replace(/"([^"]*)"|«([^»]*)»/g, function (m, a, b) { var p = norm(a ?? b).replace(/\s+/g, " ").trim(); return p && phr.push(p), " "; }); return rest.split(/\s+/).filter(Boolean).forEach(function (tok) { var n; /^(?:tag|برچسب|folder|پوشه):./i.test(tok) || /^(?:is|وضعیت):(?:pinned|favorite|fav|locked|سنجاق|علاقه|قفل)$/i.test(tok) ? ops.push(tok) : /^[-−]./.test(tok) ? (n = norm(tok.slice(1)).trim(), n && negs.push(n)) : (n = norm(tok).trim(), n && plain.push(n)); }), { plain: plain, phr: phr, negs: negs, ops: ops }; }
-    function build(cmp) { return '<svg viewBox="0 0 24 24" fill="' + (cmp ? "currentColor" : "none") + '" stroke="currentColor" stroke-width="2" stroke-linejoin="round" aria-hidden="true"><path d="M3 7a2 2 0 0 1 2-2h4l2 2.5h8a2 2 0 0 1 2 2V17a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg>'; }
+    function buildChip(sel) { return '<em class="mu-fbi' + (sel ? " mu-op" : "") + '" aria-hidden="true"></em>'; }
+    function build(cmp) { return '<em class="mu-fbi' + (cmp ? " mu-op" : "") + '" aria-hidden="true"></em>'; }
     function tb() { var folderButton = document.getElementById("muNfsFolderBtn"); folderButton && (folderButton.style.display = S2.page === "notes" ? "" : "none", folderButton.innerHTML = build(S2.fopen), folderButton.classList.toggle("mu-on", !!S2.fopen), folderButton.classList.toggle("mu-has", !!S2.fsel), folderButton.title = fa2() ? "پوشه‌ها" : "Folders", folderButton.setAttribute("aria-label", folderButton.title)); }
     function build2() { var f2 = document.getElementById("muNfsFStrip"); if (!f2)
         return; try {
@@ -37470,7 +37571,7 @@ body.mu-nfsbk-on #mkBackupBar { display:none!important; }
     catch { } try {
         fn = H.folders() || [];
     }
-    catch { } visibleNotes.forEach(function (note) { noteFolders(note).forEach(function (folderName) { folderCounts[folderName] = (folderCounts[folderName] || 0) + 1; }); }); var folderNames = fn.filter(function (folder) { return folder && typeof folder == "string" && folder !== defaultFolder; }); folderNames.filter(function (folder, index) { return folderNames.indexOf(folder) === index; }); S2.fsel && folderNames.indexOf(S2.fsel) < 0 && (S2.fsel = null); var stripHtml = '<button type="button" class="mu-fc' + (S2.fsel ? "" : " mu-on") + '" data-i="">' + build(!S2.fsel) + (fa2() ? "همه" : "All") + "<i>" + visibleNotes.length + "</i></button>"; folderNames.forEach(function (folder, index) { stripHtml += '<button type="button" class="mu-fc' + (S2.fsel === folder ? " mu-on" : "") + '" data-i="' + index + '">' + build(S2.fsel === folder) + '<span dir="auto">' + esc(folder) + "</span><i>" + (folderCounts[folder] || 0) + "</i></button>"; }); stripHtml += '<button type="button" class="mu-fc mu-fplus" data-p="1" aria-label="' + (fa2() ? "پوشه جدید" : "New folder") + '"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg></button>'; f2.classList.toggle("open", S2.page === "notes" && !!S2.fopen); if (!f2.firstChild) {
+    catch { } visibleNotes.forEach(function (note) { noteFolders(note).forEach(function (folderName) { folderCounts[folderName] = (folderCounts[folderName] || 0) + 1; }); }); var folderNames = fn.filter(function (folder) { return folder && typeof folder == "string" && folder !== defaultFolder; }); folderNames.filter(function (folder, index) { return folderNames.indexOf(folder) === index; }); S2.fsel && folderNames.indexOf(S2.fsel) < 0 && (S2.fsel = null); var stripHtml = '<button type="button" class="mu-fc' + (S2.fsel ? "" : " mu-on") + '" data-i="">' + buildChip(!S2.fsel) + (fa2() ? "همه" : "All") + "<i>" + visibleNotes.length + "</i></button>"; folderNames.forEach(function (folder, index) { stripHtml += '<button type="button" class="mu-fc' + (S2.fsel === folder ? " mu-on" : "") + '" data-i="' + index + '">' + buildChip(S2.fsel === folder) + '<span dir="auto">' + esc(folder) + "</span><i>" + (folderCounts[folder] || 0) + "</i></button>"; }); stripHtml += '<button type="button" class="mu-fc mu-fplus" data-p="1" aria-label="' + (fa2() ? "پوشه جدید" : "New folder") + '"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg></button>'; f2.classList.toggle("open", S2.page === "notes" && !!S2.fopen); if (!f2.firstChild) {
         f2.innerHTML = '<div class="mu-fi"><div class="mu-fr"></div></div>';
         f2.firstChild.firstChild.addEventListener("wheel", function (event) { Math.abs(event.deltaY) > Math.abs(event.deltaX) && (this.scrollLeft += event.deltaY, event.preventDefault()); }, { passive: !1 });
     } var rowElement = f2.firstChild.firstChild; if (f2.__s !== stripHtml) {
@@ -37864,7 +37965,7 @@ body.mu-nfsbk-on #mkBackupBar { display:none!important; }
         seg = esc(text.slice(i, j)), c && /^#[0-9a-f]{6}$/i.test(c) && (seg = '<span class="mu-nfs-c" style="--pv:' + c + '">' + seg + "</span>"), h && (seg = '<mark class="mu-nfs-hit">' + seg + "</mark>"), out += seg, i = j;
     } return out; }
     function bodyHtml(inf) { var bl = bodyLines(inf), cm = !inf.locked && inf.bcm && bl.join("\n") === inf.body ? inf.bcm : null, off = 0; return bl.map(function (l) { var o0 = off + (l.length - l.replace(/^\s+/, "").length); return off += l.length + 1, l = l.trim(), '<span class="mu-nfs-ln" dir="auto">' + (l ? inf.locked ? esc(l) : cm ? hlc(l, cm, o0) : hl(l) : "&#8203;") + "</span>"; }).join(""); }
-    function cardHtml(inf) { return hlPrep(inf), '<button type="button" class="mu-nfs-card' + (inf.cl ? " mu-nfs-cl" : "") + (inf.pin && inf.fav ? " mu-nfs-both" : inf.pin ? " mu-nfs-pinned" : inf.fav ? " mu-nfs-faved" : "") + (isSel(inf.id) ? " mu-nfs-sel" : "") + '" data-id="' + esc(inf.id) + '" data-g="' + (inf.pin ? 1 : 0) + (inf.fav ? 1 : 0) + (inf.col ? '" data-mk-color="' + esc(inf.col) : "") + '"><div class="mu-nfs-ttl" dir="auto">' + (inf.locked || !inf.title && !inf.cl ? esc((inf.locked ? "🔒 " : "") + (inf.title || (fa2() ? "بدون عنوان" : "Untitled"))) : hl(inf.title)) + "</div>" + (inf.cl ? H.get("mkCl").rows(inf) : inf.body && S2.lines > 0 ? '<div class="mu-nfs-txt">' + bodyHtml(inf) + "</div>" : "") + mediaHtml(inf) + "</button>"; }
+    function cardHtml(inf) { return hlPrep(inf), '<button type="button" class="mu-nfs-card' + (inf.cl ? " mu-nfs-cl" : "") + (inf.fav ? " mu-nfs-hasstar" : "") + (isSel(inf.id) ? " mu-nfs-sel" : "") + '" data-id="' + esc(inf.id) + '" data-g="' + (inf.pin ? 1 : 0) + (inf.fav ? 1 : 0) + (inf.col ? '" data-mk-color="' + esc(inf.col) : "") + '"><div class="mu-nfs-ttl" dir="auto">' + (inf.locked || !inf.title && !inf.cl ? esc((inf.locked ? "🔒 " : "") + (inf.title || (fa2() ? "بدون عنوان" : "Untitled"))) : hl(inf.title)) + "</div>" + (inf.cl ? H.get("mkCl").rows(inf) : inf.body && S2.lines > 0 ? '<div class="mu-nfs-txt">' + bodyHtml(inf) + "</div>" : "") + mediaHtml(inf) + (inf.fav ? '<em class="mu-nfs-star" aria-hidden="true"></em>' : "") + "</button>"; }
     function colCount() { return S2.view === "list" ? 1 : 2; }
     function colsHtml(items) { var n2 = colCount(), bufs = [], h = [], k, i, c2, m; for (k = 0; k < n2; k++)
         bufs.push(""), h.push(0); for (i = 0; i < items.length; i++) {
@@ -37874,6 +37975,14 @@ body.mu-nfsbk-on #mkBackupBar { display:none!important; }
     } return '<div class="mu-nfs-cols">' + bufs.map(function (b) { return '<div class="mu-nfs-col">' + b + "</div>"; }).join("") + "</div>"; }
     function colsEl() { return $2("muNfsCols"); }
     function setEmpty(show, msg) { var emp = $2("muNfsEmpty"); emp && (show ? (emp.style.display = "", emp.textContent = msg) : emp.style.display = "none"); }
+    // Google Keep style: pinned notes get their own "Pinned" section on top, the rest sit under "Others"
+    function pinPaint() { var hd = $2("muNfsPinHd"), pc = $2("muNfsPinCols"), oh = $2("muNfsOthHd"); if (!hd || !pc || !oh)
+        return 0; var pn = 0; while (pn < S2.list.length && S2.list[pn].pin)
+        pn++; if (!pn) {
+        hd.style.display = pc.style.display = oh.style.display = "none", pc.innerHTML = "";
+        return 0;
+    } var fa = fa2(); hd.textContent = fa ? "پین‌شده‌ها" : "Pinned", hd.style.display = "", pc.style.display = "", pc.innerHTML = colsHtml(S2.list.slice(0, pn)); pn < S2.list.length ? (oh.textContent = fa ? "سایر" : "Others", oh.style.display = "") : oh.style.display = "none"; return pn; }
+    function pinHide() { ["muNfsPinHd", "muNfsPinCols", "muNfsOthHd"].forEach(function (id) { var e = $2(id); e && (e.style.display = "none"); }); }
     function paint(from) { var cols = colsEl(); if (cols) {
         var n = colCount(), colEls;
         if (from === 0 || cols.children.length !== n) {
@@ -37885,7 +37994,7 @@ body.mu-nfsbk-on #mkBackupBar { display:none!important; }
             cols.__h = [];
             for (var h2 = 0; h2 < n; h2++)
                 cols.__h.push(0);
-            from = 0, S2.shown = 0;
+            from = 0, S2.shown = pinPaint();
         }
         else if (colEls = Array.prototype.slice.call(cols.children), !cols.__h) {
             cols.__h = [];
@@ -37920,7 +38029,7 @@ body.mu-nfsbk-on #mkBackupBar { display:none!important; }
         var html = "";
         html += fSummary(), S2.groups.forEach(function (g, gi) { var fa = fa2(), collapsed = fCol(g), cnt = g.items.length, nm = g.none ? fa ? "بدون پوشه" : "No folder" : g.name, sub = fa ? cnt ? nfa(cnt) + " یادداشت" : "خالی" : cnt ? cnt + (cnt === 1 ? " note" : " notes") : "Empty", aAdd = fa ? "افزودن یادداشت‌های موجود به این پوشه" : "Add existing notes to this folder", aRem = fa ? "حذف یادداشت‌ها از این پوشه" : "Remove notes from this folder", aDel = fa ? "حذف این پوشه" : "Delete this folder"; html += '<section class="mu-nfs-fgroup' + (collapsed ? " mu-collapsed" : "") + (g.none ? " mu-nfs-fnone" : "") + '"' + (g.none ? "" : ' style="--fh:' + fHue(g.name) + '"') + '><div class="mu-nfs-frow"><button type="button" class="mu-nfs-fh mu-nfs-fh-l" data-fi="' + gi + '"><span class="mu-nfs-ficon">' + ICONS.folder + '</span><span class="mu-nfs-ftxt"><span class="mu-nfs-fname" dir="auto">' + esc(nm) + '</span><span class="mu-nfs-fsub">' + sub + "</span></span></button>" + (g.none ? "" : '<button type="button" class="mu-nfs-fadd" data-fa="' + gi + '" aria-label="' + aAdd + '" title="' + aAdd + '">' + ICONS.plus + '</button><button type="button" class="mu-nfs-fadd mu-nfs-frem" data-fr="' + gi + '" aria-label="' + aRem + '" title="' + aRem + '">' + ICONS.minus + '</button><button type="button" class="mu-nfs-fadd mu-nfs-fdel" data-fd="' + gi + '" aria-label="' + aDel + '" title="' + aDel + '">' + ICONS.trash + "</button>") + '<button type="button" class="mu-nfs-fh mu-nfs-fh-r" data-fi="' + gi + '" aria-label="' + (fa ? "باز و بسته کردن" : "Expand or collapse") + '">' + ICONS.chev + '</button></div><div class="mu-nfs-fbody">' + groupBodyHtml(g) + "</div></section>"; }), host.innerHTML = html, setEmpty(!S2.groups.length, S2.q.trim() ? fa2() ? "یادداشتی پیدا نشد." : "No matching notes." : fa2() ? "هنوز پوشه‌ای نداری. با دکمه + یکی بساز." : "No folders yet. Tap + to create one.");
     } }
-    function render() { build2(); Ne(); var notesMode = S2.page === "notes", c = colsEl(), f = $2("muNfsFolders"); c && (c.style.display = notesMode ? "" : "none"), f && (f.style.display = notesMode ? "none" : ""), notesMode ? paint(0) : paintFolders(); }
+    function render() { build2(); Ne(); var notesMode = S2.page === "notes", c = colsEl(), f = $2("muNfsFolders"); c && (c.style.display = notesMode ? "" : "none"), f && (f.style.display = notesMode ? "none" : ""), notesMode || pinHide(), notesMode ? paint(0) : paintFolders(); }
     // Empty box: placeholder follows the app language (Persian = right-to-left, English = left-to-right).
     // Once the user types, each line follows the language of what was typed
     function setInputDir() { var inp = $2("muNfsSearch"); inp && inp.setAttribute("dir", inp.value ? "auto" : fa2() ? "rtl" : "ltr"); }
@@ -45417,7 +45526,7 @@ html body #contentsContainer .content-container.mxe.show[data-mk-color^=bg]:not(
     background-repeat:no-repeat;
 }
 #muNotesFs .mu-nfs-card[data-mk-color^=bg].mu-nfs-pinned {
-    background-image:var(--mk-pat),linear-gradient(var(--nfs-card),var(--nfs-card)),linear-gradient(#ff7aa8,#ff7aa8);
+    background-image:var(--mk-pat),linear-gradient(var(--nfs-card),var(--nfs-card)),linear-gradient(var(--nfs-border),var(--nfs-border));
     background-size:100% auto,auto,auto;
     background-position:center bottom,0 0,0 0;
     background-repeat:no-repeat;
@@ -45431,7 +45540,7 @@ html body #contentsContainer .content-container.mxe.show[data-mk-color^=bg]:not(
     background-clip:padding-box,padding-box,border-box;
 }
 #muNotesFs .mu-nfs-card[data-mk-color^=bg].mu-nfs-both {
-    background-image:var(--mk-pat),linear-gradient(var(--nfs-card),var(--nfs-card)),linear-gradient(180deg,#ff7aa8 50%,#ffd166 50%);
+    background-image:var(--mk-pat),linear-gradient(var(--nfs-card),var(--nfs-card)),linear-gradient(#ffd166,#ffd166);
     background-size:100% auto,auto,auto;
     background-position:center bottom,0 0,0 0;
     background-repeat:no-repeat;
@@ -46520,7 +46629,7 @@ html body #contentsContainer .content-container.mxe.show[data-mk-color^=gx]:not(
     background-image:var(--mk-grad);
 }
 #muNotesFs .mu-nfs-card[data-mk-color^=gx].mu-nfs-pinned {
-    background-image:var(--mk-grad),linear-gradient(var(--nfs-card),var(--nfs-card)),linear-gradient(#ff7aa8,#ff7aa8);
+    background-image:var(--mk-grad),linear-gradient(var(--nfs-card),var(--nfs-card)),linear-gradient(var(--nfs-border),var(--nfs-border));
     background-size:100% 100%,auto,auto;
     background-repeat:no-repeat;
     background-clip:padding-box,padding-box,border-box;
@@ -46532,7 +46641,7 @@ html body #contentsContainer .content-container.mxe.show[data-mk-color^=gx]:not(
     background-clip:padding-box,padding-box,border-box;
 }
 #muNotesFs .mu-nfs-card[data-mk-color^=gx].mu-nfs-both {
-    background-image:var(--mk-grad),linear-gradient(var(--nfs-card),var(--nfs-card)),linear-gradient(180deg,#ff7aa8 50%,#ffd166 50%);
+    background-image:var(--mk-grad),linear-gradient(var(--nfs-card),var(--nfs-card)),linear-gradient(#ffd166,#ffd166);
     background-size:100% 100%,auto,auto;
     background-repeat:no-repeat;
     background-clip:padding-box,padding-box,border-box;
@@ -51611,6 +51720,28 @@ html:not(#_mxfix) body #contentsContainer .mxe .mxe-top>.mxe-theme-btn {
 }
 .mkc-tags .mkc-tchev {
     color:var(--pp-mute,#6B6459);
+}
+</style>
+<style id="mkTopPillSize">
+/* edit panel: frosted-glass boxes (top and bottom pills + round buttons): faint, blurred see-through background */
+html:not(#_mxfix) body #contentsContainer .mxe .mxe-top .mxe-grp,html:not(#_mxfix) body #contentsContainer .mxe .mxe-bottom .mxe-grp,html:not(#_mxfix) body #contentsContainer .mxe .mxe-top>.mxe-back,html:not(#_mxfix) body #contentsContainer .mxe .mxe-top>.mxe-focus-btn:not(.on),html:not(#_mxfix) body #contentsContainer .mxe .mxe-top>.mxe-theme-btn{background:linear-gradient(135deg,color-mix(in srgb,var(--mx-pop,#fff) 46%,transparent),color-mix(in srgb,var(--mx-pop,#fff) 22%,transparent))!important;-webkit-backdrop-filter:blur(14px) saturate(1.5);backdrop-filter:blur(14px) saturate(1.5);border:1px solid color-mix(in srgb,var(--mx-pop,#fff) 55%,transparent)!important;box-shadow:0 2px 10px rgba(0,0,0,.10),inset 0 1px 0 color-mix(in srgb,#fff 45%,transparent)!important}
+html[data-mxe-theme=dark]:not(#_mxfix) body #contentsContainer .mxe .mxe-top .mxe-grp,html[data-mxe-theme=dark]:not(#_mxfix) body #contentsContainer .mxe .mxe-bottom .mxe-grp{border-color:rgba(255,255,255,.10)!important;box-shadow:0 2px 12px rgba(0,0,0,.28),inset 0 1px 0 rgba(255,255,255,.10)!important}
+/* top bar: favorite, pin, archive and lock share one pill (pushed to the end, next to theme / save) */
+html:not(#_mxfix) body #contentsContainer .mxe .mxe-top .mxe-grp-s{margin-inline-start:auto!important}
+/* top bar: active favorite / pin show only a coloured icon, no filled circle behind it */
+html:not(#_mxfix) body #contentsContainer .mxe .mxe-top .mxe-grp .mxe-btn[data-flag].mc-icon-active,html:not(#_mxfix) body #contentsContainer .mxe .mxe-top .mxe-grp .mxe-btn[data-flag].mc-icon-active:active{background:transparent!important;box-shadow:none!important}
+html:not(#_mxfix) body #contentsContainer .mxe .mxe-top .mxe-grp .mxe-btn[data-flag=favorite].mc-icon-active{color:#d4a017!important}
+html:not(#_mxfix) body #contentsContainer .mxe .mxe-top .mxe-grp .mxe-btn[data-flag=pinned].mc-icon-active{color:#b71c1c!important}
+/* top bar: the A+/A- pill and the favorite/pin pill match the size of the neighbouring round buttons (38px, 34px on narrow phones) */
+html:not(#_mxfix) body #contentsContainer .mxe .mxe-top .mxe-grp-t{padding:3px!important;height:38px!important;box-sizing:border-box!important;align-items:center!important}
+html:not(#_mxfix) body #contentsContainer .mxe .mxe-top .mxe-grp-t .mxe-btn{width:32px!important;height:32px!important;min-width:32px!important;flex:0 0 32px!important}
+html:not(#_mxfix) body #contentsContainer .mxe .mxe-top .mxe-grp-t .mxe-btn svg{width:19px!important;height:19px!important}
+html:not(#_mxfix) body #contentsContainer .mxe .mxe-top .mxe-grp-t .mxe-txt b{font-size:15px!important;line-height:1!important}
+@media(max-width:400px){
+html:not(#_mxfix) body #contentsContainer .mxe .mxe-top .mxe-grp-t{padding:3px!important;height:34px!important}
+html:not(#_mxfix) body #contentsContainer .mxe .mxe-top .mxe-grp-t .mxe-btn{width:28px!important;height:28px!important;min-width:28px!important;flex:0 0 28px!important}
+html:not(#_mxfix) body #contentsContainer .mxe .mxe-top .mxe-grp-t .mxe-btn svg{width:18px!important;height:18px!important}
+html:not(#_mxfix) body #contentsContainer .mxe .mxe-top .mxe-grp-t .mxe-txt b{font-size:13px!important}
 }
 </style>
 </body>
