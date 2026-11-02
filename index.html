@@ -21748,7 +21748,7 @@ const forced = !!window.__mkCloudForce; window.__mkCloudForce = !1, !(!forced &&
 // Debounce: 3 s after the last change, or half the duration of the last auto save (max 10 s) so slow saves
 // don't pile up. Max-wait: 20 s (or 2x the debounce) so someone typing without a pause (long note, dictation)
 // still gets saved.
-const CLOUD_BACKUP_DEBOUNCE_MS = 700, CLOUD_BACKUP_MAXWAIT_MS = 1e4;
+const CLOUD_BACKUP_DEBOUNCE_MS = 300, CLOUD_BACKUP_MAXWAIT_MS = 6e3;
 // __mkNoSchedule > 0 (cloudQuiet) blocks scheduling while cloud data is being applied, so a merge can't trigger
 // a backup of itself. __mkSeenAutoTs = timestamp of the Cloud auto copy this device last pushed or merged.
 // __mkRebuildForce = a deliberate "Retry now" may replace an unreadable Cloud copy.
@@ -21768,7 +21768,7 @@ function scheduleCloudBackup(urgent, force) { if (!IS_TELEGRAM || !hasCloudStora
 if (__cloudBackupPending || (__cloudBackupFirstAt = 0), __cloudBackupPending = !0, force && (window.__mkCloudForce = !0), clearTimeout(__cloudBackupTimer), urgent) {
     cloudFlushBackup();
     return;
-} const nowMs = Date.now(); __cloudBackupFirstAt || (__cloudBackupFirstAt = nowMs); const debounceMs = Math.max(CLOUD_BACKUP_DEBOUNCE_MS, Math.min(5e3, Math.round((window.__mkLastAutoMs || 0) / 3))), maxWaitMs = Math.max(CLOUD_BACKUP_MAXWAIT_MS, debounceMs * 2), waitMs = Math.max(0, Math.min(debounceMs, maxWaitMs - (nowMs - __cloudBackupFirstAt))); __cloudBackupTimer = setTimeout(cloudFlushBackup, waitMs); }
+} const nowMs = Date.now(); __cloudBackupFirstAt || (__cloudBackupFirstAt = nowMs); const debounceMs = Math.max(CLOUD_BACKUP_DEBOUNCE_MS, Math.min(3e3, Math.round((window.__mkLastAutoMs || 0) / 4))), maxWaitMs = Math.max(CLOUD_BACKUP_MAXWAIT_MS, debounceMs * 2), waitMs = Math.max(0, Math.min(debounceMs, maxWaitMs - (nowMs - __cloudBackupFirstAt))); __cloudBackupTimer = setTimeout(cloudFlushBackup, waitMs); }
 function cloudFlushEditorFirst() { try {
     return typeof flushActiveEditorSave == "function" ? flushActiveEditorSave() : null;
 }
@@ -21796,12 +21796,12 @@ document.addEventListener("visibilitychange", () => { document.visibilityState =
 //   idle (15 s) / deep idle (45 s): when nobody touches this device for 3 / 15 min (wakes up at once on touch)
 // It never runs while hidden/offline, never while a backup is running or waiting, and never while the user
 // is typing (so an incoming change can't steal the caret). Failures back off automatically.
-const CLOUD_LIVE = { hotMs: 1100, normalMs: 2200, idleMs: 4e3, deepMs: 8e3, unlinkedMs: 3e4, hotWindowMs: 18e4, idleAfterMs: 3e5, deepAfterMs: 18e5, typingQuietMs: 900, maxBackoffMs: 6e4, maxPullTries: 3 };
+const CLOUD_LIVE = { hotMs: 750, burstMs: 550, burstWindowMs: 15e3, normalMs: 1600, idleMs: 3500, deepMs: 8e3, unlinkedMs: 3e4, hotWindowMs: 18e4, idleAfterMs: 3e5, deepAfterMs: 18e5, typingQuietMs: 600, maxBackoffMs: 6e4, maxPullTries: 3 };
 const CLOUD_POLL_INTERVAL_MS = CLOUD_LIVE.normalMs;
 let __cloudPollTimer = null;
 const __cloudLive = window.__mkLive = { running: !1, busy: !1, sig: null, parts: null, ids: null, pendingSig: null, tries: 0, fails: 0, lastUserAt: Date.now(), hotUntil: 0, lastOkSeen: 0, lastProbeAt: 0, lastChangeAt: 0, probes: 0, pulls: 0, tgBound: !1 };
 function cloudLiveHot(ms) { __cloudLive.hotUntil = Math.max(__cloudLive.hotUntil, Date.now() + (ms || CLOUD_LIVE.hotWindowMs)); }
-function cloudLiveDelay() { const s = __cloudLive, now = Date.now(), idleFor = now - s.lastUserAt; let d = now < s.hotUntil ? CLOUD_LIVE.hotMs : idleFor > CLOUD_LIVE.deepAfterMs ? CLOUD_LIVE.deepMs : idleFor > CLOUD_LIVE.idleAfterMs ? CLOUD_LIVE.idleMs : CLOUD_LIVE.normalMs; try {
+function cloudLiveDelay() { const s = __cloudLive, now = Date.now(), idleFor = now - s.lastUserAt; let d = now - (s.lastChangeAt || 0) < CLOUD_LIVE.burstWindowMs && s.lastChangeAt ? CLOUD_LIVE.burstMs : now < s.hotUntil ? CLOUD_LIVE.hotMs : idleFor > CLOUD_LIVE.deepAfterMs ? CLOUD_LIVE.deepMs : idleFor > CLOUD_LIVE.idleAfterMs ? CLOUD_LIVE.idleMs : CLOUD_LIVE.normalMs; try {
     cloudIsLinked() || mkCloudFreshDevice() || (d = Math.max(d, CLOUD_LIVE.unlinkedMs));
 }
 catch { } s.fails > 0 && (d = Math.min(CLOUD_LIVE.maxBackoffMs, d * Math.pow(2, Math.min(s.fails, 4)))); return Math.round(d * (.85 + Math.random() * .3)); }
@@ -21810,12 +21810,12 @@ function cloudLiveSchedule(ms) { clearTimeout(__cloudPollTimer), __cloudPollTime
 function cloudLiveKick(ms) { if (!IS_TELEGRAM || !hasCloudStorage || document.visibilityState === "hidden")
     return; __cloudLive.running || cloudStartPolling(), cloudLiveSchedule(ms || 0); }
 async function cloudLiveTick() { __cloudPollTimer = null; const s = __cloudLive; if (!s.running)
-    return; let r; try {
+    return; let r; const __t0 = Date.now(); try {
     r = await cloudLiveProbe();
 }
 catch (e) {
     s.fails++, r = "fail";
-} cloudLiveSchedule(r === "skip" ? 600 : r === "retry" ? Math.min(3e4, 1500 * Math.pow(2, Math.min(5, Math.max(0, s.tries - 1)))) : cloudLiveDelay()); }
+} cloudLiveSchedule(r === "skip" ? 350 : r === "retry" ? Math.min(3e4, 1500 * Math.pow(2, Math.min(5, Math.max(0, s.tries - 1)))) : Math.max(250, cloudLiveDelay() - (Date.now() - __t0))); }
 function cloudLiveAuto(rawIdx) { try {
     const a = JSON.parse(rawIdx || "[]");
     return Array.isArray(a) ? a.find(e => e && e.id === "auto") || null : null;
@@ -21832,7 +21832,7 @@ if (window.__mkNoSchedule > 0 || window.__mkStartupBusy || __cloudBackupPending 
 // Never swap the screen while the user is typing
 if (Date.now() - (window.__mkLastTypeAt || 0) < CLOUD_LIVE.typingQuietMs)
     return "skip"; const lastOk = window.__mkSync && window.__mkSync.lastOk || 0; lastOk !== s.lastOkSeen && (s.lastOkSeen = lastOk, cloudLiveHot()); s.busy = !0; try {
-    const vals = await cloudGetItemsRaw([CLOUD_INDEX_KEY, CLOUD_LIST_META_KEY, CLOUD_CONFIG_KEY]); if (!vals)
+    const vals = await Promise.race([cloudGetItemsRaw([CLOUD_INDEX_KEY, CLOUD_LIST_META_KEY, CLOUD_CONFIG_KEY]), cloudSleep(6e3).then(() => null)]); if (!vals)
         return s.fails++, "fail"; s.fails = 0, s.probes++, s.lastProbeAt = Date.now(); const rawIdx = vals[CLOUD_INDEX_KEY] || "", rawList = vals[CLOUD_LIST_META_KEY] || "", rawCfg = vals[CLOUD_CONFIG_KEY] || "", sig = rawIdx + "\u0001" + rawList + "\u0001" + rawCfg; if (sig === s.sig)
         return "same";
     // What exactly changed (idx = notes + manual backups, list = the List slot, cfg = shared settings)
@@ -25525,7 +25525,7 @@ catch { } }), document.addEventListener("input", event => { const textBox = even
 }
 // Perf: the save pass (sanitizeHtml + innerText) costs more the longer the note is, and it fires on every
 // typing pause - so very long notes wait a little longer (flushed anyway on hide / close / Save)
-const id = textBox.id.slice(5); clearTimeout(autosaveTimer); const __L = window.__muSaveLen || 0; autosaveTimer = setTimeout(() => autosaveCategory(id), __L < 6e4 ? 700 : Math.min(2500, 700 + Math.round((__L - 6e4) / 80))); });
+const id = textBox.id.slice(5); clearTimeout(autosaveTimer); const __L = window.__muSaveLen || 0; autosaveTimer = setTimeout(() => autosaveCategory(id), __L < 6e4 ? 450 : Math.min(2500, 700 + Math.round((__L - 6e4) / 80))); });
 async function copyCategory(id) {
     const t = i18n[currentLang], item = categories.find(c => c.id === id);
     if (!item)
