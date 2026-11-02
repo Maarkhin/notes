@@ -20801,7 +20801,7 @@ function cloudGetKeys() { return cloudGuard(fin => TG.CloudStorage.getKeys((err,
 function cloudEntryPrefix(e2) { const p = e2 && e2.pfx ? String(e2.pfx) : String(e2 && e2.id); return /^[A-Za-z0-9_-]{1,60}$/.test(p) ? p : "invalid"; }
 // Delta entries (c = 5): chunks are content-addressed. Key = "mk_b_x" + 12-char hash of the chunk text, and
 // entry.km holds those hashes in order. Chunks that did not change keep their key and are never rewritten.
-const CLOUD_DELTA_PFX = "mk_b_x", CLOUD_DELTA_IDLEN = 12, CLOUD_DELTA_MAX = 200, CLOUD_DELTA_SEP = "#";
+const CLOUD_DELTA_PFX = "mk_b_x", CLOUD_DELTA_IDLEN = 12, CLOUD_DELTA_MAX = 200, CLOUD_DELTA_SEP = "#", CLOUD_DELTA_SEPL = "%";
 function cloudEntryKeys(e) { if (e && e.km) { const n = e.chunks | 0, s = String(e.km); if (n > 0 && s.length === n * CLOUD_DELTA_IDLEN && /^[A-Za-z0-9_-]+$/.test(s)) { const out = []; for (let i = 0; i < n; i++)
     out.push(CLOUD_DELTA_PFX + s.slice(i * CLOUD_DELTA_IDLEN, (i + 1) * CLOUD_DELTA_IDLEN)); return out; } return []; } return cloudBackupChunkKeys(cloudEntryPrefix(e), e && e.chunks || 0); }
 // ---- Manual backup as a delta (chunks shared with the auto backup) ---------------------------------------------
@@ -21313,12 +21313,20 @@ async function cloudDecompress(b64, mode) { if (mode === 5 || mode === 6) {
     // Delta backup: independent gzip blocks separated by "#" (not part of the base85 alphabet), each one a whole
     // number of JSON pieces; the decoded pieces simply concatenate into the normal payload JSON.
     try {
+        // "#" ends a gzip block, "%" an LZMA block (see cloudBlockEncV); a last piece without terminator counts as gzip
         let out = "";
-        for (const seg of String(b64).split(CLOUD_DELTA_SEP)) {
+        const pcs = String(b64).split(/([#%])/);
+        for (let pi = 0; pi < pcs.length; pi += 2) {
+            const seg = pcs[pi];
             if (!seg)
                 continue;
+            const bytes = seg.charCodeAt(0) >= CLOUD_W_BASE ? cloudW14Dec(seg) : cloudB85Dec(seg);
+            if (pcs[pi + 1] === CLOUD_DELTA_SEPL) {
+                out += cloudFaDec(await cloudLzDecBytes(bytes));
+                continue;
+            }
             const ds = new DecompressionStream("gzip"), writer = ds.writable.getWriter();
-            writer.write(seg.charCodeAt(0) >= CLOUD_W_BASE ? cloudW14Dec(seg) : cloudB85Dec(seg)), writer.close();
+            writer.write(bytes), writer.close();
             out += cloudFaDec(new Uint8Array(await new Response(ds.readable).arrayBuffer()));
         }
         return out;
@@ -21456,26 +21464,69 @@ async function cloudPool(items, limit, fn) { const res = new Array(items.length)
 function cloudHash12m(str) { const m = window.__mkH12 || (window.__mkH12 = new Map); let p = m.get(str); if (!p) {
     p = cloudHash12(str), m.size > 700 && m.delete(m.keys().next().value), m.set(str, p), p.catch(() => m.delete(str));
 } return p; }
+// ---- Compact delta (v3): LZMA blocks + tighter chunk packing ----------------------------------------------------
+// Every delta block is compressed with gzip AND (when the payload is not huge) LZMA; the smaller one is kept. A block's
+// terminator tells the decoder which one it is: "#" = gzip, "%" = LZMA (neither is in the base85 / wide alphabets).
+// Blocks are ~3 chunks long (CLOUD_D_BF) so the compressor sees more context; LZMA output is verified by decoding it again.
+// Off switch: localStorage mk_no_dlz_v1 = "1" (gzip only). A timeout / failure turns LZMA off for 10 minutes.
+const CLOUD_D_BF = 3;
+function cloudLzQ(fn) { const p = (window.__mkLzQ || Promise.resolve()).then(fn); window.__mkLzQ = p.catch(() => { }); return p; }
+function cloudDLzOn(n) { try {
+    if (localStorage.getItem("mk_no_dlz_v1") === "1" || n > 15e5)
+        return !1;
+    const b = window.__mkDlzBad;
+    if (b && Date.now() - b < 6e5)
+        return !1;
+    return !!window.MK_LZMA;
+}
+catch {
+    return !1;
+} }
+function cloudLzBlock(fa) { return cloudLzQ(() => new Promise((res, rej) => { const L = window.MK_LZMA; if (!L)
+    return rej(new Error("nolib")); let dn = 0; const tm = setTimeout(() => { dn = 1; rej(new Error("lzma-timeout")); }, 3e4), inp = new Uint8Array(fa.length + 1); inp.set(fa, 1); try {
+    L.compress(inp, fa.length > 2e5 ? 10 : 9, (r, er) => { if (dn)
+        return; dn = 1; clearTimeout(tm); er || !r ? rej(er || new Error("lzma")) : res(r.buffer ? new Uint8Array(r.buffer, r.byteOffset, r.length) : Uint8Array.from(r, x => x & 255)); });
+}
+catch (x) {
+    clearTimeout(tm), rej(x);
+} })); }
+function cloudLzDecBytes(u8) { return cloudLzQ(() => new Promise((res, rej) => { const L = window.MK_LZMA; if (!L)
+    return rej(new Error("nolib")); try {
+    L.decompress(u8, (r, er) => { if (er || !r || typeof r == "string" || r[0] !== 0)
+        return rej(er || new Error("lzma-fmt")); res(r.buffer ? new Uint8Array(r.buffer, r.byteOffset + 1, r.length - 1) : Uint8Array.from(Array.prototype.slice.call(r, 1), x => x & 255)); });
+}
+catch (x) {
+    rej(x);
+} })); }
 async function cloudBlockEnc(text, wide) { return (await cloudBlockEncRaw(text, wide)).enc; }
-async function cloudBlockEncRaw(text, wide) { const fa = cloudFaEnc(text), lossy = cloudFaEnc.lossy, gz = await cloudGzBytes(fa); return { enc: wide ? cloudW14Enc(gz) : cloudB85Enc(gz), fa: fa, lossy: lossy }; }
-// Verified + memoised block encoder: a block whose text did not change is neither re-compressed nor re-verified
-// (both are the main CPU cost of a backup); a new block is decoded again and must give back exactly its source text.
-// The check runs on bytes (decode the characters, gunzip, compare with the codec bytes) instead of rebuilding the whole
-// text; only text with a lone surrogate (rare) still goes through the strict full-text comparison.
-async function cloudBlockEncV(text, wide) { const k = (wide ? "w" : "b") + cloudHashStr(text), memo = window.__mkBlkMemo || (window.__mkBlkMemo = new Map), hit = memo.get(k); if (hit) {
-    memo.delete(k), memo.set(k, hit);
-    return hit;
-} const r = await cloudBlockEncRaw(text, wide), enc = r.enc; let ok; if (r.lossy)
-    ok = await cloudDecompress(enc + CLOUD_DELTA_SEP, 5) === text;
-else
+async function cloudBlockEncRaw(text, wide, lz) { const fa = cloudFaEnc(text), lossy = cloudFaEnc.lossy; let bytes = await cloudGzBytes(fa), l = !1; if (lz && !lossy && fa.length > 64 && !(window.__mkDlzBad && Date.now() - window.__mkDlzBad < 6e5))
     try {
-        ok = cloudBytesEq(await cloudGunzBytes(cloudAnyDec(enc)), r.fa);
+        const z = await cloudLzBlock(fa);
+        z && z.length + 8 < bytes.length && (bytes = z, l = !0);
     }
     catch {
-        ok = !1;
-    } if (!ok)
-    throw new Error("delta-block-verify"); for (; memo.size > 900;)
-    memo.delete(memo.keys().next().value); memo.set(k, enc); return enc; }
+        window.__mkDlzBad = Date.now();
+    } return { enc: wide ? cloudW14Enc(bytes) : cloudB85Enc(bytes), fa: fa, lossy: lossy, l: l }; }
+// Check of one encoded block: decode it again and compare with the codec bytes (text with a lone surrogate: strict text comparison).
+async function cloudBlockChk(r, text) { try {
+    if (r.lossy)
+        return await cloudDecompress(r.enc + CLOUD_DELTA_SEP, 5) === text;
+    const b = cloudAnyDec(r.enc);
+    return cloudBytesEq(r.l ? await cloudLzDecBytes(b) : await cloudGunzBytes(b), r.fa);
+}
+catch {
+    return !1;
+} }
+// Verified + memoised block encoder: a block whose text did not change is neither re-compressed nor re-verified
+// (both are the main CPU cost of a backup); a new block is decoded again and must give back exactly its source text.
+// Returns the encoded block WITH its terminator ("#" gzip / "%" LZMA). A failed LZMA check falls back to gzip.
+async function cloudBlockEncV(text, wide, lz) { const k = (wide ? "w" : "b") + (lz ? "z" : "") + cloudHashStr(text), memo = window.__mkBlkMemo || (window.__mkBlkMemo = new Map), hit = memo.get(k); if (hit) {
+    memo.delete(k), memo.set(k, hit);
+    return hit;
+} let r = await cloudBlockEncRaw(text, wide, lz), ok = await cloudBlockChk(r, text); if (!ok && r.l)
+    r = await cloudBlockEncRaw(text, wide, !1), ok = await cloudBlockChk(r, text); if (!ok)
+    throw new Error("delta-block-verify"); const out = r.enc + (r.l ? CLOUD_DELTA_SEPL : CLOUD_DELTA_SEP); for (; memo.size > 900;)
+    memo.delete(memo.keys().next().value); memo.set(k, out); return out; }
 // Group-size estimate (encoded chars per raw char). It is kept stable on purpose (learned value, changes only when
 // it drifts by more than 20%) because it decides where groups are cut.
 function cloudDRatioKey(wide) { return "mk_dratio_" + (wide ? "w" : "b") + "_v1"; }
@@ -21494,6 +21545,23 @@ catch { } }
 // low bits zero; hard cap 130%). Editing a note therefore only changes its own group (a neighbour at worst) instead of
 // shifting every group after it. Folders / pins / tombstones / lists live in the tail so the first group is not
 // touched by them, and a small tail is merged with the timestamp so a normal backup writes one chunk less.
+// Content-defined packing. The decoder joins every chunk and splits at the block terminators, so chunk borders carry no meaning.
+// The encoded stream is cut into small segments at positions that depend only on the text around them (rolling hash of the last
+// ~30 characters, ~120 characters per segment); a chunk is cut at exactly one full chunk (no wasted space), except that some
+// segment ends ("strong", 1 in 16) close a chunk once it is >= 75% full. That keeps chunks ~95% full (fewer keys) while an edit
+// still only changes the chunks around it: the cuts re-synchronise at the next strong end.
+function cloudCdcCut(str) { const MAXC = CLOUD_CHUNK_SIZE, segs = []; let st = 0, h = 0; for (let i = 0; i < str.length; i++) {
+    h = (h << 1) + Math.imul(str.charCodeAt(i), 2654435761) | 0;
+    let x = Math.imul(h ^ h >>> 15, 2246822507);
+    x ^= x >>> 13, x = Math.imul(x, 3266489909), x ^= x >>> 16;
+    const len = i - st + 1;
+    if (len >= 1500 || len >= 20 && (x >>> 8) % 100 === 0)
+        segs.push({ e: i + 1, strong: len < 1500 && (x >>> 3 & 31) < 2 }), st = i + 1;
+} st < str.length && segs.push({ e: str.length, strong: !0 }); const out = []; let bs = 0; for (const sg of segs) {
+    for (; sg.e - bs > MAXC;)
+        out.push(str.slice(bs, bs + MAXC)), bs += MAXC;
+    sg.strong && sg.e - bs >= MAXC * .75 && (out.push(str.slice(bs, sg.e)), bs = sg.e);
+} bs < str.length && out.push(str.slice(bs)); return out; }
 async function cloudDeltaBuild(all, c) { if (!cloudPackOn() || typeof DecompressionStream > "u" || typeof crypto > "u" || !crypto.subtle)
     return null; const wide = !!c.wide, CH = CLOUD_CHUNK_SIZE - 1, est = cloudDRatio(wide), hid = v => { let h = 2166136261; const t = String(v); for (let i = 0; i < t.length; i++)
     h = Math.imul(h ^ t.charCodeAt(i), 16777619); h ^= h >>> 15, h = Math.imul(h, 2246822507), h ^= h >>> 13; return h >>> 0; }, keyed = all.map(n => ({ n: n, h: hid(n.i), s: String(n.i) })).sort((a, b) => a.h - b.h || (a.s < b.s ? -1 : a.s > b.s ? 1 : 0)), sorted = keyed.map(k => k.n), FP = window.MU_FolderPins, head = '{"v":2,"notes":[', inner = JSON.stringify({ folders: c.customFolders, pinnedFolders: FP ? FP.list() : [], pinnedFoldersTs: FP && FP.ts ? FP.ts() : 0, vault: c.vaultRec || void 0, tombstones: c.tombstones, folderTombstones: c.folderTombstones, lists: window.MK_List ? window.MK_List.snapshot() : void 0 }).slice(1, -1), close = "]," + inner, parts = sorted.map((n, i) => (i ? "," : "") + JSON.stringify(n)), body = parts.join(""), hash = cloudHashStr(head + body + close), tsPiece = ',"ts":' + Date.now() + "}"; const full = head + body + close + tsPiece; try {
@@ -21503,15 +21571,14 @@ async function cloudDeltaBuild(all, c) { if (!cloudPackOn() || typeof Decompress
 }
 catch {
     return null;
-} const encGroup = async (strs) => { const enc = await cloudBlockEncV(strs.join(""), wide); if (enc.length > CH && strs.length > 1) {
+} const lzOn = cloudDLzOn(body.length), encGroup = async (strs) => { const enc = await cloudBlockEncV(strs.join(""), wide, lzOn); if (enc.length > CH * CLOUD_D_BF * 1.6 && strs.length > 1) {
     const m = strs.length >> 1;
     return (await encGroup(strs.slice(0, m))).concat(await encGroup(strs.slice(m)));
-} return [enc]; }; const avg = Math.max(1, body.length / Math.max(1, parts.length)), tgt = CH * .85 / est, M = Math.pow(2, Math.max(0, Math.round(Math.log2(Math.max(1, tgt * .35 / avg))))), pend = []; let rawSum = 0, cur = [head], curLen = head.length, curNotes = 0; const flush = () => { pend.push(cur), rawSum += curLen, cur = [], curLen = 0, curNotes = 0; }; for (let i = 0; i < parts.length; i++) {
+} return [enc]; }; const avg = Math.max(1, body.length / Math.max(1, parts.length)), tgt = CH * CLOUD_D_BF / est, M = Math.pow(2, Math.max(0, Math.round(Math.log2(Math.max(1, tgt * .35 / avg))))), pend = []; let rawSum = 0, cur = [head], curLen = head.length, curNotes = 0; const flush = () => { pend.push(cur), rawSum += curLen, cur = [], curLen = 0, curNotes = 0; }; for (let i = 0; i < parts.length; i++) {
     const p = parts[i];
     curNotes > 0 && (curLen + p.length > tgt * 1.3 || curLen >= tgt * .65 && (keyed[i].h & M - 1) === 0) && flush();
     cur.push(p), curLen += p.length, curNotes++;
-} cur.length && flush(); const tailStrs = close.length < 800 ? [close + tsPiece] : [close, tsPiece], encd = await cloudPool(pend.concat(tailStrs.map(t => [t])), 4, g => encGroup(g)), blocks = []; let encSum = 0; encd.forEach((encs, gi) => { blocks.push(...encs), gi < pend.length && (encSum += encs.reduce((sum, e) => sum + e.length, 0)); }); cloudDRatioLearn(wide, est, encSum / Math.max(1, rawSum)); const chunks = []; for (const b of blocks)
-    cloudSplitChunks(b + CLOUD_DELTA_SEP).forEach(x => chunks.push(x)); const joined = chunks.join(""), ids = await Promise.all(chunks.map(x => cloudHash12m(x))); return { delta: !0, wide: wide, joined: joined, chunks: chunks, ids: ids, hash: hash, totalNotes: sorted.length, skipped: 0, vaultSkipped: !!c.vaultSkipped }; }
+} cur.length && flush(); const tailStrs = close.length < 800 ? [close + tsPiece] : [close, tsPiece], encd = await cloudPool(pend.concat(tailStrs.map(t => [t])), 4, g => encGroup(g)), blocks = []; let encSum = 0; encd.forEach((encs, gi) => { blocks.push(...encs), gi < pend.length && (encSum += encs.reduce((sum, e) => sum + e.length, 0)); }); cloudDRatioLearn(wide, est, encSum / Math.max(1, rawSum)); const chunks = cloudCdcCut(blocks.join("")); const joined = chunks.join(""), ids = await Promise.all(chunks.map(x => cloudHash12m(x))); return { delta: !0, wide: wide, joined: joined, chunks: chunks, ids: ids, hash: hash, totalNotes: sorted.length, skipped: 0, vaultSkipped: !!c.vaultSkipped }; }
 async function cloudBuildPayload(maxChunks, lz, delta, wide, prevHash) { const all = categories.slice().sort((a, b) => (Date.parse(b.lastEdited) || 0) - (Date.parse(a.lastEdited) || 0)).map(item => { const persisted = getPersistedCategory(item); const totalNotes = { id: persisted.id, name: persisted.name, folder: persisted.folder, extraFolders: persisted.extraFolders || [], text: persisted.text, html: cloudStripImages(persisted.html), encrypted: persisted.encrypted, hint: persisted.hint, tags: persisted.tags, pinned: persisted.pinned, favorite: persisted.favorite, archived: persisted.archived, order: persisted.order, fontFamily: persisted.fontFamily, fontSize: persisted.fontSize, color: persisted.color, fakeContent: persisted.fakeContent, unlockAt: persisted.unlockAt, ghostUntil: persisted.ghostUntil, lastEdited: persisted.lastEdited, metaEditedAt: persisted.metaEditedAt }; return cloudPackOn() ? cloudPackNote(totalNotes) : totalNotes; }), totalNotes2 = all.length, customFolders = folders.filter(f => f !== DEFAULT_FOLDER), budget = CLOUD_CHUNK_SIZE * Math.max(1, maxChunks || MAX_CHUNKS_PER_BACKUP); let vaultRec = null, vaultSkipped = !1; try {
     window.MK?.vault?.sync && (vaultRec = await window.MK?.vault?.sync.getRecord());
 }
@@ -22436,7 +22503,7 @@ window.markhinDash_cloudRetryNow = markhinDash_cloudRetryNow;
 function mkAutoSaveInner() { const fa = currentLang === "fa", on = cloudAutoSaveOn(), title = fa ? "ذخیره خودکار پس از هر تغییر" : "Save automatically after every change", st = on ? fa ? "روشن" : "On" : fa ? "خاموش" : "Off", help = fa ? "وقتی روشن است، چند ثانیه بعد از هر تغییر در یادداشت‌ها (ساخت، ویرایش، حذف، تغییر پوشه و…) بکاپ خودکار در Cloud تلگرام به‌روز می‌شود. وقتی خاموش است هیچ ذخیره‌ی خودکاری انجام نمی‌شود؛ فقط وقتی خودت «🔄 فعال‌سازی / تعمیر سینک» یا «📤 ذخیره‌ی یک بکاپ جدید» را بزنی چیزی در Cloud نوشته می‌شود. این کلید فقط روی همین دستگاه اثر دارد و دریافت تغییرات دستگاه‌های دیگر را متوقف نمی‌کند." : "When on, a few seconds after every change to your notes (create, edit, delete, folder changes…) the auto backup in Telegram Cloud is updated. When off, nothing is saved automatically; Cloud is only written when you tap “🔄 Enable / fix auto sync” or “📤 Save a new backup” yourself. This switch only affects this device and does not stop receiving other devices’ changes.", warn = fa ? "با خاموش‌کردن، تغییرات تازه فقط روی همین دستگاه می‌مانند: اگر برنامه پاک شود یا اطلاعات دستگاه از بین برود، چیزی در Cloud برای بازیابی نیست و دستگاه‌های دیگر هم تغییرات این دستگاه را نمی‌بینند. برای امنیت یادداشت‌هایت پیشنهاد می‌شود روشن بماند. با روشن‌کردن دوباره، برنامه تلاش می‌کند تغییرات مانده را هم چند ثانیه بعد ذخیره کند." : "Turning this off keeps new changes on this device only: if the app is deleted or the device’s data is lost there is nothing in Cloud to restore, and other devices will not see this device’s changes. We recommend leaving it on to keep your notes safe. When you turn it back on, the app tries to save the pending changes a few seconds later."; return `<div class="mkc2-as"><div class="mkc2-as-top"><div class="mkc2-as-ttl"><div>💾 ${title}</div><div class="mkc2-as-st ${on ? "on" : "off"}">${mkEsc(st)}${on ? fa ? " (پیش‌فرض)" : " (default)" : ""}</div></div><button type="button" id="cloudAutoSaveSwitch" class="mkc2-sw" role="switch" aria-checked="${on ? "true" : "false"}" aria-label="${mkEsc(title)}" onclick="markhinDash_cloudToggleAutoSave()"><i></i></button></div><div class="mkc2-as-help">${mkEsc(help)}</div></div><div class="mk-warn-box" role="note" style="display:flex;align-items:flex-start;gap:10px;margin:0 0 10px;padding:10px 12px;border-radius:10px;border:1px solid rgba(255,193,7,.35);background:rgba(255,193,7,.10);font-size:12px;line-height:1.8"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#ffc107" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="flex:none;margin-top:3px"><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg><div dir="auto" style="min-width:0">${mkEsc(warn)}</div></div>`; }
 function mkAutoSaveBoxHtml() { return `<div id="cloudAutoSaveBox" dir="auto">${mkAutoSaveInner()}</div>`; }
 // "Auto backup compression" card (Auto backup tab): delta (default) / gzip / LZMA
-function mkAutoCompBoxHtml() { const fa = currentLang === "fa", cur = mkAutoCompGet(), opt = (v, t) => `<option value="${v}"${cur === v ? " selected" : ""}>${t}</option>`; return `<div class="mkc2-comp" dir="auto" id="cloudAutoCompBox"><label for="cloudAutoCompSel" style="display:block;font-size:12px;font-weight:600;margin:0 0 6px">🗜 ${fa ? "نوع فشرده‌سازی بکاپ خودکار" : "Auto backup compression"}</label><select id="cloudAutoCompSel" onchange="mkAutoCompSet(this.value)" style="display:block;width:100%;box-sizing:border-box;height:40px;padding:0 10px;margin:0 0 8px;font-size:12px;font-family:inherit;color:inherit;background:var(--k-s1);border:.5px solid var(--k-l1);border-radius:10px">${opt("delta", fa ? "سریع — دلتا (پیش‌فرض)" : "Fast — delta (default)")}${opt("gzip", fa ? "gzip (فشرده)" : "gzip (compact)")}${opt("lzma", fa ? "LZMA (فشرده‌ترین — کندتر)" : "LZMA (smallest — slower)")}</select><div style="font-size:11.5px;line-height:1.8;opacity:.85">${fa ? `<b>دلتا — پیش‌فرض:</b> همان روش فعلی؛ فقط قطعه‌های تغییرکرده نوشته می‌شود، پس سریع و سبک است.<br><b>gzip (فشرده):</b> هر بار یک نسخه‌ی کامل و مستقل با gzip ذخیره می‌شود. متن با کدگذار فارسی کوچک‌تر می‌شود و اگر Cloud تلگرام اجازه بدهد قطعه‌ها حدود ۲ برابر پرتر بسته‌بندی می‌شوند، پس حجم و تعداد کلید خیلی کمتر از دلتا می‌شود. هر نوشتن کامل بازخوانی و با چک‌سام بررسی می‌شود.<br><b>LZMA (فشرده‌ترین):</b> همان نسخه‌ی کامل ولی با LZMA در قوی‌ترین سطحِ عملی (برای یادداشت‌های کم‌حجم سطح ۹، برای حجم بیشتر سطح پایین‌تر)؛ کمترین حجم و بیشترین یادداشت در Cloud، ولی کندتر است و CPU و باتری بیشتری می‌خورد. اگر بیشتر از ۴۵ ثانیه طول بکشد یا حجم از حدود ۱٫۵ میلیون نویسه بیشتر باشد، همان بار با gzip ذخیره می‌شود.<br>ℹ️ وقتی بکاپ خودکار روی gzip یا LZMA است، حالت دلتا برای بکاپ دستی غیرفعال (کمرنگ) می‌شود و بکاپ دستی روی gzip می‌رود؛ با برگشتن بکاپ خودکار به دلتا، بکاپ دستی هم دوباره دلتا می‌شود.<br>با تغییر این گزینه، نسخه‌ی ابری همان لحظه با فرمت جدید دوباره نوشته می‌شود. گزینه فقط روی همین دستگاه اثر دارد ولی همه‌ی دستگاه‌ها هر سه فرمت را می‌خوانند و ادغام می‌کنند. دستگاهی که نسخه‌ی قدیمی‌تر برنامه را دارد ممکن است بکاپ gzip/LZMA فشرده را «ناخوانا» ببیند؛ برنامه را روی همه‌ی دستگاه‌ها به‌روز کن.` : `<b>Delta — default:</b> the current method; only changed chunks are written, so it is fast and light.<br><b>gzip (compact):</b> every save writes one full, standalone gzip copy. The text goes through the Persian codec first and, if Telegram Cloud allows it, chunks are packed about 2x denser, so the size and key count are much lower than with delta. Every full write is read back and checked with a checksum.<br><b>LZMA (smallest):</b> the same full copy with LZMA at the strongest practical level (level 9 for small data, lower for bigger data); the smallest size and the most notes in Cloud, but slower and heavier on CPU and battery. If it takes longer than 45 seconds or the data is over about 1.5 million characters, that save uses gzip instead.<br>ℹ️ While the auto backup is gzip or LZMA, delta is disabled (greyed out) for the manual backup and the manual backup moves to gzip; when the auto backup goes back to delta, the manual backup returns to delta too.<br>Changing this rewrites the Cloud copy in the new format right away. The choice only affects this device, but every device reads and merges all three formats. A device running an older version of the app may show a compact gzip/LZMA backup as “unreadable”; update the app on all devices.`}</div></div>`; }
+function mkAutoCompBoxHtml() { const fa = currentLang === "fa", cur = mkAutoCompGet(), opt = (v, t) => `<option value="${v}"${cur === v ? " selected" : ""}>${t}</option>`; return `<div class="mkc2-comp" dir="auto" id="cloudAutoCompBox"><label for="cloudAutoCompSel" style="display:block;font-size:12px;font-weight:600;margin:0 0 6px">🗜 ${fa ? "نوع فشرده‌سازی بکاپ خودکار" : "Auto backup compression"}</label><select id="cloudAutoCompSel" onchange="mkAutoCompSet(this.value)" style="display:block;width:100%;box-sizing:border-box;height:40px;padding:0 10px;margin:0 0 8px;font-size:12px;font-family:inherit;color:inherit;background:var(--k-s1);border:.5px solid var(--k-l1);border-radius:10px">${opt("delta", fa ? "سریع — دلتا (پیش‌فرض)" : "Fast — delta (default)")}${opt("gzip", fa ? "gzip (فشرده)" : "gzip (compact)")}${opt("lzma", fa ? "LZMA (فشرده‌ترین — کندتر)" : "LZMA (smallest — slower)")}</select><div style="font-size:11.5px;line-height:1.8;opacity:.85">${fa ? `<b>دلتا — پیش‌فرض:</b> همان روش فعلی؛ فقط قطعه‌های تغییرکرده نوشته می‌شود، پس سریع و سبک است. بلوک‌ها با LZMA (اگر کوچک‌تر شود) و قطعه‌بندی فشرده ذخیره می‌شوند، پس کلید کمتری مصرف می‌کند.<br><b>gzip (فشرده):</b> هر بار یک نسخه‌ی کامل و مستقل با gzip ذخیره می‌شود. متن با کدگذار فارسی کوچک‌تر می‌شود و اگر Cloud تلگرام اجازه بدهد قطعه‌ها حدود ۲ برابر پرتر بسته‌بندی می‌شوند، پس حجم و تعداد کلید خیلی کمتر از دلتا می‌شود. هر نوشتن کامل بازخوانی و با چک‌سام بررسی می‌شود.<br><b>LZMA (فشرده‌ترین):</b> همان نسخه‌ی کامل ولی با LZMA در قوی‌ترین سطحِ عملی (برای یادداشت‌های کم‌حجم سطح ۹، برای حجم بیشتر سطح پایین‌تر)؛ کمترین حجم و بیشترین یادداشت در Cloud، ولی کندتر است و CPU و باتری بیشتری می‌خورد. اگر بیشتر از ۴۵ ثانیه طول بکشد یا حجم از حدود ۱٫۵ میلیون نویسه بیشتر باشد، همان بار با gzip ذخیره می‌شود.<br>ℹ️ وقتی بکاپ خودکار روی gzip یا LZMA است، حالت دلتا برای بکاپ دستی غیرفعال (کمرنگ) می‌شود و بکاپ دستی روی gzip می‌رود؛ با برگشتن بکاپ خودکار به دلتا، بکاپ دستی هم دوباره دلتا می‌شود.<br>با تغییر این گزینه، نسخه‌ی ابری همان لحظه با فرمت جدید دوباره نوشته می‌شود. گزینه فقط روی همین دستگاه اثر دارد ولی همه‌ی دستگاه‌ها هر سه فرمت را می‌خوانند و ادغام می‌کنند. دستگاهی که نسخه‌ی قدیمی‌تر برنامه را دارد ممکن است بکاپ gzip/LZMA فشرده را «ناخوانا» ببیند؛ برنامه را روی همه‌ی دستگاه‌ها به‌روز کن.` : `<b>Delta — default:</b> the current method; only changed chunks are written, so it is fast and light. Blocks use LZMA (when smaller) and tight chunk packing, so it uses fewer keys.<br><b>gzip (compact):</b> every save writes one full, standalone gzip copy. The text goes through the Persian codec first and, if Telegram Cloud allows it, chunks are packed about 2x denser, so the size and key count are much lower than with delta. Every full write is read back and checked with a checksum.<br><b>LZMA (smallest):</b> the same full copy with LZMA at the strongest practical level (level 9 for small data, lower for bigger data); the smallest size and the most notes in Cloud, but slower and heavier on CPU and battery. If it takes longer than 45 seconds or the data is over about 1.5 million characters, that save uses gzip instead.<br>ℹ️ While the auto backup is gzip or LZMA, delta is disabled (greyed out) for the manual backup and the manual backup moves to gzip; when the auto backup goes back to delta, the manual backup returns to delta too.<br>Changing this rewrites the Cloud copy in the new format right away. The choice only affects this device, but every device reads and merges all three formats. A device running an older version of the app may show a compact gzip/LZMA backup as “unreadable”; update the app on all devices.`}</div></div>`; }
 function markhinDash_cloudToggleAutoSave() { const fa = currentLang === "fa", turnOn = !cloudAutoSaveOn(); try {
     localStorage.setItem("mk_cloud_autosave_v1", turnOn ? "1" : "0");
 }
@@ -24369,8 +24436,8 @@ function renderContents(filtered = getVisibleCategories()) {
                     <input type="text"
                            id="mc-title-${item.id}"
                            class="mc-title-input"
-                           value="${isHidden ? generateMask() : escapeHtml(item.name || "")}"
-                           placeholder="${escapeHtml(t.titleFieldPlaceholder || t.rename)}"
+                           value="${isHidden ? generateMask() : escapeHtml(/^\s*(یادداشت بدون عنوان|Untitled note)\s*$/.test(item.name || "") ? "" : item.name || "")}"
+                           placeholder="${escapeHtml(isHidden ? t.titleFieldPlaceholder || t.rename : currentLang === "fa" ? "عنوان یادداشت" : "Note title")}"
                            maxlength="120"
                            style="${mkTitleStyle(item)}"
                            ${item.isDecoy || isHidden ? "disabled" : ""}
@@ -29200,15 +29267,15 @@ document.addEventListener("DOMContentLoaded", () => { initAdvancedSystems(); });
     // renderContents()/addFeatureTools()).
     // Keep the note's tab label in sync as the title is typed.
     function mcLiveTitle(id, value) { const item = HX().categories.find(c => String(c.id) === String(id)); if (!item)
-        return; item.name = value; const tab = document.querySelector('.custom-btn[data-note-id="' + id + '"]'), titleEl = tab ? tab.querySelector(".note-item-title") : null; if (titleEl) {
+        return; item.name = String(value || "").trim() ? value : (HX().currentLang === "fa" ? "یادداشت بدون عنوان" : "Untitled note"); const tab = document.querySelector('.custom-btn[data-note-id="' + id + '"]'), titleEl = tab ? tab.querySelector(".note-item-title") : null; if (titleEl) {
         const lockIcon = HX().isNoteLocked(item) ? "🔒 " : "", pinIcon = item.pinned ? "📌 " : "", favIcon = item.favorite ? "⭐ " : "", decoyIcon = item.fakeContent ? "🎭 " : "";
-        titleEl.innerHTML = HX().escapeHtml(lockIcon) + (window.mu_flagIconsList || MK.flagIcons)(item) + HX().escapeHtml(decoyIcon + (value || ""));
+        titleEl.innerHTML = HX().escapeHtml(lockIcon) + (window.mu_flagIconsList || MK.flagIcons)(item) + HX().escapeHtml(decoyIcon + item.name);
     } }
     function mcCommitTitle(id) { const item = HX().categories.find(c => String(c.id) === String(id)); if (!item)
         return;
         // mcLiveTitle() above already overwrites item.name on every keystroke, so by the time this
         // onchange fires the pre-edit title is gone from item.name itself
-        const title = String(item.name || "").trim() || (HX().currentLang === "fa" ? "یادداشت بدون عنوان" : "Untitled note"), titleFieldEl = document.getElementById("mc-title-" + id), origName = titleFieldEl ? titleFieldEl.dataset.mcOrig : void 0; origName && origName !== title && (item.lastEdited = new Date().toUTCString()), item.name = title, HX().saveToLocalStorage(), titleFieldEl && (titleFieldEl.value = item.name, titleFieldEl.dataset.mcOrig = item.name); const tab = document.querySelector('.custom-btn[data-note-id="' + id + '"]'), titleEl = tab ? tab.querySelector(".note-item-title") : null; if (titleEl) {
+        const title = String(item.name || "").trim() || (HX().currentLang === "fa" ? "یادداشت بدون عنوان" : "Untitled note"), titleFieldEl = document.getElementById("mc-title-" + id), origName = titleFieldEl ? titleFieldEl.dataset.mcOrig : void 0; origName !== void 0 && (origName || (HX().currentLang === "fa" ? "یادداشت بدون عنوان" : "Untitled note")) !== title && (item.lastEdited = new Date().toUTCString()), item.name = title, HX().saveToLocalStorage(), titleFieldEl && (titleFieldEl.value = item.name === (HX().currentLang === "fa" ? "یادداشت بدون عنوان" : "Untitled note") ? "" : item.name, titleFieldEl.dataset.mcOrig = titleFieldEl.value); const tab = document.querySelector('.custom-btn[data-note-id="' + id + '"]'), titleEl = tab ? tab.querySelector(".note-item-title") : null; if (titleEl) {
         const lockIcon = HX().isNoteLocked(item) ? "🔒 " : "", pinIcon = item.pinned ? "📌 " : "", favIcon = item.favorite ? "⭐ " : "", decoyIcon = item.fakeContent ? "🎭 " : "";
         titleEl.innerHTML = HX().escapeHtml(lockIcon) + (window.mu_flagIconsList || MK.flagIcons)(item) + HX().escapeHtml(decoyIcon + item.name);
     } }
