@@ -21126,10 +21126,19 @@ function cloudFaDec(bytes) { const length = bytes.length, output = new Uint8Arra
 } return new TextDecoder().decode(output.subarray(0, outIndex)); }
 async function cloudEncBytes(password, data) { const salt = crypto.getRandomValues(new Uint8Array(NOTE_SALT_BYTES)), iv = crypto.getRandomValues(new Uint8Array(NOTE_IV_BYTES)), key = await noteDeriveKey(password, salt), encrypted = await crypto.subtle.encrypt({ name: NOTE_AES_ALGORITHM, iv: iv }, key, data); return { v: 2, s: noteBytesToBase64(salt), i: noteBytesToBase64(iv), d: cloudB85Enc(new Uint8Array(encrypted)) }; }
 async function cloudDecBytes(password, payload) { const key = await noteDeriveKey(password, noteBase64ToBytes(payload.s)), decrypted = await crypto.subtle.decrypt({ name: NOTE_AES_ALGORITHM, iv: noteBase64ToBytes(payload.i) }, key, cloudB85Dec(payload.d)); return new Uint8Array(decrypted); }
-function cloudEncInner(password, data, version) { return version >= 2 ? cloudEncBytes(password, cloudB85Dec(data)) : encryptNotePayload(password, data, ""); }
+function cloudEncInner(password, data, version) { return version >= 2 ? cloudEncBytes(password, cloudAnyDec(data)) : encryptNotePayload(password, data, ""); }
 async function cloudDecInner(password, payload) { return payload && payload.v === 2 && payload.d ? cloudB85Enc(await cloudDecBytes(password, payload)) : (await decryptNotePayload(password, payload)).html; }
 // Manual backup method: "delta" (default, fast: same chunks as the auto backup), "gzip" (always a full gzip backup), "lzma".
-function mkManualCompGet() { try {
+// Auto backup method (this device only): "delta" (default, the content-addressed chunks), "gzip" or "lzma": one full, standalone,
+// strongly compressed copy (see cloudCompress). Other devices read all three formats.
+function mkAutoCompGet() { try {
+    const v = localStorage.getItem("mk_auto_comp_v1");
+    return v === "gzip" || v === "lzma" ? v : "delta";
+}
+catch {
+    return "delta";
+} }
+function mkManualCompStored() { try {
     const v2 = localStorage.getItem("mk_manual_comp_v2");
     if (v2 === "delta" || v2 === "gzip" || v2 === "lzma")
         return v2;
@@ -21138,23 +21147,74 @@ function mkManualCompGet() { try {
 catch {
     return "delta";
 } }
-window.mkManualCompSet = function (mode) { try {
-    localStorage.setItem("mk_manual_comp_v2", mode === "lzma" ? "lzma" : mode === "gzip" ? "gzip" : "delta");
+// What a manual backup really uses. "delta" shares its chunks with the auto backup, so it only makes sense while the auto
+// backup is delta too; while the auto backup is gzip / LZMA a stored "delta" counts as "gzip".
+function mkManualCompGet() { const m = mkManualCompStored(); return m === "delta" && mkAutoCompGet() !== "delta" ? "gzip" : m; }
+// Mode an index entry was written in: "delta" (has a chunk list), else the mode stored in entry.am; older full entries are gzip.
+function mkEntryMode(e) { return !e ? "" : e.km ? "delta" : e.am === "lzma" ? "lzma" : "gzip"; }
+window.mkManualCompSet = function (mode) { mode = mode === "lzma" ? "lzma" : mode === "gzip" ? "gzip" : "delta"; mode === "delta" && mkAutoCompGet() !== "delta" && (mode = "gzip"); try {
+    localStorage.setItem("mk_manual_comp_v2", mode), localStorage.removeItem("mk_manual_forced_v1");
 }
-catch { } };
+catch { } const s = document.getElementById("cloudCompSel"); s && s.value !== mode && (s.value = mode); };
+// Auto backup mode switch. gzip / LZMA => the manual backup moves from delta to gzip (delta is greyed out there) and remembers that
+// it was moved; back to delta => the manual backup returns to delta (only if it was moved by this switch).
+window.mkAutoCompSet = function (mode) { const fa = currentLang === "fa"; mode = mode === "lzma" ? "lzma" : mode === "gzip" ? "gzip" : "delta"; const prev = mkAutoCompGet(); let manualMoved = !1, manualBack = !1; try {
+    const wasDelta = mkManualCompStored() === "delta", forced = localStorage.getItem("mk_manual_forced_v1") === "1";
+    localStorage.setItem("mk_auto_comp_v1", mode);
+    if (mode !== "delta") {
+        if (wasDelta)
+            localStorage.setItem("mk_manual_comp_v2", "gzip"), localStorage.setItem("mk_manual_forced_v1", "1"), manualMoved = !0;
+    }
+    else if (forced)
+        localStorage.setItem("mk_manual_comp_v2", "delta"), localStorage.removeItem("mk_manual_forced_v1"), manualBack = !0;
+}
+catch { }
+if (mkAutoCompGet() !== mode) {
+    showToast(fa ? "❌ ذخیره‌ی تنظیم ممکن نشد؛ دوباره امتحان کن." : "❌ Could not save the setting; try again.", 3200);
+    try {
+        mkBkRefreshPanel();
+    }
+    catch { }
+    return;
+}
+try {
+    mkBkRefreshPanel();
+}
+catch { }
+if (mode === prev)
+    return;
+const nm = mode === "delta" ? fa ? "دلتا" : "Delta" : mode === "gzip" ? "gzip" : "LZMA";
+showToast((fa ? `✅ بکاپ خودکار روی ${nm} تنظیم شد.` : `✅ Auto backup set to ${nm}.`) + (manualMoved ? fa ? " بکاپ دستی هم روی gzip رفت (دلتا غیرفعال شد)." : " The manual backup moved to gzip (delta is disabled)." : manualBack ? fa ? " بکاپ دستی هم دوباره دلتا شد." : " The manual backup is back on delta." : ""), 4800);
+// Write the Cloud copy in the new format now (the usual safety checks still apply)
+try {
+    cloudAutoSaveOn() && scheduleCloudBackup(!0);
+}
+catch { }
+};
+// LZMA level follows the input size: the strongest level for small inputs, lower ones for big inputs so a phone is not busy for minutes.
+function cloudLzmaLevel(n) { return n <= 2e5 ? 9 : n <= 6e5 ? 7 : 5; }
+// Compressed bytes arrive either as base85 (ASCII) or "wide" (14 bits per CJK character, first char >= CLOUD_W_BASE).
+function cloudAnyDec(s) { s = String(s); return s.length && s.charCodeAt(0) >= CLOUD_W_BASE ? cloudW14Dec(s) : cloudB85Dec(s); }
 // Compress: gzip by default; LZMA only if requested (and <= 1.5M chars, library loaded, finished within 45 s,
 // round-trip verified). Any LZMA problem falls back to gzip and sets window.__mkLzmaWhy (timeout / large / nolib
 // / verify / error) for the toast. If compression doesn't shrink the text, it is stored uncompressed.
-async function cloudCompress(str, lz) { if (lz)
+// `wide` stores the compressed bytes at 14 bits per character instead of ~6.4 (base85): ~2.2x fewer chunks. The caller only
+// asks for it after cloudWideOk(); a wide result is always decoded again and compared before it is returned.
+async function cloudCompress(str, lz, wide) { if (lz)
     window.__mkLzmaWhy = ""; if (typeof CompressionStream > "u")
-    return { data: str, compressed: !1 }; try {
-    if (lz && window.MK_LZMA && str.length <= 15e5) {
+    return { data: str, compressed: !1 }; const enc = bytes => wide ? cloudW14Enc(bytes) : cloudB85Enc(bytes); try {
+    // a recent LZMA timeout / failure on an input this size: skip LZMA for a while instead of burning 45 s of CPU on every save
+    const bad = window.__mkLzmaBad;
+    if (lz && bad && Date.now() - bad.t < 6e5 && str.length >= bad.n * .9) {
+        window.__mkLzmaWhy = bad.why;
+    }
+    else if (lz && window.MK_LZMA && str.length <= 15e5) {
         const faBytes = cloudFaEnc(str), inp = new Array(faBytes.length + 1);
         inp[0] = 0;
         for (let i = 0; i < faBytes.length; i++)
             inp[i + 1] = faBytes[i];
         const lzmaOutput = await new Promise((res, rej) => { let dn = 0; const tm = setTimeout(() => { dn = 1; rej(new Error("lzma-timeout")); }, 45e3); try {
-            window.MK_LZMA.compress(inp, 3, (result, er) => { if (dn)
+            window.MK_LZMA.compress(inp, cloudLzmaLevel(faBytes.length), (result, er) => { if (dn)
                 return; dn = 1; clearTimeout(tm); er || !result ? rej(er || new Error("lzma")) : res(result); });
         }
         catch (error) {
@@ -21163,7 +21223,7 @@ async function cloudCompress(str, lz) { if (lz)
         } }), compressedBytes = new Uint8Array(lzmaOutput.length);
         for (let j = 0; j < lzmaOutput.length; j++)
             compressedBytes[j] = lzmaOutput[j];
-        const str2 = cloudB85Enc(compressedBytes);
+        const str2 = enc(compressedBytes);
         if (str2.length < str.length) {
             let vok = !1;
             try {
@@ -21179,12 +21239,23 @@ async function cloudCompress(str, lz) { if (lz)
         window.__mkLzmaWhy = window.MK_LZMA ? "large" : "nolib";
 }
 catch (ex) {
-    window.__mkLzmaWhy = ex && /timeout/.test(String(ex.message)) ? "timeout" : "error";
+    window.__mkLzmaWhy = ex && /timeout/.test(String(ex.message)) ? "timeout" : "error", window.__mkLzmaBad = { n: str.length, t: Date.now(), why: window.__mkLzmaWhy };
 } try {
     const cs = new CompressionStream("gzip"), writer = cs.writable.getWriter();
     writer.write(cloudFaEnc(str)), writer.close();
-    const buf = await new Response(cs.readable).arrayBuffer(), b64 = cloudB85Enc(new Uint8Array(buf));
-    return b64.length < str.length ? { data: b64, compressed: 3 } : { data: str, compressed: !1 };
+    const buf = await new Response(cs.readable).arrayBuffer(), b64 = enc(new Uint8Array(buf));
+    if (!(b64.length < str.length))
+        return { data: str, compressed: !1 };
+    if (wide) {
+        let vok = !1;
+        try {
+            vok = await cloudDecompress(b64, 3) === str;
+        }
+        catch { }
+        if (!vok)
+            return await cloudCompress(str, !1, !1);
+    }
+    return { data: b64, compressed: 3 };
 }
 catch {
     return { data: str, compressed: !1 };
@@ -21210,7 +21281,7 @@ async function cloudDecompress(b64, mode) { if (mode === 5 || mode === 6) {
     try {
         if (!window.MK_LZMA)
             return null;
-        const ds = cloudB85Dec(b64), arr = new Array(ds.length);
+        const ds = cloudAnyDec(b64), arr = new Array(ds.length);
         for (let i = 0; i < ds.length; i++)
             arr[i] = ds[i] << 24 >> 24;
         const decompressed = await new Promise((res, rej) => { window.MK_LZMA.decompress(arr, (result, er) => { er || !result ? rej(er || new Error("lzma")) : res(result); }); });
@@ -21226,7 +21297,7 @@ async function cloudDecompress(b64, mode) { if (mode === 5 || mode === 6) {
     }
 } try {
     const ds = new DecompressionStream("gzip"), writer = ds.writable.getWriter();
-    writer.write(mode >= 2 ? cloudB85Dec(b64) : cloudBase64ToBytes(b64)), writer.close();
+    writer.write(mode >= 2 ? cloudAnyDec(b64) : cloudBase64ToBytes(b64)), writer.close();
     const buf = await new Response(ds.readable).arrayBuffer();
     return mode === 3 ? cloudFaDec(new Uint8Array(buf)) : new TextDecoder().decode(buf);
 }
@@ -21365,9 +21436,8 @@ catch {
     cur.push(p), curLen += p.length, curNotes++;
 } cur.length && await flush(); cloudDRatioLearn(wide, est, encSum / Math.max(1, rawSum)); for (const t of close.length < 800 ? [close + tsPiece] : [close, tsPiece])
     blocks.push(...await encGroup([t])); const chunks = []; for (const b of blocks)
-    cloudSplitChunks(b + CLOUD_DELTA_SEP).forEach(x => chunks.push(x)); const joined = chunks.join(""), ids = []; for (const x of chunks)
-    ids.push(await cloudHash12(x)); return { delta: !0, wide: wide, joined: joined, chunks: chunks, ids: ids, hash: hash, totalNotes: sorted.length, skipped: 0, vaultSkipped: !!c.vaultSkipped }; }
-async function cloudBuildPayload(maxChunks, lz, delta, wide) { const all = categories.slice().sort((a, b) => (Date.parse(b.lastEdited) || 0) - (Date.parse(a.lastEdited) || 0)).map(item => { const persisted = getPersistedCategory(item); const totalNotes = { id: persisted.id, name: persisted.name, folder: persisted.folder, extraFolders: persisted.extraFolders || [], text: persisted.text, html: cloudStripImages(persisted.html), encrypted: persisted.encrypted, hint: persisted.hint, tags: persisted.tags, pinned: persisted.pinned, favorite: persisted.favorite, archived: persisted.archived, order: persisted.order, fontFamily: persisted.fontFamily, fontSize: persisted.fontSize, color: persisted.color, fakeContent: persisted.fakeContent, unlockAt: persisted.unlockAt, ghostUntil: persisted.ghostUntil, lastEdited: persisted.lastEdited, metaEditedAt: persisted.metaEditedAt }; return cloudPackOn() ? cloudPackNote(totalNotes) : totalNotes; }), totalNotes2 = all.length, customFolders = folders.filter(f => f !== DEFAULT_FOLDER), budget = CLOUD_CHUNK_SIZE * Math.max(1, maxChunks || MAX_CHUNKS_PER_BACKUP); let vaultRec = null, vaultSkipped = !1; try {
+    cloudSplitChunks(b + CLOUD_DELTA_SEP).forEach(x => chunks.push(x)); const joined = chunks.join(""), ids = await Promise.all(chunks.map(x => cloudHash12(x))); return { delta: !0, wide: wide, joined: joined, chunks: chunks, ids: ids, hash: hash, totalNotes: sorted.length, skipped: 0, vaultSkipped: !!c.vaultSkipped }; }
+async function cloudBuildPayload(maxChunks, lz, delta, wide, prevHash) { const all = categories.slice().sort((a, b) => (Date.parse(b.lastEdited) || 0) - (Date.parse(a.lastEdited) || 0)).map(item => { const persisted = getPersistedCategory(item); const totalNotes = { id: persisted.id, name: persisted.name, folder: persisted.folder, extraFolders: persisted.extraFolders || [], text: persisted.text, html: cloudStripImages(persisted.html), encrypted: persisted.encrypted, hint: persisted.hint, tags: persisted.tags, pinned: persisted.pinned, favorite: persisted.favorite, archived: persisted.archived, order: persisted.order, fontFamily: persisted.fontFamily, fontSize: persisted.fontSize, color: persisted.color, fakeContent: persisted.fakeContent, unlockAt: persisted.unlockAt, ghostUntil: persisted.ghostUntil, lastEdited: persisted.lastEdited, metaEditedAt: persisted.metaEditedAt }; return cloudPackOn() ? cloudPackNote(totalNotes) : totalNotes; }), totalNotes2 = all.length, customFolders = folders.filter(f => f !== DEFAULT_FOLDER), budget = CLOUD_CHUNK_SIZE * Math.max(1, maxChunks || MAX_CHUNKS_PER_BACKUP); let vaultRec = null, vaultSkipped = !1; try {
     window.MK?.vault?.sync && (vaultRec = await window.MK?.vault?.sync.getRecord());
 }
 catch {
@@ -21375,11 +21445,13 @@ catch {
 } vaultRec && JSON.stringify(vaultRec).length + 2e3 > budget * .6 && (vaultRec = null, vaultSkipped = !0);
 // The backup carries this device's tombstones, so a note deleted here also disappears on other devices
 // instead of the delete staying local.
-const tombstones = loadTombstones(), folderTombstones = loadFolderTombstones(), pack = async (list) => { const body = JSON.stringify({ v: cloudPackOn() ? 2 : 1, folders: customFolders, pinnedFolders: window.MU_FolderPins ? window.MU_FolderPins.list() : [], pinnedFoldersTs: window.MU_FolderPins && window.MU_FolderPins.ts ? window.MU_FolderPins.ts() : 0, notes: list, vault: vaultRec || void 0, tombstones: tombstones, folderTombstones: folderTombstones, lists: window.MK_List ? window.MK_List.snapshot() : void 0 }), raw = body.slice(0, -1) + ',"ts":' + Date.now() + "}", out = await cloudCompress(raw, lz); return out.body = body, out; }, fits = p => p.data.length <= budget; if (delta) {
+const tombstones = loadTombstones(), folderTombstones = loadFolderTombstones(), pack = async (list, useLz, probe) => { const body = JSON.stringify({ v: cloudPackOn() ? 2 : 1, folders: customFolders, pinnedFolders: window.MU_FolderPins ? window.MU_FolderPins.list() : [], pinnedFoldersTs: window.MU_FolderPins && window.MU_FolderPins.ts ? window.MU_FolderPins.ts() : 0, notes: list, vault: vaultRec || void 0, tombstones: tombstones, folderTombstones: folderTombstones, lists: window.MK_List ? window.MK_List.snapshot() : void 0 }), raw = body.slice(0, -1) + ',"ts":' + Date.now() + "}"; if (probe && prevHash && cloudHashStr(body) === prevHash)
+    return { unchanged: !0, data: "", compressed: 0, body: body }; const out = await cloudCompress(raw, useLz === void 0 ? lz : useLz, !delta && !!wide); return out.body = body, out; }, fits = p => p.data.length <= budget; if (delta) {
     const dr = await cloudDeltaBuild(all, { wide: !!wide, customFolders: customFolders, vaultRec: vaultRec, vaultSkipped: vaultSkipped, tombstones: tombstones, folderTombstones: folderTombstones });
     if (dr)
         return dr;
-} let included = all, skipped = 0, packed = await pack(included); if (!fits(packed) && included.length) {
+} let included = all, skipped = 0, packed = await pack(included, void 0, !0); if (packed.unchanged)
+    return { data: "", compressed: 0, skipped: 0, totalNotes: totalNotes2, vaultSkipped: vaultSkipped, hash: cloudHashStr(packed.body || ""), unchanged: !0 }; if (!fits(packed) && included.length) {
     // 1) A single note that can never fit must not sink the whole backup: leave just that one out. (rawLen
     // is an upper bound of its packed size.)
     const keep = [];
@@ -21388,16 +21460,28 @@ const tombstones = loadTombstones(), folderTombstones = loadFolderTombstones(), 
             keep.push(n);
             continue;
         }
-        fits(await pack([n])) ? keep.push(n) : skipped++;
+        fits(await pack([n], !1)) ? keep.push(n) : skipped++;
     }
     // 2) Binary-search the largest number of most-recent notes that fits.
-    if (included = keep, packed = await pack(included), !fits(packed) && included.length) {
+    if (included = keep, packed = keep.length === all.length ? packed : await pack(included), !fits(packed) && included.length) {
         let lo = 0, hi = included.length - 1, best = null;
         for (; lo < hi;) {
-            const mid = Math.ceil((lo + hi) / 2), p = await pack(included.slice(0, mid));
+            const mid = Math.ceil((lo + hi) / 2), p = await pack(included.slice(0, mid), !1);
             fits(p) ? (lo = mid, best = { k: mid, p: p }) : hi = mid - 1;
         }
-        skipped += included.length - lo, packed = best && best.k === lo ? best.p : await pack(included.slice(0, lo));
+        skipped += included.length - lo, packed = best && best.k === lo ? best.p : await pack(included.slice(0, lo), !1);
+        if (lz && lo > 0) {
+            // LZMA is smaller than gzip: pack the same notes with it, then take in more notes while they still fit
+            const p2 = await pack(included.slice(0, lo));
+            if (fits(p2)) {
+                packed = p2;
+                const grow = Math.min(included.length, Math.floor(lo * budget * .97 / Math.max(1, p2.data.length)));
+                if (grow > lo) {
+                    const p3 = await pack(included.slice(0, grow));
+                    fits(p3) && (packed = p3, skipped -= grow - lo);
+                }
+            }
+        }
     }
 } return { data: packed.data, compressed: packed.compressed, skipped: skipped, totalNotes: totalNotes2, vaultSkipped: vaultSkipped, hash: cloudHashStr(packed.body || "") }; }
 // Reads the `mk_idx` list of backup entries ({id, kind, ts, notes, skipped, chunks, c, len, pfx, label, enc,
@@ -22266,6 +22350,8 @@ window.markhinDash_cloudRetryNow = markhinDash_cloudRetryNow;
 // "Save automatically after every change" card (Auto backup tab)
 function mkAutoSaveInner() { const fa = currentLang === "fa", on = cloudAutoSaveOn(), title = fa ? "ذخیره خودکار پس از هر تغییر" : "Save automatically after every change", st = on ? fa ? "روشن" : "On" : fa ? "خاموش" : "Off", help = fa ? "وقتی روشن است، چند ثانیه بعد از هر تغییر در یادداشت‌ها (ساخت، ویرایش، حذف، تغییر پوشه و…) بکاپ خودکار در Cloud تلگرام به‌روز می‌شود. وقتی خاموش است هیچ ذخیره‌ی خودکاری انجام نمی‌شود؛ فقط وقتی خودت «🔄 فعال‌سازی / تعمیر سینک» یا «📤 ذخیره‌ی یک بکاپ جدید» را بزنی چیزی در Cloud نوشته می‌شود. این کلید فقط روی همین دستگاه اثر دارد و دریافت تغییرات دستگاه‌های دیگر را متوقف نمی‌کند." : "When on, a few seconds after every change to your notes (create, edit, delete, folder changes…) the auto backup in Telegram Cloud is updated. When off, nothing is saved automatically; Cloud is only written when you tap “🔄 Enable / fix auto sync” or “📤 Save a new backup” yourself. This switch only affects this device and does not stop receiving other devices’ changes.", warn = fa ? "با خاموش‌کردن، تغییرات تازه فقط روی همین دستگاه می‌مانند: اگر برنامه پاک شود یا اطلاعات دستگاه از بین برود، چیزی در Cloud برای بازیابی نیست و دستگاه‌های دیگر هم تغییرات این دستگاه را نمی‌بینند. برای امنیت یادداشت‌هایت پیشنهاد می‌شود روشن بماند. با روشن‌کردن دوباره، برنامه تلاش می‌کند تغییرات مانده را هم چند ثانیه بعد ذخیره کند." : "Turning this off keeps new changes on this device only: if the app is deleted or the device’s data is lost there is nothing in Cloud to restore, and other devices will not see this device’s changes. We recommend leaving it on to keep your notes safe. When you turn it back on, the app tries to save the pending changes a few seconds later."; return `<div class="mkc2-as"><div class="mkc2-as-top"><div class="mkc2-as-ttl"><div>💾 ${title}</div><div class="mkc2-as-st ${on ? "on" : "off"}">${mkEsc(st)}${on ? fa ? " (پیش‌فرض)" : " (default)" : ""}</div></div><button type="button" id="cloudAutoSaveSwitch" class="mkc2-sw" role="switch" aria-checked="${on ? "true" : "false"}" aria-label="${mkEsc(title)}" onclick="markhinDash_cloudToggleAutoSave()"><i></i></button></div><div class="mkc2-as-help">${mkEsc(help)}</div></div><div class="mk-warn-box" role="note" style="display:flex;align-items:flex-start;gap:10px;margin:0 0 10px;padding:10px 12px;border-radius:10px;border:1px solid rgba(255,193,7,.35);background:rgba(255,193,7,.10);font-size:12px;line-height:1.8"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#ffc107" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="flex:none;margin-top:3px"><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg><div dir="auto" style="min-width:0">${mkEsc(warn)}</div></div>`; }
 function mkAutoSaveBoxHtml() { return `<div id="cloudAutoSaveBox" dir="auto">${mkAutoSaveInner()}</div>`; }
+// "Auto backup compression" card (Auto backup tab): delta (default) / gzip / LZMA
+function mkAutoCompBoxHtml() { const fa = currentLang === "fa", cur = mkAutoCompGet(), opt = (v, t) => `<option value="${v}"${cur === v ? " selected" : ""}>${t}</option>`; return `<div class="mkc2-comp" dir="auto" id="cloudAutoCompBox"><label for="cloudAutoCompSel" style="display:block;font-size:12px;font-weight:600;margin:0 0 6px">🗜 ${fa ? "نوع فشرده‌سازی بکاپ خودکار" : "Auto backup compression"}</label><select id="cloudAutoCompSel" onchange="mkAutoCompSet(this.value)" style="display:block;width:100%;box-sizing:border-box;height:40px;padding:0 10px;margin:0 0 8px;font-size:12px;font-family:inherit;color:inherit;background:var(--k-s1);border:.5px solid var(--k-l1);border-radius:10px">${opt("delta", fa ? "سریع — دلتا (پیش‌فرض)" : "Fast — delta (default)")}${opt("gzip", fa ? "gzip (فشرده)" : "gzip (compact)")}${opt("lzma", fa ? "LZMA (فشرده‌ترین — کندتر)" : "LZMA (smallest — slower)")}</select><div style="font-size:11.5px;line-height:1.8;opacity:.85">${fa ? `<b>دلتا — پیش‌فرض:</b> همان روش فعلی؛ فقط قطعه‌های تغییرکرده نوشته می‌شود، پس سریع و سبک است.<br><b>gzip (فشرده):</b> هر بار یک نسخه‌ی کامل و مستقل با gzip ذخیره می‌شود. متن با کدگذار فارسی کوچک‌تر می‌شود و اگر Cloud تلگرام اجازه بدهد قطعه‌ها حدود ۲ برابر پرتر بسته‌بندی می‌شوند، پس حجم و تعداد کلید خیلی کمتر از دلتا می‌شود. هر نوشتن کامل بازخوانی و با چک‌سام بررسی می‌شود.<br><b>LZMA (فشرده‌ترین):</b> همان نسخه‌ی کامل ولی با LZMA در قوی‌ترین سطحِ عملی (برای یادداشت‌های کم‌حجم سطح ۹، برای حجم بیشتر سطح پایین‌تر)؛ کمترین حجم و بیشترین یادداشت در Cloud، ولی کندتر است و CPU و باتری بیشتری می‌خورد. اگر بیشتر از ۴۵ ثانیه طول بکشد یا حجم از حدود ۱٫۵ میلیون نویسه بیشتر باشد، همان بار با gzip ذخیره می‌شود.<br>ℹ️ وقتی بکاپ خودکار روی gzip یا LZMA است، حالت دلتا برای بکاپ دستی غیرفعال (کمرنگ) می‌شود و بکاپ دستی روی gzip می‌رود؛ با برگشتن بکاپ خودکار به دلتا، بکاپ دستی هم دوباره دلتا می‌شود.<br>با تغییر این گزینه، نسخه‌ی ابری همان لحظه با فرمت جدید دوباره نوشته می‌شود. گزینه فقط روی همین دستگاه اثر دارد ولی همه‌ی دستگاه‌ها هر سه فرمت را می‌خوانند و ادغام می‌کنند. دستگاهی که نسخه‌ی قدیمی‌تر برنامه را دارد ممکن است بکاپ gzip/LZMA فشرده را «ناخوانا» ببیند؛ برنامه را روی همه‌ی دستگاه‌ها به‌روز کن.` : `<b>Delta — default:</b> the current method; only changed chunks are written, so it is fast and light.<br><b>gzip (compact):</b> every save writes one full, standalone gzip copy. The text goes through the Persian codec first and, if Telegram Cloud allows it, chunks are packed about 2x denser, so the size and key count are much lower than with delta. Every full write is read back and checked with a checksum.<br><b>LZMA (smallest):</b> the same full copy with LZMA at the strongest practical level (level 9 for small data, lower for bigger data); the smallest size and the most notes in Cloud, but slower and heavier on CPU and battery. If it takes longer than 45 seconds or the data is over about 1.5 million characters, that save uses gzip instead.<br>ℹ️ While the auto backup is gzip or LZMA, delta is disabled (greyed out) for the manual backup and the manual backup moves to gzip; when the auto backup goes back to delta, the manual backup returns to delta too.<br>Changing this rewrites the Cloud copy in the new format right away. The choice only affects this device, but every device reads and merges all three formats. A device running an older version of the app may show a compact gzip/LZMA backup as “unreadable”; update the app on all devices.`}</div></div>`; }
 function markhinDash_cloudToggleAutoSave() { const fa = currentLang === "fa", turnOn = !cloudAutoSaveOn(); try {
     localStorage.setItem("mk_cloud_autosave_v1", turnOn ? "1" : "0");
 }
@@ -22359,6 +22445,10 @@ async function mkHealthImpl(H) { const fa = currentLang === "fa", idx = await cl
             it.why = fa ? "اندازه‌ی داده با فهرست نمی‌خواند" : "size does not match the index", items.push(it);
             continue;
         }
+        if (e.ck && cloudHashStr(raw) !== e.ck) {
+            it.why = fa ? "چک‌سام داده با فهرست نمی‌خواند" : "checksum does not match the index", items.push(it);
+            continue;
+        }
         if (e.enc) {
             if (!safeParseJSON(raw, null)) {
                 it.why = fa ? "ساختار رمزگذاری خراب است" : "encryption envelope is damaged", items.push(it);
@@ -22442,8 +22532,12 @@ async function cloudDeltaTry(idx, prevEntry, allowed, noWide) { try {
         return null;
     // the previous backup's old-chunk cleanup runs in the background; it must be finished before we decide
     // which chunks already exist (otherwise a chunk could be skipped and then deleted)
-    if (window.__mkCleanP)
-        await Promise.race([window.__mkCleanP, cloudSleep(8e3)]);
+    // Wait for the previous backup's background cleanup only when it is unsafe to go on: the cleanup also runs an
+    // orphan sweep, or its list of keys being deleted is unknown. Otherwise only the (rare) case that a chunk we
+    // want to skip is one of the keys being deleted is handled below, after the payload is built.
+    const __cp = window.__mkCleanP, __ci = window.__mkCleanInfo;
+    if (__cp && (!__ci || __ci.sweep || !__ci.keys))
+        await Promise.race([__cp, cloudSleep(8e3)]);
     // key listing runs while the payload is being compressed / hashed
     const haveP = cloudGetKeys(), wide = !noWide && await cloudWideOk();
     const lim = Math.min(allowed, CLOUD_DELTA_MAX), d = await cloudBuildPayload(lim, !1, !0, wide);
@@ -22458,8 +22552,16 @@ async function cloudDeltaTry(idx, prevEntry, allowed, noWide) { try {
             localStorage.setItem(CLOUD_W_KEY, JSON.stringify({ ok: 0, t: Date.now() }));
         }
         catch { } return r2 || r; };
+    // a chunk we would skip as "already in Cloud" that the previous cleanup deleted or is deleting (e.g. after an undo):
+    // wait for the cleanup to finish (it may already have) and write that chunk again; the key listing in haveP may
+    // have been taken while the cleanup was still running
+    let cleanSet = null;
+    if (__cp && __ci && __ci.keys && !__ci.sweep && d.ids.some(id => __ci.keys.has(CLOUD_DELTA_PFX + id))) {
+        await Promise.race([__cp, cloudSleep(8e3)]);
+        cleanSet = __ci.keys;
+    }
     const have = await haveP, haveSet = have ? new Set(have) : null, seen = new Set(), todo = [];
-    d.ids.forEach((id, i) => { const k = CLOUD_DELTA_PFX + id; seen.has(k) || (seen.add(k), (!haveSet || !haveSet.has(k)) && todo.push([k, d.chunks[i]])); });
+    d.ids.forEach((id, i) => { const k = CLOUD_DELTA_PFX + id; seen.has(k) || (seen.add(k), (!haveSet || !haveSet.has(k) || cleanSet && cleanSet.has(k)) && todo.push([k, d.chunks[i]])); });
     const keysNow = have ? have.length : CLOUD_RESERVED_KEYS + idx.reduce((s, e) => s + (e.chunks || 0), 0);
     if (keysNow + todo.length > 1e3)
         return null;
@@ -22502,7 +22604,7 @@ async function cloudDeltaTry(idx, prevEntry, allowed, noWide) { try {
         }
         // Every ~30 min: keys of delta chunks that no entry uses (left by an interrupted write) are removed, but only
         // when they were already unused at the previous sweep, so another device's in-flight write is never touched.
-        if (have && !nextIdx.some(e => e && e.bad) && (!window.__mkStrayXAt || Date.now() - window.__mkStrayXAt > 18e5)) {
+        if (__swRun) {
             window.__mkStrayXAt = Date.now();
             const ref = new Set(keep);
             nextIdx.forEach(e => { cloudEntryKeys(e).forEach(k => ref.add(k)), e.kk && ref.add(e.kk); });
@@ -22521,7 +22623,19 @@ async function cloudDeltaTry(idx, prevEntry, allowed, noWide) { try {
         }
     }
     catch { } };
-    const cp = cleanup().then(() => { window.__mkCleanP === cp && (window.__mkCleanP = null); });
+    const __prevP = window.__mkCleanP, __prevI = window.__mkCleanInfo;
+    let __ok = [], __sw = !0, __swRun = !1;
+    try {
+        __ok = prevFresh ? cloudEntryKeys(prevFresh).filter(k => !keep.has(k)) : [];
+        __swRun = !!(have && !nextIdx.some(e => e && e.bad) && (!window.__mkStrayXAt || Date.now() - window.__mkStrayXAt > 18e5)), __sw = __swRun;
+    }
+    catch {
+        __sw = !0, __swRun = !1;
+    }
+    const __carry = !!__prevP, __carryBad = __carry && (!__prevI || __prevI.sweep || !__prevI.keys);
+    const __info = { keys: new Set(__carry && __prevI && __prevI.keys ? Array.from(__prevI.keys).concat(__ok) : __ok), sweep: __sw || __carryBad };
+    window.__mkCleanInfo = __info;
+    const cp = Promise.resolve(__prevP).then(() => cleanup()).then(() => { window.__mkCleanP === cp && (window.__mkCleanP = null, window.__mkCleanInfo = null); });
     window.__mkCleanP = cp;
     return { ok: !0, meta: entry };
 }
@@ -22598,7 +22712,22 @@ catch (e) {
     console.warn("Manual delta backup error", e);
     return null;
 } }
-async function cloudBackupNowImpl(kind, label, password, hint) { kind = kind === "manual" ? "manual" : "auto"; const wantsEncryption = kind === "manual" && !!String(password || "").trim(), cleanPassword = wantsEncryption ? String(password).trim() : ""; if (!hasCloudStorage)
+// Wide packing (14 bits per character) is used for gzip / LZMA copies when Cloud accepts it (cloudWideOk). If such a write or its
+// read-back check fails, wide packing is switched off for a few hours and the same backup is retried once with plain base85.
+async function cloudBackupNowImpl(kind, label, password, hint) { window.__mkWideTried = !1; let r = await cloudBackupNowImpl0(kind, label, password, hint); if (r && !r.ok && window.__mkWideTried && (r.reason === "write-failed" || r.reason === "verify-failed")) {
+    try {
+        localStorage.setItem(CLOUD_W_KEY, JSON.stringify({ ok: 0, t: Date.now() }));
+    }
+    catch { }
+    window.__mkNoWideOnce = !0;
+    try {
+        r = await cloudBackupNowImpl0(kind, label, password, hint);
+    }
+    finally {
+        window.__mkNoWideOnce = !1;
+    }
+} return window.__mkWideTried = !1, r; }
+async function cloudBackupNowImpl0(kind, label, password, hint) { kind = kind === "manual" ? "manual" : "auto"; const wantsEncryption = kind === "manual" && !!String(password || "").trim(), cleanPassword = wantsEncryption ? String(password).trim() : ""; if (!hasCloudStorage)
     return { ok: !1, reason: "unavailable" };
 // Auto: first save the text still sitting in the open editor, so it is part of what gets built. Manual
 // backups need a manual count of at least 1.
@@ -22660,14 +22789,20 @@ if (kind === "manual" && !wantsEncryption && mkManualCompGet() === "delta") {
     catch { }
 } if (allowed < 1)
     return { ok: !1, reason: "no-space" };
-if (kind === "auto") {
+const __autoMode = kind === "auto" ? mkAutoCompGet() : "delta", __fullMode = kind === "manual" ? mkManualCompGet() : __autoMode;
+if (kind === "auto" && __autoMode === "delta") {
     const __dr = await cloudDeltaTry(idx, prevEntry, allowed);
     if (__dr)
         return __dr;
 }
+// gzip / LZMA copies are packed "wide" when Cloud accepts it; password-protected backups never are
+const __wide = !wantsEncryption && __fullMode !== "delta" && !window.__mkNoWideOnce && await cloudWideOk();
+__wide && (window.__mkWideTried = !0);
+// unchanged content (same fingerprint, same mode): the build stops before compressing anything
+const __prevHash = kind === "auto" && prevEntry && !prevEntry.km && prevEntry.h && mkEntryMode(prevEntry) === __fullMode ? prevEntry.h : "";
 // Encrypting the payload afterwards grows it (ciphertext + salt/iv/JSON wrapper), so when a password is set the
 // note budget is shrunk up front by that same margin.
-const payloadBudgetChunks = wantsEncryption ? Math.max(1, Math.floor(allowed / (cloudPackOn() ? 1.06 : CLOUD_ENC_OVERHEAD_FACTOR))) : allowed, { data: data, compressed: compressed, skipped: skipped, totalNotes: totalNotes, hash: hash, vaultSkipped: vaultSkipped } = await cloudBuildPayload(payloadBudgetChunks, kind === "manual" && mkManualCompGet() === "lzma"); if (kind === "manual" && mkManualCompGet() === "lzma" && compressed !== 4 && window.__mkLzmaWhy) {
+const payloadBudgetChunks = wantsEncryption ? Math.max(1, Math.floor(allowed / (cloudPackOn() ? 1.06 : CLOUD_ENC_OVERHEAD_FACTOR))) : allowed, { data: data, compressed: compressed, skipped: skipped, totalNotes: totalNotes, hash: hash, vaultSkipped: vaultSkipped } = await cloudBuildPayload(payloadBudgetChunks, __fullMode === "lzma", !1, __wide, __prevHash); if (kind === "manual" && __fullMode === "lzma" && compressed !== 4 && window.__mkLzmaWhy) {
     try {
         const __fa = currentLang === "fa", __w = window.__mkLzmaWhy, __r = __w === "timeout" ? (__fa ? "فشرده‌سازی LZMA بیش از 45 ثانیه طول کشید" : "LZMA compression took longer than 45 seconds") : __w === "large" ? (__fa ? "حجم داده برای LZMA زیاد است (بیش از حدود 1.5 میلیون نویسه)" : "the data is too large for LZMA (over about 1.5 million characters)") : __w === "nolib" ? (__fa ? "موتور LZMA در این دستگاه بارگذاری نشده" : "the LZMA engine is not available on this device") : __w === "verify" ? (__fa ? "بررسی صحت خروجی LZMA موفق نبود" : "the LZMA output failed the integrity check") : (__fa ? "LZMA با خطا مواجه شد" : "LZMA failed");
         showToast(__fa ? "⚠️ " + __r + "؛ خودکار با gzip ادامه می‌دهم و بکاپ ذخیره می‌شود." : "⚠️ " + __r + "; automatically continuing with gzip and saving the backup.", 7000);
@@ -22689,7 +22824,7 @@ if (totalNotes > 0 && totalNotes - skipped <= 0)
     return { ok: !1, reason: "too-large" };
 // Unchanged: the Cloud auto copy already holds exactly this state (same fingerprint and skipped count), e.g.
 // after a save that changed nothing or an undone edit. Nothing is written.
-if (kind === "auto" && prevEntry && hash && prevEntry.h === hash && prevEntry.chunks && (prevEntry.skipped || 0) === skipped)
+if (kind === "auto" && prevEntry && hash && prevEntry.h === hash && prevEntry.chunks && (prevEntry.skipped || 0) === skipped && (__autoMode === "delta" || mkEntryMode(prevEntry) === __autoMode))
     return window.__mkSeenAutoTs = prevEntry.ts || 0, { ok: !0, meta: prevEntry, unchanged: !0 };
 // Manual + password only: the (already compressed) payload is encrypted as a whole, with the same
 // PBKDF2-SHA-256 + AES-256-GCM engine notes use for their own password lock.
@@ -22723,12 +22858,12 @@ const keys = cloudBackupChunkKeys(pfx, chunks.length), rollback = async (n) => {
 // Read-back check BEFORE the index switches to the new copy: a copy that did not land intact is rolled back and
 // reported as a failure (the automatic retry then runs).
 mkBkSetFor(kind, { phase: "verifying" }); let verified = !1; try {
-    verified = await cloudVerifyWritten(keys, chunks, kind === "manual");
+    verified = await cloudVerifyWritten(keys, chunks, kind === "manual" || __autoMode !== "delta");
 }
 catch {
     verified = !1;
 } if (!verified)
-    return await rollback(keys.length), { ok: !1, reason: "verify-failed" }; mkBkSetFor(kind, { phase: "finalizing" }); const cleanLabel = kind === "manual" ? String(label || "").trim().slice(0, CLOUD_LABEL_MAX_LEN) : "", entry = { id: id, kind: kind, ts: Date.now(), notes: totalNotes - skipped, skipped: skipped, chunks: chunks.length, c: +compressed, len: storedData.length, label: cleanLabel }; if (wantsEncryption) {
+    return await rollback(keys.length), { ok: !1, reason: "verify-failed" }; mkBkSetFor(kind, { phase: "finalizing" }); const cleanLabel = kind === "manual" ? String(label || "").trim().slice(0, CLOUD_LABEL_MAX_LEN) : "", entry = { id: id, kind: kind, ts: Date.now(), notes: totalNotes - skipped, skipped: skipped, chunks: chunks.length, c: +compressed, len: storedData.length, label: cleanLabel, ck: cloudHashStr(storedData) }; __fullMode !== "delta" && (entry.am = __fullMode); if (wantsEncryption) {
     entry.enc = 1;
     const cleanHint = String(hint || "").trim().slice(0, CLOUD_HINT_MAX_LEN);
     cleanHint && (entry.hint = cleanHint);
@@ -22768,6 +22903,7 @@ catch {
     return null; const keys = cloudEntryKeys(entry), parts = await cloudGetItems(keys); if (keys.some(k => !parts[k]))
     // a missing chunk = unreadable, never a "best effort" partial restore
     return null; const raw = keys.map(k => parts[k]).join(""); if (entry.len && raw.length !== entry.len)
+    return null; if (entry.ck && cloudHashStr(raw) !== entry.ck)
     return null; let json; if (entry.enc) {
     if (!String(password || "").trim())
         return { meta: entry, needsPassword: !0 };
@@ -23096,7 +23232,7 @@ catch { } const keys = cloudBackupChunkKeys(newPfx, chunks.length); for (let i =
 catch {
     verified = !1;
 } if (!verified)
-    return await cloudRemoveItems(keys), { ok: !1, reason: "verify-failed" }; const r2 = await commit(e => (e.label = cleanLabel, e.chunks = chunks.length, e.len = storedData.length, e.km && (delete e.km, delete e.kk), newC && (e.c = newC), newPfx === id ? delete e.pfx : e.pfx = newPfx, mode === "set" ? (e.enc = 1, cleanHint ? e.hint = cleanHint : delete e.hint) : (delete e.enc, delete e.hint), e)); if (r2 === "missing" || !r2)
+    return await cloudRemoveItems(keys), { ok: !1, reason: "verify-failed" }; const r2 = await commit(e => (e.label = cleanLabel, e.chunks = chunks.length, e.len = storedData.length, e.km && (delete e.km, delete e.kk), delete e.ck, newC && (e.c = newC), newPfx === id ? delete e.pfx : e.pfx = newPfx, mode === "set" ? (e.enc = 1, cleanHint ? e.hint = cleanHint : delete e.hint) : (delete e.enc, delete e.hint), e)); if (r2 === "missing" || !r2)
     return await cloudRemoveItems(keys), { ok: !1, reason: r2 === "missing" ? "missing" : "write-failed" };
 // Only after the index points at the new copy: drop the old one.
 if (cloudEntryPrefix(r2) !== newPfx)
@@ -28647,6 +28783,7 @@ document.addEventListener("DOMContentLoaded", () => { initAdvancedSystems(); });
         cloudComputeRestoreDiff: function () { return cloudComputeRestoreDiff.apply(void 0, arguments); },
         cloudDeleteBackup: function () { return cloudDeleteBackup.apply(void 0, arguments); },
         cloudEditManualBackup: function () { return cloudEditManualBackup.apply(void 0, arguments); },
+        cloudEntryKeys: function () { return cloudEntryKeys.apply(void 0, arguments); },
         cloudGetKeys: function () { return cloudGetKeys.apply(void 0, arguments); },
         cloudIsLinked: function () { return cloudIsLinked.apply(void 0, arguments); },
         cloudListBackups: function () { return cloudListBackups.apply(void 0, arguments); },
@@ -28668,6 +28805,8 @@ document.addEventListener("DOMContentLoaded", () => { initAdvancedSystems(); });
         mkHealthBtnHtml: function () { return mkHealthBtnHtml.apply(void 0, arguments); },
         mkHealthResHtml: function () { return mkHealthResHtml.apply(void 0, arguments); },
         mkManualCompGet: function () { return mkManualCompGet.apply(void 0, arguments); },
+        mkAutoCompGet: function () { return mkAutoCompGet.apply(void 0, arguments); },
+        mkAutoCompBoxHtml: function () { return mkAutoCompBoxHtml.apply(void 0, arguments); },
         mkSyncStatusHtml: function () { return mkSyncStatusHtml.apply(void 0, arguments); },
         scheduleCloudBackup: function () { return scheduleCloudBackup.apply(void 0, arguments); },
         // Export & media
@@ -29934,8 +30073,8 @@ document.addEventListener("DOMContentLoaded", () => { initAdvancedSystems(); });
         // Real key usage, read from Telegram itself (CloudStorage.getKeys), shown at the bottom of the
         // Auto and the Manual panes. `keys` is the actual list of keys stored for this bot, or null if it
         // could not be read
-        function mu_cloudKeyUsageHtml(kind, keys, manualCount) { const fa = HX().currentLang === "fa", ico = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="flex:none;margin-top:4px"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"/><path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"/></svg>'; if (!Array.isArray(keys))
-            return `<div class="mk-key-usage" style="display:flex;align-items:flex-start;gap:8px;line-height:1.8">${ico}<div dir="auto" style="min-width:0">${fa ? "شمارش کلیدهای استفاده‌شده از تلگرام ممکن نشد؛ پنل را ببند و دوباره باز کن." : "Could not read the used-key count from Telegram; close and reopen the panel."}</div></div>`; const isAuto = k => k.indexOf(HX().CLOUD_BACKUP_PREFIX + "auto_") === 0 || k.indexOf(HX().CLOUD_BACKUP_PREFIX + "auto2_") === 0 || k === HX().CLOUD_META_KEY || k.indexOf(HX().CLOUD_CHUNK_PREFIX) === 0 && k !== HX().CLOUD_CONFIG_KEY && k.indexOf(HX().CLOUD_BACKUP_PREFIX) !== 0; let a = 0, m2 = 0; keys.forEach(k => { isAuto(k) ? a++ : k.indexOf(HX().CLOUD_BACKUP_PREFIX) === 0 && m2++; });
+        function mu_cloudKeyUsageHtml(kind, keys, manualCount, autoEntry) { const fa = HX().currentLang === "fa", ico = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="flex:none;margin-top:4px"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"/><path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"/></svg>'; if (!Array.isArray(keys))
+            return `<div class="mk-key-usage" style="display:flex;align-items:flex-start;gap:8px;line-height:1.8">${ico}<div dir="auto" style="min-width:0">${fa ? "شمارش کلیدهای استفاده‌شده از تلگرام ممکن نشد؛ پنل را ببند و دوباره باز کن." : "Could not read the used-key count from Telegram; close and reopen the panel."}</div></div>`; const isAuto = k => k.indexOf(HX().CLOUD_BACKUP_PREFIX + "auto_") === 0 || k.indexOf(HX().CLOUD_BACKUP_PREFIX + "auto2_") === 0 || k === HX().CLOUD_META_KEY || k.indexOf(HX().CLOUD_CHUNK_PREFIX) === 0 && k !== HX().CLOUD_CONFIG_KEY && k.indexOf(HX().CLOUD_BACKUP_PREFIX) !== 0; let autoSet = new Set; try { autoEntry && HX().cloudEntryKeys(autoEntry).forEach(k => autoSet.add(k)); } catch { } let a = 0, m2 = 0; keys.forEach(k => { isAuto(k) || autoSet.has(k) ? a++ : k.indexOf(HX().CLOUD_BACKUP_PREFIX) === 0 && m2++; });
 // Auto keys = auto / auto2 chunks (plus the legacy mk_meta / mk_c* keys); manual keys = every other mk_b_* key;
 // everything else is a helper key (backup index, shared config, list slot). LIM 1024 is Telegram's key limit, the
 // app's own cap is CLOUD_KEY_BUDGET (960).
@@ -29994,11 +30133,12 @@ const total = keys.length, cap = HX().MAX_CHUNKS_PER_BACKUP, LIM = 1024, budget 
             if (STRONG_LTR.test(c))
                 return 'dir="ltr"';
         } return 'dir="ltr"'; }
+        function mu_cloudFmtChip(e) { const m = e.km || +e.c === 5 || +e.c === 6 ? "Delta" : +e.c === 4 ? "LZMA" : +e.c >= 1 ? "gzip" : ""; return m ? `<span>🗜 ${m}</span>` : ""; }
         function mu_cloudBackupRowHtml(e, opts) {
             opts = opts || {};
             // Rough size next to the note count, so it's visible at a glance how much of a backup slot's
             // budget is used
-            const fa = HX().currentLang === "fa", manualIcon = e.enc ? "🔒" : "📌", label = e.kind === "auto" ? fa ? "🔄 آخرین وضعیت (خودکار)" : "🔄 Latest state (auto)" : e.label ? `${manualIcon} ${HX().escapeHtml(e.label)}` : `${manualIcon} ${mu_fmtCloudDate(e.ts)}`, labelDirAttr = e.kind !== "auto" && e.label ? mu_labelDirAttr(e.label) : 'dir="auto"', sizeText = mu_cloudEntrySizeText(e), usedKeys = e.chunks || 0, meta = `<span>${e.notes} ${fa ? "یادداشت" : "notes"}</span><span>${fa ? "حجم" : "Size"}: ${sizeText}</span><span>${usedKeys} ${fa ? "کلید" : "keys"}</span>${e.skipped ? `<span class="w">⚠️ ${e.skipped} ${fa ? "رد شد" : "skipped"}</span>` : ""}`, capKeys = Math.max(1, HX().MAX_CHUNKS_PER_BACKUP), pct = Math.min(100, Math.round(usedKeys / capKeys * 100)), barHtml = `<div class="mkc2-bar" aria-hidden="true"><i${pct >= 90 ? ' class="h"' : ""} style="width:${pct}%"></i></div><div dir="auto" class="mkc2-cap">${fa ? `${usedKeys} از ${capKeys} کلیدِ سهم هر بکاپ (${pct}%)` : `${usedKeys} of ${capKeys} keys in each backup's share (${pct}%)`}</div>`, editBtn = opts.allowDelete && e.kind === "manual" ? `<button type="button" class="btn-main" data-cloud-action="edit">✏️ ${fa ? "ویرایش" : "Edit"}</button>` : "", delBtn = opts.allowDelete ? `<button type="button" class="btn-main" data-cloud-action="delete">🗑 ${fa ? "حذف" : "Delete"}</button>` : "";
+            const fa = HX().currentLang === "fa", manualIcon = e.enc ? "🔒" : "📌", label = e.kind === "auto" ? fa ? "🔄 آخرین وضعیت (خودکار)" : "🔄 Latest state (auto)" : e.label ? `${manualIcon} ${HX().escapeHtml(e.label)}` : `${manualIcon} ${mu_fmtCloudDate(e.ts)}`, labelDirAttr = e.kind !== "auto" && e.label ? mu_labelDirAttr(e.label) : 'dir="auto"', sizeText = mu_cloudEntrySizeText(e), usedKeys = e.chunks || 0, meta = `<span>${e.notes} ${fa ? "یادداشت" : "notes"}</span><span>${fa ? "حجم" : "Size"}: ${sizeText}</span><span>${usedKeys} ${fa ? "کلید" : "keys"}</span>${mu_cloudFmtChip(e)}${e.skipped ? `<span class="w">⚠️ ${e.skipped} ${fa ? "رد شد" : "skipped"}</span>` : ""}`, capKeys = Math.max(1, HX().MAX_CHUNKS_PER_BACKUP), pct = Math.min(100, Math.round(usedKeys / capKeys * 100)), barHtml = `<div class="mkc2-bar" aria-hidden="true"><i${pct >= 90 ? ' class="h"' : ""} style="width:${pct}%"></i></div><div dir="auto" class="mkc2-cap">${fa ? `${usedKeys} از ${capKeys} کلیدِ سهم هر بکاپ (${pct}%)` : `${usedKeys} of ${capKeys} keys in each backup's share (${pct}%)`}</div>`, editBtn = opts.allowDelete && e.kind === "manual" ? `<button type="button" class="btn-main" data-cloud-action="edit">✏️ ${fa ? "ویرایش" : "Edit"}</button>` : "", delBtn = opts.allowDelete ? `<button type="button" class="btn-main" data-cloud-action="delete">🗑 ${fa ? "حذف" : "Delete"}</button>` : "";
             return `<div class="markhin-smart-item mkc2-row" data-backup-id="${HX().escapeHtml(e.id)}">
         <div class="mkc2-top"><b ${labelDirAttr}>${label}</b>${e.kind === "auto" || e.label ? `<span class="mkc2-date">${mu_fmtCloudDate(e.ts)}</span>` : ""}</div>
         <div class="mkc2-meta" dir="auto">${meta}</div>
@@ -30098,7 +30238,7 @@ const __busy = HX().mkBkBusy(); window.__mkPanelStale = __busy, __busy || await 
             }
             catch {
                 __realKeys = null;
-            } const __tab = window.__mkCloudTab === "manual" ? "manual" : "auto", __warnHtml = txt => `<div class="mk-warn-box" role="note" style="display:flex;align-items:flex-start;gap:10px;margin:0 0 10px;padding:10px 12px;border-radius:10px;border:1px solid rgba(255,193,7,.35);background:rgba(255,193,7,.10);font-size:12px;line-height:1.8"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#ffc107" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="flex:none;margin-top:3px"><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg><div dir="auto" style="min-width:0">${txt}</div></div>`, __tabIco = p => `<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="flex:none">${p}</svg>`, __tabBtn = (id, label) => `<button type="button" id="cloudTab_${id}" class="btn-main" onclick="markhinDash_cloudSwitchTab('${id}')" style="flex:1;min-width:0;display:inline-flex;align-items:center;justify-content:center;gap:6px;${__tab === id ? "outline:2px solid currentColor;font-weight:bold;" : "opacity:.7;"}">${label}</button>`, __tabsHtml = `<div id="cloudTabs" style="display:flex;gap:6px;margin:0 0 12px">${__tabBtn("auto", __tabIco('<path d="M21 12a9 9 0 1 1-3-6.7"/><polyline points="21 3 21 9 15 9"/>') + (fa ? "بکاپ خودکار" : "Auto backup"))}${__tabBtn("manual", __tabIco('<path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/>') + (fa ? "بکاپ دستی" : "Manual backup"))}</div>`; if (body.innerHTML = __warnHtml(fa ? "فقط متن و اطلاعات یادداشت‌ها بکاپ می‌شود؛ تصاویر و یادداشت‌های صوتی فقط روی همین دستگاه می‌مانند و در بکاپ نیستند. این بکاپ بین همه‌ی دستگاه‌هایی که همین ربات را در تلگرام باز کنی مشترک است." : "Only note text/metadata is backed up here — images and voice notes stay on this device and are not included. This backup is shared across every device where you open this bot in Telegram.") + __tabsHtml + `<div id="cloudPaneAuto" style="display:${__tab === "auto" ? "block" : "none"}"><div id="cloudAutoProg"></div>` + autoSectionHtml + `<div id="cloudFixProg"></div><div class="mkc2-pair"><button id="cloudFixAutoSyncBtn" type="button" class="btn-main" onclick="markhinDash_cloudFixAutoSync()">🔄 ${fa ? "فعال‌سازی / تعمیر سینک" : "Enable / fix auto sync"}</button></div><div class="mk-warn-box" role="note" style="display:flex;align-items:flex-start;gap:10px;margin:8px 0 10px;padding:10px 12px;border-radius:10px;border:1px solid rgba(255,193,7,.35);background:rgba(255,193,7,.10);font-size:12px;line-height:1.8"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#ffc107" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="flex:none;margin-top:3px"><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg><div dir="auto" style="min-width:0">${fa ? "این دکمه از یادداشت‌های همین دستگاه همین الان بکاپ می‌گیرد و سینک خودکار را روشن می‌کند. اگر یادداشت‌های این دستگاه کامل یا به‌روز نیست، اول بکاپ ابری را بازیابی کن." : "This button backs up this device’s notes right now and turns auto sync on. If this device’s notes are incomplete or out of date, restore the cloud backup first."}</div></div><div class="mkc2-sh">${fa ? "وضعیت سینک" : "Sync status"}</div>` + HX().mkSyncStatusHtml(autoEntry) + (autoBlocked ? `<p class="mkc2-block">${fa ? `🛡 در Cloud بکاپی با ${autoEntry.notes} یادداشت هست ولی روی این دستگاه ${HX().categories.length} یادداشت است؛ برای حفظ بکاپ، بکاپ خودکار رویش نوشته نمی‌شود. یکی از بکاپ‌ها را بازیابی کن (یا «ذخیره‌ی یک بکاپ جدید» را بزن).` : `🛡 The Cloud holds a backup of ${autoEntry.notes} notes but this device has ${HX().categories.length}; auto-backup won't overwrite it. Restore one of the backups (or press "Save a new backup").`}</p>` : "") + `<p class="mkc2-chip ${HX().cloudIsLinked() ? "on" : ""}">${HX().cloudIsLinked() ? fa ? "🔗 سینک خودکار بین دستگاه‌ها روی این دستگاه فعال است." : "🔗 Auto sync between devices is active on this device." : fa ? "⚪️ سینک خودکار هنوز روی این دستگاه فعال نشده — " + (HX().categories.length === 0 ? "چون این دستگاه یادداشتی ندارد، به‌محض وجود بکاپ در Cloud خودکار آن را می‌گیرد." : "این دستگاه منتظر بکاپ/بازیابی دستی می‌ماند.") + "" : "⚪️ Auto sync has not been enabled on this device yet — " + (HX().categories.length === 0 ? "since this device has no notes, it will take the Cloud backup by itself as soon as there is one." : "it will wait for a manual backup/restore.") + ""}</p><div class="mkc2-pair">${HX().mkHealthBtnHtml()}</div>` + HX().mkHealthResHtml() + `<div class="mkc2-sh">${fa ? "ذخیره خودکار" : "Auto-save"}</div>` + HX().mkAutoSaveBoxHtml() + mu_cloudParallelHtml() + mu_cloudKeyUsageHtml("auto", __realKeys, manualEntries.length) + `</div><div id="cloudPaneManual" style="display:${__tab === "manual" ? "block" : "none"}">` + mu_cloudSettingsHtml(manualEntries.length) + (manualEnabled ? `<div class="mkc2-sh">${fa ? "بکاپ جدید" : "New backup"}</div><div class="mkc2-comp"><input id="cloudBackupLabelInput" type="text" maxlength="${HX().CLOUD_LABEL_MAX_LEN}" placeholder="${fa ? "برچسب اختیاری (مثلاً «قبل از پاکسازی پوشه‌ی کار»)…" : 'Optional label (e.g. "before clearing the work folder")…'}" ><button id="cloudBackupBtn" type="button" class="btn-main btn-save-prominent" onclick="markhinDash_cloudBackupClick()">📤 ${fa ? "ذخیره‌ی یک بکاپ جدید" : "Save a new backup"}</button></div><div id="cloudManualProg"></div><div class="mkc2-comp" dir="auto"><label for="cloudCompSel" style="display:block;font-size:12px;font-weight:600;margin:0 0 6px">🗜 ${fa ? "نوع فشرده‌سازی بکاپ دستی" : "Manual backup compression"}</label><select id="cloudCompSel" onchange="mkManualCompSet(this.value)" style="display:block;width:100%;box-sizing:border-box;height:40px;padding:0 10px;margin:0 0 8px;font-size:12px;font-family:inherit;color:inherit;background:var(--k-s1);border:.5px solid var(--k-l1);border-radius:10px"><option value="delta"${HX().mkManualCompGet() === "delta" ? " selected" : ""}>${fa ? "سریع — دلتا (پیش‌فرض)" : "Fast — delta (default)"}</option><option value="gzip"${HX().mkManualCompGet() === "gzip" ? " selected" : ""}>gzip ${fa ? "(کامل)" : "(full)"}</option><option value="lzma"${HX().mkManualCompGet() === "lzma" ? " selected" : ""}>LZMA ${fa ? "(حجم کمتر — کندتر)" : "(smaller — slower)"}</option></select><div style="font-size:11.5px;line-height:1.8;opacity:.85">${fa ? `<b>سریع (دلتا) — پیش‌فرض:</b> مثل بکاپ خودکار؛ قطعه‌هایی که با بکاپ خودکار مشترک‌اند فقط یک بار ذخیره می‌شوند، پس معمولاً تقریباً فوری است و کلید اضافه مصرف نمی‌کند. اگر بکاپ بیشتر از حدود ۲۰۰ قطعه باشد یا جای کلید/ایندکس کم باشد، خودکار با gzip کامل ذخیره می‌شود و یک پیام نشان داده می‌شود. بکاپ رمزدار همیشه کامل ذخیره می‌شود.<br><b>gzip (کامل):</b> همیشه یک بکاپ کامل و مستقل با gzip می‌سازد؛ سبک و سازگار، ولی کندتر از حالت دلتا.<br><b>LZMA:</b> معمولاً حجم بکاپ کمتر می‌شود و یادداشت‌های بیشتری در فضای محدود Cloud جا می‌شود، ولی فشرده‌سازی کندتر است و CPU و باتری بیشتری مصرف می‌کند (روی گوشی‌های ضعیف و بکاپ‌های بزرگ محسوس است). اگر از حدود 1.5 میلیون نویسه بزرگ‌تر باشد یا بیشتر از 45 ثانیه طول بکشد، خودکار با gzip ذخیره می‌شود؛ هر خطای دیگرِ LZMA هم همین نتیجه را دارد و یک هشدار نشان داده می‌شود. ریسک: برای بازکردن این بکاپ، برنامه‌ی دستگاهِ مقصد باید نسخه‌ای باشد که LZMA را پشتیبانی می‌کند؛ در نسخه‌ی قدیمی‌تر ممکن است بکاپ «خراب/ناخوانا» نشان داده شود.<br>این انتخاب فقط برای بکاپ‌های دستیِ بعدی است؛ بکاپ‌های قبلی و بکاپ خودکار (همیشه gzip) تغییری نمی‌کنند.` : `<b>Fast (delta) — default:</b> like the auto backup; chunks shared with the auto backup are stored only once, so it is usually almost instant and uses almost no extra keys. If the backup is over about 200 chunks or there is not enough key/index room, it automatically saves a full gzip backup and shows a notice. Password-protected backups are always saved in full.<br><b>gzip (full):</b> always builds a complete, standalone gzip backup; light and compatible, but slower than delta.<br><b>LZMA:</b> usually a smaller backup, so more notes fit in the limited Cloud space, but compression is slower and uses more CPU and battery (noticeable on weak phones and big backups). Above about 1.5 million characters, or if it takes longer than 45 seconds, it automatically saves with gzip instead; any other LZMA failure does the same, and a warning is shown. Risk: to open such a backup, the app on the target device must be a version that supports LZMA; an older version may show it as "corrupted / unreadable".<br>This choice only applies to future manual backups; existing backups and the auto backup (always gzip) are not changed.`}</div></div><div class="mkc2-comp" dir="auto"><button type="button" class="btn-main" onclick="mkBkImportPick()" style="width:100%;margin:0 0 8px">📥 ${fa ? "وارد کردن بکاپ از فایل" : "Import a backup from file"}</button><div style="font-size:11.5px;line-height:1.8;opacity:.85">${fa ? "فایلی را که با «💾 دانلود فایل بکاپ» گرفته‌ای انتخاب کن؛ یادداشت‌های داخلش همان لحظه به برنامه اضافه می‌شوند (چیزی از یادداشت‌های فعلی‌ات حذف یا با نسخه‌ی قدیمی‌تر عوض نمی‌شود). یک نسخه از فایل هم به‌عنوان بکاپ دستی در همین حساب ذخیره می‌شود. بکاپ بی‌رمز داخل فایل خوانا است، پس فایل را امن نگه دار. اگر به سقف بکاپ دستی رسیده باشی، برای ذخیره‌ی نسخه‌ی بکاپ، قدیمی‌ترین بکاپ حذف می‌شود (قبلش تأیید می‌گیرد)." : "Pick a file you saved with “💾 Download backup file”; the notes inside are added to the app right away (nothing you already have is deleted or replaced by an older version). A copy of the file is also saved as a manual backup in this account. An unprotected backup is readable inside the file, so keep it safe. If you are at the manual-backup limit, saving the backup copy deletes the oldest backup (you are asked first)."}</div></div>` + (manualEntries.length >= HX().MAX_MANUAL_BACKUPS ? `<p class="mkc2-note">${fa ? `ℹ️ به سقف ${HX().MAX_MANUAL_BACKUPS} بکاپ دستی رسیده‌ای؛ ذخیره‌ی یک بکاپ جدید، قدیمی‌ترینشان را خودکار حذف می‌کند.` : `ℹ️ You're at the ${HX().MAX_MANUAL_BACKUPS}-backup limit; saving a new one will automatically remove the oldest.`}</p>` : "") + '<div id="cloudManualWhy" dir="auto" style="font-size:12px;line-height:1.7;opacity:.85;margin:-4px 0 10px"></div>' : `<p style="opacity:.7;margin:0 0 8px">${fa ? "ℹ️ بکاپ دستی الان غیرفعال است (تعداد روی 0 است)؛ تقریباً تمام فضای Cloud فقط به بکاپ خودکار اختصاص دارد. برای فعال‌کردنش، تعداد را در «⚙️ تنظیمات بکاپ» بالا زیاد کن." : 'ℹ️ Manual backups are off (set to 0); almost all the Cloud space goes to the auto backup alone. To turn them on, raise the number in "⚙️ Backup settings" above.'}</p>`) + (manualEnabled || manualEntries.length ? `<h4 style="margin:16px 0 6px;font-size:12.5px;opacity:.85">${fa ? `بکاپ‌های ذخیره‌شده (${manualEntries.length} از ${HX().MAX_MANUAL_BACKUPS})` : `Saved backups (${manualEntries.length} of ${HX().MAX_MANUAL_BACKUPS})`}${__manualTotalTxt}</h4>` + manualSectionHtml : "") + mu_cloudParallelHtml() + mu_cloudKeyUsageHtml("manual", __realKeys, manualEntries.length) + "</div>", __labelKeep) {
+            } const __tab = window.__mkCloudTab === "manual" ? "manual" : "auto", __warnHtml = txt => `<div class="mk-warn-box" role="note" style="display:flex;align-items:flex-start;gap:10px;margin:0 0 10px;padding:10px 12px;border-radius:10px;border:1px solid rgba(255,193,7,.35);background:rgba(255,193,7,.10);font-size:12px;line-height:1.8"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#ffc107" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="flex:none;margin-top:3px"><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg><div dir="auto" style="min-width:0">${txt}</div></div>`, __tabIco = p => `<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="flex:none">${p}</svg>`, __tabBtn = (id, label) => `<button type="button" id="cloudTab_${id}" class="btn-main" onclick="markhinDash_cloudSwitchTab('${id}')" style="flex:1;min-width:0;display:inline-flex;align-items:center;justify-content:center;gap:6px;${__tab === id ? "outline:2px solid currentColor;font-weight:bold;" : "opacity:.7;"}">${label}</button>`, __tabsHtml = `<div id="cloudTabs" style="display:flex;gap:6px;margin:0 0 12px">${__tabBtn("auto", __tabIco('<path d="M21 12a9 9 0 1 1-3-6.7"/><polyline points="21 3 21 9 15 9"/>') + (fa ? "بکاپ خودکار" : "Auto backup"))}${__tabBtn("manual", __tabIco('<path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/>') + (fa ? "بکاپ دستی" : "Manual backup"))}</div>`; if (body.innerHTML = __warnHtml(fa ? "فقط متن و اطلاعات یادداشت‌ها بکاپ می‌شود؛ تصاویر و یادداشت‌های صوتی فقط روی همین دستگاه می‌مانند و در بکاپ نیستند. این بکاپ بین همه‌ی دستگاه‌هایی که همین ربات را در تلگرام باز کنی مشترک است." : "Only note text/metadata is backed up here — images and voice notes stay on this device and are not included. This backup is shared across every device where you open this bot in Telegram.") + __tabsHtml + `<div id="cloudPaneAuto" style="display:${__tab === "auto" ? "block" : "none"}"><div id="cloudAutoProg"></div>` + autoSectionHtml + `<div id="cloudFixProg"></div><div class="mkc2-pair"><button id="cloudFixAutoSyncBtn" type="button" class="btn-main" onclick="markhinDash_cloudFixAutoSync()">🔄 ${fa ? "فعال‌سازی / تعمیر سینک" : "Enable / fix auto sync"}</button></div><div class="mk-warn-box" role="note" style="display:flex;align-items:flex-start;gap:10px;margin:8px 0 10px;padding:10px 12px;border-radius:10px;border:1px solid rgba(255,193,7,.35);background:rgba(255,193,7,.10);font-size:12px;line-height:1.8"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#ffc107" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="flex:none;margin-top:3px"><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg><div dir="auto" style="min-width:0">${fa ? "این دکمه از یادداشت‌های همین دستگاه همین الان بکاپ می‌گیرد و سینک خودکار را روشن می‌کند. اگر یادداشت‌های این دستگاه کامل یا به‌روز نیست، اول بکاپ ابری را بازیابی کن." : "This button backs up this device’s notes right now and turns auto sync on. If this device’s notes are incomplete or out of date, restore the cloud backup first."}</div></div><div class="mkc2-sh">${fa ? "وضعیت سینک" : "Sync status"}</div>` + HX().mkSyncStatusHtml(autoEntry) + (autoBlocked ? `<p class="mkc2-block">${fa ? `🛡 در Cloud بکاپی با ${autoEntry.notes} یادداشت هست ولی روی این دستگاه ${HX().categories.length} یادداشت است؛ برای حفظ بکاپ، بکاپ خودکار رویش نوشته نمی‌شود. یکی از بکاپ‌ها را بازیابی کن (یا «ذخیره‌ی یک بکاپ جدید» را بزن).` : `🛡 The Cloud holds a backup of ${autoEntry.notes} notes but this device has ${HX().categories.length}; auto-backup won't overwrite it. Restore one of the backups (or press "Save a new backup").`}</p>` : "") + `<p class="mkc2-chip ${HX().cloudIsLinked() ? "on" : ""}">${HX().cloudIsLinked() ? fa ? "🔗 سینک خودکار بین دستگاه‌ها روی این دستگاه فعال است." : "🔗 Auto sync between devices is active on this device." : fa ? "⚪️ سینک خودکار هنوز روی این دستگاه فعال نشده — " + (HX().categories.length === 0 ? "چون این دستگاه یادداشتی ندارد، به‌محض وجود بکاپ در Cloud خودکار آن را می‌گیرد." : "این دستگاه منتظر بکاپ/بازیابی دستی می‌ماند.") + "" : "⚪️ Auto sync has not been enabled on this device yet — " + (HX().categories.length === 0 ? "since this device has no notes, it will take the Cloud backup by itself as soon as there is one." : "it will wait for a manual backup/restore.") + ""}</p><div class="mkc2-pair">${HX().mkHealthBtnHtml()}</div>` + HX().mkHealthResHtml() + `<div class="mkc2-sh">${fa ? "ذخیره خودکار" : "Auto-save"}</div>` + HX().mkAutoSaveBoxHtml() + HX().mkAutoCompBoxHtml() + mu_cloudParallelHtml() + mu_cloudKeyUsageHtml("auto", __realKeys, manualEntries.length, autoEntry) + `</div><div id="cloudPaneManual" style="display:${__tab === "manual" ? "block" : "none"}">` + mu_cloudSettingsHtml(manualEntries.length) + (manualEnabled ? `<div class="mkc2-sh">${fa ? "بکاپ جدید" : "New backup"}</div><div class="mkc2-comp"><input id="cloudBackupLabelInput" type="text" maxlength="${HX().CLOUD_LABEL_MAX_LEN}" placeholder="${fa ? "برچسب اختیاری (مثلاً «قبل از پاکسازی پوشه‌ی کار»)…" : 'Optional label (e.g. "before clearing the work folder")…'}" ><button id="cloudBackupBtn" type="button" class="btn-main btn-save-prominent" onclick="markhinDash_cloudBackupClick()">📤 ${fa ? "ذخیره‌ی یک بکاپ جدید" : "Save a new backup"}</button></div><div id="cloudManualProg"></div><div class="mkc2-comp" dir="auto"><label for="cloudCompSel" style="display:block;font-size:12px;font-weight:600;margin:0 0 6px">🗜 ${fa ? "نوع فشرده‌سازی بکاپ دستی" : "Manual backup compression"}</label><select id="cloudCompSel" onchange="mkManualCompSet(this.value)" style="display:block;width:100%;box-sizing:border-box;height:40px;padding:0 10px;margin:0 0 8px;font-size:12px;font-family:inherit;color:inherit;background:var(--k-s1);border:.5px solid var(--k-l1);border-radius:10px"><option value="delta"${HX().mkManualCompGet() === "delta" ? " selected" : ""}${HX().mkAutoCompGet() !== "delta" ? ' disabled style="opacity:.45"' : ""}>${fa ? "سریع — دلتا (پیش‌فرض)" : "Fast — delta (default)"}${HX().mkAutoCompGet() !== "delta" ? fa ? " — غیرفعال (بکاپ خودکار دلتا نیست)" : " — disabled (auto backup is not delta)" : ""}</option><option value="gzip"${HX().mkManualCompGet() === "gzip" ? " selected" : ""}>gzip ${fa ? "(کامل)" : "(full)"}</option><option value="lzma"${HX().mkManualCompGet() === "lzma" ? " selected" : ""}>LZMA ${fa ? "(حجم کمتر — کندتر)" : "(smaller — slower)"}</option></select><div style="font-size:11.5px;line-height:1.8;opacity:.85">${fa ? `<b>سریع (دلتا) — پیش‌فرض:</b> مثل بکاپ خودکار؛ قطعه‌هایی که با بکاپ خودکار مشترک‌اند فقط یک بار ذخیره می‌شوند، پس معمولاً تقریباً فوری است و کلید اضافه مصرف نمی‌کند. اگر بکاپ بیشتر از حدود ۲۰۰ قطعه باشد یا جای کلید/ایندکس کم باشد، خودکار با gzip کامل ذخیره می‌شود و یک پیام نشان داده می‌شود. بکاپ رمزدار همیشه کامل ذخیره می‌شود.<br><b>gzip (کامل):</b> همیشه یک بکاپ کامل و مستقل با gzip می‌سازد؛ سبک و سازگار، ولی کندتر از حالت دلتا.<br><b>LZMA:</b> معمولاً حجم بکاپ کمتر می‌شود و یادداشت‌های بیشتری در فضای محدود Cloud جا می‌شود، ولی فشرده‌سازی کندتر است و CPU و باتری بیشتری مصرف می‌کند (روی گوشی‌های ضعیف و بکاپ‌های بزرگ محسوس است). اگر از حدود 1.5 میلیون نویسه بزرگ‌تر باشد یا بیشتر از 45 ثانیه طول بکشد، خودکار با gzip ذخیره می‌شود؛ هر خطای دیگرِ LZMA هم همین نتیجه را دارد و یک هشدار نشان داده می‌شود. ریسک: برای بازکردن این بکاپ، برنامه‌ی دستگاهِ مقصد باید نسخه‌ای باشد که LZMA را پشتیبانی می‌کند؛ در نسخه‌ی قدیمی‌تر ممکن است بکاپ «خراب/ناخوانا» نشان داده شود.<br>این انتخاب فقط برای بکاپ‌های دستیِ بعدی است؛ بکاپ‌های قبلی و بکاپ خودکار تغییری نمی‌کنند. حالت دلتا فقط وقتی فعال است که بکاپ خودکار هم روی دلتا باشد؛ با گذاشتن بکاپ خودکار روی gzip یا LZMA، بکاپ دستی خودکار روی gzip می‌رود و با برگشتن بکاپ خودکار به دلتا دوباره دلتا می‌شود.` : `<b>Fast (delta) — default:</b> like the auto backup; chunks shared with the auto backup are stored only once, so it is usually almost instant and uses almost no extra keys. If the backup is over about 200 chunks or there is not enough key/index room, it automatically saves a full gzip backup and shows a notice. Password-protected backups are always saved in full.<br><b>gzip (full):</b> always builds a complete, standalone gzip backup; light and compatible, but slower than delta.<br><b>LZMA:</b> usually a smaller backup, so more notes fit in the limited Cloud space, but compression is slower and uses more CPU and battery (noticeable on weak phones and big backups). Above about 1.5 million characters, or if it takes longer than 45 seconds, it automatically saves with gzip instead; any other LZMA failure does the same, and a warning is shown. Risk: to open such a backup, the app on the target device must be a version that supports LZMA; an older version may show it as "corrupted / unreadable".<br>This choice only applies to future manual backups; existing backups and the auto backup are not changed. Delta is only available while the auto backup is delta too; if you set the auto backup to gzip or LZMA, the manual backup moves to gzip, and it returns to delta when the auto backup goes back to delta.`}</div></div><div class="mkc2-comp" dir="auto"><button type="button" class="btn-main" onclick="mkBkImportPick()" style="width:100%;margin:0 0 8px">📥 ${fa ? "وارد کردن بکاپ از فایل" : "Import a backup from file"}</button><div style="font-size:11.5px;line-height:1.8;opacity:.85">${fa ? "فایلی را که با «💾 دانلود فایل بکاپ» گرفته‌ای انتخاب کن؛ یادداشت‌های داخلش همان لحظه به برنامه اضافه می‌شوند (چیزی از یادداشت‌های فعلی‌ات حذف یا با نسخه‌ی قدیمی‌تر عوض نمی‌شود). یک نسخه از فایل هم به‌عنوان بکاپ دستی در همین حساب ذخیره می‌شود. بکاپ بی‌رمز داخل فایل خوانا است، پس فایل را امن نگه دار. اگر به سقف بکاپ دستی رسیده باشی، برای ذخیره‌ی نسخه‌ی بکاپ، قدیمی‌ترین بکاپ حذف می‌شود (قبلش تأیید می‌گیرد)." : "Pick a file you saved with “💾 Download backup file”; the notes inside are added to the app right away (nothing you already have is deleted or replaced by an older version). A copy of the file is also saved as a manual backup in this account. An unprotected backup is readable inside the file, so keep it safe. If you are at the manual-backup limit, saving the backup copy deletes the oldest backup (you are asked first)."}</div></div>` + (manualEntries.length >= HX().MAX_MANUAL_BACKUPS ? `<p class="mkc2-note">${fa ? `ℹ️ به سقف ${HX().MAX_MANUAL_BACKUPS} بکاپ دستی رسیده‌ای؛ ذخیره‌ی یک بکاپ جدید، قدیمی‌ترینشان را خودکار حذف می‌کند.` : `ℹ️ You're at the ${HX().MAX_MANUAL_BACKUPS}-backup limit; saving a new one will automatically remove the oldest.`}</p>` : "") + '<div id="cloudManualWhy" dir="auto" style="font-size:12px;line-height:1.7;opacity:.85;margin:-4px 0 10px"></div>' : `<p style="opacity:.7;margin:0 0 8px">${fa ? "ℹ️ بکاپ دستی الان غیرفعال است (تعداد روی 0 است)؛ تقریباً تمام فضای Cloud فقط به بکاپ خودکار اختصاص دارد. برای فعال‌کردنش، تعداد را در «⚙️ تنظیمات بکاپ» بالا زیاد کن." : 'ℹ️ Manual backups are off (set to 0); almost all the Cloud space goes to the auto backup alone. To turn them on, raise the number in "⚙️ Backup settings" above.'}</p>`) + (manualEnabled || manualEntries.length ? `<h4 style="margin:16px 0 6px;font-size:12.5px;opacity:.85">${fa ? `بکاپ‌های ذخیره‌شده (${manualEntries.length} از ${HX().MAX_MANUAL_BACKUPS})` : `Saved backups (${manualEntries.length} of ${HX().MAX_MANUAL_BACKUPS})`}${__manualTotalTxt}</h4>` + manualSectionHtml : "") + mu_cloudParallelHtml() + mu_cloudKeyUsageHtml("manual", __realKeys, manualEntries.length, autoEntry) + "</div>", __labelKeep) {
             const li = document.getElementById("cloudBackupLabelInput");
             li && (li.value = __labelKeep);
         } __pendingLimit !== null && !isNaN(__pendingLimit) && __pendingLimit !== HX().MAX_MANUAL_BACKUPS && markhinDash_cloudPickLimit(__pendingLimit), HX().mkAutoBkPaint(), body.querySelectorAll("[data-backup-id]").forEach(row => { const id = row.dataset.backupId; row.querySelectorAll("[data-cloud-action]").forEach(btn => { const action = btn.dataset.cloudAction; btn.onclick = e => { e.stopPropagation(), action === "export" ? HX().mkBkExport(id) : action === "view" ? markhinDash_cloudViewBackup(id) : action === "restore" ? markhinDash_cloudRestoreClick(id) : action === "edit" ? markhinDash_cloudEditClick(id) : action === "delete" && markhinDash_cloudDeleteClick(id); }; }); }); }
