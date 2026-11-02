@@ -19884,17 +19884,18 @@ html:not(#_s5) body:not(#_s5) #foldersContainer,html:not(#_s5) body:not(#_s5) #b
             function P(e, r) { return e.Mc = r, e.Lc = 0, e.Yb = r.length, e; }
             function l(e) { return e.Lc >= e.Yb ? -1 : 255 & e.Mc[e.Lc++]; }
             function v(e, r, t, o) { return e.Lc >= e.Yb ? -1 : (o = Math.min(o, e.Yb - e.Lc), M(e.Mc, e.Lc, r, t, o), e.Lc += o, o); }
-            function B(e) { return e.Mc = t(32), e.Yb = 0, e; }
-            function S(e) { var r = e.Mc; return r.length = e.Yb, r; }
-            function g(e, r) { e.Mc[e.Yb++] = r << 24 >> 24; }
-            function k(e, r, t, o) { M(r, t, e.Mc, e.Yb, o), e.Yb += o; }
+            function B(e) { return e.Mc = new Int8Array(8192), e.Yb = 0, e; }
+            function Bz(e, n) { var m = new Int8Array(Math.max(2 * e.Mc.length, e.Yb + n)); m.set(e.Mc), e.Mc = m; }
+            function S(e) { return e.Mc.subarray(0, e.Yb); }
+            function g(e, r) { e.Yb >= e.Mc.length && Bz(e, 1), e.Mc[e.Yb++] = r; }
+            function k(e, r, t, o) { e.Yb + o > e.Mc.length && Bz(e, o), M(r, t, e.Mc, e.Yb, o), e.Yb += o; }
             function R(e, r, t, o, n) { var s; for (s = r; t > s; ++s)
                 o[n++] = e.charCodeAt(s); }
-            function M(e, r, t, o, n) { for (var s = 0; n > s; ++s)
+            function M(e, r, t, o, n) { if (n > 32 && t.set && e.subarray && e.length >= r + n) { t.set(e.subarray(r, r + n), o); return; } for (var s = 0; n > s; ++s)
                 t[o + s] = e[r + s]; }
-            function D(e, r) { Ar(r, 1 << e.s), r.n = e.f, Hr(r, e.m), r.eb = 0, r.fb = 3, r.Y = 2, r.y = 3; }
+            function D(e, r, n) { var s = e.s; if (n && n[1] === 0) { var d = 16; while (d < s && (1 << d) < n[0] + 1) ++d; s = d; } Ar(r, 1 << s), r.n = e.f, Hr(r, e.m), r.eb = 0, r.fb = 3, r.Y = 2, r.y = 3, r.cv = e.c || 0; }
             function b(r, t, o, n, i) { var _, a; if (s(n, At) < 0)
-                throw Error("invalid length " + n); for (r.Tb = n, _ = Dr({}), D(i, _), _.Gc = void 0 === e.disableEndMark, Gr(_, o), a = 0; 64 > a; a += 8)
+                throw Error("invalid length " + n); for (r.Tb = n, _ = Dr({}), D(i, _, n), _.Gc = void 0 === e.disableEndMark, Gr(_, o), a = 0; 64 > a; a += 8)
                 g(o, 255 & c(d(n, a))); r.yb = (_.W = 0, _.oc = t, _.pc = 0, Mr(_), _.d.Ab = o, Fr(_), wr(_), br(_), _.$.rb = _.n + 1 - 2, Qr(_.$, 1 << _.Y), _.i.rb = _.n + 1 - 2, Qr(_.i, 1 << _.Y), void (_.g = Gt), X({}, _)); }
             function w(e, r, t) { return e.Nb = B({}), b(e, P({}, r), e.Nb, a(r.length), t), e; }
             function E(e, r, t) { var o, n, s, i, _ = "", c = []; for (n = 0; 5 > n; ++n) {
@@ -19908,7 +19909,7 @@ html:not(#_s5) body:not(#_s5) #foldersContainer,html:not(#_s5) body:not(#_s5) #b
                 s = s.toString(16), 1 == s.length && (s = "0" + s), _ = s + "" + _;
             } /^0+$|^f+$/i.test(_) ? e.Tb = At : (i = parseInt(_, 16), e.Tb = i > 4294967295 ? At : a(i)), e.yb = nr(o, r, t, e.Tb); }
             function L(e, r) { return e.Nb = B({}), E(e, P({}, r), e.Nb), e; }
-            function y(e, r, o, n) { var s; e.Bc = r, e._b = o, s = r + o + n, (null == e.c || e.Kb != s) && (e.c = null, e.Kb = s, e.c = t(e.Kb)), e.H = e.Kb - o; }
+            function y(e, r, o, n) { var s; e.Bc = r, e._b = o, s = r + o + n, (null == e.c || e.Kb != s) && (e.c = null, e.Kb = s, e.c = new Uint8Array(e.Kb)), e.H = e.Kb - o; }
             function C(e, r) { return e.c[e.f + e.o + r]; }
             function z(e, r, t, o) { var n, s; for (e.T && e.o + r + o > e.h && (o = e.h - (e.o + r)), ++t, s = e.f + e.o + r, n = 0; o > n && e.c[s + n] == e.c[s + n - t]; ++n)
                 ; return n; }
@@ -19925,7 +19926,7 @@ html:not(#_s5) body:not(#_s5) #foldersContainer,html:not(#_s5) body:not(#_s5) #b
                     e.h += r, e.h >= e.o + e._b && (e.zb = e.h - e._b);
                 } }
             function O(e, r) { e.f += r, e.zb -= r, e.o -= r, e.h -= r; }
-            function A(e, r, o, n, s) { var i, _, a; 1073741567 > r && (e.Fc = 16 + (n >> 1), a = ~~((r + o + n + s) / 2) + 256, y(e, r + o, n + s, a), e.ob = n, i = r + 1, e.p != i && (e.L = t(2 * (e.p = i))), _ = 65536, e.qb && (_ = r - 1, _ |= _ >> 1, _ |= _ >> 2, _ |= _ >> 4, _ |= _ >> 8, _ >>= 1, _ |= 65535, _ > 16777216 && (_ >>= 1), e.Ec = _, ++_, _ += e.R), _ != e.rc && (e.ub = t(e.rc = _))); }
+            function A(e, r, o, n, s) { var i, _, a; 1073741567 > r && (e.Fc = 16 + (n >> 1), a = ~~((r + o + n + s) / 2) + 256, y(e, r + o, n + s, a), e.ob = n, i = r + 1, e.p != i && (e.L = new Int32Array(2 * (e.p = i))), _ = 65536, e.qb && (_ = r - 1, _ |= _ >> 1, _ |= _ >> 2, _ |= _ >> 4, _ |= _ >> 8, _ >>= 1, _ |= 65535, _ > 16777216 && (_ >>= 1), e.Ec = _, ++_, _ += e.R), _ != e.rc && (e.ub = new Int32Array(e.rc = _))); }
             function H(e, r) { var t, o, n, s, i, _, a, c, u, f, m, d, p, h, P, l, v, B, S, g, k; if (e.h >= e.o + e.ob)
                 h = e.ob;
             else if (h = e.h - e.o, e.xb > h)
@@ -19975,7 +19976,7 @@ html:not(#_s5) body:not(#_s5) #foldersContainer,html:not(#_s5) body:not(#_s5) #b
             } while (0 != --r); }
             function V(e, r, t) { var o = e.o - r - 1; for (0 > o && (o += e.M); 0 != t; --t)
                 o >= e.M && (o = 0), e.Lb[e.o++] = e.Lb[o++], e.o >= e.M && $(e); }
-            function j(e, r) { (null == e.Lb || e.M != r) && (e.Lb = t(r)), e.M = r, e.o = 0, e.h = 0; }
+            function j(e, r) { (null == e.Lb || e.M != r) && (e.Lb = new Int8Array(r)), e.M = r, e.o = 0, e.h = 0; }
             function $(e) { var r = e.o - e.h; r && (k(e.cc, e.Lb, e.h, r), e.o >= e.M && (e.o = 0), e.h = e.o); }
             function K(e, r) { var t = e.o - r - 1; return 0 > t && (t += e.M), e.Lb[t]; }
             function q(e, r) { e.Lb[e.o++] = r, e.o >= e.M && $(e); }
@@ -20080,7 +20081,7 @@ html:not(#_s5) body:not(#_s5) #foldersContainer,html:not(#_s5) body:not(#_s5) #b
                     }
                 }
             } }
-            function Mr(e) { var r, t; e.b || (r = {}, t = 4, e.X || (t = 2), Z(r, t), e.b = r), Ur(e.A, e.eb, e.fb), (e.ab != e.wb || e.Hb != e.n) && (A(e.b, e.ab, 4096, e.n, 274), e.wb = e.ab, e.Hb = e.n); }
+            function Mr(e) { var r, t; e.b || (r = {}, t = 4, e.X || (t = 2), Z(r, t), e.b = r), Ur(e.A, e.eb, e.fb), (e.ab != e.wb || e.Hb != e.n) && (A(e.b, e.ab, 4096, e.n, 274), e.wb = e.ab, e.Hb = e.n), e.cv && (e.b.Fc = e.cv); }
             function Dr(e) { var r; for (e.v = t(4), e.a = [], e.d = {}, e.C = t(192), e.bb = t(12), e.hb = t(12), e.Ub = t(12), e.vc = t(12), e._ = t(192), e.K = [], e.Sb = t(114), e.S = ft({}, 4), e.$ = qr({}), e.i = qr({}), e.A = {}, e.m = [], e.P = [], e.lb = [], e.nc = t(16), e.x = t(4), e.Q = t(4), e.Xb = [Gt], e.uc = [Gt], e.Kc = [0], e.fc = t(5), e.yc = t(128), e.vb = 0, e.X = 1, e.D = 0, e.Hb = -1, e.mb = 0, r = 0; 4096 > r; ++r)
                 e.a[r] = {}; for (r = 0; 4 > r; ++r)
                 e.K[r] = ft({}, 6); return e; }
@@ -20255,18 +20256,18 @@ html:not(#_s5) body:not(#_s5) #foldersContainer,html:not(#_s5) body:not(#_s5) #b
                 e.Bb = e.Bb << 8 | l(e.Ab); }
             function gt(e) { for (var r = e.length - 1; r >= 0; --r)
                 e[r] = 1024; }
-            function kt(e, r, t, s) { var i, _ = r[t]; i = (e.E >>> 11) * _, s ? (e.xc = o(e.xc, n(a(i), [4294967295, 0])), e.E -= i, r[t] = _ - (_ >>> 5) << 16 >> 16) : (e.E = i, r[t] = _ + (2048 - _ >>> 5) << 16 >> 16), -16777216 & e.E || (e.E <<= 8, bt(e)); }
+            function kt(e, r, t, s) { var i, _ = r[t]; i = (e.E >>> 11) * _, s ? (e.xc += i, e.E -= i, r[t] = _ - (_ >>> 5) << 16 >> 16) : (e.E = i, r[t] = _ + (2048 - _ >>> 5) << 16 >> 16), -16777216 & e.E || (e.E <<= 8, bt(e)); }
             function Rt(e, r, t) { for (var n = t - 1; n >= 0; --n)
-                e.E >>>= 1, 1 == (r >>> n & 1) && (e.xc = o(e.xc, a(e.E))), -16777216 & e.E || (e.E <<= 8, bt(e)); }
-            function Mt(e) { return o(o(a(e.Jb), e.mc), [4, 0]); }
-            function Dt(e) { e.mc = Gt, e.xc = Gt, e.E = -1, e.Jb = 1, e.Oc = 0; }
-            function bt(e) { var r, t = c(p(e.xc, 32)); if (0 != t || s(e.xc, [4278190080, 0]) < 0) {
-                e.mc = o(e.mc, a(e.Jb)), r = e.Oc;
+                e.E >>>= 1, 1 == (r >>> n & 1) && (e.xc += e.E), -16777216 & e.E || (e.E <<= 8, bt(e)); }
+            function Mt(e) { return [e.Jb + e.mc + 4, 0]; }
+            function Dt(e) { e.mc = 0, e.xc = 0, e.E = -1, e.Jb = 1, e.Oc = 0; }
+            function bt(e) { var r, t = e.xc >= 4294967296 ? 1 : 0; if (t != 0 || e.xc < 4278190080) {
+                e.mc += e.Jb, r = e.Oc;
                 do
                     g(e.Ab, r + t), r = 255;
                 while (0 != --e.Jb);
-                e.Oc = c(e.xc) >>> 24;
-            } ++e.Jb, e.xc = m(n(e.xc, [16777215, 0]), 8); }
+                e.Oc = (e.xc >>> 0) >>> 24;
+            } ++e.Jb, e.xc = (e.xc & 16777215) * 256; }
             function wt(e, r) { return Yt[(2047 & (e - r ^ -r)) >>> 2]; }
             function Et(e) {
                 for (var r, t, o, n = 0, s = 0, i = e.length, _ = [], a = []; i > n; ++n, ++s) {
@@ -20305,7 +20306,7 @@ html:not(#_s5) body:not(#_s5) #foldersContainer,html:not(#_s5) body:not(#_s5) #b
             function yt(e) { return e[1] + e[0]; }
             function Ct(e, t, o, n) { function s() { try {
                 for (var e, r = (new Date).getTime(); rr(a.c.yb);)
-                    if (i = yt(a.c.yb.Pb) / yt(a.c.Tb), (new Date).getTime() - r > 200)
+                    if (i = yt(a.c.yb.Pb) / yt(a.c.Tb), (new Date).getTime() - r > SL())
                         return n(i), Nt(s, 0), 0;
                 n(1), e = S(a.c.Nb), Nt(o.bind(null, e), 0);
             }
@@ -20323,7 +20324,7 @@ html:not(#_s5) body:not(#_s5) #foldersContainer,html:not(#_s5) body:not(#_s5) #b
             } Nt(s, 0); }
             function zt(e, t, o) { function n() { try {
                 for (var e, r = 0, i = (new Date).getTime(); rr(c.d.yb);)
-                    if (++r % 1e3 == 0 && (new Date).getTime() - i > 200)
+                    if (++r % 1e3 == 0 && (new Date).getTime() - i > SL())
                         return _ && (s = yt(c.d.yb.Z.g) / a, o(s)), Nt(n, 0), 0;
                 o(1), e = Et(S(c.d.Nb)), Nt(t.bind(null, e), 0);
             }
@@ -20339,7 +20340,7 @@ html:not(#_s5) body:not(#_s5) #foldersContainer,html:not(#_s5) body:not(#_s5) #b
             catch (f) {
                 return t(null, f);
             } Nt(n, 0); }
-            var Ft = 1, It = 2, xt = 3, Nt = "function" == typeof setImmediate ? setImmediate : setTimeout, Ot = 4294967296, At = [4294967295, -Ot], Ht = [0, -0x8000000000000000], Gt = [0, 0], Wt = [1, 0], Tt = function () { var e, r, t, o = []; for (e = 0; 256 > e; ++e) {
+            var Ft = 1, It = 2, xt = 3, Nt = function () { if ("function" == typeof setImmediate) return setImmediate; if ("function" == typeof MessageChannel) { var q = [], ch = new MessageChannel(); ch.port1.onmessage = function () { var f = q.shift(); f && f(); }; return function (f) { q.push(f), ch.port2.postMessage(0); }; } return setTimeout; }(), SL = function () { try { return document.hidden ? 1e3 : 80; } catch (x) { return 200; } }, Ot = 4294967296, At = [4294967295, -Ot], Ht = [0, -0x8000000000000000], Gt = [0, 0], Wt = [1, 0], Tt = function () { var e, r, t, o = []; for (e = 0; 256 > e; ++e) {
                 for (t = e, r = 0; 8 > r; ++r)
                     0 != (1 & t) ? t = t >>> 1 ^ -306674912 : t >>>= 1;
                 o[e] = t;
@@ -20347,7 +20348,7 @@ html:not(#_s5) body:not(#_s5) #foldersContainer,html:not(#_s5) body:not(#_s5) #b
                 for (r = 1 << (t >> 1) - 1, e = 0; r > e; ++e, ++o)
                     n[o] = t << 24 >> 24; return n; }(), Yt = function () { var e, r, t, o, n = []; for (r = 8; r >= 0; --r)
                 for (o = 1 << 9 - r - 1, e = 1 << 9 - r, t = o; e > t; ++t)
-                    n[t] = (r << 6) + (e - t << 6 >>> 9 - r - 1); return n; }(), Vt = function () { var e = [{ s: 16, f: 64, m: 0 }, { s: 20, f: 64, m: 0 }, { s: 19, f: 64, m: 1 }, { s: 20, f: 64, m: 1 }, { s: 21, f: 128, m: 1 }, { s: 22, f: 128, m: 1 }, { s: 23, f: 128, m: 1 }, { s: 24, f: 255, m: 1 }, { s: 25, f: 255, m: 1 }]; return function (r) { return e[r - 1] || e[6]; }; }();
+                    n[t] = (r << 6) + (e - t << 6 >>> 9 - r - 1); return n; }(), Vt = function () { var e = [{ s: 16, f: 64, m: 0 }, { s: 20, f: 64, m: 0 }, { s: 19, f: 64, m: 1 }, { s: 20, f: 64, m: 1 }, { s: 21, f: 128, m: 1 }, { s: 22, f: 128, m: 1 }, { s: 23, f: 128, m: 1 }, { s: 24, f: 255, m: 1 }, { s: 25, f: 255, m: 1 }, { s: 23, f: 128, m: 1, c: 48 }]; return function (r) { return e[r - 1] || e[6]; }; }();
             return "undefined" == typeof onmessage || "undefined" != typeof window && void 0 !== window.document || !function () { onmessage = function (r) { r && r.gc && (r.gc.action == It ? e.decompress(r.gc.gc, r.gc.cbn) : r.gc.action == Ft && e.compress(r.gc.gc, r.gc.Rc, r.gc.cbn)); }; }(), { compress: Ct, decompress: zt };
         }();
         this.LZMA = this.LZMA_WORKER = e;
@@ -21083,27 +21084,32 @@ function cloudBase64ToBytes(b64) { const binary = atob(b64), bytes = new Uint8Ar
 // 4 LZMA+Persian codec+base85 (manual backups only, chosen in the panel), 5 delta blocks (gzip + base85), 6 delta blocks that may be wide-packed (14 bits per char).
 const CLOUD_B85 = "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ!$()*+,-./:;=?@[]^_{|}~", CLOUD_B85_MAP = (() => { const charMap = Object.create(null); for (let index = 0; index < 85; index++)
     charMap[CLOUD_B85.charAt(index)] = index; return charMap; })();
-function cloudB85Enc(bytes) { const length = bytes.length, remainder = length % 4, mainLength = length - remainder, parts = []; let encoded = ""; for (let i = 0; i < mainLength; i += 4) {
-    const value = (bytes[i] << 24 >>> 0) + (bytes[i + 1] << 16) + (bytes[i + 2] << 8) + bytes[i + 3];
-    encoded += CLOUD_B85.charAt(Math.floor(value / 52200625) % 85) + CLOUD_B85.charAt(Math.floor(value / 614125) % 85) + CLOUD_B85.charAt(Math.floor(value / 7225) % 85) + CLOUD_B85.charAt(Math.floor(value / 85) % 85) + CLOUD_B85.charAt(value % 85), encoded.length > 8e3 && (parts.push(encoded), encoded = "");
+// ---- fast codecs (byte-identical to the previous versions) ----
+const CLOUD_B85_CODES = (() => { const t = new Uint8Array(85); for (let i = 0; i < 85; i++)
+    t[i] = CLOUD_B85.charCodeAt(i); return t; })(), CLOUD_B85_LUT = (() => { const t = new Uint8Array(128).fill(255); for (let i = 0; i < 85; i++)
+    t[CLOUD_B85.charCodeAt(i)] = i; return t; })(), CLOUD_ASCII_DEC = new TextDecoder();
+function cloudB85Enc(bytes) { const length = bytes.length, remainder = length & 3, mainLength = length - remainder, out = new Uint8Array((mainLength >> 2) * 5 + (remainder ? remainder + 1 : 0)), T = CLOUD_B85_CODES; let o = 0; for (let i = 0; i < mainLength; i += 4) {
+    const v = ((bytes[i] << 24 | bytes[i + 1] << 16 | bytes[i + 2] << 8 | bytes[i + 3]) >>> 0), q1 = v / 85 >>> 0, q2 = q1 / 85 | 0, q3 = q2 / 85 | 0, q4 = q3 / 85 | 0;
+    out[o + 4] = T[v - q1 * 85], out[o + 3] = T[q1 - q2 * 85], out[o + 2] = T[q2 - q3 * 85], out[o + 1] = T[q3 - q4 * 85], out[o] = T[q4], o += 5;
 } if (remainder) {
     let tailValue = 0;
     for (let j = 0; j < 4; j++)
         tailValue = tailValue * 256 + (j < remainder ? bytes[mainLength + j] : 0);
     const tailChars = [];
     for (let k = 4; k >= 0; k--)
-        tailChars[k] = CLOUD_B85.charAt(tailValue % 85), tailValue = Math.floor(tailValue / 85);
-    encoded += tailChars.slice(0, remainder + 1).join("");
-} return parts.push(encoded), parts.join(""); }
+        tailChars[k] = T[tailValue % 85], tailValue = Math.floor(tailValue / 85);
+    for (let k = 0; k <= remainder; k++)
+        out[o++] = tailChars[k];
+} return CLOUD_ASCII_DEC.decode(out); }
 function cloudB85Dec(encodedStr) { const length = encodedStr.length, remainder = length % 5; if (remainder === 1)
-    throw new Error("b85"); const mainLength = length - remainder, output = new Uint8Array(mainLength / 5 * 4 + (remainder ? remainder - 1 : 0)), decodeChar = char => { const charValue = CLOUD_B85_MAP[char]; if (charValue === void 0)
-    throw new Error("b85"); return charValue; }; let outIndex = 0; for (let i = 0; i < mainLength; i += 5) {
-    const value = decodeChar(encodedStr.charAt(i)) * 52200625 + decodeChar(encodedStr.charAt(i + 1)) * 614125 + decodeChar(encodedStr.charAt(i + 2)) * 7225 + decodeChar(encodedStr.charAt(i + 3)) * 85 + decodeChar(encodedStr.charAt(i + 4));
+    throw new Error("b85"); const mainLength = length - remainder, output = new Uint8Array(mainLength / 5 * 4 + (remainder ? remainder - 1 : 0)), L = CLOUD_B85_LUT, dc = i => { const cc = encodedStr.charCodeAt(i), x = cc < 128 ? L[cc] : 255; if (x === 255)
+    throw new Error("b85"); return x; }; let outIndex = 0; for (let i = 0; i < mainLength; i += 5) {
+    const value = dc(i) * 52200625 + dc(i + 1) * 614125 + dc(i + 2) * 7225 + dc(i + 3) * 85 + dc(i + 4);
     output[outIndex++] = value >>> 24 & 255, output[outIndex++] = value >>> 16 & 255, output[outIndex++] = value >>> 8 & 255, output[outIndex++] = value & 255;
 } if (remainder) {
     let tailValue = 0;
     for (let j = 0; j < 5; j++)
-        tailValue = tailValue * 85 + (j < remainder ? decodeChar(encodedStr.charAt(mainLength + j)) : 84);
+        tailValue = tailValue * 85 + (j < remainder ? dc(mainLength + j) : 84);
     const tailBytes = [tailValue >>> 24 & 255, tailValue >>> 16 & 255, tailValue >>> 8 & 255];
     for (let k = 0; k < remainder - 1; k++)
         output[outIndex++] = tailBytes[k];
@@ -21118,24 +21124,37 @@ function cloudUnpackNote(packedNote) { if (!packedNote || typeof packedNote != "
 // instead of two UTF-8 bytes, before gzip / LZMA compression.
 const CLOUD_FA = "\u0627\u0628\u067E\u062A\u062B\u062C\u0686\u062D\u062E\u062F\u0630\u0631\u0632\u0698\u0633\u0634\u0635\u0636\u0637\u0638\u0639\u063A\u0641\u0642\u06A9\u06AF\u0644\u0645\u0646\u0648\u0647\u06CC\u0621\u0622\u0623\u0624\u0625\u0626\u0629\u0643\u0649\u064A\u06C0\u200C\u060C\u061F\u061B\u00AB\u00BB\u00A0\u0640\u06F0\u06F1\u06F2\u06F3\u06F4\u06F5\u06F6\u06F7\u06F8\u06F9\u0660\u0661\u0662\u0663\u0664\u0665\u0666\u0667\u0668\u0669\u064B\u064C\u064D\u064E\u064F\u0650\u0651\u0652\u066A\u066B\u066C\u200F\u200E\u2026\u2013\u2014\u2018\u2019\u201C\u201D\u2022\u00B0\u00D7\u00F7", CLOUD_FA_MAP = (() => { const codeToIndex = new Map; for (let index = 0; index < CLOUD_FA.length; index++)
     codeToIndex.set(CLOUD_FA.charCodeAt(index), index); return codeToIndex; })();
-function cloudFaEnc(text) { const utf8Bytes = new TextEncoder().encode(text), byteLength = utf8Bytes.length, output = new Uint8Array(byteLength + (byteLength >> 1) + 4); let outIndex = 0; for (let i2 = 0; i2 < byteLength;) {
-    const byte = utf8Bytes[i2];
-    if (byte < 128) {
-        output[outIndex++] = byte, i2++;
+// Persian codec encoder: works straight on the UTF-16 string (no TextEncoder pass, no Map lookups, no UTF-8 decode);
+// output bytes are identical to the old two-step version. `cloudFaEnc.lossy` is set when the text held a lone
+// surrogate (the old path turned it into U+FFFD), so callers can fall back to the strict text comparison.
+const CLOUD_FA_LUT = (() => { const t = new Uint8Array(8231); for (let i = 0; i < CLOUD_FA.length; i++)
+    t[CLOUD_FA.charCodeAt(i)] = 128 + i; return t; })();
+function cloudFaEnc(text) { const n = text.length, out = new Uint8Array(n * 4 + 4), L = CLOUD_FA_LUT; let o = 0, lossy = !1; for (let i = 0; i < n; i++) {
+    const c = text.charCodeAt(i);
+    if (c < 128) {
+        out[o++] = c;
         continue;
     }
-    const seqLength = byte < 224 ? 2 : byte < 240 ? 3 : 4;
-    if (seqLength < 4) {
-        const codePoint = seqLength === 2 ? (byte & 31) << 6 | utf8Bytes[i2 + 1] & 63 : (byte & 15) << 12 | (utf8Bytes[i2 + 1] & 63) << 6 | utf8Bytes[i2 + 2] & 63, mapIndex = CLOUD_FA_MAP.get(codePoint);
-        if (mapIndex !== void 0) {
-            output[outIndex++] = 128 + mapIndex, i2 += seqLength;
-            continue;
-        }
+    let m;
+    if (c < 8231 && (m = L[c])) {
+        out[o++] = m;
+        continue;
     }
-    output[outIndex++] = 254;
-    for (let j = 0; j < seqLength; j++)
-        output[outIndex++] = utf8Bytes[i2++];
-} return output.subarray(0, outIndex); }
+    out[o++] = 254;
+    if (c < 2048)
+        out[o++] = 192 | c >> 6, out[o++] = 128 | c & 63;
+    else if (c >= 55296 && c <= 57343) {
+        const d = c <= 56319 && i + 1 < n ? text.charCodeAt(i + 1) : 0;
+        if (d >= 56320 && d <= 57343) {
+            const cp = 65536 + (c - 55296 << 10) + (d - 56320);
+            out[o++] = 240 | cp >> 18, out[o++] = 128 | cp >> 12 & 63, out[o++] = 128 | cp >> 6 & 63, out[o++] = 128 | cp & 63, i++;
+        }
+        else
+            out[o++] = 239, out[o++] = 191, out[o++] = 189, lossy = !0;
+    }
+    else
+        out[o++] = 224 | c >> 12, out[o++] = 128 | c >> 6 & 63, out[o++] = 128 | c & 63;
+} cloudFaEnc.lossy = lossy; return out.subarray(0, o); }
 function cloudFaDec(bytes) { const length = bytes.length, output = new Uint8Array(length * 3 + 4); let outIndex = 0; for (let i2 = 0; i2 < length;) {
     const byte = bytes[i2++];
     if (byte < 128)
@@ -21220,7 +21239,9 @@ try {
 catch { }
 };
 // LZMA level follows the input size: the strongest level for small inputs, lower ones for big inputs so a phone is not busy for minutes.
-function cloudLzmaLevel(n) { return n <= 2e5 ? 9 : n <= 6e5 ? 7 : 5; }
+// Level 10 = the level-7 settings with a shallower match search (~35% faster, same size in practice); the dictionary now
+// always shrinks to the input size, so the old size tiers (7 / 5) are no longer needed.
+function cloudLzmaLevel(n) { return n <= 2e5 ? 9 : 10; }
 // Compressed bytes arrive either as base85 (ASCII) or "wide" (14 bits per CJK character, first char >= CLOUD_W_BASE).
 function cloudAnyDec(s) { s = String(s); return s.length && s.charCodeAt(0) >= CLOUD_W_BASE ? cloudW14Dec(s) : cloudB85Dec(s); }
 // Compress: gzip by default; LZMA only if requested (and <= 1.5M chars, library loaded, finished within 45 s,
@@ -21236,11 +21257,13 @@ async function cloudCompress(str, lz, wide) { if (lz)
     if (lz && bad && Date.now() - bad.t < 6e5 && str.length >= bad.n * .9) {
         window.__mkLzmaWhy = bad.why;
     }
+    else if (lz && window.MK_LZMA && str.length <= 15e5 && window.__mkLzCache && window.__mkLzCache.w === !!wide && window.__mkLzCache.s === str) {
+        // same text as the last verified LZMA result (e.g. an unchanged re-save): reuse it, no compression at all
+        return { data: window.__mkLzCache.d, compressed: 4 };
+    }
     else if (lz && window.MK_LZMA && str.length <= 15e5) {
-        const faBytes = cloudFaEnc(str), inp = new Array(faBytes.length + 1);
-        inp[0] = 0;
-        for (let i = 0; i < faBytes.length; i++)
-            inp[i + 1] = faBytes[i];
+        const faBytes = cloudFaEnc(str), inp = new Uint8Array(faBytes.length + 1);
+        inp.set(faBytes, 1);
         const lzmaOutput = await new Promise((res, rej) => { let dn = 0; const tm = setTimeout(() => { dn = 1; rej(new Error("lzma-timeout")); }, 45e3); try {
             window.MK_LZMA.compress(inp, cloudLzmaLevel(faBytes.length), (result, er) => { if (dn)
                 return; dn = 1; clearTimeout(tm); er || !result ? rej(er || new Error("lzma")) : res(result); });
@@ -21248,9 +21271,7 @@ async function cloudCompress(str, lz, wide) { if (lz)
         catch (error) {
             clearTimeout(tm);
             rej(error);
-        } }), compressedBytes = new Uint8Array(lzmaOutput.length);
-        for (let j = 0; j < lzmaOutput.length; j++)
-            compressedBytes[j] = lzmaOutput[j];
+        } }), compressedBytes = lzmaOutput.buffer ? new Uint8Array(lzmaOutput.buffer, lzmaOutput.byteOffset, lzmaOutput.length) : Uint8Array.from(lzmaOutput);
         const str2 = enc(compressedBytes);
         if (str2.length < str.length) {
             let vok = !1;
@@ -21258,8 +21279,10 @@ async function cloudCompress(str, lz, wide) { if (lz)
                 vok = await cloudDecompress(str2, 4) === str;
             }
             catch { }
-            if (vok)
+            if (vok) {
+                window.__mkLzCache = { s: str, w: !!wide, d: str2 };
                 return { data: str2, compressed: 4 };
+            }
             console.warn("lzma verify mismatch, falling back to gzip"), window.__mkLzmaWhy = "verify";
         }
     }
@@ -21269,15 +21292,13 @@ async function cloudCompress(str, lz, wide) { if (lz)
 catch (ex) {
     window.__mkLzmaWhy = ex && /timeout/.test(String(ex.message)) ? "timeout" : "error", window.__mkLzmaBad = { n: str.length, t: Date.now(), why: window.__mkLzmaWhy };
 } try {
-    const cs = new CompressionStream("gzip"), writer = cs.writable.getWriter();
-    writer.write(cloudFaEnc(str)), writer.close();
-    const buf = await new Response(cs.readable).arrayBuffer(), b64 = enc(new Uint8Array(buf));
+    const fa = cloudFaEnc(str), lossy = cloudFaEnc.lossy, b64 = enc(await cloudGzBytes(fa));
     if (!(b64.length < str.length))
         return { data: str, compressed: !1 };
     if (wide) {
         let vok = !1;
         try {
-            vok = await cloudDecompress(b64, 3) === str;
+            vok = lossy ? await cloudDecompress(b64, 3) === str : cloudBytesEq(await cloudGunzBytes(cloudAnyDec(b64)), fa);
         }
         catch { }
         if (!vok)
@@ -21309,15 +21330,11 @@ async function cloudDecompress(b64, mode) { if (mode === 5 || mode === 6) {
     try {
         if (!window.MK_LZMA)
             return null;
-        const ds = cloudAnyDec(b64), arr = new Array(ds.length);
-        for (let i = 0; i < ds.length; i++)
-            arr[i] = ds[i] << 24 >> 24;
-        const decompressed = await new Promise((res, rej) => { window.MK_LZMA.decompress(arr, (result, er) => { er || !result ? rej(er || new Error("lzma")) : res(result); }); });
+        const ds = cloudAnyDec(b64);
+        const decompressed = await new Promise((res, rej) => { window.MK_LZMA.decompress(ds, (result, er) => { er || !result ? rej(er || new Error("lzma")) : res(result); }); });
         if (!decompressed || decompressed[0] !== 0)
             return null;
-        const outBytes = new Uint8Array(decompressed.length - 1);
-        for (let j = 1; j < decompressed.length; j++)
-            outBytes[j - 1] = decompressed[j] & 255;
+        const outBytes = decompressed.buffer ? new Uint8Array(decompressed.buffer, decompressed.byteOffset + 1, decompressed.length - 1) : Uint8Array.from(decompressed.slice(1), x => x & 255);
         return cloudFaDec(outBytes);
     }
     catch {
@@ -21378,15 +21395,16 @@ async function cloudHash12(str) { const b = new Uint8Array(await crypto.subtle.d
 // Off switch: localStorage mk_no_wide_v1 = "1". Each block is detected by its first character, so wide and base85
 // blocks can live side by side in one entry (entry.c is 6 when wide blocks may be present, 5 otherwise).
 const CLOUD_W_BASE = 19968, CLOUD_W_KEY = "mk_wide_v1", CLOUD_W_PROBE_KEY = "mk_probe";
-function cloudW14Enc(bytes) { const n = bytes.length, out = []; let acc = 0, bits = 0; for (let i = 0; i < n; i++) {
+function cloudW14Enc(bytes) { const n = bytes.length, out = new Uint16Array(Math.ceil(n * 8 / 14) + 2); let acc = 0, bits = 0, o = 0; for (let i = 0; i < n; i++) {
     acc = acc << 8 | bytes[i], bits += 8;
     while (bits >= 14) {
-        bits -= 14, out.push(String.fromCharCode(CLOUD_W_BASE + (acc >> bits & 16383)));
+        bits -= 14, out[o++] = CLOUD_W_BASE + (acc >> bits & 16383);
     }
     acc &= (1 << bits) - 1;
 } let pad = 0; if (bits > 0) {
-    pad = 14 - bits, out.push(String.fromCharCode(CLOUD_W_BASE + (acc << pad & 16383)));
-} out.push(String.fromCharCode(CLOUD_W_BASE + pad)); return out.join(""); }
+    pad = 14 - bits, out[o++] = CLOUD_W_BASE + (acc << pad & 16383);
+} out[o++] = CLOUD_W_BASE + pad; let s = ""; for (let i = 0; i < o; i += 8192)
+    s += String.fromCharCode.apply(null, out.subarray(i, Math.min(o, i + 8192))); return s; }
 function cloudW14Dec(str) { const m = str.length - 1; if (m < 0)
     return new Uint8Array(0); const pad = str.charCodeAt(m) - CLOUD_W_BASE, total = m * 14 - pad; if (pad < 0 || pad > 13 || total < 0 || total % 8)
     throw new Error("w14"); const n = total / 8, out = new Uint8Array(n); let acc = 0, bits = 0, o = 0; for (let i = 0; i < m && o < n; i++) {
@@ -21422,12 +21440,42 @@ catch {
     localStorage.setItem(CLOUD_W_KEY, JSON.stringify({ ok: ok ? 1 : 0, t: Date.now() }));
 }
 catch { } return ok; }
-async function cloudBlockEnc(text, wide) { const cs = new CompressionStream("gzip"), w = cs.writable.getWriter(); w.write(cloudFaEnc(text)), w.close(); const bytes = new Uint8Array(await new Response(cs.readable).arrayBuffer()); return wide ? cloudW14Enc(bytes) : cloudB85Enc(bytes); }
+// Native gzip helpers working on bytes (no string round trips).
+async function cloudGzBytes(u8) { const cs = new CompressionStream("gzip"), w = cs.writable.getWriter(); w.write(u8).catch(() => { }), w.close().catch(() => { }); return new Uint8Array(await new Response(cs.readable).arrayBuffer()); }
+async function cloudGunzBytes(u8) { const ds = new DecompressionStream("gzip"), w = ds.writable.getWriter(); w.write(u8).catch(() => { }), w.close().catch(() => { }); return new Uint8Array(await new Response(ds.readable).arrayBuffer()); }
+function cloudBytesEq(a, b) { const n = a.length; if (n !== b.length)
+    return !1; for (let i = 0; i < n; i++)
+    if (a[i] !== b[i])
+        return !1; return !0; }
+// Bounded pipeline: runs fn over items with at most `limit` in flight, keeps the order of the results.
+async function cloudPool(items, limit, fn) { const res = new Array(items.length); let next = 0; const run = async () => { for (; next < items.length;) {
+    const i = next++;
+    res[i] = await fn(items[i]);
+} }; await Promise.all(Array.from({ length: Math.max(1, Math.min(limit, items.length)) }, run)); return res; }
+// SHA-256 id of a chunk, remembered per chunk text (unchanged chunks are not hashed again).
+function cloudHash12m(str) { const m = window.__mkH12 || (window.__mkH12 = new Map); let p = m.get(str); if (!p) {
+    p = cloudHash12(str), m.size > 700 && m.delete(m.keys().next().value), m.set(str, p), p.catch(() => m.delete(str));
+} return p; }
+async function cloudBlockEnc(text, wide) { return (await cloudBlockEncRaw(text, wide)).enc; }
+async function cloudBlockEncRaw(text, wide) { const fa = cloudFaEnc(text), lossy = cloudFaEnc.lossy, gz = await cloudGzBytes(fa); return { enc: wide ? cloudW14Enc(gz) : cloudB85Enc(gz), fa: fa, lossy: lossy }; }
 // Verified + memoised block encoder: a block whose text did not change is neither re-compressed nor re-verified
 // (both are the main CPU cost of a backup); a new block is decoded again and must give back exactly its source text.
-async function cloudBlockEncV(text, wide) { const k = (wide ? "w" : "b") + cloudHashStr(text), memo = window.__mkBlkMemo || (window.__mkBlkMemo = new Map), hit = memo.get(k); if (hit)
-    return hit; const enc = await cloudBlockEnc(text, wide); if (await cloudDecompress(enc + CLOUD_DELTA_SEP, 5) !== text)
-    throw new Error("delta-block-verify"); memo.size > 900 && memo.clear(), memo.set(k, enc); return enc; }
+// The check runs on bytes (decode the characters, gunzip, compare with the codec bytes) instead of rebuilding the whole
+// text; only text with a lone surrogate (rare) still goes through the strict full-text comparison.
+async function cloudBlockEncV(text, wide) { const k = (wide ? "w" : "b") + cloudHashStr(text), memo = window.__mkBlkMemo || (window.__mkBlkMemo = new Map), hit = memo.get(k); if (hit) {
+    memo.delete(k), memo.set(k, hit);
+    return hit;
+} const r = await cloudBlockEncRaw(text, wide), enc = r.enc; let ok; if (r.lossy)
+    ok = await cloudDecompress(enc + CLOUD_DELTA_SEP, 5) === text;
+else
+    try {
+        ok = cloudBytesEq(await cloudGunzBytes(cloudAnyDec(enc)), r.fa);
+    }
+    catch {
+        ok = !1;
+    } if (!ok)
+    throw new Error("delta-block-verify"); for (; memo.size > 900;)
+    memo.delete(memo.keys().next().value); memo.set(k, enc); return enc; }
 // Group-size estimate (encoded chars per raw char). It is kept stable on purpose (learned value, changes only when
 // it drifts by more than 20%) because it decides where groups are cut.
 function cloudDRatioKey(wide) { return "mk_dratio_" + (wide ? "w" : "b") + "_v1"; }
@@ -21458,13 +21506,12 @@ catch {
 } const encGroup = async (strs) => { const enc = await cloudBlockEncV(strs.join(""), wide); if (enc.length > CH && strs.length > 1) {
     const m = strs.length >> 1;
     return (await encGroup(strs.slice(0, m))).concat(await encGroup(strs.slice(m)));
-} return [enc]; }; const avg = Math.max(1, body.length / Math.max(1, parts.length)), tgt = CH * .85 / est, M = Math.pow(2, Math.max(0, Math.round(Math.log2(Math.max(1, tgt * .35 / avg))))), blocks = []; let rawSum = 0, encSum = 0, cur = [head], curLen = head.length, curNotes = 0; const flush = async () => { const encs = await encGroup(cur); blocks.push(...encs), rawSum += curLen, encSum += encs.reduce((s, e) => s + e.length, 0), cur = [], curLen = 0, curNotes = 0; }; for (let i = 0; i < parts.length; i++) {
+} return [enc]; }; const avg = Math.max(1, body.length / Math.max(1, parts.length)), tgt = CH * .85 / est, M = Math.pow(2, Math.max(0, Math.round(Math.log2(Math.max(1, tgt * .35 / avg))))), pend = []; let rawSum = 0, cur = [head], curLen = head.length, curNotes = 0; const flush = () => { pend.push(cur), rawSum += curLen, cur = [], curLen = 0, curNotes = 0; }; for (let i = 0; i < parts.length; i++) {
     const p = parts[i];
-    curNotes > 0 && (curLen + p.length > tgt * 1.3 || curLen >= tgt * .65 && (keyed[i].h & M - 1) === 0) && await flush();
+    curNotes > 0 && (curLen + p.length > tgt * 1.3 || curLen >= tgt * .65 && (keyed[i].h & M - 1) === 0) && flush();
     cur.push(p), curLen += p.length, curNotes++;
-} cur.length && await flush(); cloudDRatioLearn(wide, est, encSum / Math.max(1, rawSum)); for (const t of close.length < 800 ? [close + tsPiece] : [close, tsPiece])
-    blocks.push(...await encGroup([t])); const chunks = []; for (const b of blocks)
-    cloudSplitChunks(b + CLOUD_DELTA_SEP).forEach(x => chunks.push(x)); const joined = chunks.join(""), ids = await Promise.all(chunks.map(x => cloudHash12(x))); return { delta: !0, wide: wide, joined: joined, chunks: chunks, ids: ids, hash: hash, totalNotes: sorted.length, skipped: 0, vaultSkipped: !!c.vaultSkipped }; }
+} cur.length && flush(); const tailStrs = close.length < 800 ? [close + tsPiece] : [close, tsPiece], encd = await cloudPool(pend.concat(tailStrs.map(t => [t])), 4, g => encGroup(g)), blocks = []; let encSum = 0; encd.forEach((encs, gi) => { blocks.push(...encs), gi < pend.length && (encSum += encs.reduce((sum, e) => sum + e.length, 0)); }); cloudDRatioLearn(wide, est, encSum / Math.max(1, rawSum)); const chunks = []; for (const b of blocks)
+    cloudSplitChunks(b + CLOUD_DELTA_SEP).forEach(x => chunks.push(x)); const joined = chunks.join(""), ids = await Promise.all(chunks.map(x => cloudHash12m(x))); return { delta: !0, wide: wide, joined: joined, chunks: chunks, ids: ids, hash: hash, totalNotes: sorted.length, skipped: 0, vaultSkipped: !!c.vaultSkipped }; }
 async function cloudBuildPayload(maxChunks, lz, delta, wide, prevHash) { const all = categories.slice().sort((a, b) => (Date.parse(b.lastEdited) || 0) - (Date.parse(a.lastEdited) || 0)).map(item => { const persisted = getPersistedCategory(item); const totalNotes = { id: persisted.id, name: persisted.name, folder: persisted.folder, extraFolders: persisted.extraFolders || [], text: persisted.text, html: cloudStripImages(persisted.html), encrypted: persisted.encrypted, hint: persisted.hint, tags: persisted.tags, pinned: persisted.pinned, favorite: persisted.favorite, archived: persisted.archived, order: persisted.order, fontFamily: persisted.fontFamily, fontSize: persisted.fontSize, color: persisted.color, fakeContent: persisted.fakeContent, unlockAt: persisted.unlockAt, ghostUntil: persisted.ghostUntil, lastEdited: persisted.lastEdited, metaEditedAt: persisted.metaEditedAt }; return cloudPackOn() ? cloudPackNote(totalNotes) : totalNotes; }), totalNotes2 = all.length, customFolders = folders.filter(f => f !== DEFAULT_FOLDER), budget = CLOUD_CHUNK_SIZE * Math.max(1, maxChunks || MAX_CHUNKS_PER_BACKUP); let vaultRec = null, vaultSkipped = !1; try {
     window.MK?.vault?.sync && (vaultRec = await window.MK?.vault?.sync.getRecord());
 }
@@ -21493,9 +21540,19 @@ const tombstones = loadTombstones(), folderTombstones = loadFolderTombstones(), 
     // 2) Binary-search the largest number of most-recent notes that fits.
     if (included = keep, packed = keep.length === all.length ? packed : await pack(included), !fits(packed) && included.length) {
         let lo = 0, hi = included.length - 1, best = null;
+        // size-guided search: prefix lengths + the measured compression ratio predict how many notes fit, so only a few
+        // full compressions are needed (instead of ~log2(n)); falls back to plain bisection if the guess keeps missing.
+        const pre = [0];
+        for (let q = 0; q < included.length; q++)
+            pre.push(pre[q] + JSON.stringify(included[q]).length + 1);
+        let ratio = packed.data.length / Math.max(1, pre[included.length]), tries = 0;
+        const guess = () => { let a2 = lo + 1, b2 = hi; for (; a2 < b2;) {
+            const m2 = a2 + b2 + 1 >> 1;
+            pre[m2] * ratio <= budget * .985 ? a2 = m2 : b2 = m2 - 1;
+        } return a2; };
         for (; lo < hi;) {
-            const mid = Math.ceil((lo + hi) / 2), p = await pack(included.slice(0, mid), !1);
-            fits(p) ? (lo = mid, best = { k: mid, p: p }) : hi = mid - 1;
+            const mid = tries++ < 4 ? guess() : Math.ceil((lo + hi) / 2), p = await pack(included.slice(0, mid), !1);
+            fits(p) ? (lo = mid, best = { k: mid, p: p }) : hi = mid - 1, ratio = p.data.length / Math.max(1, pre[mid]);
         }
         skipped += included.length - lo, packed = best && best.k === lo ? best.p : await pack(included.slice(0, lo), !1);
         if (lz && lo > 0) {
