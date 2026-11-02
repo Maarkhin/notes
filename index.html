@@ -20602,7 +20602,7 @@ let hasCloudStorage = !!(TG && TG.CloudStorage);
 // Manual-backup count (0-2, default 0) is set in Cloud Backup → Settings; it is saved in Cloud (mk_cfg) with
 // a local copy. Key budget: CLOUD_KEY_BUDGET (960) keeps a margin under Telegram's 1024-key limit; 2 keys
 // (index + config) are reserved and the rest is shared equally by the auto slot and every manual slot.
-const CLOUD_CHUNK_SIZE = 3850, CLOUD_INDEX_KEY = "mk_idx", CLOUD_BACKUP_PREFIX = "mk_b_", CLOUD_CONFIG_KEY = "mk_cfg", CLOUD_MANUAL_MIN = 0, CLOUD_MANUAL_MAX = 2, CLOUD_MANUAL_DEFAULT = 0, CLOUD_LOCAL_LIMIT_KEY = "mk_manual_limit_v1", CLOUD_KEY_BUDGET = 960, CLOUD_RESERVED_KEYS = 2;
+const CLOUD_CHUNK_SIZE = 4000, CLOUD_INDEX_KEY = "mk_idx", CLOUD_BACKUP_PREFIX = "mk_b_", CLOUD_CONFIG_KEY = "mk_cfg", CLOUD_MANUAL_MIN = 0, CLOUD_MANUAL_MAX = 2, CLOUD_MANUAL_DEFAULT = 0, CLOUD_LOCAL_LIMIT_KEY = "mk_manual_limit_v1", CLOUD_KEY_BUDGET = 960, CLOUD_RESERVED_KEYS = 2;
 // Max chunks per slot: fewer manual backups => a bigger auto backup (0 manual = 958 chunks, ~3.7 MB of stored text).
 function cloudChunksPerSlot(manualCount) { return Math.max(1, Math.floor((CLOUD_KEY_BUDGET - CLOUD_RESERVED_KEYS) / (1 + manualCount))); }
 // Accepts a number or numeric string; returns an integer 0-2 or null; a larger saved value (older versions allowed up to 7) is clamped to 2. (An empty string must NOT become 0 -
@@ -20675,38 +20675,65 @@ async function cloudGetItems(keys) { const batches = []; for (let i = 0; i < key
 function cloudSetItem(key, value) { return cloudGuard(fin => TG.CloudStorage.setItem(key, value, (err, ok) => fin(!err && ok !== !1)), !1); }
 // Writes many chunks, 1-3 at a time (cloudParallel()), each retried once on failure. Returns true only when
 // EVERY chunk landed; the first hard failure stops the rest. onProgress(doneCount) is called as chunks finish
-async function cloudSetMany(keys, values, onProgress) { const doneSet = new Uint8Array(keys.length); let next = 0, done = 0, failed = !1; const tick = i => { if (!doneSet[i] && (doneSet[i] = 1, done++, onProgress))
+// Adaptive writer: starts at the speed that worked last time (learned, kept locally), speeds up while Telegram
+// answers quickly and slows down (halves) as soon as a write is rejected or answers get slow. The "Save speed"
+// chooser is the upper limit. Failed writes are retried once right away, then one by one at the end.
+const CLOUD_PAR_LEARN_KEY = "mk_cloud_par_learn_v1";
+function cloudParLearned() { try {
+    const n = parseInt(localStorage.getItem(CLOUD_PAR_LEARN_KEY), 10);
+    return n >= 1 && n <= CLOUD_PAR_MAX ? n : 3;
+}
+catch {
+    return 3;
+} }
+function cloudParLearn(n) { try {
+    localStorage.setItem(CLOUD_PAR_LEARN_KEY, String(n));
+}
+catch { } }
+async function cloudSetMany(keys, values, onProgress) { const total = keys.length, doneSet = new Uint8Array(total), maxP = Math.max(1, cloudParallel()); let next = 0, done = 0, inflight = 0, okRun = 0, base = 0, hadFail = !1, target = Math.max(1, Math.min(maxP, cloudParLearned())), peak = target; const waiters = [], st = window.__mkBkStats = { calls: 0, ms: 0, max: 0, fails: 0, start: target, target: target, total: total, t0: Date.now(), wall: 0 }; const wake = () => { while (waiters.length && inflight < target)
+    waiters.shift()(); }; const tick = i => { if (!doneSet[i] && (doneSet[i] = 1, done++, onProgress))
     try {
         onProgress(done);
     }
-    catch { } }; const worker = async () => { for (; !failed;) {
-    const i = next++;
-    if (i >= keys.length)
+    catch { } }; const one = async (i) => { const t0 = Date.now(), ok = await cloudSetItem(keys[i], values[i]), ms = Date.now() - t0; st.calls++, st.ms += ms, ms > st.max && (st.max = ms); return { ok: ok, ms: ms }; }; const worker = async () => { for (;;) {
+    if (next >= total)
         return;
-    let ok = await cloudSetItem(keys[i], values[i]);
-    if (ok) {
-        tick(i);
+    if (inflight >= target) {
+        await new Promise(r => waiters.push(r));
         continue;
     }
-    // first miss: leave it for the sequential rescue pass below (other workers keep going at full speed)
-    cloudParBackoff();
-    if (cloudParEff() <= 1 && !(ok = await cloudSetItem(keys[i], values[i]))) {
-        failed = !0;
-        return;
+    const i = next++;
+    inflight++;
+    let r = await one(i);
+    if (!r.ok) {
+        hadFail = !0, st.fails++, target = Math.max(1, target >> 1), st.target = target, okRun = 0, inflight--, wake();
+        await cloudSleep(150 + Math.floor(Math.random() * 100));
+        inflight++;
+        r = await one(i);
     }
-    ok && tick(i);
-} }; await Promise.all(Array.from({ length: Math.min(cloudParEff(), keys.length) }, worker)); 
-// Rescue pass: whatever did not land under parallel load is retried one at a time (2 tries, short pause)
-for (let i = 0; i < keys.length; i++) {
+    inflight--;
+    if (r.ok) {
+        tick(i), okRun++, (!base || r.ms < base) && (base = r.ms);
+        if (target > 1 && r.ms > Math.max(base * 3, 1500))
+            target--, okRun = 0;
+        else if (okRun >= 3 && target < maxP && r.ms <= Math.max(base * 2, base + 250))
+            target++, okRun = 0, peak = Math.max(peak, target);
+        st.target = target;
+    }
+    wake();
+} }; await Promise.all(Array.from({ length: Math.min(maxP, total) }, worker)); 
+// Rescue pass: whatever did not land is retried one at a time (4 tries, growing pause)
+for (let i = 0; i < total; i++) {
     if (doneSet[i])
         continue;
+    hadFail = !0;
     let ok = !1;
-    for (let t = 0; t < 3 && !ok; t++)
-        t && await cloudSleep(300 * t), ok = await cloudSetItem(keys[i], values[i]);
+    for (let t = 0; t < 4 && !ok; t++)
+        t && await cloudSleep([0, 400, 1000, 2000][t]), ok = await cloudSetItem(keys[i], values[i]);
     if (!ok)
-        return !1;
+        return cloudParLearn(1), !1;
     tick(i);
-} return done === keys.length; }
+} st.wall = Date.now() - st.t0, cloudParLearn(hadFail ? Math.max(1, target) : Math.min(maxP, Math.max(peak, cloudParLearned()))); return done === total; }
 function cloudRemoveItemsRaw(keys) { return cloudGuard(fin => TG.CloudStorage.removeItems(keys, err => fin(!err)), !1); }
 async function cloudRemoveItems(keys) { const batches = []; for (let i = 0; i < keys.length; i += CLOUD_BATCH)
     batches.push(keys.slice(i, i + CLOUD_BATCH)); let allOk = !0, next = 0; const worker = async () => { for (;;) {
@@ -20719,7 +20746,11 @@ function cloudGetKeys() { return cloudGuard(fin => TG.CloudStorage.getKeys((err,
 // Chunk keys of a backup entry. The key prefix is entry.pfx, else its id (the auto slot alternates between
 // "auto" and "auto2"); an invalid prefix is rejected.
 function cloudEntryPrefix(e2) { const p = e2 && e2.pfx ? String(e2.pfx) : String(e2 && e2.id); return /^[A-Za-z0-9_-]{1,60}$/.test(p) ? p : "invalid"; }
-function cloudEntryKeys(e) { return cloudBackupChunkKeys(cloudEntryPrefix(e), e && e.chunks || 0); }
+// Delta entries (c = 5): chunks are content-addressed. Key = "mk_b_x" + 12-char hash of the chunk text, and
+// entry.km holds those hashes in order. Chunks that did not change keep their key and are never rewritten.
+const CLOUD_DELTA_PFX = "mk_b_x", CLOUD_DELTA_IDLEN = 12, CLOUD_DELTA_MAX = 200, CLOUD_DELTA_SEP = "#";
+function cloudEntryKeys(e) { if (e && e.km) { const n = e.chunks | 0, s = String(e.km); if (n > 0 && s.length === n * CLOUD_DELTA_IDLEN && /^[A-Za-z0-9_-]+$/.test(s)) { const out = []; for (let i = 0; i < n; i++)
+    out.push(CLOUD_DELTA_PFX + s.slice(i * CLOUD_DELTA_IDLEN, (i + 1) * CLOUD_DELTA_IDLEN)); return out; } return []; } return cloudBackupChunkKeys(cloudEntryPrefix(e), e && e.chunks || 0); }
 // Splits at CLOUD_CHUNK_SIZE without ever cutting an emoji/surrogate pair in half: a lone surrogate is
 // mangled to U+FFFD on its way through Telegram
 function cloudSplitChunks(data) { const chunks = []; let i = 0; for (; i < data.length;) {
@@ -21050,7 +21081,24 @@ catch (ex) {
 catch {
     return { data: str, compressed: !1 };
 } }
-async function cloudDecompress(b64, mode) { if (mode === 4) {
+async function cloudDecompress(b64, mode) { if (mode === 5) {
+    // Delta backup: independent gzip blocks separated by "#" (not part of the base85 alphabet), each one a whole
+    // number of JSON pieces; the decoded pieces simply concatenate into the normal payload JSON.
+    try {
+        let out = "";
+        for (const seg of String(b64).split(CLOUD_DELTA_SEP)) {
+            if (!seg)
+                continue;
+            const ds = new DecompressionStream("gzip"), writer = ds.writable.getWriter();
+            writer.write(cloudB85Dec(seg)), writer.close();
+            out += cloudFaDec(new Uint8Array(await new Response(ds.readable).arrayBuffer()));
+        }
+        return out;
+    }
+    catch {
+        return null;
+    }
+}  if (mode === 4) {
     try {
         if (!window.MK_LZMA)
             return null;
@@ -21110,7 +21158,26 @@ function cloudHashStr(str) { let h1 = 3735928559, h2 = 1103547991; for (let i = 
 // records and the List. Most-recently-edited notes first, so when the chunk budget runs out the oldest notes
 // are the ones left out (counted in `skipped`). `hash` fingerprints the content (without the timestamp) so an
 // unchanged auto backup is skipped. The vault is dropped when it would use over 60% of the budget.
-async function cloudBuildPayload(maxChunks, lz) { const all = categories.slice().sort((a, b) => (Date.parse(b.lastEdited) || 0) - (Date.parse(a.lastEdited) || 0)).map(item => { const persisted = getPersistedCategory(item); const totalNotes = { id: persisted.id, name: persisted.name, folder: persisted.folder, extraFolders: persisted.extraFolders || [], text: persisted.text, html: cloudStripImages(persisted.html), encrypted: persisted.encrypted, hint: persisted.hint, tags: persisted.tags, pinned: persisted.pinned, favorite: persisted.favorite, archived: persisted.archived, order: persisted.order, fontFamily: persisted.fontFamily, fontSize: persisted.fontSize, color: persisted.color, fakeContent: persisted.fakeContent, unlockAt: persisted.unlockAt, ghostUntil: persisted.ghostUntil, lastEdited: persisted.lastEdited, metaEditedAt: persisted.metaEditedAt }; return cloudPackOn() ? cloudPackNote(totalNotes) : totalNotes; }), totalNotes2 = all.length, customFolders = folders.filter(f => f !== DEFAULT_FOLDER), budget = CLOUD_CHUNK_SIZE * Math.max(1, maxChunks || MAX_CHUNKS_PER_BACKUP); let vaultRec = null, vaultSkipped = !1; try {
+// ---- Delta backup (auto slot) ----------------------------------------------------------------------------
+// The payload is cut at note boundaries into groups of about one chunk each; every group is gzip'd on its own.
+// Notes are ordered oldest-edit-first, so the note you are editing (always the newest) sits at the end and only
+// the last group + a tiny timestamp block change. Unchanged chunks keep their content-addressed key.
+async function cloudHash12(str) { const b = new Uint8Array(await crypto.subtle.digest("SHA-256", new TextEncoder().encode(str))); return btoa(String.fromCharCode(b[0], b[1], b[2], b[3], b[4], b[5], b[6], b[7], b[8])).replace(/\+/g, "-").replace(/\//g, "_"); }
+async function cloudBlockEnc(text) { const cs = new CompressionStream("gzip"), w = cs.writable.getWriter(); w.write(cloudFaEnc(text)), w.close(); return cloudB85Enc(new Uint8Array(await new Response(cs.readable).arrayBuffer())); }
+async function cloudDeltaBuild(all, c) { if (!cloudPackOn() || typeof DecompressionStream > "u" || typeof crypto > "u" || !crypto.subtle)
+    return null; const CH = CLOUD_CHUNK_SIZE - 1, sorted = all.slice().sort((a, b) => (Date.parse(a.le) || 0) - (Date.parse(b.le) || 0) || (String(a.i) < String(b.i) ? -1 : String(a.i) > String(b.i) ? 1 : 0)), FP = window.MU_FolderPins, head = JSON.stringify({ v: 2, folders: c.customFolders, pinnedFolders: FP ? FP.list() : [], pinnedFoldersTs: FP && FP.ts ? FP.ts() : 0 }).slice(0, -1) + ',"notes":[', inner = JSON.stringify({ vault: c.vaultRec || void 0, tombstones: c.tombstones, folderTombstones: c.folderTombstones, lists: window.MK_List ? window.MK_List.snapshot() : void 0 }).slice(1, -1), close = "]" + (inner ? "," + inner : ""), parts = sorted.map((n, i) => (i ? "," : "") + JSON.stringify(n)), hash = cloudHashStr(head + parts.join("") + close), tsPiece = ',"ts":' + Date.now() + "}"; const encGroup = async (strs) => { const enc = await cloudBlockEnc(strs.join("")); if (enc.length > CH && strs.length > 1) {
+    const m = strs.length >> 1;
+    return (await encGroup(strs.slice(0, m))).concat(await encGroup(strs.slice(m)));
+} return [enc]; }; const blocks = []; let est = .34, rawSum = 0, encSum = 0, cur = [head], curLen = head.length, curNotes = 0; const flush = async () => { const encs = await encGroup(cur); blocks.push(...encs), rawSum += curLen, encSum += encs.reduce((s, e) => s + e.length, 0), est = Math.min(1, Math.max(.05, encSum / Math.max(1, rawSum))), cur = [], curLen = 0, curNotes = 0; }; for (const p of parts) {
+    curNotes > 0 && (curLen + p.length) * est > CH * .9 && await flush();
+    cur.push(p), curLen += p.length, curNotes++;
+} cur.length && await flush(); blocks.push(...await encGroup([close])), blocks.push(...await encGroup([tsPiece])); const chunks = []; for (const b of blocks)
+    cloudSplitChunks(b + CLOUD_DELTA_SEP).forEach(x => chunks.push(x)); const joined = chunks.join(""); 
+// Safety: the stored form must decode back to exactly the payload text, or the delta path is not used
+if (await cloudDecompress(joined, 5) !== head + parts.join("") + close + tsPiece)
+    return null; const ids = []; for (const x of chunks)
+    ids.push(await cloudHash12(x)); return { delta: !0, joined: joined, chunks: chunks, ids: ids, hash: hash, totalNotes: sorted.length, skipped: 0, vaultSkipped: !!c.vaultSkipped }; }
+async function cloudBuildPayload(maxChunks, lz, delta) { const all = categories.slice().sort((a, b) => (Date.parse(b.lastEdited) || 0) - (Date.parse(a.lastEdited) || 0)).map(item => { const persisted = getPersistedCategory(item); const totalNotes = { id: persisted.id, name: persisted.name, folder: persisted.folder, extraFolders: persisted.extraFolders || [], text: persisted.text, html: cloudStripImages(persisted.html), encrypted: persisted.encrypted, hint: persisted.hint, tags: persisted.tags, pinned: persisted.pinned, favorite: persisted.favorite, archived: persisted.archived, order: persisted.order, fontFamily: persisted.fontFamily, fontSize: persisted.fontSize, color: persisted.color, fakeContent: persisted.fakeContent, unlockAt: persisted.unlockAt, ghostUntil: persisted.ghostUntil, lastEdited: persisted.lastEdited, metaEditedAt: persisted.metaEditedAt }; return cloudPackOn() ? cloudPackNote(totalNotes) : totalNotes; }), totalNotes2 = all.length, customFolders = folders.filter(f => f !== DEFAULT_FOLDER), budget = CLOUD_CHUNK_SIZE * Math.max(1, maxChunks || MAX_CHUNKS_PER_BACKUP); let vaultRec = null, vaultSkipped = !1; try {
     window.MK?.vault?.sync && (vaultRec = await window.MK?.vault?.sync.getRecord());
 }
 catch {
@@ -21118,7 +21185,11 @@ catch {
 } vaultRec && JSON.stringify(vaultRec).length + 2e3 > budget * .6 && (vaultRec = null, vaultSkipped = !0);
 // The backup carries this device's tombstones, so a note deleted here also disappears on other devices
 // instead of the delete staying local.
-const tombstones = loadTombstones(), folderTombstones = loadFolderTombstones(), pack = async (list) => { const body = JSON.stringify({ v: cloudPackOn() ? 2 : 1, folders: customFolders, pinnedFolders: window.MU_FolderPins ? window.MU_FolderPins.list() : [], pinnedFoldersTs: window.MU_FolderPins && window.MU_FolderPins.ts ? window.MU_FolderPins.ts() : 0, notes: list, vault: vaultRec || void 0, tombstones: tombstones, folderTombstones: folderTombstones, lists: window.MK_List ? window.MK_List.snapshot() : void 0 }), raw = body.slice(0, -1) + ',"ts":' + Date.now() + "}", out = await cloudCompress(raw, lz); return out.body = body, out; }, fits = p => p.data.length <= budget; let included = all, skipped = 0, packed = await pack(included); if (!fits(packed) && included.length) {
+const tombstones = loadTombstones(), folderTombstones = loadFolderTombstones(), pack = async (list) => { const body = JSON.stringify({ v: cloudPackOn() ? 2 : 1, folders: customFolders, pinnedFolders: window.MU_FolderPins ? window.MU_FolderPins.list() : [], pinnedFoldersTs: window.MU_FolderPins && window.MU_FolderPins.ts ? window.MU_FolderPins.ts() : 0, notes: list, vault: vaultRec || void 0, tombstones: tombstones, folderTombstones: folderTombstones, lists: window.MK_List ? window.MK_List.snapshot() : void 0 }), raw = body.slice(0, -1) + ',"ts":' + Date.now() + "}", out = await cloudCompress(raw, lz); return out.body = body, out; }, fits = p => p.data.length <= budget; if (delta) {
+    const dr = await cloudDeltaBuild(all, { customFolders: customFolders, vaultRec: vaultRec, vaultSkipped: vaultSkipped, tombstones: tombstones, folderTombstones: folderTombstones });
+    if (dr)
+        return dr;
+} let included = all, skipped = 0, packed = await pack(included); if (!fits(packed) && included.length) {
     // 1) A single note that can never fit must not sink the whole backup: leave just that one out. (rawLen
     // is an upper bound of its packed size.)
     const keep = [];
@@ -21194,7 +21265,20 @@ function mkAutoBkPaint() { const a2 = window.__mkAutoBk, m = window.__mkManualBk
 const fb = document.getElementById("cloudFixAutoSyncBtn"); fb && fb.disabled !== fixBusy && (fb.disabled = fixBusy, fb.style.opacity = fixBusy ? ".5" : ""), mkSyncStatusPaint(), mkHealthPaint(), a2 && a2.phase === "idle" && !window.__mkFixAutoSyncBusy && (window.__mkFixProgHold = !1); const __fixHere = !!window.__mkFixProgHold && !!document.getElementById("cloudFixProg"); mkBkPaintOne("cloudAutoProg", __fixHere ? null : a2, !1), mkBkPaintOne("cloudFixProg", __fixHere ? a2 : null, !1), mkBkPaintOne("cloudManualProg", m, !0); }
 function mkAutoBkSet(patch) { Object.assign(window.__mkAutoBk, patch), mkAutoBkPaint(); }
 function mkManualBkSet(patch) { Object.assign(window.__mkManualBk, patch), mkAutoBkPaint(); }
-function mkBkSetFor(kind, patch) { kind === "manual" ? mkManualBkSet(patch) : mkAutoBkSet(patch); }
+// Progress ticks (only `done` changes) repaint at most ~8 times per second: a full panel repaint for every
+// chunk made the Telegram WebView stall while writes were in flight.
+function mkBkSetFor(kind, patch) { if (patch && "done" in patch && Object.keys(patch).length === 1) {
+    const s = kind === "manual" ? window.__mkManualBk : window.__mkAutoBk;
+    if (s) {
+        s.done = patch.done;
+        const now = Date.now();
+        if (now - (window.__mkBkTickAt || 0) < 120) {
+            window.__mkBkTickT || (window.__mkBkTickT = setTimeout(() => { window.__mkBkTickT = 0, window.__mkBkTickAt = Date.now(), kind === "manual" ? mkManualBkSet({}) : mkAutoBkSet({}); }, 120));
+            return;
+        }
+        window.__mkBkTickAt = now;
+    }
+} kind === "manual" ? mkManualBkSet(patch) : mkAutoBkSet(patch); }
 // The write is finished, so the serial queue is free: refresh the open panel with the real, fresh list
 // (keeping a half-typed label / unsaved count choice)
 function mkBkRefreshPanel() { if (document.getElementById("cloudPanelBody") && typeof markhinDash_renderCloudPanelBody == "function")
@@ -21708,7 +21792,7 @@ async function mkBkImportFile(file) { const fa = currentLang === "fa"; if (windo
         bad();
         return;
     }
-    const compression = Number.isInteger(meta2.c) && meta2.c >= 0 && meta2.c <= 4 ? meta2.c : -1;
+    const compression = Number.isInteger(meta2.c) && meta2.c >= 0 && meta2.c <= 5 ? meta2.c : -1;
     if (compression < 0 || meta2.len && meta2.len !== obj.data.length) {
         bad();
         return;
@@ -22149,21 +22233,107 @@ async function cloudRemoveStrayTail(pfx, keep) { const all = await cloudGetKeys(
     return; const head = CLOUD_BACKUP_PREFIX + pfx + "_", stray = all.filter(k => k.indexOf(head) === 0 && /^\d+$/.test(k.slice(head.length)) && parseInt(k.slice(head.length), 10) >= keep); stray.length && await cloudRemoveItems(stray); }
 // Password protection is only ever offered for manual snapshots — the silent auto slot never prompts, so
 // it can never end up locked
+// Writes the auto backup as a delta: only chunks whose content-addressed key is not already in Cloud are
+// written, they are read back and compared, then the index entry is switched (atomic commit) and the previous
+// copy's no-longer-used keys are removed. Returns a result object, or null when the delta path does not apply
+// (the normal full backup then runs).
+function cloudDeltaOn() { try {
+    return localStorage.getItem("mk_no_delta_v1") !== "1";
+}
+catch {
+    return !0;
+} }
+async function cloudDeltaTry(idx, prevEntry, allowed) { try {
+    if (!cloudDeltaOn())
+        return null;
+    const lim = Math.min(allowed, CLOUD_DELTA_MAX), d = await cloudBuildPayload(lim, !1, !0);
+    if (!d || !d.delta || d.vaultSkipped || !d.chunks.length || d.chunks.length > lim)
+        return null;
+    if (prevEntry && prevEntry.km && prevEntry.h === d.hash && prevEntry.chunks && !(prevEntry.skipped || 0))
+        return window.__mkSeenAutoTs = prevEntry.ts || 0, { ok: !0, meta: prevEntry, unchanged: !0 };
+    const have = await cloudGetKeys(), haveSet = have ? new Set(have) : null, seen = new Set(), todo = [];
+    d.ids.forEach((id, i) => { const k = CLOUD_DELTA_PFX + id; seen.has(k) || (seen.add(k), (!haveSet || !haveSet.has(k)) && todo.push([k, d.chunks[i]])); });
+    const keysNow = have ? have.length : CLOUD_RESERVED_KEYS + idx.reduce((s, e) => s + (e.chunks || 0), 0);
+    if (keysNow + todo.length > 1e3)
+        return null;
+    const entry = { id: "auto", kind: "auto", ts: Date.now(), notes: d.totalNotes, skipped: 0, chunks: d.chunks.length, c: 5, len: d.joined.length, label: "", km: d.ids.join(""), h: d.hash };
+    if (JSON.stringify(idx.filter(e => e.id !== "auto").concat([entry])).length > 3900)
+        return null;
+    mkBkSetFor("auto", { phase: "writing", done: 0, total: todo.length, notes: d.totalNotes });
+    if (todo.length && !await cloudSetMany(todo.map(p => p[0]), todo.map(p => p[1]), n => mkBkSetFor("auto", { done: n })))
+        return { ok: !1, reason: "write-failed" };
+    mkBkSetFor("auto", { phase: "verifying" });
+    if (todo.length) {
+        const got = await cloudGetItems(todo.map(p => p[0]));
+        if (!todo.every(p => got[p[0]] === p[1]))
+            return { ok: !1, reason: "verify-failed" };
+    }
+    mkBkSetFor("auto", { phase: "finalizing" });
+    let fresh;
+    try {
+        fresh = await cloudReadIndex();
+    }
+    catch {
+        return { ok: !1, reason: "write-failed" };
+    }
+    const prevFresh = fresh.find(e => e.id === "auto"), nextIdx = fresh.filter(e => e.id !== "auto");
+    entry.ts = Date.now(), nextIdx.push(entry);
+    if (JSON.stringify(nextIdx).length > 3900)
+        return { ok: !1, reason: "write-failed" };
+    if (!await cloudSetItem(CLOUD_INDEX_KEY, JSON.stringify(nextIdx)))
+        return { ok: !1, reason: "write-failed" };
+    window.__cloudIdxCache = nextIdx.slice(), cloudSetLinked(), window.__mkSeenAutoTs = entry.ts;
+    const keep = new Set(d.ids.map(id => CLOUD_DELTA_PFX + id));
+    try {
+        if (prevFresh) {
+            const old = cloudEntryKeys(prevFresh).filter(k => !keep.has(k));
+            old.length && await cloudRemoveItems(old);
+        }
+        // Every ~30 min: keys of delta chunks that no entry uses (left by an interrupted write) are removed, but only
+        // when they were already unused at the previous sweep, so another device's in-flight write is never touched.
+        if (have && (!window.__mkStrayXAt || Date.now() - window.__mkStrayXAt > 18e5)) {
+            window.__mkStrayXAt = Date.now();
+            const ref = new Set(keep);
+            nextIdx.forEach(e => cloudEntryKeys(e).forEach(k => ref.add(k)));
+            const orph = have.filter(k => k.indexOf(CLOUD_DELTA_PFX) === 0 && !ref.has(k));
+            let prev = null;
+            try {
+                prev = JSON.parse(localStorage.getItem("mk_x_orph_v1") || "null");
+            }
+            catch { }
+            const dead = prev && Array.isArray(prev.k) && Date.now() - prev.t > 6e5 ? orph.filter(k => prev.k.indexOf(k) >= 0) : [];
+            try {
+                localStorage.setItem("mk_x_orph_v1", JSON.stringify({ t: Date.now(), k: orph.filter(k => dead.indexOf(k) < 0) }));
+            }
+            catch { }
+            dead.length && await cloudRemoveItems(dead);
+        }
+    }
+    catch { }
+    return { ok: !0, meta: entry };
+}
+catch (e) {
+    console.warn("Delta backup error", e);
+    return null;
+} }
 async function cloudBackupNowImpl(kind, label, password, hint) { kind = kind === "manual" ? "manual" : "auto"; const wantsEncryption = kind === "manual" && !!String(password || "").trim(), cleanPassword = wantsEncryption ? String(password).trim() : ""; if (!hasCloudStorage)
     return { ok: !1, reason: "unavailable" };
 // Auto: first save the text still sitting in the open editor, so it is part of what gets built. Manual
 // backups need a manual count of at least 1.
+const __idxP = cloudReadIndex();
+__idxP.catch(() => { });
+const __lsP = kind === "auto" && !window.__mkListForcePush ? cloudReadListSlot().catch(() => null) : null;
 if (kind === "auto" && cloudQuiet(() => { cloudFlushEditorFirst(); }), await cloudLoadSettings(kind === "manual"), kind === "manual" && MAX_MANUAL_BACKUPS < 1)
     return { ok: !1, reason: "manual-disabled" };
 // Manual snapshots get a new id each time; the auto slot always has the id "auto".
-const idx = await cloudReadIndex(), id = kind === "auto" ? "auto" : "m" + Date.now().toString(36) + Math.random().toString(36).slice(2, 5), prevEntry = idx.find(e => e.id === id);
+const idx = await __idxP, id = kind === "auto" ? "auto" : "m" + Date.now().toString(36) + Math.random().toString(36).slice(2, 5), prevEntry = idx.find(e => e.id === id);
 // Never let a (near-)empty fresh device overwrite a real Cloud backup (see cloudAutoWouldBeBlocked).
 if (kind === "auto" && await cloudAutoWouldBeBlocked(prevEntry))
     return cloudNotifyProtected(prevEntry.notes), { ok: !1, reason: "protected" };
 // Take in list changes another device already pushed, so this backup never undoes them.
 if (kind === "auto" && !window.__mkListForcePush)
     try {
-        const ls = await cloudReadListSlot();
+        const ls = await (__lsP || cloudReadListSlot());
         ls && window.MK_List && cloudQuiet(() => { window.MK_List.merge(ls); });
     }
     catch { }
@@ -22198,6 +22368,11 @@ if (!preMergeOk && !forceRebuild && prevEntry.notes > 0 && categories.length < p
 // older ones are "overflow". Key budget: what is left after every other backup that stays.
 let overflow = []; kind === "manual" && (overflow = idx.filter(e => e.kind === "manual").sort((a, b) => (b.ts || 0) - (a.ts || 0)).slice(Math.max(0, MAX_MANUAL_BACKUPS - 1))); const overflowIds = new Set(overflow.map(e => e.id)), othersChunks = idx.filter(e => e.id !== id && !overflowIds.has(e.id)).reduce((sum, e) => sum + (e.chunks || 0), 0), room = CLOUD_KEY_BUDGET - CLOUD_RESERVED_KEYS - othersChunks, allowed = Math.min(MAX_CHUNKS_PER_BACKUP, room); if (allowed < 1)
     return { ok: !1, reason: "no-space" };
+if (kind === "auto") {
+    const __dr = await cloudDeltaTry(idx, prevEntry, allowed);
+    if (__dr)
+        return __dr;
+}
 // Encrypting the payload afterwards grows it (ciphertext + salt/iv/JSON wrapper), so when a password is set the
 // note budget is shrunk up front by that same margin.
 const payloadBudgetChunks = wantsEncryption ? Math.max(1, Math.floor(allowed / (cloudPackOn() ? 1.06 : CLOUD_ENC_OVERHEAD_FACTOR))) : allowed, { data: data, compressed: compressed, skipped: skipped, totalNotes: totalNotes, hash: hash, vaultSkipped: vaultSkipped } = await cloudBuildPayload(payloadBudgetChunks, kind === "manual" && mkManualCompGet() === "lzma"); if (kind === "manual" && mkManualCompGet() === "lzma" && compressed !== 4 && window.__mkLzmaWhy) {
@@ -22243,7 +22418,7 @@ if (kind === "auto") {
 }
 // Overflow snapshots are removed BEFORE writing only when old + new could not fit under the key ceiling at the
 // same time; otherwise they are removed after the new snapshot is safely saved.
-const inPlace = !!(prevEntry && cloudEntryPrefix(prevEntry) === pfx), pruneFirst = overflow.length > 0 && totalKeysNow + chunks.length > 1e3; if (pruneFirst) {
+const inPlace = !!(prevEntry && !prevEntry.km && cloudEntryPrefix(prevEntry) === pfx), pruneFirst = overflow.length > 0 && totalKeysNow + chunks.length > 1e3; if (pruneFirst) {
     if (!await cloudSetItem(CLOUD_INDEX_KEY, JSON.stringify(idx.filter(e => !overflowIds.has(e.id)))))
         return { ok: !1, reason: "write-failed" };
     for (const old of overflow)
@@ -22281,7 +22456,7 @@ catch {
 // set (or surplus tail) of this slot, and, at most every 30 min, a sweep of stray chunk keys.
 if (window.__cloudIdxCache = nextIdx.slice(), cloudSetLinked(), kind === "auto" && (window.__mkSeenAutoTs = entry.ts), overflow.length && !pruneFirst)
     for (const old of overflow)
-        await cloudRemoveItems(cloudEntryKeys(old)); if (prevFresh && (cloudEntryPrefix(prevFresh) !== pfx ? await cloudRemoveItems(cloudEntryKeys(prevFresh)) : (prevFresh.chunks || 0) > chunks.length && await cloudRemoveItems(cloudBackupChunkKeys(pfx, prevFresh.chunks).slice(chunks.length))), !window.__mkStrayAt || Date.now() - window.__mkStrayAt > 18e5) {
+        await cloudRemoveItems(cloudEntryKeys(old)); if (prevFresh && (prevFresh.km || cloudEntryPrefix(prevFresh) !== pfx ? await cloudRemoveItems(cloudEntryKeys(prevFresh)) : (prevFresh.chunks || 0) > chunks.length && await cloudRemoveItems(cloudBackupChunkKeys(pfx, prevFresh.chunks).slice(chunks.length))), !window.__mkStrayAt || Date.now() - window.__mkStrayAt > 18e5) {
     window.__mkStrayAt = Date.now();
     try {
         await cloudRemoveStrayTail(pfx, chunks.length);
@@ -22318,7 +22493,7 @@ catch {
 else
     json = entry.c ? await cloudDecompress(raw, entry.c) : raw; if (json == null)
     return null; const data = safeParseJSON(json, null); if (!data || !Array.isArray(data.notes))
-    return null; data.v >= 2 && (data.notes = data.notes.map(cloudUnpackNote)); return { meta: entry, data: data }; }
+    return null; data.v >= 2 && (data.notes = data.notes.map(cloudUnpackNote)), +entry.c === 5 && data.notes.reverse(); return { meta: entry, data: data }; }
 // Merge-restore ("newer wins", nothing is removed). Per note, body and metadata (folder, tags, pin / favorite /
 // archive, color...) are compared separately (lastEdited vs metaEditedAt). Notes deleted here after their last
 // edit stay deleted (tombstones) unless `force`; notes hidden in the vault never come back into the list;
