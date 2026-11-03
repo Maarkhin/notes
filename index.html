@@ -36752,10 +36752,10 @@ catch { } };
             return tn;
     } return null; }
     // which formats are active at the caret (pure DOM, so it never steals focus / opens the keyboard)
-    function fmtState(t2, anchor) { var st = {}, el = anchor && (anchor.nodeType === 1 ? anchor : anchor.parentElement); if (!el || !t2.contains(el))
+    function fmtState(t2, anchor, noQ) { var st = {}, el = anchor && (anchor.nodeType === 1 ? anchor : anchor.parentElement); if (!el || !t2.contains(el))
         return st; var up = function (sel) { var x = el.closest(sel); return x && t2.contains(x) && x !== t2 ? x : null; }, b = up("b,strong"); st.bold = !!b, st.italic = !!up("i,em"), st.underline = !!up("u"), st.strike = !!up("s,strike,del"), st.ul = !!up("ul"), st.ol = !!up("ol"), st.quote = !!up("blockquote"), st.link = !!up("a"), st.highlight = !!up(".mk-hl"), st.color = !!up(".mk-c"), st.colorEl = up(".mk-c"), st.code = !!up("code"), st.codeMode = st.code || !!codeModeId && t2.id === "text-" + codeModeId, st.heading = !!up(".mxe-h,.mk-hs"), st.table = !!up("table"); try {
         var ls = window.getSelection();
-        if (ls && ls.rangeCount && t2.contains(ls.anchorNode)) {
+        if (!noQ && ls && ls.rangeCount && t2.contains(ls.anchorNode)) {
             var q = function (c) { try {
                 return D2.queryCommandState(c);
             }
@@ -36766,8 +36766,32 @@ catch { } };
         }
     }
     catch { } var todoTextNode = lineFirstText(t2, anchor); return st.todo = !!(todoTextNode && /^[☐☑]/.test(todoTextNode.nodeValue)), st; }
-    // Mark (class "on", aria-pressed) the writing-popover buttons whose format is active at the caret; runs when the popover opens and shortly after each tap
-    function syncFmt(box) { var id = idOf(box), t = D2.getElementById("text-" + id), anchor = null, s2 = window.getSelection(); t && s2 && s2.rangeCount && t.contains(s2.anchorNode) ? anchor = s2.anchorNode : t && lastRange && lastId === id && t.contains(lastRange.startContainer) && (anchor = lastRange.startContainer); var st = t ? fmtState(t, anchor) : {}; try { mkColSync(box, st); } catch { } box.querySelectorAll(".mxe-pop [data-fmtk]").forEach(function (b) { var k = b.getAttribute("data-fmtk"), on = !!st[k]; b.classList.toggle("on", on), b.setAttribute("aria-pressed", on ? "true" : "false"); }); }
+    // Text node that really lies at the start / end of a selection (a boundary sitting at the edge of a node belongs to its neighbour)
+    function fmtEdge(t, r, end) { try { var n = end ? r.endContainer : r.startContainer, o = end ? r.endOffset : r.startOffset;
+        if (n.nodeType === 1) { var c = n.childNodes[end ? o - 1 : o]; if (c) { n = c; while (n.nodeType === 1 && (end ? n.lastChild : n.firstChild)) n = end ? n.lastChild : n.firstChild; } }
+        else if (n.nodeType === 3 && (end ? o === 0 : o >= n.nodeValue.length)) { var w = D2.createTreeWalker(t, NodeFilter.SHOW_TEXT, null), p; w.currentNode = n; p = end ? w.previousNode() : w.nextNode(); if (p && t.contains(p) && r.intersectsNode(p)) n = p; }
+        return t.contains(n) ? n : null; } catch (e) { return null; } }
+    // Mark (class "on", aria-pressed) the writing-popover buttons whose format is active at the caret. A selection counts as formatted only when BOTH of its ends are; runs when the popover opens, after each tap and live while the caret / selection / text changes
+    function syncFmt(box) { var id = idOf(box), t = D2.getElementById("text-" + id), anchor = null, s2 = window.getSelection(); t && s2 && s2.rangeCount && t.contains(s2.anchorNode) ? anchor = s2.anchorNode : t && lastRange && lastId === id && t.contains(lastRange.startContainer) && (anchor = lastRange.startContainer); var st = t ? fmtState(t, anchor) : {};
+        try { if (t && s2 && s2.rangeCount && !s2.isCollapsed && t.contains(s2.anchorNode) && t.contains(s2.focusNode)) { var rg = s2.getRangeAt(0), ea = fmtEdge(t, rg, !1), eb = fmtEdge(t, rg, !0);
+            if (ea && eb && ea !== eb) { var s1 = fmtState(t, ea, !0), s3 = fmtState(t, eb, !0), res = {}; for (var k in s1) k !== "colorEl" && (res[k] = !!(s1[k] && s3[k])); res.colorEl = res.color ? s1.colorEl : null; st = res; } } } catch (e) { }
+        try { mkColSync(box, st); } catch { } box.querySelectorAll(".mxe-pop [data-fmtk]").forEach(function (b) { var k = b.getAttribute("data-fmtk"), on = !!st[k]; b.classList.toggle("on", on), b.setAttribute("aria-pressed", on ? "true" : "false"); }); }
+    // Keep the marks truthful at all times: caret / selection moves, typing, undo / redo, any tool tap
+    (function () { var raf = 0, tm = []; function live() { raf || (raf = requestAnimationFrame(function () { raf = 0; try { var bx = D2.querySelector(".content-container.mxe.show"), wp = bx && bx.querySelector('.mxe-pop[data-pop="write"]'); wp && wp.classList.contains("open") && syncFmt(bx); } catch (e) { } })); }
+        function later() { live(); tm.forEach(clearTimeout); tm = [setTimeout(live, 60), setTimeout(live, 250), setTimeout(live, 600)]; }
+        D2.addEventListener("selectionchange", live); D2.addEventListener("input", later, !0); D2.addEventListener("keyup", live, !0); D2.addEventListener("pointerup", later, !0); D2.addEventListener("focusin", live, !0);
+        D2.addEventListener("click", function (e) { e.target && e.target.closest && e.target.closest(".content-container.mxe [data-mxe]") && later(); }, !0); })();
+    // Leaving a note (or opening another) resets the writing tools' STATE: tap-copy typing mode, remembered selection and the highlighted marks.
+    // Only UI / tool state is touched - the note's text and formatting are never modified, and the tools box keeps whatever open / closed state it has.
+    (function () { var prev = null;
+        function shown() { var els = D2.querySelectorAll(".content-container.mxe.show"), s = []; for (var i = 0; i < els.length; i++) s.push(els[i].id || ""); return s.join("|"); }
+        function resetTools() { try { codeModeId = null; expSnap = null; lastRange = null; lastId = null; window.__mkKeep = null; } catch (e) { }
+            try { mkCurCol = 1; localStorage.removeItem("mxe_textcolor"); root.style.removeProperty("--mk-cur"); } catch (e) { }   // last picked colour back to the default
+            try { localStorage.removeItem("mxe_write_expanded"); D2.querySelectorAll('.mxe-pop[data-pop="write"]').forEach(function (p) { p.classList.remove("wexp"); var x = p.querySelector(".mxe-wexp"); x && x.setAttribute("aria-expanded", "false"); }); } catch (e) { }   // expanded layout is not remembered
+            try { D2.querySelectorAll(".mxe-pop [data-fmtk]").forEach(function (b) { b.classList.remove("on"); b.setAttribute("aria-pressed", "false"); }); } catch (e) { } }
+        function check() { var cur = shown(); if (cur === prev) return; prev = cur; resetTools();
+            try { var bx = D2.querySelector(".content-container.mxe.show"), wp = bx && bx.querySelector('.mxe-pop[data-pop="write"]'); wp && wp.classList.contains("open") && syncFmt(bx); } catch (e) { } }
+        new MutationObserver(check).observe(D2.getElementById("contentsContainer") || D2.body, { subtree: !0, childList: !0, attributes: !0, attributeFilter: ["class"] }); check(); })();
     // tap the ☐ / ☑ of a checklist line to tick / untick it
     D2.addEventListener("click", function (e) { var t = e.target && e.target.closest ? e.target.closest('.text-box[contenteditable="true"]') : null; if (!(!t || !t.id || t.id.indexOf("text-") !== 0)) {
         var node = null;
@@ -53548,6 +53572,53 @@ html body #contentsContainer .mxe .mxe-bottom .mxe-pop[data-pop=write].wexp .gri
     ["mousedown", "pointerdown"].forEach(function (ev) { document.addEventListener(ev, function (e) { isSel(e) && e.preventDefault(); }, !0); });
     document.addEventListener("click", function (e) { var s = isSel(e); s && (e.preventDefault(), e.stopImmediatePropagation(), s.blur(), open(s)); }, !0);
     document.addEventListener("keydown", function (e) { e.key === "Escape" && close(); });
+})();
+</script>
+<style id="mkWriteSafe">
+/* Writing-tools pill floats above the bottom bar. While it is open, reserve its height at the end of the note
+   so the last lines can always be scrolled up above the pill (--mkw-h is measured live by #mkWriteSafeJs). */
+html body #contentsContainer .mxe .mxe-body {
+  padding-bottom: calc(24px + var(--mkw-h, 0px)) !important;
+  scroll-padding-bottom: calc(var(--mkw-h, 0px) + 16px);
+  transition: padding-bottom .18s ease;
+}
+</style>
+<script id="mkWriteSafeJs">
+(function () {
+  "use strict";
+  if (window.__mkWriteSafe) return; window.__mkWriteSafe = 1;
+  var RO = typeof ResizeObserver === "function" ? new ResizeObserver(schedule) : null, seen = new WeakSet(), raf = 0;
+  function schedule() { raf || (raf = requestAnimationFrame(function () { raf = 0; sync(); })); }
+  function sync() {
+    var pops = document.querySelectorAll('#contentsContainer .mxe .mxe-bottom .mxe-pop[data-pop="write"]');
+    for (var i = 0; i < pops.length; i++) {
+      var pop = pops[i], mxe = pop.closest(".mxe"); if (!mxe) continue;
+      if (RO && !seen.has(pop)) { seen.add(pop); RO.observe(pop); }
+      var open = pop.classList.contains("open") && pop.offsetHeight > 0;
+      var h = open ? Math.ceil(pop.offsetHeight) + 8 : 0;
+      var cur = parseFloat(mxe.style.getPropertyValue("--mkw-h")) || 0;
+      if (Math.abs(cur - h) > 1 || (!h && cur)) { mxe.style.setProperty("--mkw-h", h + "px"); open && keepCaret(mxe, h); }
+    }
+  }
+  // Keep the caret above the pill (the pill overlays the bottom `h` px of the scroll area).
+  function keepCaret(mxe, h) {
+    try {
+      h = h == null ? (parseFloat(mxe.style.getPropertyValue("--mkw-h")) || 0) : h; if (!h) return;
+      var body = mxe.querySelector(".mxe-body"), sel = window.getSelection();
+      if (!body || !sel || !sel.rangeCount || !body.contains(sel.anchorNode)) return;
+      var rg = sel.getRangeAt(0).cloneRange(); rg.collapse(false);
+      var r = rg.getClientRects()[0]; if (!r || !r.height) { var n = sel.anchorNode; n = n && (n.nodeType === 1 ? n : n.parentElement); r = n && n.getBoundingClientRect(); }
+      if (!r) return;
+      var b = body.getBoundingClientRect(), vv = window.visualViewport, bottom = Math.min(b.bottom, vv ? vv.offsetTop + vv.height : innerHeight) - h - 8;
+      if (r.bottom > bottom) body.scrollTop += Math.ceil(r.bottom - bottom);
+    } catch (e) { }
+  }
+  var mo = new MutationObserver(schedule), root = document.getElementById("contentsContainer") || document.body;
+  mo.observe(root, { subtree: true, childList: true, attributes: true, attributeFilter: ["class"] });
+  window.addEventListener("resize", schedule);
+  window.visualViewport && window.visualViewport.addEventListener("resize", schedule);
+  document.addEventListener("input", function (e) { var m = e.target && e.target.closest && e.target.closest(".mxe"); m && requestAnimationFrame(function () { keepCaret(m); }); }, true);
+  schedule();
 })();
 </script>
 </body>
