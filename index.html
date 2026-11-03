@@ -53587,8 +53587,15 @@ html body #contentsContainer .mxe .mxe-body {
 (function () {
   "use strict";
   if (window.__mkWriteSafe) return; window.__mkWriteSafe = 1;
-  var RO = typeof ResizeObserver === "function" ? new ResizeObserver(schedule) : null, seen = new WeakSet(), raf = 0;
-  function schedule() { raf || (raf = requestAnimationFrame(function () { raf = 0; sync(); })); }
+
+  var MARGIN = 10;          // breathing room between the caret line and whatever covers the text
+  var RO = typeof ResizeObserver === "function" ? new ResizeObserver(schedule) : null;
+  var seen = new WeakSet(), raf = 0, burstUntil = 0, burstRaf = 0;
+
+  function nowMs() { return window.performance && performance.now ? performance.now() : Date.now(); }
+  function schedule() { raf || (raf = requestAnimationFrame(function () { raf = 0; sync(); fit(); })); }
+
+  // ---- 1) reserve room at the end of the note for the floating writing-tools pill (--mkw-h) ----
   function sync() {
     var pops = document.querySelectorAll('#contentsContainer .mxe .mxe-bottom .mxe-pop[data-pop="write"]');
     for (var i = 0; i < pops.length; i++) {
@@ -53597,27 +53604,81 @@ html body #contentsContainer .mxe .mxe-body {
       var open = pop.classList.contains("open") && pop.offsetHeight > 0;
       var h = open ? Math.ceil(pop.offsetHeight) + 8 : 0;
       var cur = parseFloat(mxe.style.getPropertyValue("--mkw-h")) || 0;
-      if (Math.abs(cur - h) > 1 || (!h && cur)) { mxe.style.setProperty("--mkw-h", h + "px"); open && keepCaret(mxe, h); }
+      if (Math.abs(cur - h) > 1 || (!h && cur)) { mxe.style.setProperty("--mkw-h", h + "px"); burst(400); }
     }
   }
-  // Keep the caret above the pill (the pill overlays the bottom `h` px of the scroll area).
-  function keepCaret(mxe, h) {
+
+  // ---- 2) where is the caret line? ----
+  function caretRect(body) {
+    var s = window.getSelection();
+    if (!s || !s.rangeCount || !s.isCollapsed) return null;       // never fight a selection drag
+    var n = s.anchorNode; if (!n || !body.contains(n)) return null;
+    var el = n.nodeType === 1 ? n : n.parentElement;
+    if (!el || !el.closest || !el.closest(".text-box")) return null; // only the note text, not the title field
+    var r = null;
     try {
-      h = h == null ? (parseFloat(mxe.style.getPropertyValue("--mkw-h")) || 0) : h; if (!h) return;
-      var body = mxe.querySelector(".mxe-body"), sel = window.getSelection();
-      if (!body || !sel || !sel.rangeCount || !body.contains(sel.anchorNode)) return;
-      var rg = sel.getRangeAt(0).cloneRange(); rg.collapse(false);
-      var r = rg.getClientRects()[0]; if (!r || !r.height) { var n = sel.anchorNode; n = n && (n.nodeType === 1 ? n : n.parentElement); r = n && n.getBoundingClientRect(); }
-      if (!r) return;
-      var b = body.getBoundingClientRect(), vv = window.visualViewport, bottom = Math.min(b.bottom, vv ? vv.offsetTop + vv.height : innerHeight) - h - 8;
-      if (r.bottom > bottom) body.scrollTop += Math.ceil(r.bottom - bottom);
+      var rs = s.getRangeAt(0).getClientRects();
+      if (rs && rs.length) r = rs[rs.length - 1];
     } catch (e) { }
+    if (!r || (!r.height && !r.width)) {
+      var host = el;
+      if (host.classList && host.classList.contains("text-box")) {
+        var ch = host.childNodes[Math.min(s.anchorOffset, host.childNodes.length - 1)];
+        host = ch && ch.nodeType === 1 ? ch : null;
+      }
+      r = host ? host.getBoundingClientRect() : null;
+    }
+    if (!r || !(r.height || r.width) || r.height > 400) return null;
+    return r;
   }
-  var mo = new MutationObserver(schedule), root = document.getElementById("contentsContainer") || document.body;
-  mo.observe(root, { subtree: true, childList: true, attributes: true, attributeFilter: ["class"] });
-  window.addEventListener("resize", schedule);
-  window.visualViewport && window.visualViewport.addEventListener("resize", schedule);
-  document.addEventListener("input", function (e) { var m = e.target && e.target.closest && e.target.closest(".mxe"); m && requestAnimationFrame(function () { keepCaret(m); }); }, true);
+
+  // ---- 3) keep that line inside the REAL visible window of the note ----
+  // visible window = scroll area, minus the keyboard (visual viewport), minus the writing-tools pill that floats over it
+  function fit() {
+    var mxe = document.querySelector("#contentsContainer .mxe.show"); if (!mxe) return;
+    var body = mxe.querySelector(".mxe-body"); if (!body) return;
+    var rc = caretRect(body); if (!rc) return;
+    if (body.style.scrollBehavior !== "auto") body.style.scrollBehavior = "auto"; // instant, never a slow glide
+    var br = body.getBoundingClientRect(), vv = window.visualViewport;
+    var vTop = vv ? vv.offsetTop : 0, vBot = vv ? vv.offsetTop + vv.height : window.innerHeight;
+    var limitBottom = Math.min(br.bottom, vBot);
+    var pop = mxe.querySelector('.mxe-pop[data-pop="write"].open');
+    if (pop && pop.offsetHeight > 0) { var pt = pop.getBoundingClientRect().top; if (pt < limitBottom) limitBottom = pt; }
+    var top = Math.max(br.top, vTop) + MARGIN, bottom = limitBottom - MARGIN;
+    if (bottom - top < 40) bottom = top + 40;                       // tiny window: still make progress
+    if (rc.bottom > bottom) body.scrollTop += Math.ceil(rc.bottom - bottom);
+    else if (rc.top < top) body.scrollTop -= Math.ceil(top - rc.top);
+  }
+
+  // ---- 4) while the keyboard slides in / out (or the pill resizes) re-fit EVERY frame so the text is never covered ----
+  function burst(ms) {
+    burstUntil = Math.max(burstUntil, nowMs() + (ms || 800));
+    if (burstRaf) return;
+    (function loop() {
+      burstRaf = 0;
+      try { sync(); fit(); } catch (e) { }
+      if (nowMs() < burstUntil) burstRaf = requestAnimationFrame(loop);
+    })();
+  }
+
+  var root = document.getElementById("contentsContainer") || document.body;
+  new MutationObserver(function (ml) {
+    for (var i = 0; i < ml.length; i++) {
+      var t = ml[i].target;
+      if (t && t.classList && (t.classList.contains("mxe-pop") || t.classList.contains("mxe"))) { burst(500); return; }
+    }
+    schedule();
+  }).observe(root, { subtree: true, childList: true, attributes: true, attributeFilter: ["class"] });
+  // keyboard up/down toggles html.mu-kb / mu-kbo
+  new MutationObserver(function () { burst(900); }).observe(document.documentElement, { attributes: true, attributeFilter: ["class"] });
+
+  var vv = window.visualViewport;
+  if (vv) { vv.addEventListener("resize", function () { burst(900); }); vv.addEventListener("scroll", schedule); }
+  window.addEventListener("resize", function () { burst(900); });
+  document.addEventListener("focusin", function (e) { e.target && e.target.closest && e.target.closest(".mxe") && burst(900); }, true);
+  document.addEventListener("pointerup", function (e) { e.target && e.target.closest && e.target.closest(".mxe .text-box") && burst(700); }, true);
+  document.addEventListener("selectionchange", schedule);
+  document.addEventListener("input", schedule, true);
   schedule();
 })();
 </script>
