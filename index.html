@@ -20374,6 +20374,32 @@ html:not(#_s5) body:not(#_s5) #foldersContainer,html:not(#_s5) body:not(#_s5) #b
 <script>
 // TELEGRAM MINI APP — download fix. Telegram's in-app WebView (Android/iOS, not Telegram Desktop)
 // silently swallows most normal download methods.
+// ===== UNIFIED CLOCK (v10): UTC stamps with milliseconds, never behind anything already seen =====
+// Every "lastEdited" / "metaEditedAt" stamp comes from here. It is UTC, has millisecond precision, is strictly
+// increasing on this device, and is always later than the newest stamp this device has seen from ANY device
+// (notes loaded locally or merged from the Cloud). So an edit made after receiving another device's change
+// can never lose to it just because this device's wall clock runs behind. (Absurd future stamps > +24 h are ignored.)
+window.mkClock = window.mkClock || { max: 0, seeded: !1 };
+function mkClockSeen() { try {
+    const lim = Date.now() + 864e5;
+    for (let i = 0; i < arguments.length; i++) { const v = arguments[i], t = typeof v == "number" ? v : Date.parse(v); t && t <= lim && t > window.mkClock.max && (window.mkClock.max = t); }
+}
+catch { } }
+function mkNowMs() { const c = window.mkClock; if (!c.seeded) {
+    c.seeded = !0;
+    try { categories.forEach(n => n && mkClockSeen(n.lastEdited, n.metaEditedAt)); } catch { c.seeded = !1; }
+} const t = Math.max(Date.now(), c.max + 1); return c.max = t, t; }
+function mkStampMs(ms) { return new Date(ms).toUTCString().replace(" GMT", "." + String(ms % 1e3).padStart(3, "0") + " GMT"); }
+function mkStamp() { return mkStampMs(mkNowMs()); }
+window.mkStamp = mkStamp, window.mkStampMs = mkStampMs, window.mkNowMs = mkNowMs, window.mkClockSeen = mkClockSeen;
+// ----- v11: metadata safety net + "synced clock" -----
+// Any note whose metadata (folder, tags, pin, favorite, archive, colours, fonts, order, time capsule / ghost)
+// changed since the last save WITHOUT a new metaEditedAt gets stamped here, so no code path can change
+// metadata that never reaches the other devices. Changes applied by a Cloud merge are never re-stamped.
+window.__mkShadow = window.__mkShadow || new Map;
+function mkAutoStamp(noStamp) { const sh = window.__mkShadow, first = !window.__mkShadowInit; window.__mkShadowInit = !0; let n = 0; for (let i = 0; i < categories.length; i++) { const c = categories[i]; if (!c || c.id == null) continue; const ms = JSON.stringify([c.folder || "", c.extraFolders || [], c.tags || [], !!c.pinned, !!c.favorite, !!c.archived, c.color || "", c.titleColor == null ? "" : c.titleColor, c.fontFamily || "", +c.fontSize || 0, +c.order || 0, c.unlockAt || "", c.ghostUntil || ""]), key = String(c.id), p = sh.get(key); !noStamp && !first && p && p.ms !== ms && p.me === c.metaEditedAt && (c.metaEditedAt = mkStamp(), n++), sh.set(key, { ms: ms, me: c.metaEditedAt }); } return n; }
+window.mkAutoStamp = mkAutoStamp;
+(function () { let seen = 0; try { seen = window.__mkSeenAutoTs || 0; } catch { } Object.defineProperty(window, "__mkSeenAutoTs", { configurable: !0, enumerable: !0, get() { return seen; }, set(v) { seen = v; try { window.mkClock.synced = window.mkClock.max; } catch { } } }); })();
 let TG = null, IS_TELEGRAM = /Telegram/i.test(navigator.userAgent || "");
 // Other in-app browsers (Instagram, Facebook, Line, WeChat, KakaoTalk, Naver, Snapchat, TikTok,
 // Pinterest, WhatsApp, Google app).
@@ -21587,7 +21613,7 @@ catch {
     curNotes > 0 && (curLen + p.length > tgt * 1.3 || curLen >= tgt * .65 && (keyed[i].h & M - 1) === 0) && flush();
     cur.push(p), curLen += p.length, curNotes++;
 } cur.length && flush(); const tailStrs = close.length < 800 ? [close + tsPiece] : [close, tsPiece], encd = await cloudPool(pend.concat(tailStrs.map(t => [t])), 4, g => encGroup(g)), blocks = []; let encSum = 0; encd.forEach((encs, gi) => { blocks.push(...encs), gi < pend.length && (encSum += encs.reduce((sum, e) => sum + e.length, 0)); }); cloudDRatioLearn(wide, est, encSum / Math.max(1, rawSum)); const chunks = cloudCdcCut(blocks.join("")); const joined = chunks.join(""), ids = await Promise.all(chunks.map(x => cloudHash12m(x))); return { delta: !0, wide: wide, joined: joined, chunks: chunks, ids: ids, hash: hash, totalNotes: sorted.length, skipped: 0, vaultSkipped: !!c.vaultSkipped }; }
-async function cloudBuildPayload(maxChunks, lz, delta, wide, prevHash) { const all = categories.slice().sort((a, b) => (Date.parse(b.lastEdited) || 0) - (Date.parse(a.lastEdited) || 0)).map(item => { const persisted = getPersistedCategory(item); const totalNotes = { id: persisted.id, name: persisted.name, folder: persisted.folder, extraFolders: persisted.extraFolders || [], text: persisted.text, html: cloudStripImages(persisted.html), encrypted: persisted.encrypted, hint: persisted.hint, tags: persisted.tags, pinned: persisted.pinned, favorite: persisted.favorite, archived: persisted.archived, order: persisted.order, fontFamily: persisted.fontFamily, fontSize: persisted.fontSize, color: persisted.color, fakeContent: persisted.fakeContent, unlockAt: persisted.unlockAt, ghostUntil: persisted.ghostUntil, lastEdited: persisted.lastEdited, metaEditedAt: persisted.metaEditedAt }; return cloudPackOn() ? cloudPackNote(totalNotes) : totalNotes; }), totalNotes2 = all.length, customFolders = folders.filter(f => f !== DEFAULT_FOLDER), budget = CLOUD_CHUNK_SIZE * Math.max(1, maxChunks || MAX_CHUNKS_PER_BACKUP); let vaultRec = null, vaultSkipped = !1; try {
+async function cloudBuildPayload(maxChunks, lz, delta, wide, prevHash) { const all = categories.slice().sort((a, b) => (Date.parse(b.lastEdited) || 0) - (Date.parse(a.lastEdited) || 0)).map(item => { const persisted = getPersistedCategory(item); const totalNotes = { id: persisted.id, name: persisted.name, folder: persisted.folder, extraFolders: persisted.extraFolders || [], text: persisted.text, html: cloudStripImages(persisted.html), encrypted: persisted.encrypted, hint: persisted.hint, tags: persisted.tags, pinned: persisted.pinned, favorite: persisted.favorite, archived: persisted.archived, order: persisted.order, fontFamily: persisted.fontFamily, fontSize: persisted.fontSize, color: persisted.color, titleColor: persisted.titleColor, fakeContent: persisted.fakeContent, unlockAt: persisted.unlockAt, ghostUntil: persisted.ghostUntil, lastEdited: persisted.lastEdited, metaEditedAt: persisted.metaEditedAt }; return cloudPackOn() ? cloudPackNote(totalNotes) : totalNotes; }), totalNotes2 = all.length, customFolders = folders.filter(f => f !== DEFAULT_FOLDER), budget = CLOUD_CHUNK_SIZE * Math.max(1, maxChunks || MAX_CHUNKS_PER_BACKUP); let vaultRec = null, vaultSkipped = !1; try {
     window.MK?.vault?.sync && (vaultRec = await window.MK?.vault?.sync.getRecord());
 }
 catch {
@@ -21757,6 +21783,7 @@ function cloudQuiet(fn) { window.__mkNoSchedule++; try {
     return fn();
 }
 finally {
+    try { mkAutoStamp(!0); } catch { }
     window.__mkNoSchedule--;
 } }
 // Queues the auto backup. `urgent` (permanent delete, regular delete, folder deletion that re-files notes)
@@ -21770,6 +21797,7 @@ if (__cloudBackupPending || (__cloudBackupFirstAt = 0), __cloudBackupPending = !
     return;
 } const nowMs = Date.now(); __cloudBackupFirstAt || (__cloudBackupFirstAt = nowMs); const debounceMs = Math.max(CLOUD_BACKUP_DEBOUNCE_MS, Math.min(3e3, Math.round((window.__mkLastAutoMs || 0) / 4))), maxWaitMs = Math.max(CLOUD_BACKUP_MAXWAIT_MS, debounceMs * 2), waitMs = Math.max(0, Math.min(debounceMs, maxWaitMs - (nowMs - __cloudBackupFirstAt))); __cloudBackupTimer = setTimeout(cloudFlushBackup, waitMs); }
 function cloudFlushEditorFirst() { try {
+    try { window.mkCl && window.mkCl.flush && window.mkCl.flush(); } catch { }
     return typeof flushActiveEditorSave == "function" ? flushActiveEditorSave() : null;
 }
 catch {
@@ -21965,6 +21993,11 @@ catch (e) {
 }
 catch (e) {
     console.warn("live repaint: notes page failed", e);
+} try {
+    window.mkCl && window.mkCl.refreshOpen && window.mkCl.refreshOpen();
+}
+catch (e) {
+    console.warn("live repaint: list editor failed", e);
 } if (caret) {
     mkLiveCaretRestore(caret), setTimeout(() => { document.activeElement && document.activeElement.id === caret.id || mkLiveCaretRestore(caret); }, 220);
 } try {
@@ -23174,7 +23207,7 @@ else
 // Only for a genuinely unsynced local edit (made after this device's last successful sync), never for locked notes,
 // never twice for the same text.
 function mkConflictKeep(local, cloudItem) {
-    const base = Math.max(window.__mkSeenAutoTs || 0, window.__mkSync && window.__mkSync.lastOk || 0), localMs = Date.parse(local.lastEdited) || 0;
+    const base = Math.max(window.__mkSeenAutoTs || 0, window.__mkSync && window.__mkSync.lastOk || 0, window.mkClock && window.mkClock.synced || 0), localMs = Date.parse(local.lastEdited) || 0;
     if (!base || localMs <= base || isNoteLocked(local) || isNoteLocked(cloudItem))
         return;
     const norm = s => String(s || "").replace(/\s+/g, " ").trim(), lt = norm(local.text), ct = norm(cloudItem.text != null && cloudItem.text !== "" ? cloudItem.text : cloudItem.html ? htmlToPlainText(cloudItem.html) : "");
@@ -23183,14 +23216,14 @@ function mkConflictKeep(local, cloudItem) {
     const fa = currentLang === "fa", prefix = fa ? "⚠️ نسخه‌ی تعارض — " : "⚠️ Conflict copy — ";
     if (categories.some(c => c && String(c.name || "").indexOf(prefix) === 0 && norm(c.text) === lt))
         return;
-    const now = new Date().toUTCString(), copy = normalizeCategory({ id: mu_sanitizeNoteId(null, categories.length), name: prefix + String(local.name || ""), folder: local.folder || "", text: local.text, html: sanitizeHtml(local.html || local.text || ""), lastEdited: now, metaEditedAt: now, tags: [], history: [] }, categories.length);
+    const now = mkStamp(), copy = normalizeCategory({ id: mu_sanitizeNoteId(null, categories.length), name: prefix + String(local.name || ""), folder: local.folder || "", text: local.text, html: sanitizeHtml(local.html || local.text || ""), lastEdited: now, metaEditedAt: now, tags: [], history: [] }, categories.length);
     categories.push(copy);
     try {
         showToast(fa ? "⚠️ این یادداشت روی دو دستگاه همزمان ویرایش شده بود؛ نسخه‌ی این دستگاه به‌صورت یادداشت جدا نگه داشته شد" : "⚠️ This note was edited on two devices at once; this device's version was kept as a separate note", 6000);
     }
     catch { }
 }
-function cloudApplyMergeData(data, force) { let updated = 0, added = 0, skippedDeleted = 0; const vaultDeferred = []; let vaultApplied = null; try {
+function cloudApplyMergeData(data, force) { let updated = 0, added = 0, skippedDeleted = 0; try { (data.notes || []).forEach(n => n && mkClockSeen(n.lastEdited, n.metaEditedAt)); } catch { } const vaultDeferred = []; let vaultApplied = null; try {
     data && data.vault && window.MK?.vault?.sync && (vaultApplied = window.MK?.vault?.sync.applyRemote(data.vault, !!data.__vaultForce));
 }
 catch { } (data.notes || []).forEach(cloudItem => { if (!cloudItem || typeof cloudItem != "object")
@@ -23203,6 +23236,7 @@ try {
     }
 }
 catch { } const local = categories.find(c => c.id === cloudItem.id); if (local) {
+    try { window.mkCl && window.mkCl.preMerge && window.mkCl.preMerge(local, cloudItem); } catch (e) { console.warn("list merge failed", e); }
     // Two independent "newer wins" comparisons instead of one
     const cloudTextNewer = (Date.parse(cloudItem.lastEdited) || 0) > (Date.parse(local.lastEdited) || 0), cloudMetaNewer = (Date.parse(cloudItem.metaEditedAt) || 0) > (Date.parse(local.metaEditedAt) || Date.parse(local.lastEdited) || 0);
     // Lock conflict: the other device locked this note after our last metadata change, but we edited the text meanwhile.
@@ -23239,7 +23273,7 @@ catch { } const local = categories.find(c => c.id === cloudItem.id); if (local) 
             else
                 local.html = cloudHtml;
         }
-    cloudMetaNewer && (cloudItem.order != null && (local.order = Number(cloudItem.order) || 0), local.folder = cloudItem.folder, local.extraFolders = Array.isArray(cloudItem.extraFolders) ? cloudItem.extraFolders.filter(f => typeof f == "string" && f) : [], local.tags = Array.isArray(cloudItem.tags) ? cloudItem.tags.filter(Boolean).map(String) : local.tags || [], local.pinned = !!cloudItem.pinned, local.favorite = !!cloudItem.favorite, local.archived = !!cloudItem.archived, typeof cloudItem.color == "string" && /^[a-z]*$/.test(cloudItem.color) && (local.color = cloudItem.color), typeof cloudItem.fontFamily == "string" && (local.fontFamily = cloudItem.fontFamily), cloudItem.fontSize && (local.fontSize = Number(cloudItem.fontSize) || local.fontSize), cloudItem.unlockAt !== void 0 && (local.unlockAt = cloudItem.unlockAt), cloudItem.ghostUntil !== void 0 && (local.ghostUntil = cloudItem.ghostUntil), local.metaEditedAt = cloudItem.metaEditedAt), (cloudTextNewer || cloudMetaNewer) && updated++;
+    cloudMetaNewer && (cloudItem.titleColor !== void 0 && (local.titleColor = cloudItem.titleColor), cloudItem.order != null && (local.order = Number(cloudItem.order) || 0), local.folder = cloudItem.folder, local.extraFolders = Array.isArray(cloudItem.extraFolders) ? cloudItem.extraFolders.filter(f => typeof f == "string" && f) : [], local.tags = Array.isArray(cloudItem.tags) ? cloudItem.tags.filter(Boolean).map(String) : local.tags || [], local.pinned = !!cloudItem.pinned, local.favorite = !!cloudItem.favorite, local.archived = !!cloudItem.archived, typeof cloudItem.color == "string" && /^[a-z]*$/.test(cloudItem.color) && (local.color = cloudItem.color), typeof cloudItem.fontFamily == "string" && (local.fontFamily = cloudItem.fontFamily), cloudItem.fontSize && (local.fontSize = Number(cloudItem.fontSize) || local.fontSize), cloudItem.unlockAt !== void 0 && (local.unlockAt = cloudItem.unlockAt), cloudItem.ghostUntil !== void 0 && (local.ghostUntil = cloudItem.ghostUntil), local.metaEditedAt = cloudItem.metaEditedAt), (cloudTextNewer || cloudMetaNewer) && updated++;
 }
 else {
     let forceRestoredFromTombstone = !1;
@@ -23255,7 +23289,7 @@ else {
         // toUTCString(), not toISOString(): "Last Edited" shows this field completely raw with no
         // reformatting, so an ISO timestamp here would look inconsistent next to every other note's "Mon,
         // 28 Sep 2026 ..." form
-        const restoredNow = new Date().toUTCString();
+        const restoredNow = mkStamp();
         restored.lastEdited = restoredNow, restored.metaEditedAt = restoredNow;
     }
     isNoteLocked(restored) ? (restored.text = "", restored.html = "", restored.isDecoy = !1) : restored.html = sanitizeHtml(restored.html || restored.text || ""), categories.push(restored), added++;
@@ -23323,7 +23357,7 @@ function cloudComputeReplaceDiff(data) { const backupNotes = (data.notes || []).
 // real edit but still truthy for the merge's `|| 0` fallbacks) so the merge overwrites them with the backup's
 // copy, then re-stamped "now" so the restored state wins on the next sync. Shallow snapshot (`before`) so a
 // failure half-way leaves the notes exactly as they were.
-function cloudApplyReplaceData(data) { const backupNotes = (data.notes || []).filter(n => n && typeof n == "object" && n.id != null), ids = new Set(backupNotes.map(n => String(n.id))), nowStr = new Date().toUTCString(), staleStr = new Date(-1e3).toUTCString(), before = categories.map(c => c && typeof c == "object" ? Object.assign({}, c) : c), beforeFolders = folders.slice(), beforeCurrent = currentFolder, removedIds = [], goneFolders = []; try {
+function cloudApplyReplaceData(data) { const backupNotes = (data.notes || []).filter(n => n && typeof n == "object" && n.id != null), ids = new Set(backupNotes.map(n => String(n.id))), nowStr = mkStamp(), staleStr = new Date(-1e3).toUTCString(), before = categories.map(c => c && typeof c == "object" ? Object.assign({}, c) : c), beforeFolders = folders.slice(), beforeCurrent = currentFolder, removedIds = [], goneFolders = []; try {
     const removed = categories.filter(c => c && !ids.has(String(c.id)));
     removed.forEach(c => { removedIds.push(c.id), recordTombstone(c.id); }), categories = categories.filter(c => c && ids.has(String(c.id))), typeof activeOpenId < "u" && activeOpenId != null && removedIds.some(x => String(x) === String(activeOpenId)) && (activeOpenId = null);
     const toStamp = [];
@@ -23545,6 +23579,91 @@ function mkRepairPushCheck(result) { try {
     need && (window.__mkRepairAt = now, scheduleCloudBackup(!1));
 }
 catch { } }
+// Strong refresh (used by "Fix auto backup" and the notes-bar ☁️ button): BEFORE this device writes any backup it
+// downloads the Cloud auto copy + the List slot and merges them into the local notes (newer wins, nothing is
+// removed), retrying on a transient failure. Returns {ok, empty, added, updated, retired, reason}. When the Cloud
+// holds a copy that could not be read, ok is false so the caller must NOT overwrite the Cloud with a partial set.
+async function cloudStrongPull() { const out = { ok: !1, empty: !1, added: 0, updated: 0, retired: 0, reason: "" }; try {
+    if (window.__muTgLoaded)
+        try {
+            await window.__muTgLoaded;
+        }
+        catch { }
+    if (!IS_TELEGRAM || !hasCloudStorage) {
+        out.reason = "unavailable";
+        return out;
+    }
+    for (let w = 0; w < 48 && window.__mkStartupBusy; w++)
+        await new Promise(r => setTimeout(r, 250));
+    let got = null;
+    for (let attempt = 0; attempt < 3 && !got; attempt++) {
+        attempt && await new Promise(r => setTimeout(r, 1500));
+        try {
+            got = await cloudSerial(async () => { window.__mkSyncBusy = !0; try {
+                const idx = await cloudReadIndex();
+                let ls = null;
+                try {
+                    ls = await cloudReadListSlot();
+                }
+                catch { }
+                const ae = idx.find(e => e && e.id === "auto");
+                if (!ae || !(ae.chunks > 0))
+                    return { empty: !0, listSlot: ls };
+                const res = await cloudRestoreBackup("auto", void 0, idx);
+                return res && res.data ? { res: res, listSlot: ls } : null;
+            }
+            finally {
+                mkSyncEnd();
+            } });
+        }
+        catch {
+            got = null;
+        }
+    }
+    if (!got) {
+        out.reason = "pull-failed";
+        return out;
+    }
+    if (got.empty && !got.listSlot) {
+        out.ok = !0, out.empty = !0;
+        return out;
+    }
+    cloudFlushEditorFirst();
+    const sigB = mkLiveStateSig(), nB = categories.length;
+    let m = null;
+    cloudQuiet(() => {
+        if (got.listSlot && window.MK_List)
+            try {
+                window.MK_List.merge(got.listSlot);
+            }
+            catch { }
+        if (got.res && got.res.data) {
+            m = cloudApplyMergeData(got.res.data);
+            saveToLocalStorage(), saveFoldersToLocalStorage();
+        }
+    });
+    if (got.res && got.res.meta && got.res.meta.ts)
+        window.__mkSeenAutoTs = got.res.meta.ts;
+    out.updated = m && m.updated || 0, out.added = m && m.added || 0, out.retired = m && m.retired || 0;
+    if (out.updated || out.added || out.retired || categories.length !== nB || mkLiveStateSig() !== sigB) {
+        try {
+            mkLiveNotifyMerged(out.updated, out.added, out.retired);
+        }
+        catch { }
+        try {
+            mkLiveRepaint();
+        }
+        catch { }
+    }
+    out.ok = !0;
+    return out;
+}
+catch (e) {
+    console.warn("strong pull failed", e);
+    out.reason = "pull-failed";
+    return out;
+} }
+window.mkCloudStrongPull = cloudStrongPull;
 async function cloudSilentPullMerge() { try {
     const __hint = window.__mkIdxHint; window.__mkIdxHint = null;
     if (window.__muTgLoaded && await window.__muTgLoaded, !IS_TELEGRAM || !hasCloudStorage || window.__mkStartupBusy)
@@ -24072,10 +24191,10 @@ function mu_sanitizeNoteId(s, index) { return (s == null ? "" : String(s)).repla
 // `lastEdited` (which is only for title/body text) so cloud merge can compare and apply each half.
 function normalizeCategory(item, index) { const src = item && typeof item == "object" ? item : {}; return { id: mu_sanitizeNoteId(src.id, index), name: String(src.name ?? `Note ${index + 1}`), folder: typeof src.folder == "string" ? src.folder : "", extraFolders: Array.isArray(src.extraFolders) ? [...new Set(src.extraFolders.filter(f => typeof f == "string" && f && f !== src.folder))] : [], text: String(src.text ?? ""), html: String(src.html ?? src.text ?? ""), lastEdited: src.lastEdited ? String(src.lastEdited) : "", metaEditedAt: src.metaEditedAt ? String(src.metaEditedAt) : src.lastEdited ? String(src.lastEdited) : "", password: typeof src.password == "string" ? src.password : "", encrypted: src.encrypted && typeof src.encrypted == "object" ? { ...src.encrypted } : null, hint: typeof src.hint == "string" ? src.hint : "", isDecoy: !1, unlockAt: src.unlockAt ?? "", ghostUntil: src.ghostUntil ?? "", tags: Array.isArray(src.tags) ? src.tags.filter(Boolean).map(String) : [], pinned: !!src.pinned, favorite: !!src.favorite, archived: !!src.archived, order: Number(src.order) || 0, fakeContent: typeof src.fakeContent == "string" ? src.fakeContent : "", fontFamily: typeof src.fontFamily == "string" ? src.fontFamily : "", fsv: 3, fontSize: src.fsv === 3 ? (Number(src.fontSize) || 16) : (!Number(src.fontSize) || Number(src.fontSize) === 13 || Number(src.fontSize) === 15 ? 16 : Number(src.fontSize)), color: typeof src.color == "string" && /^[a-z]*$/.test(src.color) ? src.color : "", titleColor: typeof src.titleColor == "string" && /^(#[0-9a-f]{6}|[1-9])$/i.test(src.titleColor) ? src.titleColor : null }; }
 // Stamps a note's metadata-only edit time
-function mu_touchMeta(item) { item && (item.metaEditedAt = new Date().toUTCString()); }
+function mu_touchMeta(item) { item && (item.metaEditedAt = mkStamp()); }
 // Lock / unlock / hint changes must travel to other devices: stamp BOTH lastEdited and metaEditedAt, strictly newer
 // than anything already on the note, so the cloud merge (cloudTextNewer) applies the new lock state on the other device.
-function mu_touchLock(item) { if (!item) return; var prev = Math.max(Date.parse(item.lastEdited) || 0, Date.parse(item.metaEditedAt) || 0), s = new Date(Math.max(Date.now(), prev + 1000)).toUTCString(); item.lastEdited = s; item.metaEditedAt = s; }
+function mu_touchLock(item) { if (!item) return; var prev = Math.max(Date.parse(item.lastEdited) || 0, Date.parse(item.metaEditedAt) || 0), s = mkStampMs(Math.max(mkNowMs(), prev + 1)); item.lastEdited = s; item.metaEditedAt = s; }
 window.mu_touchLock = mu_touchLock;
 window.mu_touchMeta = mu_touchMeta;
 // Multi-folder notes: `folder` stays the primary folder (backward compatible), `extraFolders` holds any
@@ -24549,7 +24668,7 @@ else
             catch { }
         return showToast(currentLang === "fa" ? "⚠️ ذخیره‌سازی ناموفق بود — فضای مرورگر پر است. یک بکاپ (JSON) بگیر و چند یادداشت/تصویر حجیم را حذف کن." : "⚠️ Save failed — browser storage is full. Export a backup (JSON) and remove a few large notes/images.", 4200), !1;
     } return idbWrite2 && idbWrite2.then(function (ok) { ok || showToast(currentLang === "fa" ? "⚠️ ذخیره‌سازی ناموفق بود." : "⚠️ Save failed.", 4200); }), !0; }
-function saveToLocalStorage() { if (mu_savePending = !0, scheduleCloudBackup(), !mu_idbAvailable)
+function saveToLocalStorage() { try { mkAutoStamp(window.__mkNoSchedule > 0); } catch { } if (mu_savePending = !0, scheduleCloudBackup(), !mu_idbAvailable)
     return mu_doSaveFlush(); if (!mu_saveTimer) {
     const size = mu_estimateNotesSize(), delay = size < 2e5 ? 0 : Math.min(3e3, Math.round(150 + size / 8e3));
     mu_saveTimer = setTimeout(function () { mu_saveTimer = null, mu_doSaveFlush(); }, delay);
@@ -25084,7 +25203,7 @@ if (textEl.querySelector("img,audio,canvas,table,a") && !confirm(currentLang ===
         const item = categories.find(c => c.id === id);
         // textContent drops <br> line breaks entirely; use the same attached-clone extraction as everywhere
         // else so the saved text keeps the translated line breaks.
-        item && (item.html = textEl.innerHTML, item.text = textWithVisualSpacing(textEl).replace(/\u00a0/g, " "), item.lastEdited = new Date().toUTCString(), saveToLocalStorage()),
+        item && (item.html = textEl.innerHTML, item.text = textWithVisualSpacing(textEl).replace(/\u00a0/g, " "), item.lastEdited = mkStamp(), saveToLocalStorage()),
         // Second checkpoint: the translated result.
         mu_historyPush(id, textEl.innerHTML);
     }
@@ -25492,7 +25611,7 @@ function mu_historyPush(id, html) { let h = window.__muHistory[id]; if (!h) {
 function mu_updateUndoRedoButtons(id) { const h = window.__muHistory[id], undoBtn = document.getElementById("mu-undo-" + id), redoBtn = document.getElementById("mu-redo-" + id); undoBtn && (undoBtn.disabled = !h || h.index <= 0), redoBtn && (redoBtn.disabled = !h || h.index >= h.stack.length - 1); }
 // innerHTML was just replaced wholesale, so any image/audio wrapper's toolbar buttons need their click
 // handlers rebound, and any data-mu-media reference needs to be turned back into a live blob: URL
-function mu_applyHistoryState(id) { const h = window.__muHistory[id], textEl = document.getElementById("text-" + id), item = categories.find(c => c.id === id); !h || !textEl || !item || (textEl.innerHTML = h.stack[h.index], item.html = textEl.innerHTML, item.text = textWithVisualSpacing(textEl).replace(/\u00a0/g, " "), item.lastEdited = new Date().toUTCString(), saveToLocalStorage(), mu_updateUndoRedoButtons(id), attachWrapperEvents(id)); }
+function mu_applyHistoryState(id) { const h = window.__muHistory[id], textEl = document.getElementById("text-" + id), item = categories.find(c => c.id === id); !h || !textEl || !item || (textEl.innerHTML = h.stack[h.index], item.html = textEl.innerHTML, item.text = textWithVisualSpacing(textEl).replace(/\u00a0/g, " "), item.lastEdited = mkStamp(), saveToLocalStorage(), mu_updateUndoRedoButtons(id), attachWrapperEvents(id)); }
 window.mu_undoText = function (id) { const h = window.__muHistory[id], fa = currentLang === "fa"; if (!h || h.index <= 0) {
     showToast(fa ? "چیزی برای بازگشت نیست." : "Nothing to undo.");
     return;
@@ -25538,7 +25657,7 @@ async function saveCategory(id) { const item = categories.find(c => c.id === id)
         console.error(error), alert(currentLang === "fa" ? "رمزگذاری مجدد یادداشت انجام نشد." : "The note could not be re-encrypted.");
         return;
     }
-} changed && (item.lastEdited = new Date().toUTCString(), mu_historyPush(id, cleanHtml)), saveToLocalStorage(), renderApp(id); }
+} changed && (item.lastEdited = mkStamp(), mu_historyPush(id, cleanHtml)), saveToLocalStorage(), renderApp(id); }
 // Save button: save, then close the note editor
 async function saveAndCloseCategory(id) { if (autosaveTimer && (clearTimeout(autosaveTimer), autosaveTimer = null), await saveCategory(id), activeOpenId === id) {
     const item = categories.find(c => c.id === id);
@@ -25563,7 +25682,7 @@ async function autosaveCategory(id) { const item = categories.find(c => c.id ===
             return;
         }
     }
-    item.lastEdited = new Date().toUTCString(), saveToLocalStorage();
+    item.lastEdited = mkStamp(), saveToLocalStorage();
 } }
 let autosaveTimer = null;
 function flushActiveEditorSave() { return autosaveTimer && (clearTimeout(autosaveTimer), autosaveTimer = null), activeOpenId ? autosaveCategory(activeOpenId) : null; }
@@ -25640,7 +25759,7 @@ async function clearNoteText(id) { const item = categories.find(c => c.id === id
     showToast(fa ? "این یادداشت از قبل خالی است." : "This note is already empty.");
     return;
 } const undoSvg = '<svg viewBox="0 0 24 24" width="1.15em" height="1.15em" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:-0.2em" aria-hidden="true"><path d="M9 14L4 9l5-5M4 9h10.5a5.5 5.5 0 010 11H11"/></svg>', warnMsg = fa ? "کل متن این یادداشت پاک شود؟ در صورت پشیمانی می‌توانی با دکمه واگرد (" + undoSvg + ") آن را برگردانی." : "Delete all the text in this note? You can bring it back with the Undo button (" + undoSvg + ") if you change your mind."; if (!(typeof mu_confirmYesNo == "function" ? await mu_confirmYesNo({ messageHtml: warnMsg }) : confirm(warnMsg.replace(/<svg[^>]*>.*?<\/svg>/g, "↩"))))
-    return; const preClearHtml = textEl.innerHTML; if (mu_historyInit(id, preClearHtml), mu_historyPush(id, preClearHtml), textEl.innerHTML = "", item.html = "", item.text = "", item.lastEdited = new Date().toUTCString(), isNoteLocked(item)) {
+    return; const preClearHtml = textEl.innerHTML; if (mu_historyInit(id, preClearHtml), mu_historyPush(id, preClearHtml), textEl.innerHTML = "", item.html = "", item.text = "", item.lastEdited = mkStamp(), isNoteLocked(item)) {
     const sessionPassword = noteSessionKeys.get(item.id);
     if (sessionPassword)
         try {
@@ -26949,7 +27068,7 @@ async function buildZipRobust(files) { const JSZipCtor = await ensureZipEngine()
 catch { } return blob; }
 // Category & folder helpers. A new note is created at once with a default title and opened in its edit
 // panel (title field + text box); there is no name prompt.
-async function addNewCategory() { const fa = currentLang === "fa", newCategory = { id: `${Date.now()}_${Math.random().toString(36).slice(2, 8)}`, name: fa ? "یادداشت بدون عنوان" : "Untitled note", folder: currentFolder !== DEFAULT_FOLDER ? currentFolder : "", text: "", html: "", history: [], order: window.mu_topNoteOrder(null), lastEdited: new Date().toUTCString(), unlockAt: "", ghostUntil: "" }; categories.push(newCategory), saveToLocalStorage(), window.mu_suppressScrollRestore = !0, renderApp(newCategory.id); const mu_scrollToNewNote = () => { const target = document.getElementById("container-" + newCategory.id); target && target.scrollIntoView({ behavior: "smooth", block: "start" }); }; (() => { try {
+async function addNewCategory() { const fa = currentLang === "fa", newCategory = { id: `${Date.now()}_${Math.random().toString(36).slice(2, 8)}`, name: fa ? "یادداشت بدون عنوان" : "Untitled note", folder: currentFolder !== DEFAULT_FOLDER ? currentFolder : "", text: "", html: "", history: [], order: window.mu_topNoteOrder(null), lastEdited: mkStamp(), unlockAt: "", ghostUntil: "" }; categories.push(newCategory), saveToLocalStorage(), window.mu_suppressScrollRestore = !0, renderApp(newCategory.id); const mu_scrollToNewNote = () => { const target = document.getElementById("container-" + newCategory.id); target && target.scrollIntoView({ behavior: "smooth", block: "start" }); }; (() => { try {
     const box = document.getElementById("text-" + newCategory.id);
     box && box.getAttribute("contenteditable") === "true" && box.focus({ preventScroll: !0 });
 }
@@ -26964,7 +27083,7 @@ async function addNewFolder() { const t = i18n[currentLang], fa = currentLang ==
 } }
 // Shared by every rename path (this manual dialog and the AI's rename_note tool) so a note's title history
 // is always complete regardless of how it was renamed
-function mu_recordTitleHistory(item, newName) { const oldName = item.name; oldName && oldName !== newName && (item.lastEdited = new Date().toUTCString()), item.name = newName; }
+function mu_recordTitleHistory(item, newName) { const oldName = item.name; oldName && oldName !== newName && (item.lastEdited = mkStamp()), item.name = newName; }
 function changeCategoryFolder(id, folderName) { const item = categories.find(c => c.id === id); item && (item.folder = folders.includes(folderName) && folderName !== DEFAULT_FOLDER ? folderName : "", item.extraFolders = [], mu_touchMeta(item), saveToLocalStorage(), renderApp(id)); }
 function removeFromFolder(id) { const item = categories.find(c => c.id === id); item && (item.folder = "", item.extraFolders = [], mu_touchMeta(item), saveToLocalStorage(), renderApp(id)); }
 function deleteCategory(id) { confirm(i18n[currentLang].confirmDelete) && (categories = categories.filter(c => c.id !== id), activeOpenId === id && (activeOpenId = null), saveToLocalStorage(), renderApp()); }
@@ -26985,7 +27104,7 @@ async function importBackupZip(file, input) { const fa = currentLang === "fa"; t
     const addNote = raw => { const note = normalizeCategory(raw, categories.length + idx++); existing.has(String(note.id)) && (note.id = `${Date.now()}_${idx}_${Math.random().toString(36).slice(2, 8)}`), isNoteLocked(note) ? (note.html = "", note.text = "", note.isDecoy = !1, lockedAdded++) : note.html = sanitizeHtml(note.html || note.text || ""), categories.push(note), existing.add(String(note.id)), added++; const wasTombstoned = isTombstoned(note.id, Date.parse(note.lastEdited) || 0); if (clearTombstone(note.id), wasTombstoned) {
         // Match the display format used everywhere else (Last Edited shows this field completely raw, with
         // no reformatting) — toUTCString(), not toISOString()
-        const stampNow = new Date().toUTCString();
+        const stampNow = mkStamp();
         note.lastEdited = stampNow, note.metaEditedAt = stampNow;
     } note.folder && note.folder !== DEFAULT_FOLDER && !folders.includes(note.folder) && folders.push(note.folder), note.folder && clearFolderTombstone(note.folder), (Array.isArray(note.extraFolders) ? note.extraFolders : []).forEach(f => { f && f !== DEFAULT_FOLDER && !folders.includes(f) && folders.push(f), f && clearFolderTombstone(f); }); };
     for (const name of entries) {
@@ -27007,7 +27126,7 @@ async function importBackupZip(file, input) { const fa = currentLang === "fa"; t
                 skipped++;
                 continue;
             }
-            addNote({ id: n.id, name: n.name || "Imported Note", folder: n.folder || "", extraFolders: n.extraFolders, text: "", html: "", encrypted: enc, hint: n.hint || "", tags: n.tags || [], pinned: !!n.pinned, favorite: !!n.favorite, fontFamily: n.fontFamily || "", fontSize: n.fontSize, lastEdited: data.exportedAt || new Date().toUTCString() });
+            addNote({ id: n.id, name: n.name || "Imported Note", folder: n.folder || "", extraFolders: n.extraFolders, text: "", html: "", encrypted: enc, hint: n.hint || "", tags: n.tags || [], pinned: !!n.pinned, favorite: !!n.favorite, fontFamily: n.fontFamily || "", fontSize: n.fontSize, lastEdited: data.exportedAt || mkStamp() });
         }
         else if (data && Array.isArray(data.categories)) {
             data.categories.filter(x => x && typeof x == "object").forEach(addNote);
@@ -27143,11 +27262,11 @@ const reader = new FileReader; reader.onload = async function (e) { try {
         if (!note.encrypted.ciphertext || !note.encrypted.salt || !note.encrypted.iv)
             throw new Error("Invalid encrypted note");
         // clearing only THIS device's local tombstone list isn't enough
-        const imported = normalizeCategory({ id: note.id && !categories.some(c => String(c.id) === String(note.id)) ? note.id : `${Date.now()}_${Math.random().toString(36).slice(2, 8)}`, name: note.name || "Imported Note", folder: note.folder || "", extraFolders: note.extraFolders, text: "", html: "", encrypted: note.encrypted, hint: note.hint || "", tags: note.tags || [], pinned: !!note.pinned, favorite: !!note.favorite, fontFamily: note.fontFamily || "", fontSize: note.fontSize, lastEdited: data.exportedAt || new Date().toUTCString() }, categories.length), wasTombstoned = isTombstoned(imported.id, Date.parse(imported.lastEdited) || 0);
+        const imported = normalizeCategory({ id: note.id && !categories.some(c => String(c.id) === String(note.id)) ? note.id : `${Date.now()}_${Math.random().toString(36).slice(2, 8)}`, name: note.name || "Imported Note", folder: note.folder || "", extraFolders: note.extraFolders, text: "", html: "", encrypted: note.encrypted, hint: note.hint || "", tags: note.tags || [], pinned: !!note.pinned, favorite: !!note.favorite, fontFamily: note.fontFamily || "", fontSize: note.fontSize, lastEdited: data.exportedAt || mkStamp() }, categories.length), wasTombstoned = isTombstoned(imported.id, Date.parse(imported.lastEdited) || 0);
         if (categories.push(imported), clearTombstone(imported.id), wasTombstoned) {
             // Same display-format fix as the ZIP import above: toUTCString() matches what "Last Edited"
             // shows for every other note
-            const stampNow = new Date().toUTCString();
+            const stampNow = mkStamp();
             imported.lastEdited = stampNow, imported.metaEditedAt = stampNow;
         }
         imported.folder && imported.folder !== DEFAULT_FOLDER && !folders.includes(imported.folder) && folders.push(imported.folder), imported.folder && clearFolderTombstone(imported.folder), (Array.isArray(imported.extraFolders) ? imported.extraFolders : []).forEach(f => { f && f !== DEFAULT_FOLDER && !folders.includes(f) && folders.push(f), f && clearFolderTombstone(f); }), saveToLocalStorage(), saveFoldersToLocalStorage(), mu_refreshNotesPage(), await mu_nextPaint(), await mu_flushStorage(), renderApp(), showToast(currentLang === "fa" ? "یادداشت رمزنگاری‌شده وارد شد؛ برای باز کردن رمز را وارد کن." : "Encrypted note imported; enter its password to open it.");
@@ -27165,7 +27284,7 @@ const reader = new FileReader; reader.onload = async function (e) { try {
     // Like CSV/TXT import, restoring a JSON backup adds its notes/folders alongside what is already here.
     const existingIds = new Set(categories.map(c => String(c.id))), incoming = data.categories.filter(x => x && typeof x == "object").map((item, index) => { const norm = normalizeCategory(item, index), originalId = norm.id; existingIds.has(String(norm.id)) && (norm.id = `${Date.now()}_${index}_${Math.random().toString(36).slice(2, 8)}`), existingIds.add(String(norm.id)); const wasTombstoned = isTombstoned(norm.id, Date.parse(norm.lastEdited) || 0); if (clearTombstone(norm.id), wasTombstoned) {
         // Same display-format fix as the two import paths above
-        const stampNow = new Date().toUTCString();
+        const stampNow = mkStamp();
         norm.lastEdited = stampNow, norm.metaEditedAt = stampNow;
     }
     // Backups made before Time Capsule/Ghost Note moved onto the note itself keep those fields in a
@@ -27727,7 +27846,7 @@ function importCSV(event) { const file = event.target.files?.[0]; if (!file)
         return;
         // Tags/Pinned/Favorite/FontFamily/FontSize are optional, so older CSV exports still import.
         // A corrupted locked row is skipped rather than imported with a broken lock.
-        const tagsRaw = val(idxTags), tags = tagsRaw ? tagsRaw.split(/[;,،؛]/).map(t => t.trim()).filter(Boolean) : [], pinned = val(idxPinned) === "1" || val(idxPinned).toLowerCase() === "true", favorite = val(idxFav) === "1" || val(idxFav).toLowerCase() === "true", fontFamily = val(idxFontFamily).trim(), fontSize = Number(val(idxFontSize)) || void 0, isLocked = val(idxEncrypted) === "1" || val(idxEncrypted).toLowerCase() === "true", enc = isLocked ? { v: Number(val(idxV)) || NOTE_CRYPTO_VERSION, alg: val(idxAlg) || NOTE_AES_ALGORITHM, kdf: val(idxKdf) || "PBKDF2", hash: val(idxHash) || NOTE_KDF_HASH, iterations: Number(val(idxIterations)) || NOTE_KDF_ITERATIONS, ciphertext: val(idxCiphertext), salt: val(idxSalt), iv: val(idxIv) } : null; isLocked && (!enc.ciphertext || !enc.salt || !enc.iv) || (categories.push(normalizeCategory({ id: `${Date.now()}_${index}_${Math.random().toString(36).slice(2, 8)}`, name: name, folder: folder === "undefined" ? "" : folder, text: isLocked ? "" : val(idxText), html: isLocked ? "" : sanitizeHtml(escapeHtml(val(idxText)).replace(/\r\n?|\n/g, "<br>")), encrypted: enc, history: [], lastEdited: new Date().toUTCString(), tags: tags, pinned: pinned, favorite: favorite, fontFamily: fontFamily, fontSize: fontSize }, index)), folder && folder !== "undefined" && folder !== DEFAULT_FOLDER && (folders.includes(folder) || folders.push(folder), clearFolderTombstone(folder)), added++, isLocked && lockedAdded++); }), saveToLocalStorage(), saveFoldersToLocalStorage(), mu_refreshNotesPage(), renderApp(), showToast(currentLang === "fa" ? `${added} یادداشت وارد شد${lockedAdded ? ` (${lockedAdded} قفل‌شده)` : ""}.` : `${added} notes imported${lockedAdded ? ` (${lockedAdded} locked)` : ""}.`);
+        const tagsRaw = val(idxTags), tags = tagsRaw ? tagsRaw.split(/[;,،؛]/).map(t => t.trim()).filter(Boolean) : [], pinned = val(idxPinned) === "1" || val(idxPinned).toLowerCase() === "true", favorite = val(idxFav) === "1" || val(idxFav).toLowerCase() === "true", fontFamily = val(idxFontFamily).trim(), fontSize = Number(val(idxFontSize)) || void 0, isLocked = val(idxEncrypted) === "1" || val(idxEncrypted).toLowerCase() === "true", enc = isLocked ? { v: Number(val(idxV)) || NOTE_CRYPTO_VERSION, alg: val(idxAlg) || NOTE_AES_ALGORITHM, kdf: val(idxKdf) || "PBKDF2", hash: val(idxHash) || NOTE_KDF_HASH, iterations: Number(val(idxIterations)) || NOTE_KDF_ITERATIONS, ciphertext: val(idxCiphertext), salt: val(idxSalt), iv: val(idxIv) } : null; isLocked && (!enc.ciphertext || !enc.salt || !enc.iv) || (categories.push(normalizeCategory({ id: `${Date.now()}_${index}_${Math.random().toString(36).slice(2, 8)}`, name: name, folder: folder === "undefined" ? "" : folder, text: isLocked ? "" : val(idxText), html: isLocked ? "" : sanitizeHtml(escapeHtml(val(idxText)).replace(/\r\n?|\n/g, "<br>")), encrypted: enc, history: [], lastEdited: mkStamp(), tags: tags, pinned: pinned, favorite: favorite, fontFamily: fontFamily, fontSize: fontSize }, index)), folder && folder !== "undefined" && folder !== DEFAULT_FOLDER && (folders.includes(folder) || folders.push(folder), clearFolderTombstone(folder)), added++, isLocked && lockedAdded++); }), saveToLocalStorage(), saveFoldersToLocalStorage(), mu_refreshNotesPage(), renderApp(), showToast(currentLang === "fa" ? `${added} یادداشت وارد شد${lockedAdded ? ` (${lockedAdded} قفل‌شده)` : ""}.` : `${added} notes imported${lockedAdded ? ` (${lockedAdded} locked)` : ""}.`);
 }
 catch {
     alert(currentLang === "fa" ? "خطا در خواندن CSV." : "Failed to read CSV.");
@@ -27974,11 +28093,11 @@ function importTextFile(event) {
                 multiNotes.forEach((note, idx) => {
                     const folder = note.folder && note.folder !== "undefined" ? note.folder : currentFolder !== DEFAULT_FOLDER ? currentFolder : "", locked = mu_parseLockedNoteBlock(note.content);
                     if (locked)
-                        categories.push(normalizeCategory({ id: `${Date.now()}_${idx}_${Math.random().toString(36).slice(2, 8)}`, name: note.name, folder: folder, text: "", html: "", encrypted: { v: locked.v, alg: locked.alg, kdf: locked.kdf, hash: locked.hash, iterations: locked.iterations, ciphertext: locked.ciphertext, salt: locked.salt, iv: locked.iv }, hint: locked.hint, history: [], lastEdited: new Date().toUTCString(), password: "", isDecoy: !1 }, categories.length)), lockedAdded++;
+                        categories.push(normalizeCategory({ id: `${Date.now()}_${idx}_${Math.random().toString(36).slice(2, 8)}`, name: note.name, folder: folder, text: "", html: "", encrypted: { v: locked.v, alg: locked.alg, kdf: locked.kdf, hash: locked.hash, iterations: locked.iterations, ciphertext: locked.ciphertext, salt: locked.salt, iv: locked.iv }, hint: locked.hint, history: [], lastEdited: mkStamp(), password: "", isDecoy: !1 }, categories.length)), lockedAdded++;
                     else {
                         const html = isMd ? markdownToSafeHtml(note.content) : escapeHtml(note.content).replace(/\r\n?/g, `
 `).replace(/\n/g, "<br>");
-                        categories.push(normalizeCategory({ id: `${Date.now()}_${idx}_${Math.random().toString(36).slice(2, 8)}`, name: note.name, folder: folder, text: note.content, html: sanitizeHtml(html), history: [], lastEdited: new Date().toUTCString(), password: "", hint: "", isDecoy: !1 }, categories.length));
+                        categories.push(normalizeCategory({ id: `${Date.now()}_${idx}_${Math.random().toString(36).slice(2, 8)}`, name: note.name, folder: folder, text: note.content, html: sanitizeHtml(html), history: [], lastEdited: mkStamp(), password: "", hint: "", isDecoy: !1 }, categories.length));
                     }
                     folder && folder !== DEFAULT_FOLDER && (folders.includes(folder) || folders.push(folder), clearFolderTombstone(folder));
                 }), saveToLocalStorage(), saveFoldersToLocalStorage(), mu_refreshNotesPage(), renderApp(), showToast(currentLang === "fa" ? `${multiNotes.length} یادداشت وارد شد${lockedAdded ? ` (${lockedAdded} قفل‌شده)` : ""}.` : `${multiNotes.length} notes imported${lockedAdded ? ` (${lockedAdded} locked)` : ""}.`);
@@ -27987,12 +28106,12 @@ function importTextFile(event) {
             let name = file.name.replace(/\.(txt|md|markdown)$/i, "").trim() || "Imported Note";
             const lockedSingle = mu_parseLockedNoteBlock(raw);
             if (lockedSingle) {
-                categories.push(normalizeCategory({ id: `${Date.now()}_${Math.random().toString(36).slice(2, 8)}`, name: name, folder: currentFolder !== DEFAULT_FOLDER ? currentFolder : "", text: "", html: "", encrypted: { v: lockedSingle.v, alg: lockedSingle.alg, kdf: lockedSingle.kdf, hash: lockedSingle.hash, iterations: lockedSingle.iterations, ciphertext: lockedSingle.ciphertext, salt: lockedSingle.salt, iv: lockedSingle.iv }, hint: lockedSingle.hint, history: [], lastEdited: new Date().toUTCString(), password: "", isDecoy: !1 }, categories.length)), saveToLocalStorage(), mu_refreshNotesPage(), renderApp(), showToast(currentLang === "fa" ? "یادداشت رمزنگاری‌شده وارد شد؛ برای باز کردن رمز را وارد کن." : "Encrypted note imported; enter its password to open it.");
+                categories.push(normalizeCategory({ id: `${Date.now()}_${Math.random().toString(36).slice(2, 8)}`, name: name, folder: currentFolder !== DEFAULT_FOLDER ? currentFolder : "", text: "", html: "", encrypted: { v: lockedSingle.v, alg: lockedSingle.alg, kdf: lockedSingle.kdf, hash: lockedSingle.hash, iterations: lockedSingle.iterations, ciphertext: lockedSingle.ciphertext, salt: lockedSingle.salt, iv: lockedSingle.iv }, hint: lockedSingle.hint, history: [], lastEdited: mkStamp(), password: "", isDecoy: !1 }, categories.length)), saveToLocalStorage(), mu_refreshNotesPage(), renderApp(), showToast(currentLang === "fa" ? "یادداشت رمزنگاری‌شده وارد شد؛ برای باز کردن رمز را وارد کن." : "Encrypted note imported; enter its password to open it.");
                 return;
             }
             let html2 = "";
             isMd ? html2 = markdownToSafeHtml(raw) : html2 = escapeHtml(raw).replace(/\r\n?/g, `
-`).replace(/\n/g, "<br>"), categories.push(normalizeCategory({ id: `${Date.now()}_${Math.random().toString(36).slice(2, 8)}`, name: name, folder: currentFolder !== DEFAULT_FOLDER ? currentFolder : "", text: raw, html: sanitizeHtml(html2), history: [], lastEdited: new Date().toUTCString(), password: "", hint: "", isDecoy: !1 }, categories.length)), saveToLocalStorage(), mu_refreshNotesPage(), renderApp(), showToast(currentLang === "fa" ? "فایل متنی وارد شد." : "Text file imported.");
+`).replace(/\n/g, "<br>"), categories.push(normalizeCategory({ id: `${Date.now()}_${Math.random().toString(36).slice(2, 8)}`, name: name, folder: currentFolder !== DEFAULT_FOLDER ? currentFolder : "", text: raw, html: sanitizeHtml(html2), history: [], lastEdited: mkStamp(), password: "", hint: "", isDecoy: !1 }, categories.length)), saveToLocalStorage(), mu_refreshNotesPage(), renderApp(), showToast(currentLang === "fa" ? "فایل متنی وارد شد." : "Text file imported.");
         }
         catch (err) {
             console.error(err), alert(currentLang === "fa" ? "خواندن فایل متنی انجام نشد." : "Could not import text file.");
@@ -28006,7 +28125,7 @@ function importTextFile(event) {
 // buildStructuredExport('html')) and restores it as multiple notes with their original names/folders
 function mu_parseEncryptedFields(text) { const src = String(text || "").replace(/\r/g, ""), get = k => { const m = new RegExp("(?:^|\\n)[ \\t]*" + k + "[ \\t]*:[ \\t]*([^\\s]+)", "i").exec(src); return m ? m[1] : ""; }, ciphertext = get("ciphertext"), salt = get("salt"), iv = get("iv"); if (!ciphertext || !salt || !iv)
     return null; const b64 = /^[A-Za-z0-9+/]+={0,2}$/; return !b64.test(ciphertext) || !b64.test(salt) || !b64.test(iv) ? null : { v: parseInt(get("v"), 10) || NOTE_CRYPTO_VERSION, alg: get("alg") || NOTE_AES_ALGORITHM, kdf: get("kdf") || "PBKDF2", hash: get("hash") || NOTE_KDF_HASH, iterations: parseInt(get("iterations"), 10) || NOTE_KDF_ITERATIONS, salt: salt, iv: iv, ciphertext: ciphertext }; }
-function mu_buildImportedNote(o) { const locked = !!(o.encrypted && o.encrypted.ciphertext); return normalizeCategory({ id: `${Date.now()}_${Math.random().toString(36).slice(2, 8)}${Math.random().toString(36).slice(2, 6)}`, name: o.name, folder: o.folder || "", extraFolders: o.extraFolders, text: locked ? "" : o.text || "", html: locked ? "" : o.html || "", encrypted: locked ? o.encrypted : null, hint: locked && o.hint || "", history: [], lastEdited: new Date().toUTCString(), password: "", isDecoy: !1 }, categories.length); }
+function mu_buildImportedNote(o) { const locked = !!(o.encrypted && o.encrypted.ciphertext); return normalizeCategory({ id: `${Date.now()}_${Math.random().toString(36).slice(2, 8)}${Math.random().toString(36).slice(2, 6)}`, name: o.name, folder: o.folder || "", extraFolders: o.extraFolders, text: locked ? "" : o.text || "", html: locked ? "" : o.html || "", encrypted: locked ? o.encrypted : null, hint: locked && o.hint || "", history: [], lastEdited: mkStamp(), password: "", isDecoy: !1 }, categories.length); }
 // Same commit sequence the JSON backup import uses: clear any old deletion record for the note/folder,
 // persist, wait for the write to actually land, close whatever note is open, and only then re-render
 async function mu_commitImportedNotes(notes) { notes.forEach(n2 => { (n2.folder === "همه" || n2.folder === "All") && (n2.folder = ""), categories.push(n2), clearTombstone(n2.id), n2.folder && n2.folder !== DEFAULT_FOLDER && !folders.includes(n2.folder) && folders.push(n2.folder), n2.folder && clearFolderTombstone(n2.folder), (Array.isArray(n2.extraFolders) ? n2.extraFolders : []).forEach(f => { f && f !== DEFAULT_FOLDER && !folders.includes(f) && folders.push(f), f && clearFolderTombstone(f); }); }), saveToLocalStorage(), saveFoldersToLocalStorage(), mu_refreshNotesPage(), await mu_nextPaint(), await mu_flushStorage(), renderApp(); }
@@ -29590,7 +29709,7 @@ document.addEventListener("DOMContentLoaded", () => { initAdvancedSystems(); });
         return;
         // mcLiveTitle() above already overwrites item.name on every keystroke, so by the time this
         // onchange fires the pre-edit title is gone from item.name itself
-        const title = String(item.name || "").trim() || (HX().currentLang === "fa" ? "یادداشت بدون عنوان" : "Untitled note"), titleFieldEl = document.getElementById("mc-title-" + id), origName = titleFieldEl ? titleFieldEl.dataset.mcOrig : void 0; origName !== void 0 && (origName || (HX().currentLang === "fa" ? "یادداشت بدون عنوان" : "Untitled note")) !== title && (item.lastEdited = new Date().toUTCString()), item.name = title, HX().saveToLocalStorage(), titleFieldEl && (titleFieldEl.value = item.name === (HX().currentLang === "fa" ? "یادداشت بدون عنوان" : "Untitled note") ? "" : item.name, titleFieldEl.dataset.mcOrig = titleFieldEl.value); const tab = document.querySelector('.custom-btn[data-note-id="' + id + '"]'), titleEl = tab ? tab.querySelector(".note-item-title") : null; if (titleEl) {
+        const title = String(item.name || "").trim() || (HX().currentLang === "fa" ? "یادداشت بدون عنوان" : "Untitled note"), titleFieldEl = document.getElementById("mc-title-" + id), origName = titleFieldEl ? titleFieldEl.dataset.mcOrig : void 0; origName !== void 0 && (origName || (HX().currentLang === "fa" ? "یادداشت بدون عنوان" : "Untitled note")) !== title && (item.lastEdited = mkStamp()), item.name = title, HX().saveToLocalStorage(), titleFieldEl && (titleFieldEl.value = item.name === (HX().currentLang === "fa" ? "یادداشت بدون عنوان" : "Untitled note") ? "" : item.name, titleFieldEl.dataset.mcOrig = titleFieldEl.value); const tab = document.querySelector('.custom-btn[data-note-id="' + id + '"]'), titleEl = tab ? tab.querySelector(".note-item-title") : null; if (titleEl) {
         const lockIcon = HX().isNoteLocked(item) ? "🔒 " : "", pinIcon = item.pinned ? "📌 " : "", favIcon = item.favorite ? "⭐ " : "", decoyIcon = item.fakeContent ? "🎭 " : "";
         titleEl.innerHTML = HX().escapeHtml(lockIcon) + (window.mu_flagIconsList || MK.flagIcons)(item) + HX().escapeHtml(decoyIcon + item.name);
     } }
@@ -29610,7 +29729,7 @@ document.addEventListener("DOMContentLoaded", () => { initAdvancedSystems(); });
     // Wrapper so the pin/favorite icon buttons in the mc-head (rendered from renderContents' template,
     // which only has the note's id in scope) can reach toggleFlag, which expects the note object itself
     window.toggleArchiveNote = toggleArchiveNote, window.mcToggleFlag = function (id, key) { const it = HX().categories.find(x => x.id === id); it && toggleFlag(it, key); }, window.duplicateNote = function (id) { const o = HX().categories.find(x => x.id === id); if (!o)
-        return; const n = JSON.parse(JSON.stringify(o)); n.id = Date.now() + "_" + Math.random().toString(36).slice(2, 9), n.name = (o.name || "Note") + " — Copy", n.pinned = !1, n.favorite = !1, n.isDecoy = !1, n.lastEdited = new Date().toUTCString(), HX().categories.push(n), HX().saveToLocalStorage(), HX().renderApp(n.id); }, window.editFake = async function (id) {
+        return; const n = JSON.parse(JSON.stringify(o)); n.id = Date.now() + "_" + Math.random().toString(36).slice(2, 9), n.name = (o.name || "Note") + " — Copy", n.pinned = !1, n.favorite = !1, n.isDecoy = !1, n.lastEdited = mkStamp(), HX().categories.push(n), HX().saveToLocalStorage(), HX().renderApp(n.id); }, window.editFake = async function (id) {
         const item = HX().categories.find(x => x.id === id);
         if (!item)
             return;
@@ -29935,7 +30054,7 @@ document.addEventListener("DOMContentLoaded", () => { initAdvancedSystems(); });
             tb && (tb.insertAdjacentHTML("beforeend", "<img " + (mediaId ? 'data-mu-media="' + mediaId + '" ' : "") + 'src="' + data + '" alt="' + HX().escapeHtml(f.name) + '" style="max-width:100%;height:auto">'), HX().saveCategory(target.id));
         }
         else if (/text\/plain|text\/markdown/.test(f.type) || /\.(txt|md)$/i.test(f.name)) {
-            const txt = await f.text(), n = HX().normalizeCategory({ id: Date.now() + "_" + Math.random().toString(36).slice(2, 8), name: f.name.replace(/\.(txt|md)$/i, ""), folder: HX().currentFolder === HX().DEFAULT_FOLDER ? "" : HX().currentFolder, text: txt, html: /\.md$/i.test(f.name) ? mdToHtml(txt) : HX().escapeHtml(txt).replace(/\n/g, "<br>"), history: [], lastEdited: new Date().toUTCString() }, 0);
+            const txt = await f.text(), n = HX().normalizeCategory({ id: Date.now() + "_" + Math.random().toString(36).slice(2, 8), name: f.name.replace(/\.(txt|md)$/i, ""), folder: HX().currentFolder === HX().DEFAULT_FOLDER ? "" : HX().currentFolder, text: txt, html: /\.md$/i.test(f.name) ? mdToHtml(txt) : HX().escapeHtml(txt).replace(/\n/g, "<br>"), history: [], lastEdited: mkStamp() }, 0);
             HX().categories.push(n), HX().saveToLocalStorage(), HX().renderApp(n.id);
         } });
     // MU_Dashboard — ماژول داشبورد (آمار/میانبرها/فهرست‌های فیلترشده) + پنل بکاپ ابری تلگرام
@@ -30744,14 +30863,22 @@ window.__mkFixAutoSyncBusy = !0, window.__mkFixProgHold = !0; const btn = docume
                 HX().cloudStartPolling();
             }
             catch { }
-            HX().mkBackupBarShow(fa ? "⏳ در حال بکاپ‌گیری از همه‌ی یادداشت‌ها..." : "⏳ Backing up all notes now...");
+            // Strong refresh FIRST: pull + merge what the other device(s) saved, only then back everything up
             const before = HX().categories.length;
+            HX().mkBackupBarShow(fa ? "⏳ در حال دریافت و همگام‌سازی یادداشت‌های دستگاه دیگر..." : "⏳ Syncing notes from your other device...");
+            const pull = await window.mkCloudStrongPull();
+            if (!pull.ok) {
+                HX().mkBackupBarDone(fa ? "⚠️ همگام‌سازی از ابر ناموفق بود، پس برای اینکه یادداشت‌های دستگاه دیگر از بین نرود بکاپ گرفته نشد. دوباره امتحان کن." : "⚠️ Could not sync from the Cloud, so no backup was written (to protect the notes saved from your other device). Please try again.", !1, 6e3);
+                return;
+            }
+            const pulledN = (pull.added || 0) + (pull.updated || 0) + (pull.retired || 0);
+            HX().mkBackupBarShow(fa ? "⏳ در حال بکاپ‌گیری از همه‌ی یادداشت‌ها..." : "⏳ Backing up all notes now...");
             let res = await HX().cloudBackupNow("auto");
             // One automatic retry for a transient Cloud failure (write-failed / unavailable /
             // verify-failed).
             if (!res.ok && (res.reason === "write-failed" || res.reason === "unavailable" || res.reason === "verify-failed") && (await new Promise(r => setTimeout(r, 1500)), HX().mkBackupBarShow(fa ? "⏳ تلاش دوباره..." : "⏳ Retrying..."), res = await HX().cloudBackupNow("auto")), changed = HX().categories.length !== before, res.ok) {
                 const n = res.meta && res.meta.notes != null ? res.meta.notes : HX().categories.length, sk = res.meta && res.meta.skipped || 0;
-                msg = fa ? `✅ سینک خودکار فعال شد و همین الان از ${n} یادداشت بکاپ خودکار گرفته شد.${sk ? ` (${sk} مورد جا نشد)` : ""}` : `✅ Auto sync enabled — all ${n} notes were backed up just now.${sk ? ` (${sk} skipped)` : ""}`;
+                msg = fa ? `✅ ${pulledN ? `${pulledN} تغییر از دستگاه دیگر همگام شد و سپس ` : ""}از ${n} یادداشت بکاپ خودکار گرفته شد.${sk ? ` (${sk} مورد جا نشد)` : ""}` : `✅ ${pulledN ? `${pulledN} change${pulledN === 1 ? "" : "s"} synced from the other device, then ` : ""}all ${n} notes were backed up.${sk ? ` (${sk} skipped)` : ""}`;
             }
             else
                 ok = !1, msg = (fa ? "سینک فعال شد اما بکاپ ناموفق بود — " : "Sync is on but the backup failed — ") + mu_cloudReasonMsg(res.reason, fa);
@@ -32241,7 +32368,7 @@ HX().scheduleCloudBackup(!1, !0), HX().showToast(fa ? `✅ ذخیره شد — �
     } const ordered = [...HX().getVisibleCategories()].sort((a, b) => Number(b.pinned) - Number(a.pinned) || Number(b.favorite) - Number(a.favorite) || (Number(a.order) || 0) - (Number(b.order) || 0)), idx = ordered.findIndex(x => x.id === id), swapIdx = idx + dir; if (idx === -1 || swapIdx < 0 || swapIdx >= ordered.length)
         return;
         // ensureItem() is scoped to a different IIFE; order is the only field needed here.
-        const tmp = ordered[idx]; ordered[idx] = ordered[swapIdx], ordered[swapIdx] = tmp, ordered.forEach((it, i) => { it.order !== i && (it.metaEditedAt = new Date().toUTCString()), it.order = i; }), HX().saveToLocalStorage(), HX().renderButtons(); }, window.moveFolderOrder = function (name, dir) {
+        const tmp = ordered[idx]; ordered[idx] = ordered[swapIdx], ordered[swapIdx] = tmp, ordered.forEach((it, i) => { it.order !== i && (it.metaEditedAt = mkStamp()), it.order = i; }), HX().saveToLocalStorage(), HX().renderButtons(); }, window.moveFolderOrder = function (name, dir) {
         // The root folder (index 0) stays pinned first.
         const idx = HX().folders.indexOf(name), swapIdx = idx + dir; if (idx <= 0 || swapIdx <= 0 || swapIdx >= HX().folders.length)
         return; const tmp = HX().folders[idx]; HX().folders[idx] = HX().folders[swapIdx], HX().folders[swapIdx] = tmp, HX().saveFoldersToLocalStorage(), HX().renderFolders(); }, (function () { let menuEl = null, suppressClickUntil = 0; function closeMenu() { menuEl && (menuEl.remove(), menuEl = null), document.removeEventListener("pointerdown", onOutsidePointerDown, !0), window.removeEventListener("scroll", closeMenu, !0); } function onOutsidePointerDown(e) { menuEl && !menuEl.contains(e.target) && closeMenu(); } function openMenu(wrap, onMoveRight, onMoveLeft, axis, onDelete) { if (!wrap)
@@ -32319,7 +32446,7 @@ HX().scheduleCloudBackup(!1, !0), HX().showToast(fa ? `✅ ذخیره شد — �
         }
         HX().saveToLocalStorage(), mu_exitNoteSelectMode(), HX().renderApp(HX().activeOpenId); let msg; fa ? (msg = "🔒 " + done + " یادداشت رمزگذاری شد", skipped && (msg += " (" + skipped + " مورد از قبل قفل بود)"), failed && (msg += " — " + failed + " مورد ناموفق")) : (msg = "🔒 " + done + " note" + (done === 1 ? "" : "s") + " locked", skipped && (msg += " (" + skipped + " already locked)"), failed && (msg += " — " + failed + " failed")), HX().showToast(msg); },
         // Duplicate every picked note (copies are appended, unpinned/unfavorited), then close selection mode.
-        window.mu_bulkDuplicateSelected = function () { const fa = HX().currentLang === "fa", items = Array.from(window.MarkhinSelectedNoteIds).map(id => HX().categories.find(c => String(c.id) === id)).filter(Boolean); items.length && (items.forEach((o, k) => { const n = JSON.parse(JSON.stringify(o)); n.id = Date.now() + "_" + k + "_" + Math.random().toString(36).slice(2, 9), n.name = (o.name || "Note") + " — Copy", n.pinned = !1, n.favorite = !1, n.isDecoy = !1, n.lastEdited = new Date().toUTCString(), HX().categories.push(n); }), HX().saveToLocalStorage(), mu_exitNoteSelectMode(), HX().renderApp(HX().activeOpenId), HX().showToast(fa ? "⧉ " + items.length + " یادداشت کپی شد" : "⧉ " + items.length + " note(s) duplicated")); },
+        window.mu_bulkDuplicateSelected = function () { const fa = HX().currentLang === "fa", items = Array.from(window.MarkhinSelectedNoteIds).map(id => HX().categories.find(c => String(c.id) === id)).filter(Boolean); items.length && (items.forEach((o, k) => { const n = JSON.parse(JSON.stringify(o)); n.id = Date.now() + "_" + k + "_" + Math.random().toString(36).slice(2, 9), n.name = (o.name || "Note") + " — Copy", n.pinned = !1, n.favorite = !1, n.isDecoy = !1, n.lastEdited = mkStamp(), HX().categories.push(n); }), HX().saveToLocalStorage(), mu_exitNoteSelectMode(), HX().renderApp(HX().activeOpenId), HX().showToast(fa ? "⧉ " + items.length + " یادداشت کپی شد" : "⧉ " + items.length + " note(s) duplicated")); },
         // Delete every picked note in one go (same tombstone path deleteCategory() uses for a single note).
         window.mu_bulkDeleteSelectedNotes = async function () { const fa = HX().currentLang === "fa", ids = Array.from(window.MarkhinSelectedNoteIds); !ids.length || !await window.mu_confirmYesNo({ title: fa ? "⚠️ حذف دائمی" : "⚠️ Permanent delete", message: fa ? `${ids.length} یادداشت برای همیشه پاک می‌شود و دیگر قابل بازیابی نیست. ادامه می‌دهی؟` : `${ids.length} note(s) will be permanently erased and cannot be recovered. Continue?`, okText: fa ? "🗑️ حذف دائمی" : "🗑️ Delete permanently", cancelText: fa ? "انصراف" : "Cancel" }) || (ids.forEach(id => { const item = HX().categories.find(c => String(c.id) === id); item && (HX().typeOf("recordTombstone") == "function" && HX().recordTombstone(item.id), HX().activeOpenId === item.id && (HX().activeOpenId = null), HX().categories = HX().categories.filter(c => c !== item)); }), HX().saveToLocalStorage(), HX().typeOf("scheduleCloudBackup") == "function" && HX().scheduleCloudBackup(!0), HX().typeOf("mu_flushStorage") == "function" && await HX().mu_flushStorage(), window.MarkhinNoteSelectMode = !1, window.MarkhinSelectedNoteIds.clear(), mu_removeSelectBar(), HX().renderApp(), HX().showToast(fa ? `🗑️ ${ids.length} یادداشت برای همیشه حذف شد` : `🗑️ ${ids.length} note(s) permanently deleted`)); }, document.addEventListener("click", function (e) { window.MarkhinNoteSelectMode && (e.target.closest("#buttonsContainer") || e.target.closest("#muNoteSelectBar") || mu_exitNoteSelectMode()); }, !0); })(), (function () { var KEY = "app_pinned_folders_v1", pins = []; try {
         var raw = JSON.parse(localStorage.getItem(KEY) || "[]");
@@ -32804,7 +32931,7 @@ HX().scheduleCloudBackup(!1, !0), HX().showToast(fa ? `✅ ذخیره شد — �
             runs.forEach(run => { if (run.preserve || !run.nodes.length)
                 return; const anchor = run.nodes[0], parent = anchor.parentNode; parent && (parent.insertBefore(document.createTextNode(run.translated || ""), anchor), run.nodes.forEach(n => n.remove())); });
             const item = categories.find(c => c.id === id);
-            item && (item.html = textEl.innerHTML, item.text = textWithVisualSpacing(textEl).replace(/\u00a0/g, " "), item.lastEdited = new Date().toUTCString(), saveToLocalStorage()), showToast(fa ? "✅ ترجمه انجام شد." : "✅ Translation complete.", 1800);
+            item && (item.html = textEl.innerHTML, item.text = textWithVisualSpacing(textEl).replace(/\u00a0/g, " "), item.lastEdited = mkStamp(), saveToLocalStorage()), showToast(fa ? "✅ ترجمه انجام شد." : "✅ Translation complete.", 1800);
         }
         catch {
             alert(t.serverError);
@@ -33702,7 +33829,7 @@ catch { } }, (function () {
                     }
                     else
                         item.html = snap.html, item.text = snap.text;
-                    item.lastEdited = new Date().toUTCString();
+                    item.lastEdited = mkStamp();
                     try {
                         VH.historyPush(item.id, snap.html);
                     }
@@ -33710,7 +33837,7 @@ catch { } }, (function () {
                     c.lastHtml = snap.html;
                 }
                 else
-                    snap.name !== c.lastName && (item.lastEdited = new Date().toUTCString());
+                    snap.name !== c.lastName && (item.lastEdited = mkStamp());
                 c.lastName = snap.name, VH.saveToLocalStorage(), c.rendered = !0;
                 // keep the note editor behind the viewer in sync, so its own autosave can never bring back
                 // old content
@@ -34892,7 +35019,7 @@ function cancel() { timer && (clearTimeout(timer), timer = null); } document.add
 
 <script id="muEmoJs">
 (function () { if (window.__muEmo)
-    return; window.__muEmo = 1; var D = { trash: ["#ff5d73", '<path d="M4 7h16M9 7V4.5h6V7"/><path ~ d="M6 7l1 13h10l1-13z"/><path d="M10 11v5M14 11v5"/>'], warn: ["#ffb020", '<path ~ d="M12 3.5l9.5 16.5h-19z"/><path d="M12 10v4.5M12 17.4v.1"/>'], lock: ["#ffb020", '<rect ~ x="5" y="10.5" width="14" height="10" rx="2.5"/><path d="M8 10.5V8a4 4 0 0 1 8 0v2.5M12 14.5v2.5"/>'], unlock: ["#3ecf8e", '<rect ~ x="5" y="10.5" width="14" height="10" rx="2.5"/><path d="M8 10.5V8a4 4 0 0 1 7.5-2M12 14.5v2.5"/>'], key: ["#ffb020", '<circle ~ cx="8" cy="15.5" r="3.8"/><path d="M10.8 12.8L20 3.5M16.5 7l3 3"/>'], hourglass: ["#ff9f43", '<path d="M6.5 3.5h11M6.5 20.5h11"/><path ~ d="M8 3.5c0 4.5 4 5 4 8.5 0-3.5 4-4 4-8.5z"/><path d="M8 20.5c0-4.5 4-5 4-8.5 0 3.5 4 4 4 8.5z"/>'], check: ["#3ecf8e", '<circle ~ cx="12" cy="12" r="9"/><path d="M7.8 12.4l2.9 2.9 5.5-6"/>'], cross: ["#ff5d73", '<circle ~ cx="12" cy="12" r="9"/><path d="M9 9l6 6M15 9l-6 6"/>'], plus: ["#3ecf8e", '<circle ~ cx="12" cy="12" r="9"/><path d="M12 8v8M8 12h8"/>'], minus: ["#ff9f43", '<circle ~ cx="12" cy="12" r="9"/><path d="M8 12h8"/>'], gear: ["#8fa3bf", '<circle ~ cx="12" cy="12" r="3"/><circle cx="12" cy="12" r="6.2"/><path d="M12 2.8v2.6M12 18.6v2.6M2.8 12h2.6M18.6 12h2.6M5.5 5.5l1.9 1.9M16.6 16.6l1.9 1.9M18.5 5.5l-1.9 1.9M7.4 16.6l-1.9 1.9"/>'], cloud: ["#4cc3ff", '<path ~ d="M7 18.5h10.2a4 4 0 0 0 .6-7.95A6 6 0 0 0 6.3 9.7 4.4 4.4 0 0 0 7 18.5z"/>'], folder: ["#ffb020", '<path ~ d="M3 7.5a2 2 0 0 1 2-2h4l2 2.5h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>'], folders: ["#ffb020", '<path d="M7 5h4l1.5 2H19a2 2 0 0 1 2 2v8"/><path ~ d="M3 9a2 2 0 0 1 2-2h3.5l1.5 2H17a2 2 0 0 1 2 2v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>'], upload: ["#4cc3ff", '<path ~ stroke="none" d="M4 14h16v4a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2z"/><path d="M4 14v4a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-4M12 15V4M8 8l4-4 4 4"/>'], download: ["#3ecf8e", '<path ~ stroke="none" d="M4 14h16v4a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2z"/><path d="M4 14v4a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-4M12 4v11M8 11l4 4 4-4"/>'], down: ["#4cc3ff", '<path d="M12 4v15M6 13l6 6 6-6"/>'], up: ["#4cc3ff", '<path d="M12 20V5M6 11l6-6 6 6"/>'], updown: ["#8fa3bf", '<path d="M12 4v16M8 8l4-4 4 4M8 16l4 4 4-4"/>'], undo: ["#8fa3bf", '<path d="M9 7L4 12l5 5"/><path d="M4 12h10a6 6 0 0 1 6 6v1"/>'], package: ["#d9944a", '<path ~ d="M3.5 7.5L12 3.5l8.5 4v9L12 20.5l-8.5-4z"/><path d="M3.5 7.5L12 11.5l8.5-4M12 11.5v9"/>'], pin: ["#ff5d73", '<path ~ d="M9 3.8h6l-.9 5.3 2.9 3.1v1.9H7v-1.9l2.9-3.1L9 3.8z"/><path d="M12 14.1v6.1"/>', .9], star: ["#ffc61a", '<path ~ d="M12 3.6l2.5 5.2 5.7.8-4.1 4 1 5.7L12 16.6l-5.1 2.7 1-5.7-4.1-4 5.7-.8L12 3.6z"/>', .9], page: ["#6aa9ff", '<path ~ d="M6 3h8l4 4v13a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1z"/><path d="M14 3v4h4M8.5 12h7M8.5 15.5h7"/>'], memo: ["#ffc61a", '<rect ~ x="4" y="3.5" width="13" height="17" rx="2"/><path d="M7.5 8h6M7.5 11.5h4"/><path d="M14 19l.5-2.5 5-5 2 2-5 5z"/>'], clip: ["#6aa9ff", '<rect ~ x="5" y="4.5" width="14" height="16.5" rx="2"/><rect x="9" y="2.8" width="6" height="3.6" rx="1.2"/><path d="M8.5 11h7M8.5 14.5h7"/>'], paperclip: ["#a08cff", '<path d="M20 11.5l-7.8 7.8a4.6 4.6 0 0 1-6.5-6.5l8-8a3 3 0 0 1 4.3 4.3l-8 8a1.4 1.4 0 0 1-2-2l7.3-7.3"/>'], picture: ["#3ecf8e", '<rect ~ x="3.5" y="4.5" width="17" height="15" rx="2.2"/><circle cx="9" cy="10" r="1.6"/><path d="M4 17l5-4.5 3.5 3 3-2.5 4.5 4"/>'], book: ["#6aa9ff", '<path ~ d="M12 6.5C10 4.8 7 4.3 3.5 4.7v13c3.5-.4 6.5.1 8.5 1.8 2-1.7 5-2.2 8.5-1.8v-13C17 4.3 14 4.8 12 6.5z"/><path d="M12 6.5v13"/>'], books: ["#6aa9ff", '<rect ~ x="3.5" y="3.5" width="4.5" height="17" rx="1"/><rect x="9" y="3.5" width="4.5" height="17" rx="1"/><path ~ d="M15 6l4-1 3 14.5-4 1z"/>'], cal: ["#ff7a59", '<rect ~ x="3.5" y="5" width="17" height="15.5" rx="2.5"/><path d="M3.5 10h17M8 3v4M16 3v4"/>'], chart: ["#4cc3ff", '<path d="M4 20h16"/><rect ~ x="5.5" y="11" width="3.5" height="9" rx=".8"/><rect ~ x="10.3" y="5" width="3.5" height="15" rx=".8"/><rect ~ x="15" y="8.5" width="3.5" height="11.5" rx=".8"/>'], tri: ["#ffb020", '<path ~ d="M4 20V4l16 16z"/><path d="M4 12h3M4 8h2M8 20v-3M12 20v-2"/>'], ruler: ["#ffb020", '<rect ~ x="2.5" y="8" width="19" height="8" rx="1.5"/><path d="M6 8v3M10 8v4M14 8v3M18 8v4"/>'], antenna: ["#4cc3ff", '<path d="M5 19a9 9 0 0 1 0-13M8 16a5 5 0 0 1 0-7"/><circle ~ cx="14" cy="10" r="2"/><path d="M14 12v8M10.5 20h7"/>'], floppy: ["#6aa9ff", '<path ~ d="M4 5a1 1 0 0 1 1-1h11l4 4v11a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1z"/><rect x="7.5" y="4" width="7" height="5"/><rect x="7.5" y="13.5" width="9" height="6.5"/>'], ghost: ["#b8a5ff", '<path ~ d="M5 20V11a7 7 0 0 1 14 0v9l-2.3-2-2.4 2-2.3-2-2.3 2-2.4-2z"/><circle cx="9.5" cy="11" r="1" fill="@"/><circle cx="14.5" cy="11" r="1" fill="@"/>'], masks: ["#ff7ab6", '<path ~ d="M3.5 5h11v7a5.5 5.5 0 0 1-11 0z"/><path d="M7 8.5v1M11 8.5v1M6.5 13c1.2 1 3.3 1 4.5 0"/><path d="M14.5 8.5h6v6.5a4.5 4.5 0 0 1-8 2.8"/>'], robot: ["#4cc3ff", '<rect ~ x="4.5" y="8" width="15" height="11.5" rx="3"/><path d="M12 4.8V8"/><circle cx="12" cy="3.8" r="1.1"/><circle cx="9" cy="13" r="1.2" fill="@"/><circle cx="15" cy="13" r="1.2" fill="@"/><path d="M9.5 16.5h5"/>'], brain: ["#ff7ab6", '<path ~ d="M9.5 4A3.5 3.5 0 0 0 6 7.2 3.4 3.4 0 0 0 4.5 10c0 1 .4 1.8 1 2.4A3.6 3.6 0 0 0 7 19a3 3 0 0 0 5-1V5.5A2.5 2.5 0 0 0 9.5 4z"/><path ~ d="M14.5 4A3.5 3.5 0 0 1 18 7.2 3.4 3.4 0 0 1 19.5 10c0 1-.4 1.8-1 2.4A3.6 3.6 0 0 1 17 19a3 3 0 0 1-5-1V5.5A2.5 2.5 0 0 1 14.5 4z"/>'], dna: ["#3ecf8e", '<path d="M8 3c0 5 8 5 8 9s-8 4-8 9M16 3c0 5-8 5-8 9s8 4 8 9M9 6.5h6M9 17.5h6M8.5 12h7"/>'], compass: ["#4cc3ff", '<circle ~ cx="12" cy="12" r="9"/><path ~ d="M15.5 8.5l-2 5-5 2 2-5z"/>'], toolbox: ["#ff7a59", '<rect ~ x="3" y="8" width="18" height="12" rx="2"/><path d="M9 8V6a1.5 1.5 0 0 1 1.5-1.5h3A1.5 1.5 0 0 1 15 6v2M3 13h18M11 12v3h2v-3"/>'], puzzle: ["#a08cff", '<path ~ d="M5 8h4a2.2 2.2 0 1 1 4.5 0H18v4.5a2.2 2.2 0 1 1 0 4.5V21H5z"/>'], abacus: ["#d9944a", '<rect x="3.5" y="4" width="17" height="16" rx="2"/><path d="M3.5 9.5h17M3.5 14.5h17"/><circle ~ cx="8" cy="7" r="1.3"/><circle ~ cx="14" cy="12" r="1.3"/><circle ~ cx="10" cy="17" r="1.3"/>'], soap: ["#4cc3ff", '<rect ~ x="4" y="11" width="16" height="8" rx="3"/><circle cx="8" cy="6.5" r="2"/><circle cx="14" cy="5" r="1.4"/><circle cx="17.5" cy="8" r="1"/>'], broom: ["#d9944a", '<path d="M15.5 3.5l-4.5 7.5"/><path ~ d="M8 11l6 3.5-3.5 6-7-1z"/>'], ban: ["#ff5d73", '<circle ~ cx="12" cy="12" r="9"/><path d="M5.7 5.7l12.6 12.6"/>'], stop: ["#ff5d73", '<path ~ d="M8.5 3h7L21 8.5v7L15.5 21h-7L3 15.5v-7z"/><path d="M8.5 12h7"/>'], cone: ["#ffb020", '<rect ~ x="3" y="8" width="18" height="6" rx="1"/><path d="M5 14v6M19 14v6M8 8l3 6M13 8l3 6"/>'], shield: ["#4cc3ff", '<path ~ d="M12 3l7.5 3v6c0 4.5-3.2 8-7.5 9.5C7.7 20 4.5 16.5 4.5 12V6z"/><path d="M8.8 12l2.4 2.4 4-4.4"/>'], scales: ["#ffb020", '<path d="M12 4v16M7 20h10M4.5 7h15"/><path ~ d="M4.5 7L2 14a3 3 0 0 0 5 0zM19.5 7L17 14a3 3 0 0 0 5 0z"/>'], bolt: ["#ffc61a", '<path ~ d="M13 2.5L5 13.5h6l-1 8 8-11h-6z"/>'], fire: ["#ff7a30", '<path ~ d="M12 21c4 0 6.5-2.7 6.5-6 0-3.5-2.5-5.2-3.5-8-1.7 1.3-2.8 3-3 5-1-.8-1.5-2-1.5-3.5C8 10 5.5 12 5.5 15c0 3.3 2.5 6 6.5 6z"/>'], boom: ["#ff7a30", '<path ~ d="M12 2.5l2 5 5-2-2 5 5 2-5 2 2 5-5-2-2 5-2-5-5 2 2-5-5-2 5-2-2-5 5 2z"/>'], bulb: ["#ffc61a", '<path ~ d="M12 3.5a6 6 0 0 0-3.5 10.8c.6.5 1 1.2 1 2.2h5c0-1 .4-1.7 1-2.2A6 6 0 0 0 12 3.5z"/><path d="M9.5 19h5M10.5 21.5h3"/>'], target: ["#ff5d73", '<circle cx="12" cy="12" r="9"/><circle ~ cx="12" cy="12" r="5"/><circle cx="12" cy="12" r="1.2" fill="@"/>'], palette: ["#ff7ab6", '<path ~ d="M12 3.5a8.5 8.5 0 1 0 0 17c1.4 0 2-1 1.5-2.2-.5-1.2.3-2.300 1.7-2.300H17a3.500 3.500 0 0 0 3.500-3.500C20.500 7 16.700 3.500 12 3.500z"/><circle cx="8" cy="11" r="1" fill="@"/><circle cx="11" cy="7.5" r="1" fill="@"/><circle cx="15.5" cy="8.5" r="1" fill="@"/>'], music: ["#a08cff", '<path d="M9 18V5.5l10-2V16"/><circle ~ cx="6.5" cy="18" r="2.5"/><circle ~ cx="16.5" cy="16" r="2.5"/>'], mic: ["#ff7ab6", '<rect ~ x="9" y="3" width="6" height="11" rx="3"/><path d="M5.5 11.5a6.500 6.500 0 0 0 13 0M12 18v3M8.5 21h7"/>'], stopsq: ["#ff5d73", '<rect ~ x="5" y="5" width="14" height="14" rx="2.500"/>'], trophy: ["#ffc61a", '<path ~ d="M7.5 4h9v5.5a4.5 4.5 0 0 1-9 0z"/><path d="M7.5 6h-3v1.500a3 3 0 0 0 3 3M16.5 6h3v1.500a3 3 0 0 1-3 3M12 14v4M8.5 20.5h7M10 18h4"/>'], link: ["#4cc3ff", '<path d="M10 14a4 4 0 0 0 5.700 0l3-3a4 4 0 0 0-5.700-5.700l-1 1"/><path d="M14 10a4 4 0 0 0-5.700 0l-3 3a4 4 0 0 0 5.700 5.700l1-1"/>'], cycle: ["#3ecf8e", '<path d="M20 11a8 8 0 0 0-14-4.500L4 9M4 4v5h5"/><path d="M4 13a8 8 0 0 0 14 4.500L20 15M20 20v-5h-5"/>'], shuffle: ["#3ecf8e", '<path d="M3.5 7h3.500c4 0 5 10 9 10h4M3.500 17H7c1.500 0 2.600-1.800 3.500-3.500M13.500 10.500C14.400 8.800 15.300 7 17 7h3.500M17.500 4l3 3-3 3M17.500 14l3 3-3 3"/>'], hash: ["#4cc3ff", '<path d="M9 4L7 20M17 4l-2 16M4 9h16M3 15h16"/>'], abc: ["#4cc3ff", '<path d="M3.5 19l4.500-12 4.500 12M5.200 14.500h5.600"/><circle ~ cx="17" cy="15.500" r="3"/><path d="M20 12.500V19"/>'], search: ["#4cc3ff", '<circle ~ cx="10.500" cy="10.500" r="6.500"/><path d="M15.500 15.500L21 21"/>'], globe: ["#4cc3ff", '<circle ~ cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c3 3 3 15 0 18M12 3c-3 3-3 15 0 18"/>'], night: ["#8a7dff", '<path ~ d="M20 14.500A8.500 8.500 0 1 1 9.500 4a6.500 6.500 0 0 0 10.500 10.500z"/><path d="M17 3.500v3M15.500 5h3"/>'], swirl: ["#4cc3ff", '<path d="M12 12h.01M12 8.500a3.500 3.500 0 1 1-3.500 3.500M12 4.500a7.500 7.500 0 1 1-7.500 7.500"/>'], eye: ["#a08cff", '<path ~ d="M2.500 12S6 5.500 12 5.500 21.500 12 21.500 12 18 18.500 12 18.500 2.500 12 2.500 12z"/><circle cx="12" cy="12" r="2.800" fill="@"/>'], eyeoff: ["#a08cff", '<path d="M3 3l18 18"/><path d="M10.500 5.700A9.500 9.500 0 0 1 12 5.500c6 0 9.500 6.500 9.500 6.500a15 15 0 0 1-2.800 3.700M6.600 7.200A15 15 0 0 0 2.500 12S6 18.500 12 18.500c1.300 0 2.500-.3 3.500-.8"/><path d="M9.900 9.900a3 3 0 0 0 4.200 4.200"/>'], tag: ["#ff9f43", '<path ~ d="M3.500 12.500v-8a1 1 0 0 1 1-1h8l8 8-9 9z"/><circle cx="8" cy="8" r="1.300" fill="@"/>'], scissors: ["#ff5d73", '<circle cx="6" cy="6.5" r="2.5"/><circle cx="6" cy="17.5" r="2.5"/><path d="M8 8l12 9M8 16l12-9"/>'], pencil: ["#ffc61a", '<path ~ d="M4 20l1-4.500L16.500 4a2.100 2.100 0 0 1 3 3L8 18.500z"/><path d="M14.500 6l3.500 3.500"/>'], question: ["#ff9f43", '<circle ~ cx="12" cy="12" r="9"/><path d="M9.500 9.500a2.500 2.500 0 1 1 3.500 2.300c-.7.400-1 .9-1 1.700M12 16.800v.1"/>'], info: ["#4cc3ff", '<circle ~ cx="12" cy="12" r="9"/><path d="M12 11v6M12 7.300v.1"/>'], card: ["#6aa9ff", '<rect ~ x="3" y="5.500" width="18" height="13" rx="2.500"/><path d="M3 10h18M6.500 15h4"/>'], dollar: ["#3ecf8e", '<circle ~ cx="12" cy="12" r="9"/><path d="M14.800 9.200c-.3-1.200-1.400-1.900-2.800-1.900-1.600 0-2.800.8-2.800 2.100 0 3 5.800 1.400 5.800 4.500 0 1.300-1.200 2.200-3 2.200-1.500 0-2.700-.7-3-2M12 5.800v1.500M12 16.700v1.500"/>'], spider: ["#8fa3bf", '<ellipse ~ cx="12" cy="13" rx="3.500" ry="4.500"/><circle cx="12" cy="8" r="2"/><path d="M8.500 11L4 8M8.500 13.500L3.500 14M9 16l-3 4M15.500 11L20 8M15.500 13.500l5 .5M15 16l3 4"/>'], clock: ["#8fa3bf", '<circle ~ cx="12" cy="12" r="9"/><path d="M12 7v5l3.500 2"/>'], smile: ["#ffc61a", '<circle ~ cx="12" cy="12" r="9"/><circle cx="9" cy="10" r="1" fill="@"/><circle cx="15" cy="10" r="1" fill="@"/><path d="M8 14.500a5 5 0 0 0 8 0"/>'], circle: ["#8fa3bf", '<circle ~ cx="12" cy="12" r="8"/>'], green: ["#3ecf8e", '<circle cx="12" cy="12" r="8" fill="@"/>'], square: ["#8fa3bf", '<rect ~ x="4.500" y="4.500" width="15" height="15" rx="3"/>'], window: ["#4cc3ff", '<rect ~ x="4" y="3.500" width="16" height="17" rx="2"/><path d="M12 3.500v17M4 12h16"/>'], compress: ["#8fa3bf", '<path d="M4 7h16M4 17h16M12 4v6M9 8l3 3 3-3M12 20v-6M9 16l3-3 3 3"/>'], tools: ["#8fa3bf", '<path ~ d="M14.500 6a4 4 0 0 0 5 5.200l-9 9a2 2 0 0 1-3-3l9-9A4 4 0 0 0 14.500 6z"/>'] }, M = { "🗑": "trash", "🗑️": "trash", "⚠": "warn", "⚠️": "warn", "🔒": "lock", "🔒️": "lock", "🔐": "lock", "🔐️": "lock", "🔓": "unlock", "🔓️": "unlock", "🔑": "key", "🔑️": "key", "⏳": "hourglass", "⏳️": "hourglass", "⌛": "hourglass", "⌛️": "hourglass", "✅": "check", "✅️": "check", "❌": "cross", "❌️": "cross", "➕": "plus", "➕️": "plus", "➖": "minus", "➖️": "minus", "⚙": "gear", "⚙️": "gear", "☁": "cloud", "☁️": "cloud", "📁": "folder", "📁️": "folder", "🗂": "folders", "🗂️": "folders", "📤": "upload", "📤️": "upload", "📥": "download", "📥️": "download", "⬇": "down", "⬇️": "down", "⬆": "up", "⬆️": "up", "📦": "package", "📦️": "package", "📌": "pin", "📌️": "pin", "⭐": "star", "⭐️": "star", "📄": "page", "📄️": "page", "📝": "memo", "📝️": "memo", "📋": "clip", "📋️": "clip", "📎": "paperclip", "📎️": "paperclip", "🖼": "picture", "🖼️": "picture", "📖": "book", "📖️": "book", "📚": "books", "📚️": "books", "📅": "cal", "📅️": "cal", "🗓": "cal", "🗓️": "cal", "📊": "chart", "📊️": "chart", "📐": "tri", "📐️": "tri", "📏": "ruler", "📏️": "ruler", "📡": "antenna", "📡️": "antenna", "💾": "floppy", "💾️": "floppy", "👻": "ghost", "👻️": "ghost", "🎭": "masks", "🎭️": "masks", "🤖": "robot", "🤖️": "robot", "🧠": "brain", "🧠️": "brain", "🧬": "dna", "🧬️": "dna", "🧭": "compass", "🧭️": "compass", "🧰": "toolbox", "🧰️": "toolbox", "🧩": "puzzle", "🧩️": "puzzle", "🧮": "abacus", "🧮️": "abacus", "🧼": "soap", "🧼️": "soap", "🧹": "broom", "🧹️": "broom", "🚫": "ban", "🚫️": "ban", "🛑": "stop", "🛑️": "stop", "🚧": "cone", "🚧️": "cone", "🛡": "shield", "🛡️": "shield", "⚖": "scales", "⚖️": "scales", "⚡": "bolt", "⚡️": "bolt", "🔥": "fire", "🔥️": "fire", "💥": "boom", "💥️": "boom", "💡": "bulb", "💡️": "bulb", "🎯": "target", "🎯️": "target", "🎨": "palette", "🎨️": "palette", "🎵": "music", "🎵️": "music", "🎙": "mic", "🎙️": "mic", "⏹": "stopsq", "⏹️": "stopsq", "🏆": "trophy", "🏆️": "trophy", "🔗": "link", "🔗️": "link", "🔄": "cycle", "🔄️": "cycle", "🔁": "cycle", "🔁️": "cycle", "🔀": "shuffle", "🔀️": "shuffle", "🔢": "hash", "🔢️": "hash", "🔤": "abc", "🔤️": "abc", "🔠": "abc", "🔠️": "abc", "🔎": "search", "🔎️": "search", "🔍": "search", "🔍️": "search", "🌐": "globe", "🌐️": "globe", "🌍": "globe", "🌍️": "globe", "??": "night", "🌌️": "night", "🌀": "swirl", "🌀️": "swirl", "👁": "eye", "👁️": "eye", "🙈": "eyeoff", "🙈️": "eyeoff", "🏷": "tag", "🏷️": "tag", "✂": "scissors", "✂️": "scissors", "✏": "pencil", "✏️": "pencil", "✍": "pencil", "✍️": "pencil", "❓": "question", "❓️": "question", ℹ: "info", "ℹ️": "info", "💳": "card", "💳️": "card", "💲": "dollar", "💲️": "dollar", "🕷": "spider", "🕷️": "spider", "🕒": "clock", "🕒️": "clock", "🕘": "clock", "🕘️": "clock", "🕰": "clock", "🕰️": "clock", "😀": "smile", "😀️": "smile", "⚪": "circle", "⚪️": "circle", "🟢": "green", "🟢️": "green", "⬜": "square", "⬜️": "square", "🪟": "window", "🪟️": "window", "🗜": "compress", "🗜️": "compress", "🛠": "tools", "🛠️": "tools", "✔️": "check", "↕️": "updown", "↩️": "undo" }, keys = Object.keys(M).sort(function (a, b) { return b.length - a.length; }).map(function (k) { return k.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"); }).join("|"), RE = new RegExp(keys, "g"), RT = new RegExp(keys), SKIP = "[contenteditable],textarea,input,select,option,script,style,svg,.mu-emo,.text-box,.mu-viewer-body,.note-item-meta,[data-mu-noemo]", st = document.createElement("style"); st.id = "muEmoRules", (document.head || document.documentElement).appendChild(st); var done = {}; function svg(k) { var t = D[k], c = t[0]; return '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="' + c + '" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">' + t[1].replace(/@/g, c).replace(/~/g, ' fill="' + c + '" fill-opacity="' + (t[2] || .22) + '"') + "</svg>"; } function rule(k) { done[k] || (done[k] = 1, st.appendChild(document.createTextNode('.mu-emo[data-k="' + k + '"]{background-image:url("data:image/svg+xml,' + encodeURIComponent(svg(k)) + '")}'))); } window.mu_emoUri = function (k) { return "data:image/svg+xml," + encodeURIComponent(svg(k)); }; function fix(n) { var p = n.parentNode; if (!(!p || p.closest && p.closest(SKIP))) {
+    return; window.__muEmo = 1; var D = { trash: ["#ff5d73", '<path d="M4 7h16M9 7V4.5h6V7"/><path ~ d="M6 7l1 13h10l1-13z"/><path d="M10 11v5M14 11v5"/>'], warn: ["#ffb020", '<path ~ d="M12 3.5l9.5 16.5h-19z"/><path d="M12 10v4.5M12 17.4v.1"/>'], lock: ["#ffb020", '<rect ~ x="5" y="10.5" width="14" height="10" rx="2.5"/><path d="M8 10.5V8a4 4 0 0 1 8 0v2.5M12 14.5v2.5"/>'], unlock: ["#3ecf8e", '<rect ~ x="5" y="10.5" width="14" height="10" rx="2.5"/><path d="M8 10.5V8a4 4 0 0 1 7.5-2M12 14.5v2.5"/>'], key: ["#ffb020", '<circle ~ cx="8" cy="15.5" r="3.8"/><path d="M10.8 12.8L20 3.5M16.5 7l3 3"/>'], hourglass: ["#ff9f43", '<path d="M6.5 3.5h11M6.5 20.5h11"/><path ~ d="M8 3.5c0 4.5 4 5 4 8.5 0-3.5 4-4 4-8.5z"/><path d="M8 20.5c0-4.5 4-5 4-8.5 0 3.5 4 4 4 8.5z"/>'], check: ["#3ecf8e", '<circle ~ cx="12" cy="12" r="9"/><path d="M7.8 12.4l2.9 2.9 5.5-6"/>'], cross: ["#ff5d73", '<circle ~ cx="12" cy="12" r="9"/><path d="M9 9l6 6M15 9l-6 6"/>'], plus: ["#3ecf8e", '<circle ~ cx="12" cy="12" r="9"/><path d="M12 8v8M8 12h8"/>'], minus: ["#ff9f43", '<circle ~ cx="12" cy="12" r="9"/><path d="M8 12h8"/>'], gear: ["#8fa3bf", '<circle ~ cx="12" cy="12" r="3"/><circle cx="12" cy="12" r="6.2"/><path d="M12 2.8v2.6M12 18.6v2.6M2.8 12h2.6M18.6 12h2.6M5.5 5.5l1.9 1.9M16.6 16.6l1.9 1.9M18.5 5.5l-1.9 1.9M7.4 16.6l-1.9 1.9"/>'], cloud: ["#4cc3ff", '<path ~ d="M7 18.5h10.2a4 4 0 0 0 .6-7.95A6 6 0 0 0 6.3 9.7 4.4 4.4 0 0 0 7 18.5z"/>'], folder: ["#ffb020", '<path ~ d="M3 7.5a2 2 0 0 1 2-2h4l2 2.5h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>'], folders: ["#ffb020", '<path d="M7 5h4l1.5 2H19a2 2 0 0 1 2 2v8"/><path ~ d="M3 9a2 2 0 0 1 2-2h3.5l1.5 2H17a2 2 0 0 1 2 2v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>'], upload: ["#4cc3ff", '<path ~ stroke="none" d="M4 14h16v4a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2z"/><path d="M4 14v4a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-4M12 15V4M8 8l4-4 4 4"/>'], download: ["#3ecf8e", '<path ~ stroke="none" d="M4 14h16v4a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2z"/><path d="M4 14v4a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-4M12 4v11M8 11l4 4 4-4"/>'], down: ["#4cc3ff", '<path d="M12 4v15M6 13l6 6 6-6"/>'], up: ["#4cc3ff", '<path d="M12 20V5M6 11l6-6 6 6"/>'], updown: ["#8fa3bf", '<path d="M12 4v16M8 8l4-4 4 4M8 16l4 4 4-4"/>'], undo: ["#8fa3bf", '<path d="M9 7L4 12l5 5"/><path d="M4 12h10a6 6 0 0 1 6 6v1"/>'], package: ["#d9944a", '<path ~ d="M3.5 7.5L12 3.5l8.5 4v9L12 20.5l-8.5-4z"/><path d="M3.5 7.5L12 11.5l8.5-4M12 11.5v9"/>'], pin: ["#ff5d73", '<path ~ d="M9 3.8h6l-.9 5.3 2.9 3.1v1.9H7v-1.9l2.9-3.1L9 3.8z"/><path d="M12 14.1v6.1"/>', .9], star: ["#ffc61a", '<path ~ d="M12 3.6l2.5 5.2 5.7.8-4.1 4 1 5.7L12 16.6l-5.1 2.7 1-5.7-4.1-4 5.7-.8L12 3.6z"/>', .9], page: ["#6aa9ff", '<path ~ d="M6 3h8l4 4v13a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1z"/><path d="M14 3v4h4M8.5 12h7M8.5 15.5h7"/>'], memo: ["#ffc61a", '<rect ~ x="4" y="3.5" width="13" height="17" rx="2"/><path d="M7.5 8h6M7.5 11.5h4"/><path d="M14 19l.5-2.5 5-5 2 2-5 5z"/>'], clip: ["#6aa9ff", '<rect ~ x="5" y="4.5" width="14" height="16.5" rx="2"/><rect x="9" y="2.8" width="6" height="3.6" rx="1.2"/><path d="M8.5 11h7M8.5 14.5h7"/>'], paperclip: ["#a08cff", '<path d="M20 11.5l-7.8 7.8a4.6 4.6 0 0 1-6.5-6.5l8-8a3 3 0 0 1 4.3 4.3l-8 8a1.4 1.4 0 0 1-2-2l7.3-7.3"/>'], picture: ["#3ecf8e", '<rect ~ x="3.5" y="4.5" width="17" height="15" rx="2.2"/><circle cx="9" cy="10" r="1.6"/><path d="M4 17l5-4.5 3.5 3 3-2.5 4.5 4"/>'], book: ["#6aa9ff", '<path ~ d="M12 6.5C10 4.8 7 4.3 3.5 4.7v13c3.5-.4 6.5.1 8.5 1.8 2-1.7 5-2.2 8.5-1.8v-13C17 4.3 14 4.8 12 6.5z"/><path d="M12 6.5v13"/>'], books: ["#6aa9ff", '<rect ~ x="3.5" y="3.5" width="4.5" height="17" rx="1"/><rect x="9" y="3.5" width="4.5" height="17" rx="1"/><path ~ d="M15 6l4-1 3 14.5-4 1z"/>'], cal: ["#ff7a59", '<rect ~ x="3.5" y="5" width="17" height="15.5" rx="2.5"/><path d="M3.5 10h17M8 3v4M16 3v4"/>'], chart: ["#4cc3ff", '<path d="M4 20h16"/><rect ~ x="5.5" y="11" width="3.5" height="9" rx=".8"/><rect ~ x="10.3" y="5" width="3.5" height="15" rx=".8"/><rect ~ x="15" y="8.5" width="3.5" height="11.5" rx=".8"/>'], tri: ["#ffb020", '<path ~ d="M4 20V4l16 16z"/><path d="M4 12h3M4 8h2M8 20v-3M12 20v-2"/>'], ruler: ["#ffb020", '<rect ~ x="2.5" y="8" width="19" height="8" rx="1.5"/><path d="M6 8v3M10 8v4M14 8v3M18 8v4"/>'], antenna: ["#4cc3ff", '<path d="M5 19a9 9 0 0 1 0-13M8 16a5 5 0 0 1 0-7"/><circle ~ cx="14" cy="10" r="2"/><path d="M14 12v8M10.5 20h7"/>'], floppy: ["#6aa9ff", '<path ~ d="M4 5a1 1 0 0 1 1-1h11l4 4v11a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1z"/><rect x="7.5" y="4" width="7" height="5"/><rect x="7.5" y="13.5" width="9" height="6.5"/>'], ghost: ["#b8a5ff", '<path ~ d="M5 20V11a7 7 0 0 1 14 0v9l-2.3-2-2.4 2-2.3-2-2.3 2-2.4-2z"/><circle cx="9.5" cy="11" r="1" fill="@"/><circle cx="14.5" cy="11" r="1" fill="@"/>'], masks: ["#ff7ab6", '<path ~ d="M3.5 5h11v7a5.5 5.5 0 0 1-11 0z"/><path d="M7 8.5v1M11 8.5v1M6.5 13c1.2 1 3.3 1 4.5 0"/><path d="M14.5 8.5h6v6.5a4.5 4.5 0 0 1-8 2.8"/>'], robot: ["#4cc3ff", '<rect ~ x="4.5" y="8" width="15" height="11.5" rx="3"/><path d="M12 4.8V8"/><circle cx="12" cy="3.8" r="1.1"/><circle cx="9" cy="13" r="1.2" fill="@"/><circle cx="15" cy="13" r="1.2" fill="@"/><path d="M9.5 16.5h5"/>'], brain: ["#ff7ab6", '<path ~ d="M9.5 4A3.5 3.5 0 0 0 6 7.2 3.4 3.4 0 0 0 4.5 10c0 1 .4 1.8 1 2.4A3.6 3.6 0 0 0 7 19a3 3 0 0 0 5-1V5.5A2.5 2.5 0 0 0 9.5 4z"/><path ~ d="M14.5 4A3.5 3.5 0 0 1 18 7.2 3.4 3.4 0 0 1 19.5 10c0 1-.4 1.8-1 2.4A3.6 3.6 0 0 1 17 19a3 3 0 0 1-5-1V5.5A2.5 2.5 0 0 1 14.5 4z"/>'], dna: ["#3ecf8e", '<path d="M8 3c0 5 8 5 8 9s-8 4-8 9M16 3c0 5-8 5-8 9s8 4 8 9M9 6.5h6M9 17.5h6M8.5 12h7"/>'], compass: ["#4cc3ff", '<circle ~ cx="12" cy="12" r="9"/><path ~ d="M15.5 8.5l-2 5-5 2 2-5z"/>'], toolbox: ["#ff7a59", '<rect ~ x="3" y="8" width="18" height="12" rx="2"/><path d="M9 8V6a1.5 1.5 0 0 1 1.5-1.5h3A1.5 1.5 0 0 1 15 6v2M3 13h18M11 12v3h2v-3"/>'], puzzle: ["#a08cff", '<path ~ d="M5 8h4a2.2 2.2 0 1 1 4.5 0H18v4.5a2.2 2.2 0 1 1 0 4.5V21H5z"/>'], abacus: ["#d9944a", '<rect x="3.5" y="4" width="17" height="16" rx="2"/><path d="M3.5 9.5h17M3.5 14.5h17"/><circle ~ cx="8" cy="7" r="1.3"/><circle ~ cx="14" cy="12" r="1.3"/><circle ~ cx="10" cy="17" r="1.3"/>'], soap: ["#4cc3ff", '<rect ~ x="4" y="11" width="16" height="8" rx="3"/><circle cx="8" cy="6.5" r="2"/><circle cx="14" cy="5" r="1.4"/><circle cx="17.5" cy="8" r="1"/>'], broom: ["#d9944a", '<path d="M15.5 3.5l-4.5 7.5"/><path ~ d="M8 11l6 3.5-3.5 6-7-1z"/>'], ban: ["#ff5d73", '<circle ~ cx="12" cy="12" r="9"/><path d="M5.7 5.7l12.6 12.6"/>'], stop: ["#ff5d73", '<path ~ d="M8.5 3h7L21 8.5v7L15.5 21h-7L3 15.5v-7z"/><path d="M8.5 12h7"/>'], cone: ["#ffb020", '<rect ~ x="3" y="8" width="18" height="6" rx="1"/><path d="M5 14v6M19 14v6M8 8l3 6M13 8l3 6"/>'], shield: ["#4cc3ff", '<path ~ d="M12 3l7.5 3v6c0 4.5-3.2 8-7.5 9.5C7.7 20 4.5 16.5 4.5 12V6z"/><path d="M8.8 12l2.4 2.4 4-4.4"/>'], scales: ["#ffb020", '<path d="M12 4v16M7 20h10M4.5 7h15"/><path ~ d="M4.5 7L2 14a3 3 0 0 0 5 0zM19.5 7L17 14a3 3 0 0 0 5 0z"/>'], bolt: ["#ffc61a", '<path ~ d="M13 2.5L5 13.5h6l-1 8 8-11h-6z"/>'], fire: ["#ff7a30", '<path ~ d="M12 21c4 0 6.5-2.7 6.5-6 0-3.5-2.5-5.2-3.5-8-1.7 1.3-2.8 3-3 5-1-.8-1.5-2-1.5-3.5C8 10 5.5 12 5.5 15c0 3.3 2.5 6 6.5 6z"/>'], boom: ["#ff7a30", '<path ~ d="M12 2.5l2 5 5-2-2 5 5 2-5 2 2 5-5-2-2 5-2-5-5 2 2-5-5-2 5-2-2-5 5 2z"/>'], bulb: ["#ffc61a", '<path ~ d="M12 3.5a6 6 0 0 0-3.5 10.8c.6.5 1 1.2 1 2.2h5c0-1 .4-1.7 1-2.2A6 6 0 0 0 12 3.5z"/><path d="M9.5 19h5M10.5 21.5h3"/>'], target: ["#ff5d73", '<circle cx="12" cy="12" r="9"/><circle ~ cx="12" cy="12" r="5"/><circle cx="12" cy="12" r="1.2" fill="@"/>'], palette: ["#ff7ab6", '<path ~ d="M12 3.5a8.5 8.5 0 1 0 0 17c1.4 0 2-1 1.5-2.2-.5-1.2.3-2.300 1.7-2.300H17a3.500 3.500 0 0 0 3.500-3.500C20.500 7 16.700 3.500 12 3.500z"/><circle cx="8" cy="11" r="1" fill="@"/><circle cx="11" cy="7.5" r="1" fill="@"/><circle cx="15.5" cy="8.5" r="1" fill="@"/>'], music: ["#a08cff", '<path d="M9 18V5.5l10-2V16"/><circle ~ cx="6.5" cy="18" r="2.5"/><circle ~ cx="16.5" cy="16" r="2.5"/>'], mic: ["#ff7ab6", '<rect ~ x="9" y="3" width="6" height="11" rx="3"/><path d="M5.5 11.5a6.500 6.500 0 0 0 13 0M12 18v3M8.5 21h7"/>'], stopsq: ["#ff5d73", '<rect ~ x="5" y="5" width="14" height="14" rx="2.500"/>'], trophy: ["#ffc61a", '<path ~ d="M7.5 4h9v5.5a4.5 4.5 0 0 1-9 0z"/><path d="M7.5 6h-3v1.500a3 3 0 0 0 3 3M16.5 6h3v1.500a3 3 0 0 1-3 3M12 14v4M8.5 20.5h7M10 18h4"/>'], link: ["#4cc3ff", '<path d="M10 14a4 4 0 0 0 5.700 0l3-3a4 4 0 0 0-5.700-5.700l-1 1"/><path d="M14 10a4 4 0 0 0-5.700 0l-3 3a4 4 0 0 0 5.700 5.700l1-1"/>'], cycle: ["#3ecf8e", '<path d="M20 11a8 8 0 0 0-14-4.500L4 9M4 4v5h5"/><path d="M4 13a8 8 0 0 0 14 4.500L20 15M20 20v-5h-5"/>'], shuffle: ["#3ecf8e", '<path d="M3.5 7h3.500c4 0 5 10 9 10h4M3.500 17H7c1.500 0 2.600-1.800 3.500-3.500M13.500 10.500C14.400 8.800 15.300 7 17 7h3.500M17.500 4l3 3-3 3M17.500 14l3 3-3 3"/>'], hash: ["#4cc3ff", '<path d="M9 4L7 20M17 4l-2 16M4 9h16M3 15h16"/>'], abc: ["#4cc3ff", '<path d="M3.5 19l4.500-12 4.500 12M5.200 14.500h5.600"/><circle ~ cx="17" cy="15.500" r="3"/><path d="M20 12.500V19"/>'], search: ["#4cc3ff", '<circle ~ cx="10.500" cy="10.500" r="6.500"/><path d="M15.500 15.500L21 21"/>'], globe: ["#4cc3ff", '<circle ~ cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c3 3 3 15 0 18M12 3c-3 3-3 15 0 18"/>'], night: ["#8a7dff", '<path ~ d="M20 14.500A8.500 8.500 0 1 1 9.500 4a6.500 6.500 0 0 0 10.500 10.500z"/><path d="M17 3.500v3M15.500 5h3"/>'], swirl: ["#4cc3ff", '<path d="M12 12h.01M12 8.500a3.500 3.500 0 1 1-3.500 3.500M12 4.500a7.500 7.500 0 1 1-7.500 7.500"/>'], eye: ["#a08cff", '<path ~ d="M2.500 12S6 5.500 12 5.500 21.500 12 21.500 12 18 18.500 12 18.500 2.500 12 2.500 12z"/><circle cx="12" cy="12" r="2.800" fill="@"/>'], eyeoff: ["#a08cff", '<path d="M3 3l18 18"/><path d="M10.500 5.700A9.500 9.500 0 0 1 12 5.500c6 0 9.500 6.500 9.500 6.500a15 15 0 0 1-2.800 3.700M6.600 7.200A15 15 0 0 0 2.500 12S6 18.500 12 18.500c1.300 0 2.500-.3 3.500-.8"/><path d="M9.900 9.900a3 3 0 0 0 4.200 4.200"/>'], tag: ["#ff9f43", '<path ~ d="M3.500 12.500v-8a1 1 0 0 1 1-1h8l8 8-9 9z"/><circle cx="8" cy="8" r="1.300" fill="@"/>'], scissors: ["#ff5d73", '<circle cx="6" cy="6.5" r="2.5"/><circle cx="6" cy="17.5" r="2.5"/><path d="M8 8l12 9M8 16l12-9"/>'], pencil: ["#ffc61a", '<path ~ d="M4 20l1-4.500L16.500 4a2.100 2.100 0 0 1 3 3L8 18.500z"/><path d="M14.500 6l3.500 3.500"/>'], question: ["#ff9f43", '<circle ~ cx="12" cy="12" r="9"/><path d="M9.500 9.500a2.500 2.500 0 1 1 3.500 2.300c-.7.400-1 .9-1 1.700M12 16.800v.1"/>'], info: ["#4cc3ff", '<circle ~ cx="12" cy="12" r="9"/><path d="M12 11v6M12 7.300v.1"/>'], card: ["#6aa9ff", '<rect ~ x="3" y="5.500" width="18" height="13" rx="2.500"/><path d="M3 10h18M6.500 15h4"/>'], dollar: ["#3ecf8e", '<circle ~ cx="12" cy="12" r="9"/><path d="M14.800 9.200c-.3-1.200-1.400-1.900-2.800-1.900-1.600 0-2.800.8-2.800 2.100 0 3 5.800 1.400 5.800 4.500 0 1.300-1.200 2.200-3 2.200-1.500 0-2.700-.7-3-2M12 5.800v1.500M12 16.700v1.500"/>'], spider: ["#8fa3bf", '<ellipse ~ cx="12" cy="13" rx="3.500" ry="4.500"/><circle cx="12" cy="8" r="2"/><path d="M8.500 11L4 8M8.500 13.500L3.500 14M9 16l-3 4M15.500 11L20 8M15.500 13.500l5 .5M15 16l3 4"/>'], clock: ["#8fa3bf", '<circle ~ cx="12" cy="12" r="9"/><path d="M12 7v5l3.500 2"/>'], smile: ["#ffc61a", '<circle ~ cx="12" cy="12" r="9"/><circle cx="9" cy="10" r="1" fill="@"/><circle cx="15" cy="10" r="1" fill="@"/><path d="M8 14.500a5 5 0 0 0 8 0"/>'], circle: ["#8fa3bf", '<circle ~ cx="12" cy="12" r="8"/>'], green: ["#3ecf8e", '<circle cx="12" cy="12" r="8" fill="@"/>'], square: ["#8fa3bf", '<rect ~ x="4.500" y="4.500" width="15" height="15" rx="3"/>'], window: ["#4cc3ff", '<rect ~ x="4" y="3.500" width="16" height="17" rx="2"/><path d="M12 3.500v17M4 12h16"/>'], compress: ["#8fa3bf", '<path d="M4 7h16M4 17h16M12 4v6M9 8l3 3 3-3M12 20v-6M9 16l3-3 3 3"/>'], tools: ["#8fa3bf", '<path ~ d="M14.500 6a4 4 0 0 0 5 5.200l-9 9a2 2 0 0 1-3-3l9-9A4 4 0 0 0 14.500 6z"/>'] }, M = { "🗑": "trash", "🗑️": "trash", "⚠": "warn", "⚠️": "warn", "🔒": "lock", "🔒️": "lock", "🔐": "lock", "🔐️": "lock", "🔓": "unlock", "🔓️": "unlock", "🔑": "key", "🔑️": "key", "⏳": "hourglass", "⏳️": "hourglass", "⌛": "hourglass", "⌛️": "hourglass", "✅": "check", "✅️": "check", "❌": "cross", "❌️": "cross", "➕": "plus", "➕️": "plus", "➖": "minus", "➖️": "minus", "⚙": "gear", "⚙️": "gear", "☁": "cloud", "☁️": "cloud", "📁": "folder", "📁️": "folder", "🗂": "folders", "🗂️": "folders", "📤": "upload", "📤️": "upload", "📥": "download", "📥️": "download", "⬇": "down", "⬇️": "down", "⬆": "up", "⬆️": "up", "📦": "package", "📦️": "package", "📌": "pin", "📌️": "pin", "⭐": "star", "⭐️": "star", "📄": "page", "📄️": "page", "📝": "memo", "📝️": "memo", "📋": "clip", "📋️": "clip", "📎": "paperclip", "📎️": "paperclip", "🖼": "picture", "🖼️": "picture", "📖": "book", "📖️": "book", "📚": "books", "📚️": "books", "📅": "cal", "📅️": "cal", "🗓": "cal", "🗓️": "cal", "📊": "chart", "📊️": "chart", "📐": "tri", "📐️": "tri", "📏": "ruler", "📏️": "ruler", "📡": "antenna", "📡️": "antenna", "💾": "floppy", "💾️": "floppy", "👻": "ghost", "👻️": "ghost", "🎭": "masks", "🎭️": "masks", "🤖": "robot", "🤖️": "robot", "🧠": "brain", "🧠️": "brain", "🧬": "dna", "🧬️": "dna", "🧭": "compass", "🧭️": "compass", "🧰": "toolbox", "🧰️": "toolbox", "🧩": "puzzle", "🧩️": "puzzle", "🧮": "abacus", "🧮️": "abacus", "🧼": "soap", "🧼️": "soap", "🧹": "broom", "🧹️": "broom", "🚫": "ban", "🚫️": "ban", "🛑": "stop", "🛑️": "stop", "🚧": "cone", "🚧️": "cone", "🛡": "shield", "🛡️": "shield", "⚖": "scales", "⚖️": "scales", "⚡": "bolt", "⚡️": "bolt", "🔥": "fire", "🔥️": "fire", "💥": "boom", "💥️": "boom", "💡": "bulb", "💡️": "bulb", "🎯": "target", "🎯️": "target", "🎨": "palette", "🎨️": "palette", "🎵": "music", "🎵️": "music", "🎙": "mic", "🎙️": "mic", "⏹": "stopsq", "⏹️": "stopsq", "🏆": "trophy", "🏆️": "trophy", "🔗": "link", "🔗️": "link", "🔄": "cycle", "🔄️": "cycle", "🔁": "cycle", "🔁️": "cycle", "🔀": "shuffle", "🔀️": "shuffle", "🔢": "hash", "🔢️": "hash", "🔤": "abc", "🔤️": "abc", "🔠": "abc", "🔠️": "abc", "🔎": "search", "🔎️": "search", "🔍": "search", "🔍️": "search", "🌐": "globe", "🌐️": "globe", "🌍": "globe", "🌍️": "globe", "??": "night", "🌌️": "night", "🌀": "swirl", "🌀️": "swirl", "👁": "eye", "👁️": "eye", "🙈": "eyeoff", "🙈️": "eyeoff", "🏷": "tag", "??️": "tag", "✂": "scissors", "✂️": "scissors", "✏": "pencil", "✏️": "pencil", "✍": "pencil", "✍️": "pencil", "❓": "question", "❓️": "question", ℹ: "info", "ℹ️": "info", "💳": "card", "💳️": "card", "💲": "dollar", "💲️": "dollar", "🕷": "spider", "🕷️": "spider", "🕒": "clock", "🕒️": "clock", "🕘": "clock", "🕘️": "clock", "🕰": "clock", "🕰️": "clock", "😀": "smile", "😀️": "smile", "⚪": "circle", "⚪️": "circle", "🟢": "green", "🟢️": "green", "⬜": "square", "⬜️": "square", "🪟": "window", "🪟️": "window", "🗜": "compress", "🗜️": "compress", "🛠": "tools", "🛠️": "tools", "✔️": "check", "↕️": "updown", "↩️": "undo" }, keys = Object.keys(M).sort(function (a, b) { return b.length - a.length; }).map(function (k) { return k.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"); }).join("|"), RE = new RegExp(keys, "g"), RT = new RegExp(keys), SKIP = "[contenteditable],textarea,input,select,option,script,style,svg,.mu-emo,.text-box,.mu-viewer-body,.note-item-meta,[data-mu-noemo]", st = document.createElement("style"); st.id = "muEmoRules", (document.head || document.documentElement).appendChild(st); var done = {}; function svg(k) { var t = D[k], c = t[0]; return '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="' + c + '" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">' + t[1].replace(/@/g, c).replace(/~/g, ' fill="' + c + '" fill-opacity="' + (t[2] || .22) + '"') + "</svg>"; } function rule(k) { done[k] || (done[k] = 1, st.appendChild(document.createTextNode('.mu-emo[data-k="' + k + '"]{background-image:url("data:image/svg+xml,' + encodeURIComponent(svg(k)) + '")}'))); } window.mu_emoUri = function (k) { return "data:image/svg+xml," + encodeURIComponent(svg(k)); }; function fix(n) { var p = n.parentNode; if (!(!p || p.closest && p.closest(SKIP))) {
     var t2 = n.nodeValue;
     if (!(!t2 || !RT.test(t2))) {
         var f = document.createDocumentFragment(), last = 0, m;
@@ -40523,7 +40650,7 @@ body.mu-nfsbk-on #mkBackupBar { display:none!important; }
             H.categories().forEach(function (c) { map[String(c.id)] = c; });
         }
         catch { }
-        idList.forEach(function (id, i) { var c = map[String(id)]; c && (c.order !== i && (c.metaEditedAt = new Date().toUTCString()), c.order = i); });
+        idList.forEach(function (id, i) { var c = map[String(id)]; c && (c.order !== i && (c.metaEditedAt = mkStamp()), c.order = i); });
         try {
             H.saveToLocalStorage();
         }
@@ -41277,6 +41404,7 @@ html.mu-nfs-open body .mkc .mkc-head {
         save: function () { typeof saveToLocalStorage == "function" && saveToLocalStorage(); },
         tombstone: function (id) { typeof recordTombstone == "function" && recordTombstone(id); },
         recordTitle: function (note, title) { typeof mu_recordTitleHistory == "function" ? mu_recordTitleHistory(note, title) : note.name = title; },
+        push: function () { typeof scheduleCloudBackup == "function" && scheduleCloudBackup(!0); },
         topNoteOrder: function () { return typeof window.mu_topNoteOrder == "function" ? window.mu_topNoteOrder(null) : 0; },
         deleteNote: function (id) { return window.deleteCategory(id); },
         // folders
@@ -41334,7 +41462,7 @@ html.mu-nfs-open body .mkc .mkc-head {
 `);
     }
     function serializeChecklistHtml(items) { return "<div>" + checklistMarker + "</div>" + items.map(function (item) { return "<div>" + (item.d ? checkedMark : uncheckedMark) + " " + escapeHtml(item.t) + "</div>"; }).join(""); }
-    function touchNote(S) { S.lastEdited = new Date().toUTCString(); }
+    function touchNote(S) { S.lastEdited = mkStamp(); }
     function saveNotes() { try {
         H().save();
     }
@@ -41361,7 +41489,7 @@ html.mu-nfs-open body .mkc .mkc-head {
                     if (checklist) {
                         var itemIndex = parseInt(checkbox.getAttribute("data-i"), 10);
                         if (itemIndex >= 0 && itemIndex < checklist.items.length) {
-                            checklist.items[itemIndex].d = !checklist.items[itemIndex].d, note.text = serializeChecklist(checklist.items), note.html = serializeChecklistHtml(checklist.items), touchNote(note), saveNotes();
+                            checklist.items[itemIndex].d = !checklist.items[itemIndex].d, note.text = serializeChecklist(checklist.items), note.html = serializeChecklistHtml(checklist.items), touchNote(note), saveNotes(), H().push();
                             var updatedChecklist = parseChecklist(note), rowsElement = card.querySelector(".mkcl-rows");
                             if (rowsElement) {
                                 var wrapper = document.createElement("div");
@@ -41377,12 +41505,12 @@ html.mu-nfs-open body .mkc .mkc-head {
             }
         }
     } }, !0);
-    var state = { id: null, items: [], title: "", fresh: !1, tm: 0, fp: !1, dc: !1, focus: -1 };
+    var state = { id: null, items: [], title: "", fresh: !1, tm: 0, fp: !1, dc: !1, focus: -1, dirty: !1 };
     function getNotesFsElement() { return getById("muNotesFs"); }
     function getEditor() { var container = getNotesFsElement(); if (!container)
         return null; var editor = getById("mkClEd"); return editor || (editor = document.createElement("div"), editor.id = "mkClEd", editor.className = "mkcl-ed", container.appendChild(editor), attachEditorEvents(editor)), editor; }
-    function scheduleSave() { clearTimeout(state.tm), state.tm = setTimeout(saveNow, 350); }
-    function saveNow() { clearTimeout(state.tm), state.tm = 0; var note = findNoteById(state.id); if (note) {
+    function scheduleSave() { state.dirty = !0, clearTimeout(state.tm), state.tm = setTimeout(saveNow, 350); }
+    function saveNow() { clearTimeout(state.tm), state.tm = 0; if (!state.dirty) return; state.dirty = !1; var note = findNoteById(state.id); if (note) {
         var cleanItems = state.items.filter(function (item) { return String(item.t).trim(); }).map(function (item) { return { t: String(item.t).trim(), d: !!item.d }; }), title = String(state.title || "").trim() || getDefaultTitle();
         if (title !== note.name)
             try {
@@ -41431,7 +41559,7 @@ html.mu-nfs-open body .mkc .mkc-head {
         try {
             H().notesFs().open("notes");
         }
-        catch (error) { } state.id = note.id, state.items = checklist.items.map(function (item) { return { t: item.t, d: item.d }; }), state.title = isDefaultTitle(note.name) ? "" : note.name, state.fresh = !!(options && options.fresh), state.fp = !1, state.dc = !1, options && options.fresh && !state.items.length && state.items.push({ t: "", d: !1 }); var isFresh = !!(options && options.fresh); state.focus = isFresh ? 0 : -1; var editor = getEditor(); return editor.classList.add("on"), renderEditor(), isFresh && setTimeout(function () { var activeElement = document.activeElement; if (state.id && !(activeElement && activeElement.classList && activeElement.classList.contains("mkcl-in"))) {
+        catch (error) { } state.dirty = !1, state.id = note.id, state.items = checklist.items.map(function (item) { return { t: item.t, d: item.d }; }), state.title = isDefaultTitle(note.name) ? "" : note.name, state.fresh = !!(options && options.fresh), state.fp = !1, state.dc = !1, options && options.fresh && !state.items.length && state.items.push({ t: "", d: !1 }); var isFresh = !!(options && options.fresh); state.focus = isFresh ? 0 : -1; var editor = getEditor(); return editor.classList.add("on"), renderEditor(), isFresh && setTimeout(function () { var activeElement = document.activeElement; if (state.id && !(activeElement && activeElement.classList && activeElement.classList.contains("mkcl-in"))) {
         var firstInput = editor.querySelector(".mkcl-in");
         if (firstInput)
             try {
@@ -41468,11 +41596,11 @@ html.mu-nfs-open body .mkc .mkc-head {
             return;
         }
         if (action === "tg" && state.items[rowIndex]) {
-            state.items[rowIndex].d = !state.items[rowIndex].d, saveNow(), renderEditor();
+            state.items[rowIndex].d = !state.items[rowIndex].d, commit(!0), renderEditor();
             return;
         }
         if (action === "rm" && state.items[rowIndex]) {
-            state.items.splice(rowIndex, 1), saveNow(), renderEditor();
+            state.items.splice(rowIndex, 1), commit(!0), renderEditor();
             return;
         }
         if (action === "add") {
@@ -41503,7 +41631,7 @@ html.mu-nfs-open body .mkc .mkc-head {
             var hasDone = state.items.some(function (item) { return item.d; });
             if (!hasDone)
                 return;
-            state.items = state.items.filter(function (item) { return !item.d; }), saveNow(), renderEditor();
+            state.items = state.items.filter(function (item) { return !item.d; }), commit(!0), renderEditor();
             return;
         }
         if (action === "dl") {
@@ -41535,10 +41663,10 @@ html.mu-nfs-open body .mkc .mkc-head {
                 if (event.key === "Enter" && !event.shiftKey) {
                     if (event.preventDefault(), !String(state.items[itemIndex].t).trim())
                         return;
-                    state.items.splice(itemIndex + 1, 0, { t: "", d: !1 }), state.focus = itemIndex + 1, saveNow(), renderEditor();
+                    state.items.splice(itemIndex + 1, 0, { t: "", d: !1 }), state.focus = itemIndex + 1, commit(!0), renderEditor();
                     return;
                 }
-                event.key === "Backspace" && !String(state.items[itemIndex].t).length && (event.preventDefault(), state.items.splice(itemIndex, 1), state.focus = Math.max(0, itemIndex - 1), state.items.length || (state.items.push({ t: "", d: !1 }), state.focus = 0), saveNow(), renderEditor());
+                event.key === "Backspace" && !String(state.items[itemIndex].t).length && (event.preventDefault(), state.items.splice(itemIndex, 1), state.focus = Math.max(0, itemIndex - 1), state.items.length || (state.items.push({ t: "", d: !1 }), state.focus = 0), commit(!0), renderEditor());
             }
         }
     } }); }
@@ -41546,12 +41674,105 @@ html.mu-nfs-open body .mkc .mkc-head {
         var defaultFolder = H().defaultFolder(), activeFolder = H().currentFolder();
         folderName && folderName !== defaultFolder && H().folders().indexOf(folderName) >= 0 ? targetFolder = folderName : activeFolder && activeFolder !== defaultFolder && String(activeFolder).indexOf("__") !== 0 && (targetFolder = activeFolder);
     }
-    catch (t) { } var newNote = { id: Date.now() + "_" + Math.random().toString(36).slice(2, 8), name: getDefaultTitle(), folder: targetFolder, text: serializeChecklist([]), html: serializeChecklistHtml([]), history: [], order: H().topNoteOrder(), lastEdited: new Date().toUTCString(), unlockAt: "", ghostUntil: "" }; try {
+    catch (t) { } var newNote = { id: Date.now() + "_" + Math.random().toString(36).slice(2, 8), name: getDefaultTitle(), folder: targetFolder, text: serializeChecklist([]), html: serializeChecklistHtml([]), history: [], order: H().topNoteOrder(), lastEdited: mkStamp(), unlockAt: "", ghostUntil: "" }; try {
         H().addNote(newNote);
     }
     catch (error) {
         return !1;
-    } return saveNotes(), openChecklist(newNote.id, { fresh: !0 }); }
+    } return openChecklist(newNote.id, { fresh: !0 }); }
+
+    // ---- live-sync hardening (v9) ----
+    // commit(): a deliberate change (tick, delete, Enter...) is written at once and pushed to the Cloud at once.
+    function commit(urgent) { state.dirty = !0, saveNow(), urgent && (function () { try { H().push(); } catch (e) { } })(); }
+    function clKey(v) { return String(v || "").replace(/\s+/g, " ").trim().toLowerCase(); }
+    function clSame(a, b) { if (a.length !== b.length) return !1; for (var i = 0; i < a.length; i++)
+        if (String(a[i].t).trim() !== String(b[i].t).trim() || !!a[i].d !== !!b[i].d)
+            return !1; return !0; }
+    function clEditorItems() { return state.items.filter(function (it) { return String(it.t).trim(); }).map(function (it) { return { t: String(it.t).trim(), d: !!it.d }; }); }
+    // flush(): write any half-typed edit into the note NOW (called before every Cloud push / merge / hide)
+    function clFlush() { if (state.id)
+        saveNow(); }
+    // refreshOpen(): another device changed the list that is open here -> redraw the editor from the note (keeps focus,
+    // caret and scroll). Never touches pending local edits (they are flushed first and win, as for normal notes).
+    function clRefreshOpen() {
+        if (!state.id)
+            return !1;
+        var editor = getById("mkClEd"), note = findNoteById(state.id);
+        if (!note) {
+            // deleted on another device while open here
+            clearTimeout(state.tm), state.tm = 0, state.dirty = !1, state.id = null, editor && editor.classList.remove("on"), refreshNotesView();
+            return !0;
+        }
+        var parsed = parseChecklist(note);
+        if (!parsed || !editor || state.dirty || state.tm)
+            return !1;
+        var remoteTitle = isDefaultTitle(note.name) ? "" : String(note.name).trim(), localTitle = String(state.title || "").trim();
+        if (clSame(parsed.items, clEditorItems()) && remoteTitle === localTitle)
+            return !1;
+        var ae = document.activeElement, focusIdx = -1, focusTitle = !1, selS = null, selE = null;
+        if (ae && editor.contains(ae)) {
+            try {
+                selS = ae.selectionStart, selE = ae.selectionEnd;
+            }
+            catch (e) { }
+            ae.classList.contains("mkcl-title") ? focusTitle = !0 : ae.classList.contains("mkcl-in") && (focusIdx = parseInt(ae.getAttribute("data-i"), 10));
+        }
+        var focusedRow = focusIdx >= 0 ? state.items[focusIdx] : null, hadBlank = state.items.some(function (it) { return !String(it.t).trim(); }), focusedBlank = !!(focusedRow && !String(focusedRow.t).trim());
+        var bodyEl = editor.querySelector(".mkcl-body"), bodyTop = bodyEl ? bodyEl.scrollTop : 0, edTop = editor.scrollTop;
+        var next = parsed.items.map(function (it) { return { t: it.t, d: it.d }; }), newFocus = -1;
+        if (focusedRow && !focusedBlank) {
+            var want = String(focusedRow.t).trim();
+            for (var j = 0; j < next.length; j++)
+                if (String(next[j].t).trim() === want) {
+                    newFocus = j;
+                    break;
+                }
+        }
+        (hadBlank || focusedBlank) && (next.push({ t: "", d: !1 }), focusedBlank && (newFocus = next.length - 1));
+        state.items = next, state.title = remoteTitle === "" ? "" : String(note.name), state.focus = -1, renderEditor();
+        try {
+            var inp = focusTitle ? editor.querySelector(".mkcl-title") : newFocus >= 0 ? editor.querySelector('.mkcl-in[data-i="' + newFocus + '"]') : null;
+            if (inp) {
+                inp.focus({ preventScroll: !0 });
+                selS != null && inp.setSelectionRange(Math.min(selS, inp.value.length), Math.min(selE == null ? selS : selE, inp.value.length));
+            }
+            var nb = editor.querySelector(".mkcl-body");
+            nb && (nb.scrollTop = bodyTop), editor.scrollTop = edTop;
+        }
+        catch (e) { }
+        return !0;
+    }
+    // preMerge(): both devices changed the SAME list since they last synced. Instead of "newer wins" (the other device's
+    // items would be lost, or kept only as a separate conflict note) the items of both are combined.
+    function clPreMerge(local, cloudItem) {
+        var lp = parseChecklist(local), cp = parseChecklist(cloudItem);
+        if (!lp || !cp)
+            return !1;
+        var base = Math.max(window.__mkSeenAutoTs || 0, window.__mkSync && window.__mkSync.lastOk || 0, window.mkClock && window.mkClock.synced || 0), lMs = Date.parse(local.lastEdited) || 0, cMs = Date.parse(cloudItem.lastEdited) || 0;
+        if (!base || lMs <= base || cMs <= base || cMs === lMs || clSame(lp.items, cp.items))
+            return !1;
+        var out = cp.items.map(function (it) { return { t: it.t, d: it.d }; }), used = [];
+        lp.items.forEach(function (li) {
+            var k = clKey(li.t), hit = -1;
+            for (var j = 0; j < out.length; j++)
+                if (!used[j] && clKey(out[j].t) === k) {
+                    hit = j;
+                    break;
+                }
+            hit >= 0 ? (used[hit] = !0, out[hit].d = out[hit].d || li.d) : out.push({ t: li.t, d: li.d });
+        });
+        cMs > lMs && cloudItem.name && (local.name = cloudItem.name);
+        local.text = serializeChecklist(out), local.html = serializeChecklistHtml(out), local.lastEdited = mkStamp();
+        setTimeout(function () { try {
+            H().push();
+        }
+        catch (e) { } }, 150);
+        try {
+            typeof showToast == "function" && showToast(H().isFa() ? "🔀 تغییرات لیست از دو دستگاه ادغام شد" : "🔀 List changes from two devices were merged", 3000);
+        }
+        catch (e) { }
+        return !0;
+    }
     function collectChecklists() { var item = []; try {
         H().categories().forEach(function (note) { if (!(!note || note.isDecoy)) {
             var checklist = parseChecklist(note);
@@ -41587,7 +41808,7 @@ html.mu-nfs-open body .mkc .mkc-head {
             return;
         } return originalOpenNote.apply(this, arguments); };
     } }
-    hookListOpen(), hookNotesFs(), document.readyState === "loading" && document.addEventListener("DOMContentLoaded", function () { hookListOpen(), hookNotesFs(); }), window.addEventListener("pagehide", function () { state.id && saveNow(); }), document.addEventListener("visibilitychange", function () { document.visibilityState === "hidden" && state.id && saveNow(); }), window.mkCl = { isDef: isDefaultTitle, parse: parseChecklist, rows: renderChecklistRows, create: createChecklist, open: openChecklist, close: closeChecklist, isOpen: function () { return !!state.id; } };
+    hookListOpen(), hookNotesFs(), document.readyState === "loading" && document.addEventListener("DOMContentLoaded", function () { hookListOpen(), hookNotesFs(); }), window.addEventListener("pagehide", function () { state.id && saveNow(); }), document.addEventListener("visibilitychange", function () { document.visibilityState === "hidden" && state.id && saveNow(); }), window.mkCl = { flush: clFlush, refreshOpen: clRefreshOpen, preMerge: clPreMerge, isDef: isDefaultTitle, parse: parseChecklist, rows: renderChecklistRows, create: createChecklist, open: openChecklist, close: closeChecklist, isOpen: function () { return !!state.id; } };
 })();
 </script>
 
