@@ -53800,19 +53800,5 @@ html body #contentsContainer .mxe .mxe-body {
   schedule();
 })();
 </script>
-<style id="mkWriteGlass">
-/* Writing-tools frame: frosted glass. The note text under the panel is blurred and faded out (not readable). */
-html body:not(#_g1) #contentsContainer .mxe .mxe-pop[data-pop=write] {
-  -webkit-backdrop-filter: blur(26px) saturate(1.5);
-  backdrop-filter: blur(26px) saturate(1.5);
-  box-shadow: 0 10px 34px rgba(0,0,0,.22), inset 0 1px 0 rgba(255,255,255,.16);
-}
-@supports (color: color-mix(in srgb, red 10%, blue)) {
-  html body:not(#_g1) #contentsContainer .mxe .mxe-pop[data-pop=write] {
-    background: color-mix(in srgb, var(--mx-pop) 72%, transparent) !important;
-    border-color: color-mix(in srgb, var(--mx-icon) 16%, transparent) !important;
-  }
-}
-</style>
 </body>
 </html>
