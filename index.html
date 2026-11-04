@@ -183,7 +183,7 @@ html.mk-boot body,html.mk-boot body * {
     -webkit-user-select:none;
     user-select:none;
     touch-action:none;
-    animation:mkFail .4s linear 2.7s forwards;
+    animation:mkFail .3s linear 1.8s forwards;
 }
 #mkSplash.out {
     pointer-events:none;
@@ -202,8 +202,7 @@ html.mk-boot body,html.mk-boot body * {
     display:inline-block;
     font-style:normal;
     will-change:transform,opacity;
-    animation:mkIn .7s cubic-bezier(.16,.84,.3,1) both;
-    animation-delay:var(--d);
+    opacity:1;
 }
 #mkSplash .mkt {
     position:relative;
@@ -222,7 +221,7 @@ html.mk-boot body,html.mk-boot body * {
     transform-origin:left;
     transform:scaleX(0);
     will-change:transform;
-    animation:mkBar 1.5s cubic-bezier(.35,.05,.2,1) forwards,mkPulse .9s ease-in-out 1.5s infinite alternate;
+    animation:mkBar 1s cubic-bezier(.35,.05,.2,1) forwards;
 }
 #mkSplash .mkv {
     position:absolute;
@@ -349,8 +348,7 @@ html.mk-boot[data-mk-th=light] {
     letter-spacing:.5em;
     margin-inline-end:-.5em;
     padding-bottom:.35em;
-    opacity:0;
-    animation:mkBrand .7s cubic-bezier(.16,.84,.3,1) .05s forwards;
+    opacity:.9;
     will-change:transform,opacity;
 }
 @keyframes mkBrand {
@@ -1591,7 +1589,7 @@ html.mk-tg button,html.mk-tg a,html.mk-tg [role=button],html.mk-tg .note-btn-wra
 <script id="mkBootGateJs">
 // Splash: shown for at least MIN ms, hidden once the app reports ready, never longer than MAX ms (weak
 // network). Set to false to disable only the loading screen.
-(function () { var d = document.documentElement; d.classList.add("mk-boot"); var SPLASH = !0, MIN = 1500, MAX = 2500, HARD = 15e3, t0 = Date.now(), done = !1, s2 = null, painted = !1, tp = t0, wantReveal = !1; try {
+(function () { var d = document.documentElement; d.classList.add("mk-boot"); var SPLASH = !0, MIN = 1000, MAX = 1500, HARD = 15e3, t0 = Date.now(), done = !1, s2 = null, painted = !1, tp = t0, wantReveal = !1; try {
     if (!SPLASH)
         throw 0;
     var TH = "light";
@@ -1603,7 +1601,7 @@ html.mk-tg button,html.mk-tg a,html.mk-tg [role=button],html.mk-tg .note-btn-wra
     d.setAttribute("data-mk-th", TH), s2 = document.createElement("div"), s2.id = "mkSplash", s2.setAttribute("data-theme", TH), s2.setAttribute("role", "status"), s2.setAttribute("aria-label", "Notes");
     var W = "Notes", h2 = "", i2;
     for (i2 = 0; i2 < W.length; i2++)
-        h2 += '<i style="--d:' + (.25 + i2 * .14).toFixed(2) + 's">' + W.charAt(i2) + "</i>";
+        h2 += "<i>" + W.charAt(i2) + "</i>";
     var P = "M0 60 Q150 20 300 60 T600 60 T900 60 T1200 60 V120 H0Z";
     s2.innerHTML = '<div class="mkb" aria-hidden="true">MARKHIN</div><div class="mkw"><span aria-hidden="true">' + h2 + '</span></div><div class="mkt" aria-hidden="true"><span class="mkf"></span></div><svg class="mkv mkv1" viewBox="0 0 1200 120" preserveAspectRatio="none" aria-hidden="true"><path d="' + P + '"/></svg><svg class="mkv mkv2" viewBox="0 0 1200 120" preserveAspectRatio="none" aria-hidden="true"><path d="' + P + '"/></svg>', d.appendChild(s2);
 }
@@ -19467,8 +19465,9 @@ html body:not(#_m1):not(#_m2):not(#_m3) #contentsContainer .mxe .mxe-pop .grid b
 .mu-viewer.mu-vs-ocean .mu-viewer-close{z-index:6!important}
 </style>
 <script id="mk-pill-measure">
-(function () { function upd() { try { var l = document.querySelectorAll(".mu-viewer"); for (var i = 0; i < l.length; i++) { var r = l[i], h = r.querySelector(".mu-viewer-head"), t = r.querySelector(".mu-viewer-tools"); if (h && h.offsetHeight) { var a = h.offsetHeight + "px"; r.style.getPropertyValue("--mk-hh") !== a && r.style.setProperty("--mk-hh", a); } if (t && t.offsetHeight) { var c = t.offsetHeight + "px"; r.style.getPropertyValue("--mk-th") !== c && r.style.setProperty("--mk-th", c); } } } catch (e) { } }
-  setInterval(upd, 250); window.addEventListener("resize", upd); upd(); })();
+(function () { var q = 0; function run() { q = 0; try { var l = document.querySelectorAll(".mu-viewer"); for (var i = 0; i < l.length; i++) { var r = l[i], h = r.querySelector(".mu-viewer-head"), t = r.querySelector(".mu-viewer-tools"); if (h && h.offsetHeight) { var a = h.offsetHeight + "px"; r.style.getPropertyValue("--mk-hh") !== a && r.style.setProperty("--mk-hh", a); } if (t && t.offsetHeight) { var c = t.offsetHeight + "px"; r.style.getPropertyValue("--mk-th") !== c && r.style.setProperty("--mk-th", c); } } } catch (e) { } }
+  function upd() { q || (q = requestAnimationFrame(run)); }
+  setInterval(function () { !document.hidden && document.querySelector(".mu-viewer") && upd(); }, 500); window.addEventListener("resize", upd); upd(); })();
 </script>
 
 <style id="mk-ed-glass">
@@ -19483,10 +19482,19 @@ html body #contentsContainer .mxe .mxe-top .mxe-grp .mxe-btn:active,html body #c
 html body #contentsContainer .mxe .mxe-body:not(#mkx){padding-bottom:calc(max(var(--mk-ebc,0px),var(--mk-eb) + var(--mkw-h,0px)) + 28px)!important}
 </style>
 <script id="mk-ed-measure">
-(function () { function upd() { try { var l = document.querySelectorAll(".content-container.mxe"); for (var i = 0; i < l.length; i++) { var r = l[i], t = r.querySelector(".mxe-top"), b = r.querySelector(".mxe-bottom"), bd = r.querySelector(".mxe-body"), a = (t ? t.offsetHeight : 0) + "px", c = (b ? b.offsetHeight : 0) + "px", cov = 0;
-    if (bd) { var bb = bd.getBoundingClientRect().bottom, top = bb; if (b && b.offsetHeight) top = Math.min(top, b.getBoundingClientRect().top); var ps = r.querySelectorAll(".mxe-bottom .mxe-pop, .mxe-bottom .mxe-pop .grid"); for (var j = 0; j < ps.length; j++) { var q = ps[j].getBoundingClientRect(); if (q.width > 20 && q.height > 10 && getComputedStyle(ps[j]).display !== "none" && getComputedStyle(ps[j]).visibility !== "hidden") top = Math.min(top, q.top); } cov = Math.max(0, Math.round(bb - top)); }
+(function () {
+  /* perf: one measurement per frame (not per mutation), only for open editors, never while the app is in the background,
+     and typing inside the note itself no longer triggers a layout read. */
+  var q = 0;
+  function run() { q = 0; try { if (document.hidden) return; var l = document.querySelectorAll(".content-container.mxe.show"); for (var i = 0; i < l.length; i++) { var r = l[i], t = r.querySelector(".mxe-top"), b = r.querySelector(".mxe-bottom"), bd = r.querySelector(".mxe-body"), a = (t ? t.offsetHeight : 0) + "px", c = (b ? b.offsetHeight : 0) + "px", cov = 0;
+    if (bd) { var bb = bd.getBoundingClientRect().bottom, top = bb; if (b && b.offsetHeight) top = Math.min(top, b.getBoundingClientRect().top); var ps = r.querySelectorAll(".mxe-bottom .mxe-pop, .mxe-bottom .mxe-pop .grid"); for (var j = 0; j < ps.length; j++) { var p = ps[j]; if (p.offsetHeight < 11 && p.offsetWidth < 21) continue; var q2 = p.getBoundingClientRect(); if (q2.width > 20 && q2.height > 10) { var cs = getComputedStyle(p); if (cs.display !== "none" && cs.visibility !== "hidden") top = Math.min(top, q2.top); } } cov = Math.max(0, Math.round(bb - top)); }
     r.style.getPropertyValue("--mk-et") !== a && r.style.setProperty("--mk-et", a); r.style.getPropertyValue("--mk-eb") !== c && r.style.setProperty("--mk-eb", c); var cv = cov + "px"; r.style.getPropertyValue("--mk-ebc") !== cv && r.style.setProperty("--mk-ebc", cv); } } catch (e) { } }
-  setInterval(upd, 200); window.addEventListener("resize", upd); try { new MutationObserver(upd).observe(document.documentElement, { subtree: true, childList: true, attributes: true, attributeFilter: ["class", "hidden", "style"] }); } catch (e) { } upd(); })();
+  function upd() { q || (q = requestAnimationFrame(run)); }
+  setInterval(function () { if (!document.hidden && document.querySelector(".content-container.mxe.show")) upd(); }, 400);
+  window.addEventListener("resize", upd);
+  try { new MutationObserver(function (ms) { for (var i = 0; i < ms.length; i++) { var m = ms[i], t = m.target; if (t && t.nodeType === 3) t = t.parentNode; if (!t || !t.closest) continue; if (t.closest(".text-box,.mc-title-input")) continue; if (m.type === "attributes" && m.attributeName === "style" && t.classList && t.classList.contains("mxe")) continue; upd(); return; } }).observe(document.documentElement, { subtree: true, childList: true, attributes: true, attributeFilter: ["class", "hidden", "style"] }); } catch (e) { }
+  upd();
+})();
 </script>
 <style id="mkEdFadeCss">
 /* "Fade" mode (Settings -> Text under the bars / edit menu): the text is fully hidden in the zone of the top and bottom bars, with a soft ramp */
@@ -31454,7 +31462,7 @@ window.__mkFixAutoSyncBusy = !0, window.__mkFixProgHold = !0; const btn = docume
             <p>A manual backup is never saved incomplete: either every note is in it, or the save is refused with a "not enough space" / "larger than one backup can hold" message. While the auto backup or "Enable / fix auto sync" is running, a manual backup can't be taken (a progress bar and the reason are shown under the button).</p>
 
             <h4 style="margin:14px 0 6px">💾 Download and import backups</h4>
-            <p>Under every backup (auto or manual) there is a “💾 Download backup file” button that saves that backup as a .json file on your phone. In the manual tab, “?? Import a backup from file” lets you pick that file in any other account/bot (or this one); it is stored as a new manual backup, which you can then restore.</p>
+            <p>Under every backup (auto or manual) there is a “💾 Download backup file” button that saves that backup as a .json file on your phone. In the manual tab, “📥 Import a backup from file” lets you pick that file in any other account/bot (or this one); it is stored as a new manual backup, which you can then restore.</p>
             <p>The file holds the backup content: a password-protected backup stays encrypted inside the file (same password), but an unprotected one is readable, so keep the file safe. The file is checked before saving, and a damaged or invalid file is rejected. Importing depends on that account's key space and manual-backup limit: if there is no room you get “not enough space”, and at the limit the oldest manual backup is deleted (after you confirm). Images and voice notes are never in a backup.</p>
 
             <h4 style="margin:14px 0 6px">🗜 Compression type (gzip / LZMA)</h4>
@@ -32606,7 +32614,7 @@ HX().scheduleCloudBackup(!1, !0), HX().showToast(fa ? `✅ ذخیره شد — �
     // else
     async function mu_confirmTypeOk(opts) { opts = opts || {}; const fa = HX().currentLang === "fa"; if (HX().typeOf("promptStyledText") != "function")
         return !1; if (mu_overDeletePage()) {
-        const v = await window.mu_delOverlay({ title: opts.title || "", message: opts.message || "", input: !0, placeholder: "OK", okText: fa ? "🗑️ حذف دائمی" : "🗑️ Delete permanently", cancelText: fa ? "انصراف" : "Cancel" });
+        const v = await window.mu_delOverlay({ title: opts.title || "", message: opts.message || "", input: !0, placeholder: "OK", okText: fa ? "??️ حذف دائمی" : "🗑️ Delete permanently", cancelText: fa ? "انصراف" : "Cancel" });
         return v == null ? !1 : String(v).trim().toLowerCase() === "ok" ? (HX().closeAdvancedModal(), !0) : !1;
     } const val = await HX().promptStyledText({ title: opts.title || "", message: opts.message || "", placeholder: "OK", okText: fa ? "🗑️ حذف دائمی" : "🗑️ Delete permanently", cancelText: fa ? "انصراف" : "Cancel" }); return val == null ? !1 : String(val).trim().toLowerCase() === "ok"; }
     // Permanently erases every note in `categories`, exactly like deleting a single note, just applied to
@@ -35072,7 +35080,7 @@ catch { } }, (function () {
 <script id="mkBootRevealJs">
 // Reveal only AFTER the app's async startup (IndexedDB load -> renderApp) has painted its first full
 // render.
-(function () { var r = window.requestAnimationFrame || function (f) { setTimeout(f, 16); }, done = !1; window.__mkAppReady = function () { done || (done = !0, r(function () { r(function () { window.__mkReveal && window.__mkReveal(); }); })); }; function arm() { setTimeout(function () { window.__mkAppReady(); }, 2500); } document.readyState === "loading" ? document.addEventListener("DOMContentLoaded", arm) : arm(); })();
+(function () { var r = window.requestAnimationFrame || function (f) { setTimeout(f, 16); }, done = !1; window.__mkAppReady = function () { done || (done = !0, r(function () { r(function () { window.__mkReveal && window.__mkReveal(); }); })); }; function arm() { setTimeout(function () { window.__mkAppReady(); }, 1000); } document.readyState === "loading" ? document.addEventListener("DOMContentLoaded", arm) : arm(); })();
 </script>
 
 <script id="muIconJs">
@@ -37912,6 +37920,9 @@ catch { } };
 
 
 
+<style id="muKbPerfCss">
+html.mu-kbanim .mxe-body,html.mu-kbclosing .mxe-body,html.mu-kb .mxe-body,html.mu-kbo .mxe-body{overflow-anchor:none}
+</style>
 <style id="muKbSabCss">
 html.mu-kbo,html.mu-kb {
     --mu-sab:0px !important;
@@ -38072,7 +38083,10 @@ html.mu-kbanim body #contentsContainer .content-container.mxe.show,html.mu-kbani
             unlock();
     } }
     /* ---------- the engine ---------- */
-    function collect() { var out = [], nl = document.querySelectorAll(BARS), i; for (i = 0; i < nl.length; i++)
+    var __bc = null, __bcT = 0;
+    function barsDirty() { __bc = null; }
+    function barsNow() { var t = nowMs(), o, i; if (!__bc || t - __bcT > 240) { __bc = Array.prototype.slice.call(document.querySelectorAll(BARS)); __bcT = t; } else { o = []; for (i = 0; i < __bc.length; i++) __bc[i].isConnected && o.push(__bc[i]); __bc = o; } return __bc; }
+    function collect() { var out = [], nl = barsNow(), i; for (i = 0; i < nl.length; i++)
         out.push([nl[i], 0]); var fab = document.getElementById("muNfsFab"); fab && out.push([fab, 1]); return out; }
     function watch(el) { if (!ro)
         return; var h = el.closest ? el.closest(HOLDERS) : null; h && !h.__muRo && (h.__muRo = !0, ro.observe(h)); }
@@ -38092,7 +38106,7 @@ html.mu-kbanim body #contentsContainer .content-container.mxe.show,html.mu-kbani
     function durFor(d, down) { if (down)
         return Math.round(Math.min(150, Math.max(100, 90 + d * .1))); var v = Math.round(Math.min(300, Math.max(190, 130 + d * .5))); return pred && !pred.seen ? Math.min(v, 160) : v; }
     function setAnim(on) { on !== animCls && (animCls = on, rootElement.classList.toggle("mu-kbanim", on)); }
-    function snap() { var nl = document.querySelectorAll(BARS), list = [], i, r, st, el; for (i = 0; i < nl.length; i++)
+    function snap() { var nl = barsNow(), list = [], i, r, st, el; for (i = 0; i < nl.length; i++)
         list.push(nl[i]); el = document.getElementById("muNfsFab"); el && list.push(el); for (i = 0; i < list.length; i++) {
         r = list[i].getBoundingClientRect();
         if (r.width || r.height) {
@@ -38203,7 +38217,7 @@ html.mu-kbanim body #contentsContainer .content-container.mxe.show,html.mu-kbani
         setAnim(anyDown);
         return busy;
     }
-    function wake(ms) { until = Math.max(until, nowMs() + (ms || 900)); raf || (raf = requestAnimationFrame(tick)); }
+    function wake(ms) { raf || nowMs() < until || barsDirty(); until = Math.max(until, nowMs() + (ms || 900)); raf || (raf = requestAnimationFrame(tick)); }
     function resetAll() { items.forEach(function (it, key) { apply(key, it, 0); }); items.clear(); winDvh = 0; pred = null; rootElement.classList.remove("mu-kbpre"); setAnim(!1); }
     function endPred(learn) { if (!pred)
         return; var k = Math.max(0, base - vh()), wasSeen = pred.seen, fr = pred.fabReal || 0, hadFab = pred.fab; pred = null; hadFab && rootElement.classList.remove("mu-kbpre"); if (learn && wasSeen) {
@@ -38245,7 +38259,7 @@ html.mu-kbanim body #contentsContainer .content-container.mxe.show,html.mu-kbani
     function startPred(t) { if (pred || reduce || !isEditable(t))
         return; if (t.readOnly || t.getAttribute && /^none$/i.test(t.getAttribute("inputmode") || ""))
         return; if (kbShowing())
-        return; var ls = nowMs(), lim = window.innerHeight || 0, L0 = new WeakMap, ok = new WeakMap, nl = document.querySelectorAll(BARS), i, r, st; for (i = 0; i < nl.length; i++) {
+        return; var ls = nowMs(), lim = window.innerHeight || 0, L0 = new WeakMap, ok = new WeakMap, nl = (barsDirty(), barsNow()), i, r, st; for (i = 0; i < nl.length; i++) {
         r = nl[i].getBoundingClientRect();
         if (!r.width && !r.height)
             continue;
@@ -38320,9 +38334,9 @@ html.mu-kbanim body #contentsContainer .content-container.mxe.show,html.mu-kbani
         catch (SETTLE) { } }, 380); }
     // freeze the page height before the keyboard moves it keyboard already up: just moving between fields
     // keyboard started opening / closing / changing height
-    document.addEventListener("focusin", function (e) { var t = e.target; isEditable(t) && inHome(t) && lock(); snap(); startPred(t); wake(900); }, !0);
+    document.addEventListener("focusin", function (e) { var t = e.target; barsDirty(); isEditable(t) && inHome(t) && lock(); snap(); startPred(t); wake(900); }, !0);
     // keyboard is about to open
-    document.addEventListener("focusout", function () { snap(); wake(900); }, !0);
+    document.addEventListener("focusout", function () { barsDirty(); snap(); wake(900); }, !0);
     // Tapping a field that kept focus after the keyboard was dismissed does not always bring the keyboard back
     // (Telegram / Android WebView) and fires no focus event: if nothing happened shortly after the tap, the
     // field is refocused. The in-note search bar is excluded here: its click handler below handles it (a real
@@ -54051,10 +54065,25 @@ html body #contentsContainer .mxe .mxe-body {
   function schedule() { raf || (raf = requestAnimationFrame(function () { raf = 0; sync(); fit(); })); }
 
   // ---- 1) reserve room at the end of the note for the floating writing-tools pill (--mkw-h) ----
+  var popC = null, popT = 0, heavyV = false, heavyT = 0, burstN = 0;
+  function popsNow() {
+    var t = nowMs();
+    if (!popC || t - popT > 300) { popC = Array.prototype.slice.call(document.querySelectorAll('#contentsContainer .mxe .mxe-bottom .mxe-pop[data-pop="write"]')); popT = t; }
+    return popC;
+  }
+  // very long note? (cached: scrollHeight forces layout)
+  function isHeavy() {
+    var t = nowMs();
+    if (t - heavyT > 1000) {
+      heavyT = t;
+      try { var b = document.querySelector("#contentsContainer .mxe.show .mxe-body"); heavyV = !!b && b.scrollHeight > (window.innerHeight || 800) * 8; } catch (e) { heavyV = false; }
+    }
+    return heavyV;
+  }
   function sync() {
-    var pops = document.querySelectorAll('#contentsContainer .mxe .mxe-bottom .mxe-pop[data-pop="write"]');
+    var pops = popsNow();
     for (var i = 0; i < pops.length; i++) {
-      var pop = pops[i], mxe = pop.closest(".mxe"); if (!mxe) continue;
+      var pop = pops[i], mxe = pop.isConnected ? pop.closest(".mxe") : null; if (!mxe) continue;
       if (RO && !seen.has(pop)) { seen.add(pop); RO.observe(pop); }
       var open = pop.classList.contains("open") && pop.offsetHeight > 0;
       var h = open ? Math.ceil(pop.offsetHeight) + 8 : 0;
@@ -54112,7 +54141,7 @@ html body #contentsContainer .mxe .mxe-body {
     if (burstRaf) return;
     (function loop() {
       burstRaf = 0;
-      try { sync(); fit(); } catch (e) { }
+      try { sync(); (++burstN & 1 && isHeavy()) || fit(); } catch (e) { }
       if (nowMs() < burstUntil) burstRaf = requestAnimationFrame(loop);
     })();
   }
@@ -54121,6 +54150,7 @@ html body #contentsContainer .mxe .mxe-body {
   new MutationObserver(function (ml) {
     for (var i = 0; i < ml.length; i++) {
       var t = ml[i].target;
+      if (!(t && t.closest && t.closest(".text-box"))) popC = null;
       if (t && t.classList && (t.classList.contains("mxe-pop") || t.classList.contains("mxe"))) { burst(500); return; }
     }
     schedule();
@@ -54307,5 +54337,48 @@ html:not([data-mxe-theme]):not(#_mxfix):not(#_mxfast):not(#_mxopq) body #content
 html body #contentsContainer .mxe .mxe-body,html body #contentsContainer .mxe .text-box{overflow-anchor:none!important}
 html body #contentsContainer .mxe .mxe-body{overscroll-behavior:contain;-webkit-overflow-scrolling:touch;scroll-behavior:auto!important}
 </style>
+<style id="mkTgPerf2Css">
+/* Telegram speed pass 2 (last in the file so it wins over the glass rules above, which used to out-rank the earlier
+   "blur off" rules and kept 26px + saturate blur layers alive on every editor pill / viewer card).
+   Normal Telegram tier: only the top nav and the editor pills keep a light blur (no saturate); everything else is flat.
+   Lite tier: no blur at all, no scroll mask, no big drop shadows. */
+html.mk-tg.mk-tg.mk-tg body *:not(#mkSplash):not(#muNav):not(#muNav *):not(.mxe-grp):not(.mxe-top>.mxe-btn) {
+    -webkit-backdrop-filter: none !important;
+    backdrop-filter: none !important;
+}
+html.mk-tg.mk-tg.mk-tg body #muNav,
+html.mk-tg.mk-tg.mk-tg body #contentsContainer .mxe .mxe-top .mxe-grp,
+html.mk-tg.mk-tg.mk-tg body #contentsContainer .mxe .mxe-bottom .mxe-grp,
+html.mk-tg.mk-tg.mk-tg body #contentsContainer .mxe .mxe-top>.mxe-btn {
+    -webkit-backdrop-filter: blur(8px) !important;
+    backdrop-filter: blur(8px) !important;
+}
+html.mk-tg.mk-tg.mk-tg body #contentsContainer .mxe .mxe-top .mxe-grp,
+html.mk-tg.mk-tg.mk-tg body #contentsContainer .mxe .mxe-bottom .mxe-grp,
+html.mk-tg.mk-tg.mk-tg body #contentsContainer .mxe .mxe-top>.mxe-btn {
+    box-shadow: inset 0 1px 0 rgba(255,255,255,.25) !important;
+}
+html.mk-tg-lite body *:not(#_a):not(#_b),
+html.mk-tg-lite body *:not(#_a):not(#_b):before,
+html.mk-tg-lite body *:not(#_a):not(#_b):after {
+    -webkit-backdrop-filter: none !important;
+    backdrop-filter: none !important;
+}
+html.mk-tg-lite.mk-tg-lite body #contentsContainer .mxe .mxe-body,
+html.mk-tg-lite.mk-tg-lite .mu-viewer .mu-viewer-body {
+    -webkit-mask-image: none !important;
+    mask-image: none !important;
+}
+html.mk-tg .mu-viewer .mu-viewer-body { overscroll-behavior: contain; }
+/* nothing animates while the Mini App is in the background / covered */
+html.mk-hidden *, html.mk-hidden *:before, html.mk-hidden *:after { animation-play-state: paused !important; }
+</style>
+<script id="mkTgPerf2Js">
+(function () {
+  var r = document.documentElement;
+  function vis() { r.classList.toggle("mk-hidden", !!document.hidden); }
+  document.addEventListener("visibilitychange", vis); vis();
+})();
+</script>
 </body>
 </html>
