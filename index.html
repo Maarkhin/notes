@@ -1311,7 +1311,7 @@ body.theme-anonymous {
     } } function updateBackButton() { if (!d2.body) {
         d2.addEventListener("DOMContentLoaded", updateBackButton, { once: !0 });
         return;
-    } backButton || (backButton = d2.createElement("button"), backButton.id = "muHostBack", backButton.type = "button", backButton.setAttribute("aria-label", "Back"), backButton.innerHTML = '<svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 5l-7 7 7 7"/></svg>', backButton.style.cssText = "position:fixed!important;left:12px!important;bottom:calc(86px + env(safe-area-inset-bottom,0px))!important;z-index:2147483645!important;width:46px!important;height:46px!important;min-width:46px!important;border-radius:50%!important;border:1px solid rgba(255,255,255,.45)!important;background:#14161f!important;color:#fff!important;display:none;align-items:center;justify-content:center;padding:0!important;margin:0!important;cursor:pointer;opacity:1!important;box-shadow:0 2px 10px rgba(0,0,0,.4)!important;-webkit-tap-highlight-color:transparent", backButton.addEventListener("click", function (event) { event.preventDefault(), event.stopPropagation(); var backNav = w2.muBackNav, handled = !1; try {
+    } backButton || (backButton = d2.createElement("button"), backButton.id = "muHostBack", backButton.type = "button", backButton.setAttribute("aria-label", "Back"), backButton.innerHTML = '<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 5l-7 7 7 7"/></svg>', backButton.style.cssText = "position:fixed!important;left:12px!important;bottom:calc(152px + env(safe-area-inset-bottom,0px))!important;z-index:2147483645!important;width:36px!important;height:36px!important;min-width:36px!important;border-radius:50%!important;border:1px solid rgba(255,255,255,.45)!important;background:#14161f!important;color:#fff!important;display:none;align-items:center;justify-content:center;padding:0!important;margin:0!important;cursor:pointer;opacity:1!important;box-shadow:0 2px 10px rgba(0,0,0,.4)!important;-webkit-tap-highlight-color:transparent", backButton.addEventListener("click", function (event) { event.preventDefault(), event.stopPropagation(); var backNav = w2.muBackNav, handled = !1; try {
         backNav && backNav.back && (handled = backNav.back());
     }
     catch { } if (!handled && _2 > 0)
@@ -26134,7 +26134,7 @@ cpLen = s => { let n = 0; for (const _ of s)
 let __filenamePromptSeq = 0;
 function promptFilename(defaultName, ext, opts = {}) {
     return new Promise(resolve => {
-        const fa = currentLang === "fa", safeDefault = sanitizeFilename(defaultName || "Markhin_Note"), title = opts.title || (fa ? "📝 نام فایل خروجی" : "📝 Output file name"), desc = opts.desc || (fa ? "اسم فایلی که دانلود می‌شود را وارد کن." : "Choose the name for the downloaded file."), extLabel = ext ? `.${ext}` : "", uid = "mfp" + ++__filenamePromptSeq;
+        const fa = currentLang === "fa", safeDefault = sanitizeFilename(defaultName || "Markhin_Note"), title = opts.title || (fa ? "📝 نام فایل خروجی" : "?? Output file name"), desc = opts.desc || (fa ? "اسم فایلی که دانلود می‌شود را وارد کن." : "Choose the name for the downloaded file."), extLabel = ext ? `.${ext}` : "", uid = "mfp" + ++__filenamePromptSeq;
         let settled = !1;
         const modalEl = document.getElementById("advancedModal"), hadExportScreen = !!(modalEl && modalEl.style.display === "flex" && window.__mkExpStack && window.__mkExpStack.length), finish = val => { if (settled)
             return; settled = !0, modalEl && modalEl.removeEventListener("click", outsideClick, !0); const st = window.__mkExpStack; if (val === null && hadExportScreen && st && st.length) {
@@ -53800,5 +53800,19 @@ html body #contentsContainer .mxe .mxe-body {
   schedule();
 })();
 </script>
+<style id="mkWriteGlass">
+/* Writing-tools frame: frosted glass. The note text under the panel is blurred and faded out (not readable). */
+html body:not(#_g1) #contentsContainer .mxe .mxe-pop[data-pop=write] {
+  -webkit-backdrop-filter: blur(26px) saturate(1.5);
+  backdrop-filter: blur(26px) saturate(1.5);
+  box-shadow: 0 10px 34px rgba(0,0,0,.22), inset 0 1px 0 rgba(255,255,255,.16);
+}
+@supports (color: color-mix(in srgb, red 10%, blue)) {
+  html body:not(#_g1) #contentsContainer .mxe .mxe-pop[data-pop=write] {
+    background: color-mix(in srgb, var(--mx-pop) 72%, transparent) !important;
+    border-color: color-mix(in srgb, var(--mx-icon) 16%, transparent) !important;
+  }
+}
+</style>
 </body>
 </html>
