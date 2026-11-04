@@ -22643,7 +22643,7 @@ catch (error) {
 // Asks for the file's password (its hint is the placeholder) until it is right or cancelled. Returns the
 // parsed payload, {cancelled: true}, or null for a damaged file.
 async function mkBkDecodeEncFile(raw, compression, hint) { const fa = currentLang === "fa"; let wrong = !1; const hintText = String(hint || "").trim().slice(0, CLOUD_HINT_MAX_LEN); for (;;) {
-    const pw = await promptStyledText({ title: fa ? "🔒 بکاپ رمزدار" : "🔒 Encrypted backup", message: wrong ? fa ? "❌ رمز اشتباه بود؛ دوباره امتحان کن." : "❌ Wrong password; try again." : fa ? "این فایل با رمز محافظت شده. برای اضافه‌شدن یادداشت‌ها، رمز را وارد کن." : "This file is password-protected. Enter the password to add its notes.", placeholder: hintText ? hintText + (fa ? " (راهنما)" : " (hint)") : fa ? "🔐 رمز بکاپ را وارد کن" : "🔐 Enter backup password", type: "password", okText: fa ? "🔓 باز کن" : "🔓 Unlock", cancelText: fa ? "انصراف" : "Cancel" });
+    const pw = await promptStyledText({ title: fa ? "🔒 بکاپ رمزدار" : "🔒 Encrypted backup", message: wrong ? fa ? "❌ رمز اشتباه بود؛ دوباره امتحان کن." : "❌ Wrong password; try again." : fa ? "این فایل با رمز محافظت شده. برای اضافه‌شدن یادداشت‌ها، رمز را وارد کن." : "This file is password-protected. Enter the password to add its notes.", placeholder: hintText ? "\u2068" + hintText + "\u2069" + (fa ? " (راهنما)" : " (hint)") : fa ? "🔐 رمز بکاپ را وارد کن" : "🔐 Enter backup password", type: "password", okText: fa ? "🔓 باز کن" : "🔓 Unlock", cancelText: fa ? "انصراف" : "Cancel" });
     if (pw === null)
         return { cancelled: !0 };
     const trimmedPassword = String(pw).trim();
@@ -25785,7 +25785,7 @@ function promptNotePasswordBase(item, actionText = "") {
     return new Promise(resolve => {
         const fa = currentLang === "fa", uid = "npp" + Date.now() + Math.random().toString(36).slice(2, 7), modalEl = document.getElementById("advancedModal"), openerScrollY = window.scrollY || window.pageYOffset || 0;
         let settled = !1;
-        const hintText = String(item?.hint || "").trim(), placeholder = hintText ? hintText + (fa ? " (راهنما)" : " (hint)") : fa ? "🔐 رمز عبور را وارد کنید" : "🔐 Enter password", finish = value => { settled || (settled = !0, modalEl && modalEl.removeEventListener("click", outsideClick, !0), closeAdvancedModal(), window.scrollTo(0, openerScrollY), requestAnimationFrame(() => window.scrollTo(0, openerScrollY)), resolve(value)); }, outsideClick = e => { e.target === modalEl && finish(null); };
+        const hintText = String(item?.hint || "").trim(), placeholder = hintText ? "\u2068" + hintText + "\u2069" + (fa ? " (راهنما)" : " (hint)") : fa ? "🔐 رمز عبور را وارد کنید" : "🔐 Enter password", finish = value => { settled || (settled = !0, modalEl && modalEl.removeEventListener("click", outsideClick, !0), closeAdvancedModal(), window.scrollTo(0, openerScrollY), requestAnimationFrame(() => window.scrollTo(0, openerScrollY)), resolve(value)); }, outsideClick = e => { e.target === modalEl && finish(null); };
         modalEl && modalEl.addEventListener("click", outsideClick, !0), showAdvanced(`
                     <div class="advanced-head image-export-picker-head">
                         <div>
@@ -30507,7 +30507,7 @@ document.addEventListener("DOMContentLoaded", () => { initAdvancedSystems(); });
         async function markhinDash_openNote(id) { try {
             const _it = HX().categories.find(c => String(c.id) === String(id)), _cap = _it && _it.unlockAt && Date.now() < Number(_it.unlockAt), _dm = document.getElementById("advancedModal");
             if ((window.__mkDashOpen || (_dm && _dm.querySelector("#mklkRoot, #mkcRoot, #mkfRoot"))) && _it && !_cap && HX().isNoteLocked(_it) && window.mu_delOverlay && _dm && _dm.style.display === "flex") {
-                const fa = HX().currentLang === "fa", hint = String(_it.hint || "").trim(), pw = await window.mu_delOverlay({ title: "🔒 " + (_it.name || (fa ? "یادداشت" : "Note")), message: fa ? "برای باز کردن یادداشت، رمز عبور را وارد کنید." : "Enter the password to unlock this note.", input: !0, inputType: "password", placeholder: hint ? hint + (fa ? " (راهنما)" : " (hint)") : fa ? "🔐 رمز عبور را وارد کنید" : "🔐 Enter password", okText: fa ? "🔓 باز کردن" : "🔓 Unlock", neutralOk: !0 });
+                const fa = HX().currentLang === "fa", hint = String(_it.hint || "").trim(), pw = await window.mu_delOverlay({ title: "🔒 " + (_it.name || (fa ? "یادداشت" : "Note")), message: fa ? "برای باز کردن یادداشت، رمز عبور را وارد کنید." : "Enter the password to unlock this note.", input: !0, inputType: "password", placeholder: hint ? "\u2068" + hint + "\u2069" + (fa ? " (راهنما)" : " (hint)") : fa ? "🔐 رمز عبور را وارد کنید" : "🔐 Enter password", okText: fa ? "🔓 باز کردن" : "🔓 Unlock", neutralOk: !0 });
                 if (pw === null)
                     return;
                 window.__mkPrePass = { id: id, value: pw };
@@ -31169,7 +31169,7 @@ const total = keys.length, cap = HX().MAX_CHUNKS_PER_BACKUP, LIM = 1024, budget 
         const __mkCloudPassCache = new Map;
         // Prompts for a backup's password (showing its hint, if any, as the placeholder) using the same
         // themed dialog style as unlocking a note
-        async function mu_cloudPromptPassword(entry, wrong) { const fa = HX().currentLang === "fa", hintText = String(entry && entry.hint || "").trim(), placeholder = hintText ? hintText + (fa ? " (راهنما)" : " (hint)") : fa ? "🔐 رمز بکاپ را وارد کن" : "🔐 Enter backup password", pass = await HX().promptStyledText({ title: fa ? "🔒 بکاپ رمزدار" : "🔒 Encrypted backup", message: wrong ? fa ? "❌ رمز اشتباه بود؛ دوباره امتحان کن." : "❌ Wrong password; try again." : fa ? "این بکاپ با رمز محافظت شده. برای دیدن یا بازیابی‌اش، رمز را وارد کن." : "This backup is password-protected. Enter the password to view or restore it.", placeholder: placeholder, type: "password", okText: fa ? "🔓 باز کن" : "🔓 Unlock", cancelText: fa ? "انصراف" : "Cancel" }); return pass === null ? null : pass.trim(); }
+        async function mu_cloudPromptPassword(entry, wrong) { const fa = HX().currentLang === "fa", hintText = String(entry && entry.hint || "").trim(), placeholder = hintText ? "\u2068" + hintText + "\u2069" + (fa ? " (راهنما)" : " (hint)") : fa ? "🔐 رمز بکاپ را وارد کن" : "🔐 Enter backup password", pass = await HX().promptStyledText({ title: fa ? "🔒 بکاپ رمزدار" : "🔒 Encrypted backup", message: wrong ? fa ? "❌ رمز اشتباه بود؛ دوباره امتحان کن." : "❌ Wrong password; try again." : fa ? "این بکاپ با رمز محافظت شده. برای دیدن یا بازیابی‌اش، رمز را وارد کن." : "This backup is password-protected. Enter the password to view or restore it.", placeholder: placeholder, type: "password", okText: fa ? "🔓 باز کن" : "🔓 Unlock", cancelText: fa ? "انصراف" : "Cancel" }); return pass === null ? null : pass.trim(); }
         // Fetches one backup's decoded {meta, data}, prompting for (and retrying on a wrong) password if
         // it's encrypted
         async function mu_cloudGetBackupData(id) { let password = __mkCloudPassCache.get(id) || null, result = await HX().cloudRestoreBackup(id, password); for (; result && result.needsPassword;) {
@@ -32614,7 +32614,7 @@ HX().scheduleCloudBackup(!1, !0), HX().showToast(fa ? `✅ ذخیره شد — �
     // else
     async function mu_confirmTypeOk(opts) { opts = opts || {}; const fa = HX().currentLang === "fa"; if (HX().typeOf("promptStyledText") != "function")
         return !1; if (mu_overDeletePage()) {
-        const v = await window.mu_delOverlay({ title: opts.title || "", message: opts.message || "", input: !0, placeholder: "OK", okText: fa ? "??️ حذف دائمی" : "🗑️ Delete permanently", cancelText: fa ? "انصراف" : "Cancel" });
+        const v = await window.mu_delOverlay({ title: opts.title || "", message: opts.message || "", input: !0, placeholder: "OK", okText: fa ? "🗑️ حذف دائمی" : "🗑️ Delete permanently", cancelText: fa ? "انصراف" : "Cancel" });
         return v == null ? !1 : String(v).trim().toLowerCase() === "ok" ? (HX().closeAdvancedModal(), !0) : !1;
     } const val = await HX().promptStyledText({ title: opts.title || "", message: opts.message || "", placeholder: "OK", okText: fa ? "🗑️ حذف دائمی" : "🗑️ Delete permanently", cancelText: fa ? "انصراف" : "Cancel" }); return val == null ? !1 : String(val).trim().toLowerCase() === "ok"; }
     // Permanently erases every note in `categories`, exactly like deleting a single note, just applied to
@@ -54346,12 +54346,17 @@ html.mk-tg.mk-tg.mk-tg body *:not(#mkSplash):not(#muNav):not(#muNav *):not(.mxe-
     -webkit-backdrop-filter: none !important;
     backdrop-filter: none !important;
 }
-html.mk-tg.mk-tg.mk-tg body #muNav,
 html.mk-tg.mk-tg.mk-tg body #contentsContainer .mxe .mxe-top .mxe-grp,
 html.mk-tg.mk-tg.mk-tg body #contentsContainer .mxe .mxe-bottom .mxe-grp,
 html.mk-tg.mk-tg.mk-tg body #contentsContainer .mxe .mxe-top>.mxe-btn {
     -webkit-backdrop-filter: blur(8px) !important;
     backdrop-filter: blur(8px) !important;
+}
+/* side menu: #muNav is a full-screen layer, so a blur on it hit the whole screen the instant it became visible and
+   vanished abruptly ~260ms after closing (the "flash" on every tab switch). The dim layer alone fades smoothly. */
+html body #muNav, html body #muNav .mu-nav-bg {
+    -webkit-backdrop-filter: none !important;
+    backdrop-filter: none !important;
 }
 html.mk-tg.mk-tg.mk-tg body #contentsContainer .mxe .mxe-top .mxe-grp,
 html.mk-tg.mk-tg.mk-tg body #contentsContainer .mxe .mxe-bottom .mxe-grp,
