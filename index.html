@@ -13306,6 +13306,22 @@ html body .content-container .action-bar .mc-row .mc-btn-danger,html body[class*
     color:#ff6b6b!important;
 }
 </style>
+<style id="muPvFmt">
+/* note formatting shown in the note previews (list rows + Notes page cards): bold, italic, underline, strike,
+   highlight, code chip, link, quote, bullet / numbered items. Headings and font sizes are deliberately NOT applied. */
+.mu-pv-b{font-weight:800!important}
+.mu-pv-i{font-style:italic!important}
+.mu-pv-u{text-decoration:underline!important}
+.mu-pv-s{text-decoration:line-through!important}
+.mu-pv-u.mu-pv-s{text-decoration:underline line-through!important}
+.mu-pv-a{text-decoration:underline!important}
+.mu-pv-h{background:#ffeb3b!important;border-radius:3px;padding:0 1px;-webkit-box-decoration-break:clone;box-decoration-break:clone}
+.mu-pv-h:not(.mu-pv-c):not(.mu-nfs-c){color:#111!important;-webkit-text-fill-color:#111!important}
+.mu-pv-code{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:.92em;background:rgba(127,127,127,.28);border-radius:4px;padding:0 4px}
+.mu-pv-q{border-inline-start:3px solid #60a5fa;padding-inline-start:7px;background:rgba(96,165,250,.10);border-radius:3px}
+.mu-pv-ul::before{content:"\2022\00a0"}
+.mu-pv-ol::before{content:attr(data-pvn) ".\00a0"}
+</style>
 <style id="muHeadingGlobal">
 .mk-cb {
     display:inline-block;
@@ -32182,7 +32198,15 @@ HX().scheduleCloudBackup(!1, !0), HX().showToast(fa ? `✅ ذخیره شد — �
     const MU_PV_PAL = ["#ef4444", "#f97316", "#eab308", "#22c55e", "#14b8a6", "#3b82f6", "#8b5cf6", "#ec4899", "#9ca3af"];
     function mu_pvColorOf(el) { try { if (el.classList.contains("mk-cx")) { const m = /--mk-x:\s*(#[0-9a-f]{6})/i.exec(el.getAttribute("style") || ""); if (m) return m[1].toLowerCase(); } for (const c of el.classList) { const m = /^mk-c([1-9])$/.exec(c); if (m) return MU_PV_PAL[m[1] - 1]; } } catch { } return ""; }
     // runs of one line: [[startCodePoint, endCodePoint, "#rrggbb"], ...]
-    function mu_pvLineHtml(text, runs, suffix) { const esc = s => HX().escapeHtml(s); if (!runs || !runs.length) return esc(text) + (suffix ? esc(suffix) : ""); const cps = Array.from(text); let html = "", pos = 0; runs.forEach(r => { const a = Math.max(pos, r[0]), b = Math.min(r[1], cps.length); if (!(b > a) || !/^#[0-9a-f]{6}$/i.test(r[2])) return; a > pos && (html += esc(cps.slice(pos, a).join(""))), html += '<span class="mu-pv-c" style="color:' + r[2] + "!important;-webkit-text-fill-color:" + r[2] + '!important">' + esc(cps.slice(a, b).join("")) + "</span>", pos = b; }); pos < cps.length && (html += esc(cps.slice(pos).join(""))); return html + (suffix ? esc(suffix) : ""); }
+    function mu_pvTokParse(tok) { const m = /^(#[0-9a-f]{6})?(?::([a-z]*))?$/i.exec(String(tok || "")); return m ? { col: m[1] || "", fl: m[2] || "" } : null; }
+    // one run = [startCodePoint, endCodePoint, "#rrggbb:flags"]; flags: b bold, i italic, u underline, s strike, h highlight, c code, a link
+    function mu_pvSpanOpen(tok) { const p = mu_pvTokParse(tok); if (!p || !(p.col || p.fl)) return ""; const cls = ["mu-pv"], F = { b: "mu-pv-b", i: "mu-pv-i", u: "mu-pv-u", s: "mu-pv-s", h: "mu-pv-h", c: "mu-pv-code", a: "mu-pv-a" }; let st = ""; if (p.col) cls.push("mu-pv-c"), st = "color:" + p.col + "!important;-webkit-text-fill-color:" + p.col + "!important"; for (const ch of p.fl) F[ch] && cls.push(F[ch]); p.fl.indexOf("h") >= 0 && !p.col && (st = "color:#111!important;-webkit-text-fill-color:#111!important"); return '<span class="' + cls.join(" ") + '"' + (st ? ' style="' + st + '"' : "") + ">"; }
+    // line-level flags travel as a marker run [-1,-1,"q,u"|"q,o3"]: q = quote, u = bullet, oN = numbered item N
+    function mu_pvLineAttrs(runs) { const r = runs && runs.find(x => x && x[0] === -1); if (!r) return null; let cls = "", n = ""; String(r[2] || "").split(",").forEach(x => { x === "q" ? cls += " mu-pv-q" : x === "u" ? cls += " mu-pv-ul" : /^o\d+$/.test(x) && (cls += " mu-pv-ol", n = x.slice(1)); }); return { cls, n }; }
+    function mu_pvLineHtml(text, runs, suffix) { const esc = s => HX().escapeHtml(s); if (!runs || !runs.length) return esc(text) + (suffix ? esc(suffix) : ""); const cps = Array.from(text); let html = "", pos = 0; runs.forEach(r => { if (!r || r[0] < 0) return; const a = Math.max(pos, r[0]), b = Math.min(r[1], cps.length), op = mu_pvSpanOpen(r[2]); if (!(b > a) || !op) return; a > pos && (html += esc(cps.slice(pos, a).join(""))), html += op + esc(cps.slice(a, b).join("")) + "</span>", pos = b; }); pos < cps.length && (html += esc(cps.slice(pos).join(""))); return html + (suffix ? esc(suffix) : ""); }
+    function mu_pvLineSpan(text, runs, suffix) { const la = mu_pvLineAttrs(runs); return '<span class="note-item-meta-line' + (la ? la.cls : "") + '"' + (la && la.n ? ' data-pvn="' + la.n + '"' : "") + ' dir="auto">' + mu_pvLineHtml(text, runs, suffix) + "</span>"; }
+    // formatting context of one text node: inline flags + colour, and the line flags (quote / bullet / number)
+    function mu_pvCtx(node, root, liUsed) { let col = "", fl = "", q = !1, li = null; if (!/\S/.test(node.nodeValue || "")) return { tok: "", lf: "" }; try { for (let el = node.parentElement; el && el !== root; el = el.parentElement) { const t = el.tagName; !col && el.classList.contains("mk-c") && (col = mu_pvColorOf(el)); t === "B" || t === "STRONG" ? fl += "b" : t === "I" || t === "EM" ? fl += "i" : t === "U" ? fl += "u" : t === "S" || t === "STRIKE" || t === "DEL" ? fl += "s" : t === "CODE" ? fl += "c" : t === "A" ? fl += "a" : t === "BLOCKQUOTE" ? q = !0 : t === "LI" && !li && (li = el), el.classList.contains("mk-hl") && (fl += "h"); } } catch { } fl = "biushca".split("").filter(c => fl.indexOf(c) >= 0).join(""); let lf = q ? "q" : ""; if (li && !liUsed.has(li)) { liUsed.add(li); const p = li.parentElement; if (p && p.tagName === "OL") { let n = 1; for (let sb = li.previousElementSibling; sb; sb = sb.previousElementSibling) sb.tagName === "LI" && n++; lf += (lf ? "," : "") + "o" + n; } else lf += (lf ? "," : "") + "u"; } return { tok: col || fl ? col + ":" + fl : "", lf }; }
     function mu_notePreviewRunsArr(item) { try { const e = window.__mu_pvCache && window.__mu_pvCache.get(item.id); return e && e.runs ? e.runs.slice() : []; } catch { return []; } }
     function mu_notePreviewLinesArr(item) {
         if (item.fakeContent)
@@ -32206,10 +32230,10 @@ HX().scheduleCloudBackup(!1, !0), HX().showToast(fa ? `✅ ذخیره شد — �
 `);
         });
         // text colour (<span class="mk-c mk-cN|mk-cx">) -> per-character colour map, so the list preview keeps the note's text colours
-        const hasCol = src.indexOf("mk-c") >= 0; let raw = "", cmap = [];
+        const hasCol = /mk-c|mk-hl|<(?:b|strong|i|em|u|s|strike|del|code|a|blockquote|li)\b/i.test(src); let raw = "", cmap = [], lmap = []; const liUsed = new Set;
         for (const tw = document.createTreeWalker(tmp, NodeFilter.SHOW_TEXT); tw.nextNode();) {
             const s = tw.currentNode.nodeValue || ""; if (!s) continue; raw += s;
-            if (hasCol) { const h = tw.currentNode.parentElement && tw.currentNode.parentElement.closest(".mk-c"), col = h ? mu_pvColorOf(h) : ""; for (let k = 0; k < s.length; k++) cmap.push(col); }
+            if (hasCol) { const cx = mu_pvCtx(tw.currentNode, tmp, liUsed); for (let k = 0; k < s.length; k++) cmap.push(cx.tok), lmap.push(cx.lf); }
         }
         raw = raw.replace(/\u00A0/g, " "); const out = [], outRuns = []; let off = 0;
         for (const ln of raw.split(`
@@ -32220,7 +32244,7 @@ HX().scheduleCloudBackup(!1, !0), HX().showToast(fa ? `✅ ذخیره شد — �
             if (t) {
                 const cps = Array.from(t).slice(0, 400), runs = []; let ui = lineStart + lead, cur = null;
                 if (hasCol) cps.forEach((ch, ci) => { const col = cmap[ui] || ""; ui += ch.length; if (col) { if (cur && cur[2] === col && cur[1] === ci) cur[1] = ci + 1; else { cur = [ci, ci + 1, col]; runs.push(cur); } } else cur = null; });
-                out.push(cps.join("")), outRuns.push(runs);
+                hasCol && lmap[lineStart + lead] && runs.unshift([-1, -1, lmap[lineStart + lead]]), out.push(cps.join("")), outRuns.push(runs);
                 // fitter trims to the chosen count
                 if (out.length >= 8) break;
             }
@@ -32233,7 +32257,7 @@ HX().scheduleCloudBackup(!1, !0), HX().showToast(fa ? `✅ ذخیره شد — �
     }
     // Ellipsis with a space before it ("word …"): the browser's own CSS ellipsis can't be given a space,
     // so the preview is fitted here
-    (function () { function renderMetaLine(lineText, runs, suffix) { return '<span class="note-item-meta-line" dir="auto">' + mu_pvLineHtml(lineText, runs, suffix) + "</span>"; } function build(lines, maxChars, addEllipsis, pvc) { let withEll = maxChars, html = ""; for (let lineIndex = 0; lineIndex < lines.length && withEll > 0; lineIndex++) {
+    (function () { function renderMetaLine(lineText, runs, suffix) { return mu_pvLineSpan(lineText, runs, suffix); } function build(lines, maxChars, addEllipsis, pvc) { let withEll = maxChars, html = ""; for (let lineIndex = 0; lineIndex < lines.length && withEll > 0; lineIndex++) {
         const chars = Array.from(lines[lineIndex]);
         if (chars.length <= withEll)
             html += renderMetaLine(lines[lineIndex], pvc && pvc[lineIndex]), withEll -= chars.length;
@@ -32482,7 +32506,7 @@ HX().scheduleCloudBackup(!1, !0), HX().showToast(fa ? `✅ ذخیره شد — �
         }
         c2.innerHTML = '<div class="no-result-msg">' + t.noResult + "</div>";
         return;
-    } const rawQuery = (document.getElementById("searchInput") || {}).value || "", searching = !!rawQuery.trim(), sortCmp = mu_noteSortComparator(mu_getNoteSortMode()), ordered = searching ? list.slice() : [...list].sort((a, b) => Number(b.pinned) - Number(a.pinned) || Number(b.favorite) - Number(a.favorite) || sortCmp(a, b)), wantIds = new Set(ordered.map(item => String(item.id))), existingByCid = new Map; Array.from(c2.children).forEach(child => { const cid = child.dataset ? child.dataset.id : null; cid && wantIds.has(cid) ? existingByCid.set(cid, child) : child.parentNode === c2 && c2.removeChild(child); }); let prevNode = null; ordered.forEach(item => { Array.isArray(item.tags) || (item.tags = []); const cid = String(item.id); let wrap = existingByCid.get(cid), b2; wrap ? b2 = wrap.querySelector(".custom-btn") : (wrap = document.createElement("div"), wrap.className = "note-btn-wrap", wrap.dataset.id = cid, b2 = document.createElement("button"), b2.dataset.noteId = item.id, wrap.appendChild(b2)); const wantClass = "custom-btn note-item " + (HX().activeOpenId === item.id ? "active-btn " : "") + (item.pinned ? "note-pinned " : "") + (item.favorite ? "note-favorite " : ""); b2.className !== wantClass && (b2.className = wantClass), b2.setAttribute("aria-expanded", HX().activeOpenId === item.id ? "true" : "false"), b2.style.animationDelay = window.MarkhinNoteDeleteMode ? "0s" : ""; const titleHtml = HX().escapeHtml(HX().isNoteLocked(item) ? "🔒 " : "") + (window.mu_flagIconsList || MK.flagIcons)(item) + HX().escapeHtml((item.fakeContent ? "🎭 " : "") + (item.titleHidden ? "•••••" : mu_isolateNumbers(String(item.name || "")))), metaLines = item.titleHidden || !mu_getNotePreviewEnabled() ? [] : mu_notePreviewLinesArr(item), metaRuns = metaLines.length ? mu_notePreviewRunsArr(item) : [], pvcAttr = metaRuns.some(r => r && r.length) ? ' data-pvc="' + encodeURIComponent(JSON.stringify(metaRuns)) + '"' : "", wantHtml = '<span class="note-item-title' + (item.titleHidden ? " is-masked" : "") + '" dir="auto">' + titleHtml + "</span>" + (metaLines.length ? '<span class="note-item-meta" data-pv="' + encodeURIComponent(JSON.stringify(metaLines)) + '"' + pvcAttr + '>' + metaLines.map((l, i) => '<span class="note-item-meta-line" dir="auto">' + mu_pvLineHtml(l, metaRuns[i]) + "</span>").join("") + "</span>" : ""); b2.innerHTML !== wantHtml && (b2.innerHTML = wantHtml), b2.onclick = () => { if (HX().activeOpenId === item.id && !searching) {
+    } const rawQuery = (document.getElementById("searchInput") || {}).value || "", searching = !!rawQuery.trim(), sortCmp = mu_noteSortComparator(mu_getNoteSortMode()), ordered = searching ? list.slice() : [...list].sort((a, b) => Number(b.pinned) - Number(a.pinned) || Number(b.favorite) - Number(a.favorite) || sortCmp(a, b)), wantIds = new Set(ordered.map(item => String(item.id))), existingByCid = new Map; Array.from(c2.children).forEach(child => { const cid = child.dataset ? child.dataset.id : null; cid && wantIds.has(cid) ? existingByCid.set(cid, child) : child.parentNode === c2 && c2.removeChild(child); }); let prevNode = null; ordered.forEach(item => { Array.isArray(item.tags) || (item.tags = []); const cid = String(item.id); let wrap = existingByCid.get(cid), b2; wrap ? b2 = wrap.querySelector(".custom-btn") : (wrap = document.createElement("div"), wrap.className = "note-btn-wrap", wrap.dataset.id = cid, b2 = document.createElement("button"), b2.dataset.noteId = item.id, wrap.appendChild(b2)); const wantClass = "custom-btn note-item " + (HX().activeOpenId === item.id ? "active-btn " : "") + (item.pinned ? "note-pinned " : "") + (item.favorite ? "note-favorite " : ""); b2.className !== wantClass && (b2.className = wantClass), b2.setAttribute("aria-expanded", HX().activeOpenId === item.id ? "true" : "false"), b2.style.animationDelay = window.MarkhinNoteDeleteMode ? "0s" : ""; const titleHtml = HX().escapeHtml(HX().isNoteLocked(item) ? "🔒 " : "") + (window.mu_flagIconsList || MK.flagIcons)(item) + HX().escapeHtml((item.fakeContent ? "🎭 " : "") + (item.titleHidden ? "•••••" : mu_isolateNumbers(String(item.name || "")))), metaLines = item.titleHidden || !mu_getNotePreviewEnabled() ? [] : mu_notePreviewLinesArr(item), metaRuns = metaLines.length ? mu_notePreviewRunsArr(item) : [], pvcAttr = metaRuns.some(r => r && r.length) ? ' data-pvc="' + encodeURIComponent(JSON.stringify(metaRuns)) + '"' : "", wantHtml = '<span class="note-item-title' + (item.titleHidden ? " is-masked" : "") + '" dir="auto">' + titleHtml + "</span>" + (metaLines.length ? '<span class="note-item-meta" data-pv="' + encodeURIComponent(JSON.stringify(metaLines)) + '"' + pvcAttr + '>' + metaLines.map((l, i) => mu_pvLineSpan(l, metaRuns[i])).join("") + "</span>" : ""); b2.innerHTML !== wantHtml && (b2.innerHTML = wantHtml), b2.onclick = () => { if (HX().activeOpenId === item.id && !searching) {
         HX().handleCategoryClick(item.id);
         return;
     }
@@ -39146,6 +39170,9 @@ body.mu-nfsbk-on #mkBackupBar { display:none!important; }
     // text colour (<span class="mk-c mk-cN|mk-cx">) -> hex, so the card preview keeps the note's text colours
     var PVPAL = ["#ef4444", "#f97316", "#eab308", "#22c55e", "#14b8a6", "#3b82f6", "#8b5cf6", "#ec4899", "#9ca3af"];
     function pvColOf(el) { try { if (el.classList.contains("mk-cx")) { var m = /--mk-x:\s*(#[0-9a-f]{6})/i.exec(el.getAttribute("style") || ""); if (m) return m[1].toLowerCase(); } for (var i = 0; i < el.classList.length; i++) { var m2 = /^mk-c([1-9])$/.exec(el.classList[i]); if (m2) return PVPAL[m2[1] - 1]; } } catch { } return ""; }
+    // inline formatting token "#rrggbb:flags" (b i u s h c a) carried per character, like the colour map before
+    function pvTokAdd(tok, k) { var col = "", fl = "", ix; if (tok) { ix = tok.indexOf(":"), col = tok.slice(0, ix), fl = tok.slice(ix + 1); } var tg = k.nodeName.toUpperCase(), add = tg === "B" || tg === "STRONG" ? "b" : tg === "I" || tg === "EM" ? "i" : tg === "U" ? "u" : tg === "S" || tg === "STRIKE" || tg === "DEL" ? "s" : tg === "CODE" ? "c" : tg === "A" ? "a" : ""; k.classList && (k.classList.contains("mk-c") && (col = pvColOf(k) || col), k.classList.contains("mk-hl") && (add += "h")); for (var z = 0; z < add.length; z++) fl.indexOf(add.charAt(z)) < 0 && (fl += add.charAt(z)); return col || fl ? col + ":" + fl : ""; }
+    function pvLiFlag(li) { var p = li.parentElement; if (p && p.nodeName === "OL") { var c = 1; for (var sb = li.previousElementSibling; sb; sb = sb.previousElementSibling) sb.nodeName === "LI" && c++; return "o" + c; } return "u"; }
     function htmlLines(html, full) {
         var src = String(html);
         (full || src.length > 3e4) && (src = src.replace(/\s(?:src|href|style)=(?:"[^"]*"|'[^']*')/g, function (m) { return !full && /^\sstyle=["']\s*--mk-x:\s*#[0-9a-f]{6};?\s*["']$/i.test(m) ? m : ""; })), !full && src.length > 12e4 && (src = src.slice(0, 12e4));
@@ -39157,8 +39184,8 @@ body.mu-nfsbk-on #mkBackupBar { display:none!important; }
         if (!doc || !doc.body)
             return String(htmlToText(src)).split(`
 `);
-        var lines = [], cur = "", curC = [], cmaps = [], wantC = !full && src.indexOf("mk-c") >= 0, n = 0;
-        function push() { var lead = cur.length - cur.replace(/^\s+/, "").length, t = cur.replace(/\s+$/, "").replace(/^\s+/, ""); lines.push(t), wantC && cmaps.push(curC.slice(lead, lead + t.length)), cur = "", curC = []; }
+        var lines = [], cur = "", curC = [], cmaps = [], lfs = [], qd = 0, pend = "", wantC = !full && /mk-c|mk-hl|<(?:b|strong|i|em|u|s|strike|del|code|a|blockquote|li)\b/i.test(src), n = 0;
+        function push() { var lead = cur.length - cur.replace(/^\s+/, "").length, t = cur.replace(/\s+$/, "").replace(/^\s+/, ""); lines.push(t), wantC && (cmaps.push(curC.slice(lead, lead + t.length)), lfs.push(t ? (qd ? "q" : "") + (pend ? (qd ? "," : "") + pend : "") : ""), t && (pend = "")), cur = "", curC = []; }
         function walk(el, col) { for (var k = el.firstChild; k && (full || n < 400); k = k.nextSibling)
             if (k.nodeType === 3) {
                 var tx = String(k.nodeValue).replace(/\u00A0/g, " ").replace(/[ \t\r\n]+/g, " ");
@@ -39176,25 +39203,25 @@ body.mu-nfsbk-on #mkBackupBar { display:none!important; }
                 if (typeof cl == "string" && /(?:^|\s)(?:img-toolbar|audio-wrapper|img-drag-wrapper|mu-img-row|img-top-divider|img-above-line|img-below-line)(?:\s|$)/.test(cl))
                     continue;
                 // table cells never glue together ("..p" + "ri.." must not look like "pri")
-                var nc = col; wantC && k.classList && k.classList.contains("mk-c") && (nc = pvColOf(k) || col);
-                (tg === "TD" || tg === "TH") && (cur += " ", wantC && curC.push("")), BBLK.test(tg) ? (cur.trim() && (push(), n++), walk(k, nc), cur.trim() && (push(), n++)) : walk(k, nc);
+                var nc = col; wantC && (nc = pvTokAdd(col, k));
+                (tg === "TD" || tg === "TH") && (cur += " ", wantC && curC.push("")), BBLK.test(tg) ? (cur.trim() && (push(), n++), tg === "BLOCKQUOTE" && qd++, tg === "LI" && wantC && (pend = pvLiFlag(k)), walk(k, nc), cur.trim() && (push(), n++), tg === "BLOCKQUOTE" && qd--, tg === "LI" && (pend = "")) : walk(k, nc);
             } }
-        return walk(doc.body, ""), cur.trim() && push(), wantC && (lines.cm = cmaps), lines;
+        return walk(doc.body, ""), cur.trim() && push(), wantC && (lines.cm = cmaps, lines.lf = lfs), lines;
     }
     function previewText(c2) {
         var raw = c2.text || c2.html || "", sig = String(c2.lastEdited || "") + "|" + String(raw).length + "|" + (c2.text ? 1 : 0), hit = BCACHE[c2.id];
         if (hit && hit.s === sig)
             return hit.v;
-        for (var lines = c2.html && String(c2.html).trim() ? htmlLines(c2.html) : String(c2.text || "").split(/\r?\n/).map(function (l) { return l.trim(); }), cms = lines.cm || null; lines.length && !lines[0];)
-            lines.shift(), cms && cms.shift();
+        for (var lines = c2.html && String(c2.html).trim() ? htmlLines(c2.html) : String(c2.text || "").split(/\r?\n/).map(function (l) { return l.trim(); }), cms = lines.cm || null, lfs = lines.lf || null; lines.length && !lines[0];)
+            lines.shift(), cms && cms.shift(), lfs && lfs.shift();
         for (; lines.length && !lines[lines.length - 1];)
-            lines.pop(), cms && cms.pop();
+            lines.pop(), cms && cms.pop(), lfs && lfs.pop();
         for (var out = [], total = 0, i = 0; i < lines.length && (out.push(lines[i]), total += lines[i].length + 1, !(total >= 900)); i++)
             ;
         var v = out.join(`
 `), flat = null;
         if (cms) { var fc = [], any2 = !1; out.forEach(function (ln, ii) { var m2 = cms[ii] || []; for (var z = 0; z < ln.length; z++) { var cc = m2[z] || ""; cc && (any2 = !0), fc.push(cc); } ii < out.length - 1 && fc.push(""); }), flat = any2 ? fc : null; }
-        return BCACHE[c2.id] = { s: sig, v: v, cm: flat }, v;
+        return BCACHE[c2.id] = { s: sig, v: v, cm: flat, lf: lfs && lfs.some(Boolean) ? lfs.slice(0, out.length) : null }, v;
     }
     // Search text = exactly what is VISIBLE in the note (same extraction as the card preview, but the
     // whole note, not only the first 900 chars)
@@ -39207,7 +39234,7 @@ body.mu-nfsbk-on #mkBackupBar { display:none!important; }
 `);
         return FCACHE[c.id] = { s: sig, v: v }, v;
     }
-    function info(c) { var locked = isLocked(c), title = c.titleHidden ? "•••••" : String(c.name || "").trim(), noPv = !!(locked || c.titleHidden || c.fakeContent || capsule(c)), body = noPv ? "" : (previewText(c).match(/^[\s\S]{0,900}/u) || [""])[0], bcm = noPv ? null : BCACHE[c.id] && BCACHE[c.id].cm || null, flags = (locked ? "🔒 " : "") + (c.pinned ? "📌 " : "") + (c.favorite ? "⭐ " : ""), media = noPv || S2.lines <= 0 ? null : mediaOf(c), o = { id: c.id, bcm: bcm, media: media, title: (H.get("mkCl") && H.get("mkCl").parse(c) && H.get("mkCl").isDef(title)) ? "" : title, body: body, flags: flags, locked: locked, fl: noteFolders(c), pin: !!c.pinned, fav: !!c.favorite, col: /^[a-z]+$/.test(c.color || "") ? c.color : "", cl: H.get("mkCl") ? H.get("mkCl").parse(c) : null }; return Object.defineProperty(o, "searchable", { enumerable: !0, get: function () { return noPv ? "" : searchText(c, title); } }), Object.defineProperty(o, "full", { enumerable: !0, get: function () { return noPv ? "" : fullText(c); } }), o; }
+    function info(c) { var locked = isLocked(c), title = c.titleHidden ? "•••••" : String(c.name || "").trim(), noPv = !!(locked || c.titleHidden || c.fakeContent || capsule(c)), body = noPv ? "" : (previewText(c).match(/^[\s\S]{0,900}/u) || [""])[0], bcm = noPv ? null : BCACHE[c.id] && BCACHE[c.id].cm || null, blf = noPv ? null : BCACHE[c.id] && BCACHE[c.id].lf || null, flags = (locked ? "🔒 " : "") + (c.pinned ? "📌 " : "") + (c.favorite ? "⭐ " : ""), media = noPv || S2.lines <= 0 ? null : mediaOf(c), o = { id: c.id, bcm: bcm, blf: blf, media: media, title: (H.get("mkCl") && H.get("mkCl").parse(c) && H.get("mkCl").isDef(title)) ? "" : title, body: body, flags: flags, locked: locked, fl: noteFolders(c), pin: !!c.pinned, fav: !!c.favorite, col: /^[a-z]+$/.test(c.color || "") ? c.color : "", cl: H.get("mkCl") ? H.get("mkCl").parse(c) : null }; return Object.defineProperty(o, "searchable", { enumerable: !0, get: function () { return noPv ? "" : searchText(c, title); } }), Object.defineProperty(o, "full", { enumerable: !0, get: function () { return noPv ? "" : fullText(c); } }), o; }
     var SRCACHE = Object.create(null);
     function searchText(c, title) { var raw = c.text || c.html || "", sig = String(c.lastEdited || "") + "|" + String(raw).length + "|" + String(c.text || "").length + "|" + String(c.html || "").length + "|" + (c.text ? 1 : 0) + "|" + title, hit = SRCACHE[c.id]; if (hit && hit.s === sig)
         return hit.v; var v = norm(title) + " " + norm(fullText(c)); return SRCACHE[c.id] = { s: sig, v: v }, v; }
@@ -39619,6 +39646,7 @@ body.mu-nfsbk-on #mkBackupBar { display:none!important; }
         return out;
     }
     // like hl(), but also paints the note's text colours (cm = per-character colours of the whole body, base = offset of this line)
+    function nfsTokSpan(tok, seg) { var ix = tok.indexOf(":"), col = ix < 0 ? tok : tok.slice(0, ix), fl = ix < 0 ? "" : tok.slice(ix + 1), cls = [], st = "", F = { b: "mu-pv-b", i: "mu-pv-i", u: "mu-pv-u", s: "mu-pv-s", h: "mu-pv-h", c: "mu-pv-code", a: "mu-pv-a" }; /^#[0-9a-f]{6}$/i.test(col) && (cls.push("mu-nfs-c"), st = ' style="--pv:' + col + '"'); for (var z = 0; z < fl.length; z++) F[fl.charAt(z)] && cls.push(F[fl.charAt(z)]); return cls.length ? '<span class="' + cls.join(" ") + '"' + st + ">" + seg + "</span>" : seg; }
     function hlc(text, cm, base) { text = String(text ?? ""); var n = text.length, any = !1, i, j, x, h, c, seg, out = ""; for (i = 0; i < n; i++)
         if (cm[base + i]) {
             any = !0;
@@ -39629,9 +39657,9 @@ body.mu-nfsbk-on #mkBackupBar { display:none!important; }
             hit[x] = 1; for (i = 0; i < n;) {
         for (h = hit[i], c = cm[base + i] || "", j = i + 1; j < n && hit[j] === h && (cm[base + j] || "") === c;)
             j++;
-        seg = esc(text.slice(i, j)), c && /^#[0-9a-f]{6}$/i.test(c) && (seg = '<span class="mu-nfs-c" style="--pv:' + c + '">' + seg + "</span>"), h && (seg = '<mark class="mu-nfs-hit">' + seg + "</mark>"), out += seg, i = j;
+        seg = esc(text.slice(i, j)), c && (seg = nfsTokSpan(c, seg)), h && (seg = '<mark class="mu-nfs-hit">' + seg + "</mark>"), out += seg, i = j;
     } return out; }
-    function bodyHtml(inf) { var bl = bodyLines(inf), cm = !inf.locked && inf.bcm && bl.join("\n") === inf.body ? inf.bcm : null, off = 0; return bl.map(function (l) { var o0 = off + (l.length - l.replace(/^\s+/, "").length); return off += l.length + 1, l = l.trim(), '<span class="mu-nfs-ln" dir="auto">' + (l ? inf.locked ? esc(l) : cm ? hlc(l, cm, o0) : hl(l) : "&#8203;") + "</span>"; }).join(""); }
+    function bodyHtml(inf) { var bl = bodyLines(inf), same = !inf.locked && bl.join("\n") === inf.body, cm = same && inf.bcm ? inf.bcm : null, lfa = same && inf.blf ? inf.blf : null, off = 0; return bl.map(function (l, li) { var o0 = off + (l.length - l.replace(/^\s+/, "").length), lf = lfa && lfa[li] || "", ccls = "", pn = ""; lf && lf.split(",").forEach(function (x) { x === "q" ? ccls += " mu-pv-q" : x === "u" ? ccls += " mu-pv-ul" : /^o\d+$/.test(x) && (ccls += " mu-pv-ol", pn = x.slice(1)); }); return off += l.length + 1, l = l.trim(), '<span class="mu-nfs-ln' + ccls + '"' + (pn ? ' data-pvn="' + pn + '"' : "") + ' dir="auto">' + (l ? inf.locked ? esc(l) : cm ? hlc(l, cm, o0) : hl(l) : "&#8203;") + "</span>"; }).join(""); }
     function cardHtml(inf) { return hlPrep(inf), '<button type="button" class="mu-nfs-card' + (inf.cl ? " mu-nfs-cl" : "") + (inf.fav ? " mu-nfs-hasstar" : "") + (isSel(inf.id) ? " mu-nfs-sel" : "") + '" data-id="' + esc(inf.id) + '" data-g="' + (inf.pin ? 1 : 0) + (inf.fav ? 1 : 0) + (inf.col ? '" data-mk-color="' + esc(inf.col) : "") + '"><div class="mu-nfs-ttl" dir="auto">' + (inf.locked || !inf.title && !inf.cl ? esc((inf.locked ? "🔒 " : "") + (inf.title || (fa2() ? "بدون عنوان" : "Untitled"))) : hl(inf.title)) + "</div>" + (inf.cl ? H.get("mkCl").rows(inf) : inf.body && S2.lines > 0 ? '<div class="mu-nfs-txt">' + bodyHtml(inf) + "</div>" : "") + mediaHtml(inf) + (inf.fav ? '<em class="mu-nfs-star" aria-hidden="true"></em>' : "") + "</button>"; }
     function colCount() { return S2.view === "list" ? 1 : 2; }
     function colsHtml(items) { var n2 = colCount(), bufs = [], h = [], k, i, c2, m; for (k = 0; k < n2; k++)
