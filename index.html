@@ -54229,9 +54229,58 @@ html body #contentsContainer .mxe .mxe-body {
     return r;
   }
 
+  // ---- 2b) a SELECTION (long-press on a word, handles, select-all) is not a caret: keep the WHOLE selected text inside the visible window ----
+  var SETTLE = 160, SEL_TOP = 12, SEL_BOT = 30;   // SEL_BOT is larger: the round selection handle hangs below the last line
+  var selAt = 0, selTimer = 0;                    // selAt: last time the selection changed (handle drags keep changing it: never scroll while that goes on)
+  function inNote(n) { var el = n && (n.nodeType === 1 ? n : n.parentElement); return !!(el && el.closest && el.closest(".mxe .text-box")); }
+  function hasSel() { var s = window.getSelection(); return !!(s && s.rangeCount && !s.isCollapsed && inNote(s.anchorNode) && inNote(s.focusNode)); }
+  function selRect() {
+    var s = window.getSelection(); if (!s || !s.rangeCount || s.isCollapsed) return null;
+    var rs; try { rs = s.getRangeAt(0).getClientRects(); } catch (e) { return null; }
+    if (!rs || !rs.length) return null;
+    var top = Infinity, bottom = -Infinity, n = rs.length, i, r;
+    if (n > 80) { var a = rs[0], z = rs[n - 1]; top = Math.min(a.top, z.top); bottom = Math.max(a.bottom, z.bottom); }   // huge selection: first / last line are enough (it will not fit anyway)
+    else for (i = 0; i < n; i++) { r = rs[i]; if (!r.height || r.height > 400) continue; if (r.top < top) top = r.top; if (r.bottom > bottom) bottom = r.bottom; }
+    return top === Infinity || bottom < top ? null : { top: top, bottom: bottom };
+  }
+  function visBox(el) {
+    if (!el || !el.isConnected || (el.offsetHeight < 11 && el.offsetWidth < 21)) return null;
+    var r = el.getBoundingClientRect(); if (r.width <= 20 || r.height <= 10) return null;
+    var cs = getComputedStyle(el); if (cs.display === "none" || cs.visibility === "hidden" || parseFloat(cs.opacity) < 0.05) return null;
+    return r;
+  }
+  // the part of the note that is really visible: scroll area, minus the keyboard, minus the top bar, minus the bottom bar and any pill / panel above it
+  function safeWin(mxe, body) {
+    var br = body.getBoundingClientRect(), vv = window.visualViewport;
+    var vTop = vv ? vv.offsetTop : 0, vBot = vv ? vv.offsetTop + vv.height : window.innerHeight;
+    var top = Math.max(br.top, vTop), bottom = Math.min(br.bottom, vBot), r = visBox(mxe.querySelector(".mxe-top"));
+    if (r && r.bottom > top && r.bottom < bottom) top = r.bottom;
+    var cov = mxe.querySelectorAll(".mxe-bottom, .mxe-bottom .mxe-pop, .mxe-bottom .mxe-pop .grid");
+    for (var i = 0; i < cov.length; i++) { r = visBox(cov[i]); if (r && r.top > top && r.top < bottom) bottom = r.top; }
+    return { top: top + SEL_TOP, bottom: bottom - SEL_BOT, br: br };
+  }
+  function fitSel() {
+    var t = nowMs();
+    if (t > allowUntil || t - selAt < SETTLE || touching) return;   // only right after the selection was made / the keyboard or a panel moved, and only once it stopped changing
+    var mxe = document.querySelector("#contentsContainer .mxe.show"); if (!mxe) return;
+    var body = mxe.querySelector(".mxe-body"); if (!body) return;
+    var rc = selRect(); if (!rc) return;
+    var w = safeWin(mxe, body);
+    if (rc.bottom < w.br.top || rc.top > w.br.bottom) return;        // the person scrolled far away from it: leave the note alone
+    if (w.bottom - w.top < 40) w.bottom = w.top + 40;               // tiny window: still make progress
+    if (rc.bottom - rc.top > w.bottom - w.top) return;              // longer than the window (e.g. select all): nothing sensible to do
+    var d = 0;
+    if (rc.bottom > w.bottom) d = Math.ceil(rc.bottom - w.bottom);
+    else if (rc.top < w.top) d = -Math.ceil(w.top - rc.top);
+    if (!d) return;
+    if (body.style.scrollBehavior !== "auto") body.style.scrollBehavior = "auto";   // instant, never a slow glide
+    body.scrollTop += d;
+  }
+
   // ---- 3) keep that line inside the REAL visible window of the note ----
   // visible window = scroll area, minus the keyboard (visual viewport), minus the writing-tools pill that floats over it
   function fit() {
+    if (hasSel()) { fitSel(); return; }                              // selection: its own rules (2b)
     if (nowMs() > allowUntil || nowMs() - scrolledAt < 900 || (window.__mkScrollRecent && window.__mkScrollRecent(2500))) return;   // nothing moved the caret: never snap the note back to it (this fought the person's own scrolling)
     var mxe = document.querySelector("#contentsContainer .mxe.show"); if (!mxe) return;
     var body = mxe.querySelector(".mxe-body"); if (!body) return;
@@ -54250,6 +54299,7 @@ html body #contentsContainer .mxe .mxe-body {
 
   // ---- 4) while the keyboard slides in / out (or the pill resizes) re-fit EVERY frame so the text is never covered ----
   function burst(ms) {
+    if (hasSel()) arm((ms || 800) + 700);                           // keyboard / panel moved while text is selected: bring the selection back into view
     burstUntil = Math.max(burstUntil, nowMs() + (ms || 800));
     if (burstRaf) return;
     (function loop() {
@@ -54280,7 +54330,14 @@ html body #contentsContainer .mxe .mxe-body {
   document.addEventListener("touchstart", function (e) { var t = e.touches && e.touches[0]; ty0 = t ? t.clientY : 0; }, { capture: true, passive: true });
   document.addEventListener("touchmove", function (e) { var t = e.touches && e.touches[0]; if (!t || Math.abs(t.clientY - ty0) > 6) scrolledAt = nowMs(); }, { capture: true, passive: true });
   document.addEventListener("pointerup", function (e) { if (nowMs() - scrolledAt < 900) return; e.target && e.target.closest && e.target.closest(".mxe .text-box") && (arm(1500), burst(700)); }, true);
-  document.addEventListener("selectionchange", schedule);
+  document.addEventListener("selectionchange", function () {
+    schedule();
+    if (!hasSel()) { clearTimeout(selTimer); return; }
+    selAt = nowMs(); arm(1500);
+    clearTimeout(selTimer); selTimer = setTimeout(function () { burst(600); }, SETTLE + 40);   // selection stopped changing: bring it into view
+  });
+  // finger lifted after a long-press selection: now it may scroll
+  document.addEventListener("touchend", function () { if (hasSel()) { arm(1500); clearTimeout(selTimer); selTimer = setTimeout(function () { burst(600); }, 90); } }, { capture: true, passive: true });
   function arm(ms) { allowUntil = Math.max(allowUntil, nowMs() + ms); }
   ["input", "paste", "keydown", "compositionend"].forEach(function (n) { document.addEventListener(n, function (e) { if (e.target && e.target.closest && e.target.closest(".mxe .text-box")) { arm(900); schedule(); } }, true); });
   // the person is scrolling the note by hand: stop every caret-follow at once and keep it off until the scroll (and its fling) is over
