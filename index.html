@@ -19505,7 +19505,7 @@ html.mk-edfade .mu-viewer.mu-vs-ocean .mu-viewer-body{-webkit-mask-image:linear-
 (function () {
     "use strict";
     var KEY = "mk_ed_fade_v1", R = document.documentElement;
-    function on() { try { return localStorage.getItem(KEY) === "1"; } catch (e) { return false; } }
+    function on() { try { return localStorage.getItem(KEY) !== "0"; } catch (e) { return true; } }
     function isFa() { try { return (typeof currentLang !== "undefined" ? currentLang : "fa") === "fa"; } catch (e) { return true; } }
     function sync() {
         var v = on(), i, l;
@@ -19522,10 +19522,10 @@ html.mk-edfade .mu-viewer.mu-vs-ocean .mu-viewer-body{-webkit-mask-image:linear-
     }
     function html(fa) {
         return '<div class="mu-set-row" style="flex-direction:column;align-items:stretch"><div class="mu-set-text"><div class="mu-set-title">' + (fa ? "رد شدن متن زیر نوارهای پنل ادیت" : "Text under the edit-panel bars") + '</div><div class="mu-set-desc">'
-            + (fa ? "«همپوشانی»: متن کمرنگ از لابه‌لای کادرهای بالا و پایین دیده می‌شود (حالت فعلی). «محو کامل»: متن در محدوده‌ی کادرها کاملاً محو می‌شود. از منوی ⋮ پنل ادیت هم می‌شود عوضش کرد."
-                : "“Overlap”: dimmed text shows between the top and bottom boxes (current look). “Fade out”: text fades out completely in the bar zones. Can also be switched from the ⋮ menu of the edit panel.")
+            + (fa ? "«همپوشانی»: متن کمرنگ از لابه‌لای کادرهای بالا و پایین دیده می‌شود . «محو کامل»: متن در محدوده‌ی کادرها کاملاً محو می‌شود. از منوی ⋮ پنل ادیت هم می‌شود عوضش کرد."
+                : "“Overlap”: dimmed text shows between the top and bottom boxes. “Fade out”: text fades out completely in the bar zones. Can also be switched from the ⋮ menu of the edit panel.")
             + '</div></div><div class="mu-vs-seg" id="muEdFadeSeg" role="group">'
-            + [["0", fa ? "همپوشانی (پیش‌فرض)" : "Overlap (default)"], ["1", fa ? "محو کامل" : "Fade out"]].map(function (o) {
+            + [["0", fa ? "همپوشانی" : "Overlap"], ["1", fa ? "محو کامل (پیش‌فرض)" : "Fade out (default)"]].map(function (o) {
                 return '<button type="button" class="mu-vs-opt" data-fade="' + o[0] + '" aria-pressed="' + ((o[0] === "1") === on() ? "true" : "false") + '" onclick="MK_EdFade.set(' + (o[0] === "1") + ')">' + o[1] + "</button>";
             }).join("") + "</div></div>";
     }
@@ -34608,7 +34608,7 @@ catch { } }, (function () {
         }
     } }
     // Finger drag outside the text area scrolls the note (with a little momentum)
-    var kcRaf = 0; function kcSoon() { kcRaf || (kcRaf = requestAnimationFrame(function () { kcRaf = 0, keepCaretVisible(); })); } function onVV() { S2.active && (fitNow(), kcSoon(), setTimeout(keepCaretVisible, 120), setTimeout(keepCaretVisible, 350)); } window.visualViewport && (window.visualViewport.addEventListener("resize", onVV), window.visualViewport.addEventListener("scroll", function () { S2.active && fitNow(); })), window.addEventListener("resize", onVV), document.addEventListener("selectionchange", function () { S2.active && kcSoon(); }), vb.addEventListener("focus", function () { S2.active && (setTimeout(keepCaretVisible, 120), setTimeout(keepCaretVisible, 350)); }), vb.addEventListener("input", function () { kcSoon(); }), (function () { var t0 = null, lastY = 0, lastT = 0, vel = 0, dragging = !1, raf = 0; function stopFling() { raf && (cancelAnimationFrame(raf), raf = 0); } r2.addEventListener("touchstart", function (e) { if (stopFling(), !S2.active || e.touches.length !== 1) {
+    var kcRaf = 0; function kcSoon() { kcRaf || (kcRaf = requestAnimationFrame(function () { kcRaf = 0, keepCaretVisible(); })); } function onVV() { S2.active && (fitNow(), kcSoon(), setTimeout(keepCaretVisible, 120), setTimeout(keepCaretVisible, 350)); } window.visualViewport && (window.visualViewport.addEventListener("resize", onVV), window.visualViewport.addEventListener("scroll", function () { S2.active && fitNow(); })), window.addEventListener("resize", onVV), document.addEventListener("selectionchange", function () { S2.active && !(window.__mkScrollRecent && window.__mkScrollRecent(2500)) && kcSoon(); }), vb.addEventListener("focus", function () { S2.active && (setTimeout(keepCaretVisible, 120), setTimeout(keepCaretVisible, 350)); }), vb.addEventListener("input", function () { kcSoon(); }), (function () { var t0 = null, lastY = 0, lastT = 0, vel = 0, dragging = !1, raf = 0; function stopFling() { raf && (cancelAnimationFrame(raf), raf = 0); } r2.addEventListener("touchstart", function (e) { if (stopFling(), !S2.active || e.touches.length !== 1) {
         t0 = null;
         return;
     } if (vb.contains(e.target)) {
@@ -50135,6 +50135,119 @@ catch { } return window.mkClearFormat(text); }; })();
     font-size:11px;
 }
 </style>
+<style id="mk-table-readable-fix">
+/* Table readability fix (night theme + all themes): visible borders, distinct header, wrapped text that fits the screen.
+   Uses currentColor so it adapts automatically to light/dark/any custom theme. */
+:is(.text-box,.mu-viewer-body,.mu-note-body) table :is(td,th){
+    border-color:color-mix(in srgb,currentColor 42%,transparent)!important;
+    color:inherit;
+    overflow-wrap:anywhere;
+    word-break:normal;
+}
+/* default grid look only when the table has no explicit border style chosen by the user */
+:is(.text-box,.mu-viewer-body,.mu-note-body) table:not([class*=mk-bd-]):not(.mk-t-clean) :is(td,th){
+    border-style:solid!important;
+    border-width:1px!important;
+}
+/* header cells: clearly separated from the body */
+:is(.text-box,.mu-viewer-body,.mu-note-body) table:not([class*=mk-th-]):not(.mk-t-clean) th{
+    background:color-mix(in srgb,currentColor 16%,transparent)!important;
+    font-weight:700;
+}
+/* fit the screen unless the person manually resized the table (mk-t-w keeps horizontal scroll) */
+:is(.text-box,.mu-viewer-body) table:not(.mk-t-w){
+    max-width:100%;
+}
+:is(.text-box,.mu-viewer-body) table:not(.mk-t-w) :is(td,th){
+    min-width:0!important;
+    max-width:none!important;
+    width:auto!important;
+}
+:is(.text-box,.mu-viewer-body) table.mk-t:not(.mk-t-w)>tbody{
+    width:100%!important;
+    min-width:0!important;
+}
+.mk-tw>table:not(.mk-t-w){
+    width:100%!important;
+    min-width:0!important;
+}
+</style>
+<script id="mk-scroll-fix">
+/* Scroll fix: while the person is scrolling (finger drag + the fling that follows, or wheel), nothing may snap the note back
+   to the caret / to the previous scroll position. Other scripts ask window.__mkScrollRecent() before doing so. */
+(function () {
+    if (window.__mkScrollRecent) return;
+    var at = 0, lastMove = 0, y0 = 0;
+    function now() { return Date.now(); }
+    document.addEventListener("touchstart", function (e) { var t = e.touches && e.touches[0]; y0 = t ? t.clientY : 0; }, { capture: true, passive: true });
+    document.addEventListener("touchmove", function (e) { var t = e.touches && e.touches[0]; if (!t || Math.abs(t.clientY - y0) > 6) { lastMove = at = now(); } }, { capture: true, passive: true });
+    // the fling keeps scrolling after the finger is lifted: extend the window from the moment the finger leaves
+    ["touchend", "touchcancel"].forEach(function (n) { document.addEventListener(n, function () { if (now() - lastMove < 400) at = now(); }, { capture: true, passive: true }); });
+    document.addEventListener("wheel", function () { at = now(); }, { capture: true, passive: true });
+    window.__mkScrollRecent = function (ms) { return now() - at < (ms || 2500); };
+})();
+</script>
+<script id="mk-latin-digits">
+/* Always type English digits: Persian (۰-۹) and Arabic-Indic (٠-٩) digits are converted to 0-9 as you type. */
+(function () {
+    if (window.__mkLatinDigits) return; window.__mkLatinDigits = 1;
+    var MAP = {};
+    "۰۱۲۳۴۵۶۷۸۹".split("").forEach(function (c, i) { MAP[c] = String(i); });
+    "٠١٢٣٤٥٦٧٨٩".split("").forEach(function (c, i) { MAP[c] = String(i); });
+    var HAS = /[۰-۹٠-٩]/, ALL = /[۰-۹٠-٩]/g;
+    function conv(s) { return String(s).replace(ALL, function (c) { return MAP[c]; }); }
+    function isField(t) {
+        if (!t || !t.tagName) return false;
+        if (t.tagName === "TEXTAREA") return true;
+        if (t.tagName !== "INPUT") return false;
+        var ty = (t.type || "text").toLowerCase();
+        return ty === "text" || ty === "search" || ty === "" || ty === "tel";
+    }
+    function editHost(t) {
+        try { return t && t.closest ? t.closest('[contenteditable=""],[contenteditable="true"],[contenteditable="plaintext-only"]') : null; } catch (e) { return null; }
+    }
+    document.addEventListener("beforeinput", function (e) {
+        try {
+            if (e.isComposing || e.inputType !== "insertText" || !e.data || !HAS.test(e.data)) return;
+            var t = e.target, out = conv(e.data);
+            if (isField(t)) {
+                e.preventDefault();
+                var s = t.selectionStart, en = t.selectionEnd;
+                t.setRangeText(out, s, en, "end");
+                t.dispatchEvent(new Event("input", { bubbles: true }));
+            } else if (editHost(t)) {
+                e.preventDefault();
+                document.execCommand("insertText", false, out);
+            }
+        } catch (err) { }
+    }, true);
+    // Fallback for keyboards that insert digits through composition / without a cancelable beforeinput
+    document.addEventListener("input", function (e) {
+        try {
+            var t = e.target;
+            if (isField(t)) {
+                if (!HAS.test(t.value)) return;
+                var s = t.selectionStart, en = t.selectionEnd;
+                t.value = conv(t.value);
+                try { t.setSelectionRange(s, en); } catch (x) { }
+                return;
+            }
+            if (!editHost(t)) return;
+            var sel = window.getSelection();
+            if (!sel || !sel.rangeCount) return;
+            var n = sel.anchorNode;
+            if (!n || n.nodeType !== 3 || !HAS.test(n.data)) return;
+            var off = sel.anchorOffset;
+            n.data = conv(n.data);
+            var r = document.createRange();
+            r.setStart(n, Math.min(off, n.data.length)); r.collapse(true);
+            sel.removeAllRanges(); sel.addRange(r);
+        } catch (err) { }
+    }, true);
+})();
+</script>
+
+
 <script id="mkTableHost">
 /* Table Pro host adapter — the ONLY place where the table module touches the rest of the app.
    Every member is looked up lazily, so load order does not matter. Replace a member to port the module to another app. */
@@ -50232,7 +50345,7 @@ else
     d.appendChild(document.createElement("br")), tbl.parentNode.insertBefore(d, tbl.nextSibling);
 }
     // caret into the first cell (header text is pre-selected so typing replaces it)
-    var first = tbl.querySelector("th,td"); return first && focusCell(first, !0), tbl; }
+    var first = tbl.querySelector("th,td"); if (c.html) { first && focusCell(first, !0); } else { try { var s3 = window.getSelection(); s3 && s3.removeAllRanges(); var ae = document.activeElement; ae && ae.blur && ae.blur(); box.blur && box.blur(); } catch (e3) { } } return tbl; }
     // put the caret in a cell; selectAll selects existing text so typing replaces it
     function focusCell(cell, selectAll) { try {
     var s = window.getSelection(), r = document.createRange(), hasText = (cell.textContent || "").replace(/\u200b/g, "") !== "";
@@ -54119,7 +54232,7 @@ html body #contentsContainer .mxe .mxe-body {
   // ---- 3) keep that line inside the REAL visible window of the note ----
   // visible window = scroll area, minus the keyboard (visual viewport), minus the writing-tools pill that floats over it
   function fit() {
-    if (nowMs() > allowUntil || nowMs() - scrolledAt < 900) return;   // nothing moved the caret: never snap the note back to it (this fought the person's own scrolling)
+    if (nowMs() > allowUntil || nowMs() - scrolledAt < 900 || (window.__mkScrollRecent && window.__mkScrollRecent(2500))) return;   // nothing moved the caret: never snap the note back to it (this fought the person's own scrolling)
     var mxe = document.querySelector("#contentsContainer .mxe.show"); if (!mxe) return;
     var body = mxe.querySelector(".mxe-body"); if (!body) return;
     var rc = caretRect(body); if (!rc) return;
@@ -54188,7 +54301,7 @@ html body #contentsContainer .mxe .mxe-body {
     if (gBody !== b) { gBody = b; gTop = top; gT = now; gD = 0; reverting = false; return; }
     if (reverting) { reverting = false; gT = now; gD = 0; return; }
     var d = top - gTop, gap = now - gT;
-    if (!touching && now > allowUntil && Math.abs(d) > 80 && (gap > 90 || d * gD < 0)) { reverting = true; gT = now; b.scrollTop = gTop; return; }
+    if (!touching && !(window.__mkScrollRecent && window.__mkScrollRecent(2500)) && now > allowUntil && Math.abs(d) > 80 && (gap > 250 || d * gD < 0)) { reverting = true; gT = now; b.scrollTop = gTop; return; }
     gD = d; gTop = top; gT = now;
   }, true);
   schedule();
@@ -54385,5 +54498,24 @@ html.mk-hidden *, html.mk-hidden *:before, html.mk-hidden *:after { animation-pl
   document.addEventListener("visibilitychange", vis); vis();
 })();
 </script>
+<style id="mkInputPillCss">
+/* Pill boxes (edit panel + note viewer) = the look of the chat input bar: solid rounded bar, hairline border, no glass/blur */
+html body #contentsContainer .mxe{--mkp-bg:#fff;--mkp-bd:rgba(0,0,0,.10);--mkp-sh:0 2px 10px rgba(0,0,0,.07);--mkp-on:rgba(0,0,0,.07)}
+html[data-mxe-theme=dark] body #contentsContainer .mxe{--mkp-bg:color-mix(in srgb,var(--mx-bg,#1d1d1f) 88%,#fff 12%);--mkp-bd:rgba(255,255,255,.13);--mkp-sh:0 1px 2px rgba(0,0,0,.28);--mkp-on:rgba(255,255,255,.10)}
+@media(prefers-color-scheme:dark){html:not([data-mxe-theme]) body #contentsContainer .mxe{--mkp-bg:color-mix(in srgb,var(--mx-bg,#1d1d1f) 88%,#fff 12%);--mkp-bd:rgba(255,255,255,.13);--mkp-sh:0 1px 2px rgba(0,0,0,.28);--mkp-on:rgba(255,255,255,.10)}}
+html body #contentsContainer .mxe .mxe-top>.mxe-btn,html body #contentsContainer .mxe .mxe-top .mxe-grp,html body #contentsContainer .mxe .mxe-bottom .mxe-grp{background:var(--mkp-bg)!important;border:1px solid var(--mkp-bd)!important;-webkit-backdrop-filter:none!important;backdrop-filter:none!important;box-shadow:var(--mkp-sh)!important}
+html body #contentsContainer .mxe .mxe-top .mxe-grp .mxe-btn:active,html body #contentsContainer .mxe .mxe-bottom .mxe-grp .mxe-btn:active,html body #contentsContainer .mxe .mxe-top .mxe-grp .mxe-btn.on,html body #contentsContainer .mxe .mxe-bottom .mxe-grp .mxe-btn.on{background:var(--mkp-on)!important;box-shadow:none!important}
+html body .mu-viewer.mu-vs-ocean{--mkp-bg:#222224;--mkp-bd:rgba(255,255,255,.13);--mkp-sh:0 1px 2px rgba(0,0,0,.28);--mkp-on:rgba(255,255,255,.12)}
+html body .mu-viewer.mu-vs-ocean.mu-vs-light{--mkp-bg:#fff;--mkp-bd:rgba(0,0,0,.10);--mkp-sh:0 2px 10px rgba(0,0,0,.07);--mkp-on:rgba(0,0,0,.07)}
+html body .mu-viewer.mu-vs-ocean .mu-viewer-title,html body .mu-viewer.mu-vs-ocean .mu-viewer-tools-fs,html body .mu-viewer.mu-vs-ocean .mu-viewer-tools-grp,html body .mu-viewer.mu-vs-ocean.mu-vs-light .mu-viewer-title,html body .mu-viewer.mu-vs-ocean.mu-vs-light .mu-viewer-tools-fs,html body .mu-viewer.mu-vs-ocean.mu-vs-light .mu-viewer-tools-grp,html body .mu-viewer.mu-vs-ocean.mu-vs-dark .mu-viewer-title,html body .mu-viewer.mu-vs-ocean.mu-vs-dark .mu-viewer-tools-fs,html body .mu-viewer.mu-vs-ocean.mu-vs-dark .mu-viewer-tools-grp{background:var(--mkp-bg)!important;background-image:none!important;border:1px solid var(--mkp-bd)!important;-webkit-backdrop-filter:none!important;backdrop-filter:none!important;box-shadow:var(--mkp-sh)!important}
+html body .mu-viewer.mu-vs-ocean .mu-viewer-tools-fs .mu-viewer-tool:hover,html body .mu-viewer.mu-vs-ocean .mu-viewer-tools-grp .mu-viewer-tool:hover,html body .mu-viewer.mu-vs-ocean .mu-viewer-tools-fs .mu-viewer-tool:active,html body .mu-viewer.mu-vs-ocean .mu-viewer-tools-grp .mu-viewer-tool:active,html body .mu-viewer.mu-vs-ocean .mu-viewer-tools-grp .mu-viewer-tool.is-active{background:var(--mkp-on)!important;box-shadow:none!important}
+</style>
+<style id="mkEdTableContrastCss">
+/* Edit panel tables: borders / header follow the panel's own text colour (they used --text-color, which was nearly invisible in the dark edit theme) */
+html body #contentsContainer .mxe .text-box table td,html body #contentsContainer .mxe .text-box table th{border:1px solid color-mix(in srgb,var(--mx-note,#888) 45%,transparent)!important}
+html body #contentsContainer .mxe .text-box table th:not([class*=mk-bg]){background:color-mix(in srgb,var(--mx-note,#888) 18%,transparent)!important;color:var(--mx-note)!important;-webkit-text-fill-color:var(--mx-note)!important}
+html body #contentsContainer .mxe .text-box table.mk-t-clean td,html body #contentsContainer .mxe .text-box table.mk-t-clean th{border-width:0 0 1px 0!important}
+html body #contentsContainer .mxe .text-box table.mk-t-clean th:not([class*=mk-bg]){background:transparent!important}
+</style>
 </body>
 </html>
