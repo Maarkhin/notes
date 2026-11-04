@@ -24830,7 +24830,7 @@ function mu_scrollFieldIntoView(el) { if (!el)
                 return;
             r = host.getBoundingClientRect();
         }
-        const b = sc.getBoundingClientRect(), v = window.visualViewport, limitBottom = Math.min(b.bottom, v ? v.offsetTop + v.height : window.innerHeight), top = b.top + 12, bottom = limitBottom - 24;
+        const b0 = sc.getBoundingClientRect(), mx_ = sc.closest(".mxe"), tb_ = mx_ && mx_.querySelector(".mxe-top"), bb_ = mx_ && mx_.querySelector(".mxe-bottom"), b = { top: Math.max(b0.top, tb_ ? tb_.getBoundingClientRect().bottom : b0.top), bottom: Math.min(b0.bottom, bb_ && bb_.offsetHeight ? bb_.getBoundingClientRect().top : b0.bottom) }, v = window.visualViewport, limitBottom = Math.min(b.bottom, v ? v.offsetTop + v.height : window.innerHeight), top = b.top + 30, bottom = limitBottom - 42;
         r.top < top ? sc.scrollTop -= top - r.top : r.bottom > bottom && (sc.scrollTop += r.bottom - bottom);
         return;
     }
@@ -26134,7 +26134,7 @@ cpLen = s => { let n = 0; for (const _ of s)
 let __filenamePromptSeq = 0;
 function promptFilename(defaultName, ext, opts = {}) {
     return new Promise(resolve => {
-        const fa = currentLang === "fa", safeDefault = sanitizeFilename(defaultName || "Markhin_Note"), title = opts.title || (fa ? "📝 نام فایل خروجی" : "?? Output file name"), desc = opts.desc || (fa ? "اسم فایلی که دانلود می‌شود را وارد کن." : "Choose the name for the downloaded file."), extLabel = ext ? `.${ext}` : "", uid = "mfp" + ++__filenamePromptSeq;
+        const fa = currentLang === "fa", safeDefault = sanitizeFilename(defaultName || "Markhin_Note"), title = opts.title || (fa ? "📝 نام فایل خروجی" : "📝 Output file name"), desc = opts.desc || (fa ? "اسم فایلی که دانلود می‌شود را وارد کن." : "Choose the name for the downloaded file."), extLabel = ext ? `.${ext}` : "", uid = "mfp" + ++__filenamePromptSeq;
         let settled = !1;
         const modalEl = document.getElementById("advancedModal"), hadExportScreen = !!(modalEl && modalEl.style.display === "flex" && window.__mkExpStack && window.__mkExpStack.length), finish = val => { if (settled)
             return; settled = !0, modalEl && modalEl.removeEventListener("click", outsideClick, !0); const st = window.__mkExpStack; if (val === null && hadExportScreen && st && st.length) {
@@ -40668,7 +40668,7 @@ body.mu-nfsbk-on #mkBackupBar { display:none!important; }
     function autoScroll() { if (D.on) {
         var b = $2("muNfsBody");
         if (b) {
-            var r2 = b.getBoundingClientRect(), edge = 80, v = 0;
+            var r2 = b.getBoundingClientRect(), edge = 80, v = 0, __h = parseFloat(b.parentNode.style.getPropertyValue("--mk-ht")) || 0; r2 = { top: r2.top + __h, bottom: r2.bottom };
             D.y < r2.top + edge ? v = -Math.ceil((r2.top + edge - D.y) / 5) : D.y > r2.bottom - edge && (v = Math.ceil((D.y - (r2.bottom - edge)) / 5)), v && (b.scrollTop += v, findTarget());
         }
     } }
@@ -53752,18 +53752,38 @@ html body #contentsContainer .mxe .mxe-body {
 
   // ---- 3) keep that line inside the REAL visible window of the note ----
   // visible window = scroll area, minus the keyboard (visual viewport), minus the writing-tools pill that floats over it
+  // The user is dragging / flinging the note: never pull the view back to the caret meanwhile (that felt like the panel being stuck).
+  var uLock = 0, selfUntil = 0, cEvt = 0;
+  // last moment the CARET itself was touched (typing, tap, selection move, focus); background class toggles must not drag the view back
+  function cMark() { cEvt = nowMs(); }
+  ["input", "beforeinput", "keydown", "selectionchange", "focusin"].forEach(function (n) { document.addEventListener(n, cMark, true); });
+  document.addEventListener("pointerup", function (e) { e.target && e.target.closest && e.target.closest(".mxe .text-box") && cMark(); }, true);
+  function userMark() { uLock = nowMs() + 700; }
+  function inBody(e) { var t = e.target; return !!(t && t.closest && t.closest(".mxe-body")); }
+  document.addEventListener("touchmove", function (e) { inBody(e) && userMark(); }, { capture: true, passive: true });
+  document.addEventListener("touchend", function (e) { inBody(e) && userMark(); }, { capture: true, passive: true });
+  document.addEventListener("wheel", function (e) { inBody(e) && userMark(); }, { capture: true, passive: true });
+  document.addEventListener("scroll", function (e) { if (nowMs() > selfUntil && inBody(e)) userMark(); }, { capture: true, passive: true });
+  // typing / caret moves by the user always re-enable following the caret
+  ["input", "beforeinput", "keydown"].forEach(function (n) { document.addEventListener(n, function () { uLock = 0; }, true); });
   function fit() {
+    if (nowMs() < uLock) return;
     var mxe = document.querySelector("#contentsContainer .mxe.show"); if (!mxe) return;
     var body = mxe.querySelector(".mxe-body"); if (!body) return;
     var rc = caretRect(body); if (!rc) return;
     if (body.style.scrollBehavior !== "auto") body.style.scrollBehavior = "auto"; // instant, never a slow glide
     var br = body.getBoundingClientRect(), vv = window.visualViewport;
+    if ((rc.bottom < br.top || rc.top > br.bottom) && nowMs() - cEvt > 1200) return; // caret is off-screen because the user scrolled away: leave the view alone
     var vTop = vv ? vv.offsetTop : 0, vBot = vv ? vv.offsetTop + vv.height : window.innerHeight;
     var limitBottom = Math.min(br.bottom, vBot);
     var pop = mxe.querySelector('.mxe-pop[data-pop="write"].open');
     if (pop && pop.offsetHeight > 0) { var pt = pop.getBoundingClientRect().top; if (pt < limitBottom) limitBottom = pt; }
-    var top = Math.max(br.top, vTop) + MARGIN, bottom = limitBottom - MARGIN;
+    var tb_ = mxe.querySelector(".mxe-top"), bb_ = mxe.querySelector(".mxe-bottom");
+    var tbB = tb_ ? tb_.getBoundingClientRect().bottom : -1e9, bbT = bb_ && bb_.offsetHeight ? bb_.getBoundingClientRect().top : 1e9;
+    if (bbT < limitBottom) limitBottom = bbT;
+    var top = Math.max(br.top, vTop, tbB) + MARGIN + 18, bottom = limitBottom - MARGIN - 18;
     if (bottom - top < 40) bottom = top + 40;                       // tiny window: still make progress
+    selfUntil = nowMs() + 80;
     if (rc.bottom > bottom) body.scrollTop += Math.ceil(rc.bottom - bottom);
     else if (rc.top < top) body.scrollTop -= Math.ceil(top - rc.top);
   }
@@ -53798,6 +53818,86 @@ html body #contentsContainer .mxe .mxe-body {
   document.addEventListener("selectionchange", schedule);
   document.addEventListener("input", schedule, true);
   schedule();
+})();
+</script>
+<style id="mkWriteGlass">
+/* Writing-tools frame: frosted glass. The note text under the panel is blurred and faded out (not readable). */
+html body:not(#_g1) #contentsContainer .mxe .mxe-pop[data-pop=write] {
+  -webkit-backdrop-filter: blur(26px) saturate(1.5);
+  backdrop-filter: blur(26px) saturate(1.5);
+  box-shadow: 0 10px 34px rgba(0,0,0,.22), inset 0 1px 0 rgba(255,255,255,.16);
+}
+@supports (color: color-mix(in srgb, red 10%, blue)) {
+  html body:not(#_g1) #contentsContainer .mxe .mxe-pop[data-pop=write] {
+    background: color-mix(in srgb, var(--mx-pop) 72%, transparent) !important;
+    border-color: color-mix(in srgb, var(--mx-icon) 16%, transparent) !important;
+  }
+}
+</style>
+<style id="mkEdgeFade">
+/* Telegram-style dark edge: notes keep scrolling UNDER the top bar / bottom bar and stay visible, but dimmed by a dark gradient
+   (strongest at the screen edge, dissolving a little past the bar). --mk-a1 = darkness at the very edge, --mk-a2 = darkness where the bar ends. */
+:root{--mk-a1:.9;--mk-a2:.72;--mk-ft:26px;--mk-eft:22px;--mk-efb:24px}
+/* ===== main page ===== */
+html body #muNotesFs .mu-nfs-top{position:relative;z-index:4}
+html body #muNotesFs .mu-nfs-top::before{content:"";position:absolute;pointer-events:none;inset:0;z-index:-1; background:var(--nfs-bg);-webkit-mask-image:linear-gradient(to bottom,rgba(0,0,0,var(--mk-a1)),rgba(0,0,0,var(--mk-a2)));mask-image:linear-gradient(to bottom,rgba(0,0,0,var(--mk-a1)),rgba(0,0,0,var(--mk-a2)));}
+html body #muNotesFs .mu-nfs-top::after{content:"";position:absolute;pointer-events:none;left:0;right:0;top:100%;height:var(--mk-ft);opacity:0;transition:opacity .15s; background:var(--nfs-bg);-webkit-mask-image:linear-gradient(to bottom,rgba(0,0,0,calc(var(--mk-a2)*1)) 0,rgba(0,0,0,calc(var(--mk-a2)*.78)) 25%,rgba(0,0,0,calc(var(--mk-a2)*.45)) 50%,rgba(0,0,0,calc(var(--mk-a2)*.18)) 75%,rgba(0,0,0,0) 100%);mask-image:linear-gradient(to bottom,rgba(0,0,0,calc(var(--mk-a2)*1)) 0,rgba(0,0,0,calc(var(--mk-a2)*.78)) 25%,rgba(0,0,0,calc(var(--mk-a2)*.45)) 50%,rgba(0,0,0,calc(var(--mk-a2)*.18)) 75%,rgba(0,0,0,0) 100%);}
+html body #muNotesFs.mk-sc .mu-nfs-top::after{opacity:1}
+html body #muNotesFs .mu-nfs-body{margin-top:calc(-1*var(--mk-ht,0px));padding-top:calc(var(--mk-ht,0px) + 8px);scroll-padding-top:calc(var(--mk-ht,0px) + 8px)}
+/* ===== edit panel ===== */
+html body #contentsContainer .mxe .mxe-top{position:relative;z-index:4}
+html body #contentsContainer .mxe .mxe-top::before{content:"";position:absolute;pointer-events:none;inset:0;z-index:-1; background:var(--mx-bg);-webkit-mask-image:linear-gradient(to bottom,rgba(0,0,0,var(--mk-a1)),rgba(0,0,0,var(--mk-a2)));mask-image:linear-gradient(to bottom,rgba(0,0,0,var(--mk-a1)),rgba(0,0,0,var(--mk-a2)));}
+html body #contentsContainer .mxe .mxe-top::after{content:"";position:absolute;pointer-events:none;left:0;right:0;top:100%;height:var(--mk-eft); background:var(--mx-bg);-webkit-mask-image:linear-gradient(to bottom,rgba(0,0,0,calc(var(--mk-a2)*1)) 0,rgba(0,0,0,calc(var(--mk-a2)*.78)) 25%,rgba(0,0,0,calc(var(--mk-a2)*.45)) 50%,rgba(0,0,0,calc(var(--mk-a2)*.18)) 75%,rgba(0,0,0,0) 100%);mask-image:linear-gradient(to bottom,rgba(0,0,0,calc(var(--mk-a2)*1)) 0,rgba(0,0,0,calc(var(--mk-a2)*.78)) 25%,rgba(0,0,0,calc(var(--mk-a2)*.45)) 50%,rgba(0,0,0,calc(var(--mk-a2)*.18)) 75%,rgba(0,0,0,0) 100%);}
+html body #contentsContainer .mxe .mxe-bottom{z-index:4}
+html body #contentsContainer .mxe .mxe-bottom::before{content:"";position:absolute;pointer-events:none;inset:0;z-index:-1; background:var(--mx-bg);-webkit-mask-image:linear-gradient(to bottom,rgba(0,0,0,var(--mk-a2)),rgba(0,0,0,var(--mk-a1)));mask-image:linear-gradient(to bottom,rgba(0,0,0,var(--mk-a2)),rgba(0,0,0,var(--mk-a1)));}
+html body #contentsContainer .mxe .mxe-bottom::after{content:"";position:absolute;pointer-events:none;left:0;right:0;bottom:100%;height:var(--mk-efb); background:var(--mx-bg);-webkit-mask-image:linear-gradient(to top,rgba(0,0,0,calc(var(--mk-a2)*1)) 0,rgba(0,0,0,calc(var(--mk-a2)*.78)) 25%,rgba(0,0,0,calc(var(--mk-a2)*.45)) 50%,rgba(0,0,0,calc(var(--mk-a2)*.18)) 75%,rgba(0,0,0,0) 100%);mask-image:linear-gradient(to top,rgba(0,0,0,calc(var(--mk-a2)*1)) 0,rgba(0,0,0,calc(var(--mk-a2)*.78)) 25%,rgba(0,0,0,calc(var(--mk-a2)*.45)) 50%,rgba(0,0,0,calc(var(--mk-a2)*.18)) 75%,rgba(0,0,0,0) 100%);}
+html body #contentsContainer .mxe .mxe-body{
+  margin-top:calc(-1*var(--mk-ht,0px));margin-bottom:calc(-1*var(--mk-hb,0px));
+  padding-top:calc(26px + var(--mk-ht,0px));
+  padding-bottom:calc(24px + var(--mkw-h,0px) + var(--mk-hb,0px))!important;
+  scroll-padding-top:calc(var(--mk-ht,0px) + 24px);
+  scroll-padding-bottom:calc(var(--mk-hb,0px) + var(--mkw-h,0px) + 16px);
+}
+</style>
+<script id="mkEdgeFadeJs">
+(function () {
+  "use strict";
+  if (window.__mkEdgeFade) return; window.__mkEdgeFade = 1;
+  /* Keeps --mk-ht / --mk-hb (heights of the top / bottom bar) up to date so the scroll area can run underneath them. */
+  var seen = typeof WeakSet === "function" ? new WeakSet() : null, raf = 0;
+  var RO = typeof ResizeObserver === "function" ? new ResizeObserver(function (es) { for (var i = 0; i < es.length; i++) measure(es[i].target); }) : null;
+  function setVar(el, name, px) { px = Math.round(px) + "px"; if (el.style.getPropertyValue(name) !== px) el.style.setProperty(name, px); }
+  function measure(el) {
+    try {
+      if (el.classList.contains("mu-nfs-top")) { if (el.parentNode) setVar(el.parentNode, "--mk-ht", el.offsetHeight); return; }
+      var mxe = el.closest ? el.closest(".mxe") : null; if (!mxe) return;
+      var t = mxe.querySelector(".mxe-top"), b = mxe.querySelector(".mxe-bottom");
+      setVar(mxe, "--mk-ht", t ? t.offsetHeight : 0);
+      setVar(mxe, "--mk-hb", b ? b.offsetHeight : 0);   // 0 while the bar is display:none (focus mode, find bar)
+    } catch (e) { }
+  }
+  function watch(el) { if (!el || (seen && seen.has(el))) return; seen && seen.add(el); RO && RO.observe(el); measure(el); }
+  function bindScroll() {
+    var b = document.getElementById("muNfsBody"); if (!b || b.__mkfx) return; b.__mkfx = 1;
+    var root = b.parentNode, on = false;
+    b.addEventListener("scroll", function () { var s = b.scrollTop > 6; if (s !== on) { on = s; root.classList.toggle("mk-sc", s); } }, { passive: true });
+  }
+  function scan() {
+    raf = 0;
+    watch(document.querySelector("#muNotesFs .mu-nfs-top")); bindScroll();
+    var l = document.getElementsByClassName("mxe");
+    for (var i = 0; i < l.length; i++) {
+      if (!l[i].classList.contains("show")) continue;
+      watch(l[i].querySelector(".mxe-top")); watch(l[i].querySelector(".mxe-bottom"));
+    }
+  }
+  function sched() { raf || (raf = requestAnimationFrame(scan)); }
+  var cc = document.getElementById("contentsContainer");
+  if (cc) new MutationObserver(sched).observe(cc, { childList: true, subtree: true, attributes: true, attributeFilter: ["class"] });
+  var nf = document.getElementById("muNotesFs");
+  if (nf) new MutationObserver(sched).observe(nf, { childList: true, subtree: true });
+  window.addEventListener("resize", sched);
+  scan(); setTimeout(scan, 600); setTimeout(scan, 2000);
 })();
 </script>
 </body>
