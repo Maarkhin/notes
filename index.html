@@ -1,6 +1,147 @@
 <!DOCTYPE html>
 <html lang="fa" dir="rtl" id="htmlTag">
 <head>
+<script id="mkRejGuard">
+/* Error collector + unhandled-rejection guard.
+   A promise rejected with `undefined` has no Error object, so the log shows a bare "undefined" with no stack and no origin.
+   1) reject() called from page code with no / undefined reason becomes a real Error, so its stack names the exact call site.
+   2) Every uncaught error, unhandled rejection, console.error and handled failure (console.warn with an Error) is collected in
+      window.mkErrLog; the Dashboard shows an "Errors" section at its bottom only while this list is not empty. */
+(function () {
+    "use strict";
+    try {
+        var NativePromise = window.Promise;
+        if (NativePromise && !NativePromise.__mkRejGuard) {
+            var Guarded = class extends NativePromise {
+                constructor(executor) {
+                    super(typeof executor !== "function" ? executor : function (resolve, reject) {
+                        executor(resolve, function (reason) {
+                            return reject(reason === undefined ? new Error("Promise rejected with undefined (no reason given)") : reason);
+                        });
+                    });
+                }
+            };
+            Object.defineProperty(Guarded, "name", { value: "Promise" });
+            Guarded.__mkRejGuard = true;
+            window.Promise = Guarded;
+        }
+    } catch (e) { }
+
+    var list = [], MAX = 100, seq = 0, timer = 0, busy = 0;
+    function isFa() { try { return currentLang === "fa"; } catch (e) { return true; } }
+    function str(v) {
+        try {
+            if (v === undefined) return "undefined";
+            if (v === null) return "null";
+            if (typeof v === "string") return v;
+            if (v instanceof Error || (v && typeof v === "object" && v.name && v.message !== undefined && v.stack !== undefined)) return (v.name || "Error") + ": " + v.message;
+            if (typeof v === "object") { var s = JSON.stringify(v); return s && s !== "{}" ? s : Object.prototype.toString.call(v); }
+            return String(v);
+        } catch (e) { return "[unprintable]"; }
+    }
+    function esc(s) { return String(s).replace(/[&<>"']/g, function (c) { return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]; }); }
+    function add(type, msg, o) {
+        o = o || {};
+        msg = String(msg).slice(0, 2000);
+        var first = String(o.stack || "").split("\n").slice(0, 3).join("|"), key = type + "\u0001" + msg + "\u0001" + (o.src || "") + "\u0001" + first;
+        for (var i = 0; i < list.length; i++) if (list[i].key === key) { list[i].n++; list[i].t = Date.now(); schedule(); return; }
+        list.push({ id: ++seq, key: key, t: Date.now(), type: type, msg: msg, src: o.src || "", stack: String(o.stack || "").slice(0, 6000), extra: o.extra ? String(o.extra).slice(0, 3000) : "", n: 1 });
+        list.length > MAX && list.shift();
+        schedule();
+    }
+    function schedule() { timer || (timer = setTimeout(function () { timer = 0; refresh(); }, 150)); }
+    function stackOf(v) { return v && typeof v === "object" && typeof v.stack === "string" ? v.stack : ""; }
+    function cleanStack() { var s = String(new Error().stack || "").split("\n"); return s.slice(3).join("\n"); }
+
+    window.addEventListener("error", function (ev) {
+        try {
+            var t = ev && ev.target;
+            if (t && t !== window && t.tagName) {
+                if (t.tagName === "SCRIPT") add("resource", (isFa() ? "بارگذاری اسکریپت ناموفق بود: " : "Failed to load script: ") + (t.src || "(inline)"), { src: t.src || "" });
+                return;
+            }
+            var m = String(ev.message || "");
+            if (/ResizeObserver loop/i.test(m)) return;
+            var e = ev.error;
+            add("error", e !== undefined && e !== null ? str(e) : (m || "Unknown error"), {
+                src: ev.filename ? ev.filename + ":" + ev.lineno + ":" + ev.colno : "",
+                stack: stackOf(e),
+                extra: e === undefined || e === null ? (isFa() ? "ارور بدون شیء Error (مثلاً «Script error» از اسکریپت بیرونی)؛ stack در دسترس نیست." : "Error without an Error object (e.g. \"Script error\" from a cross-origin script); no stack available.") : ""
+            });
+        } catch (x) { }
+    }, true);
+    window.addEventListener("unhandledrejection", function (ev) {
+        try {
+            var r = ev && ev.reason, empty = r === undefined || r === null || r === "";
+            if (empty) { try { ev.preventDefault(); } catch (e) { } }
+            add("promise", empty ? (isFa() ? "Promise با دلیل خالی (undefined) رد شد" : "Promise rejected with an empty reason (undefined)") : str(r), {
+                stack: stackOf(r),
+                extra: empty ? (isFa() ? "هیچ شیء Error وجود ندارد؛ منشأ آن یک API بومی یا SDK تلگرام است و stack ندارد." : "No Error object exists; the origin is a native API or the Telegram SDK and has no stack.") : (typeof r === "object" && !(r instanceof Error) ? "typeof: " + typeof r : "")
+            });
+        } catch (x) { }
+    });
+    ["error", "warn"].forEach(function (lv) {
+        var orig = console[lv];
+        if (typeof orig !== "function") return;
+        console[lv] = function () {
+            try {
+                if (!busy) {
+                    busy = 1;
+                    var a = Array.prototype.slice.call(arguments), errArg = a.filter(function (x) { return x instanceof Error || (x && typeof x === "object" && x.name && x.stack); })[0];
+                    if (lv === "error" || errArg) add(lv === "error" ? "console.error" : "handled", a.map(str).join(" — "), { stack: stackOf(errArg) || cleanStack() });
+                    busy = 0;
+                }
+            } catch (x) { busy = 0; }
+            return orig.apply(console, arguments);
+        };
+    });
+
+    var TL = { error: ["خطای اجرا", "Runtime error"], promise: ["Promise", "Promise"], "console.error": ["console.error", "console.error"], handled: ["خطای مدیریت‌شده", "Handled"], resource: ["منبع", "Resource"] };
+    function detail(e, fa) {
+        var L = fa ? ["نوع", "پیام", "منبع", "تعداد تکرار", "زمان", "Stack", "توضیح"] : ["Type", "Message", "Source", "Repeats", "Time", "Stack", "Note"];
+        return L[0] + ": " + TL[e.type][fa ? 0 : 1] + "\n" + L[1] + ": " + e.msg + "\n" + (e.src ? L[2] + ": " + e.src + "\n" : "") + L[3] + ": " + e.n + "\n" + L[4] + ": " + new Date(e.t).toLocaleString(fa ? "fa-IR" : "en-US") + "\n" + (e.extra ? L[6] + ": " + e.extra + "\n" : "") + (e.stack ? "\n" + L[5] + ":\n" + e.stack : "\n" + L[5] + ": " + (fa ? "موجود نیست" : "not available"));
+    }
+    function section(fa) {
+        var items = !list.length ? '<div class="mkerr-none" dir="auto">' + (fa ? "هیچ اروری ثبت نشده است." : "No errors recorded.") + '</div>' : list.slice().reverse().map(function (e) {
+            var tm = new Date(e.t).toLocaleTimeString(fa ? "fa-IR" : "en-US");
+            return '<details class="mkerr-it" data-i="' + e.id + '"><summary><span class="mkerr-tag">' + esc(TL[e.type][fa ? 0 : 1]) + '</span><span class="mkerr-msg" dir="auto">' + esc(e.msg.slice(0, 160)) + '</span><span class="mkerr-n">' + (e.n > 1 ? "×" + e.n + " " : "") + esc(tm) + '</span></summary><pre dir="ltr">' + esc(detail(e, fa)) + '</pre></details>';
+        }).join("");
+        return '<details class="mdb-sec' + (list.length ? "" : " mkerr-ok") + '" id="mkErrSec"><summary><span>🐞 ' + (fa ? "ارورها" : "Errors") + '</span><em>' + list.length + '</em></summary><div class="mdb-body">' + (list.length ? '<div class="mkerr-acts"><button type="button" class="btn-main" onclick="mkErrLog.copy()">📋 ' + (fa ? "کپی همه" : "Copy all") + '</button>' : "") + '</div>' + items + '</div></details>';
+    }
+    function refresh() {
+        try {
+            var card = document.getElementById("advancedCard"), secs = card && card.querySelector(".mdb-secs");
+            if (!secs) return;
+            var old = document.getElementById("mkErrSec"), top = old && old.open, op = {};
+            old && old.querySelectorAll("details.mkerr-it[open]").forEach(function (d) { op[d.dataset.i] = 1; });
+            var tmp = document.createElement("div"); tmp.innerHTML = section(isFa());
+            var n = tmp.firstElementChild; if (top) n.open = true;
+            n.querySelectorAll("details.mkerr-it").forEach(function (d) { if (op[d.dataset.i]) d.open = true; });
+            old ? old.replaceWith(n) : secs.appendChild(n);
+        } catch (x) { }
+    }
+    function copy() {
+        var fa = isFa(), txt = list.map(function (e) { return detail(e, fa); }).join("\n\n----------------------------------------\n\n"), done = function (ok) {
+            try { typeof showToast === "function" && showToast(ok ? (fa ? "ارورها کپی شد" : "Errors copied") : (fa ? "کپی نشد" : "Copy failed")); } catch (e) { }
+        };
+        try { if (navigator.clipboard && window.isSecureContext) { navigator.clipboard.writeText(txt).then(function () { done(1); }, function () { fb(); }); return; } } catch (e) { }
+        fb();
+        function fb() { try { var a = document.createElement("textarea"); a.value = txt; a.style.cssText = "position:fixed;top:0;left:0;opacity:0"; document.body.appendChild(a); a.select(); var ok = document.execCommand("copy"); a.remove(); done(ok); } catch (e) { done(0); } }
+    }
+    var CLOUD_RE = /^(Cloud |List cloud|Delta backup|Manual delta|Backup encryption|Backup re-encryption|list startup merge|first sync|list merge|sync:|cloud merge|list replace|strong pull|Fix auto sync|Notes bar auto backup|lzma verify|gz load|gzip save)/i;
+    function resolve(re) {
+        var ch = 0;
+        for (var i = list.length - 1; i >= 0; i--) if ((list[i].type === "handled" || list[i].type === "console.error") && re.test(list[i].msg)) { list.splice(i, 1); ch = 1; }
+        ch && refresh();
+    }
+    window.mkErrLog = { resolve: resolve, resolveCloud: function () { resolve(CLOUD_RE); }, list: list, add: add, section: section, refresh: refresh, copy: copy, clear: function () { list.length = 0; refresh(); } };
+    try {
+        var st = document.createElement("style"); st.id = "mkErrCss";
+        st.textContent = "html:not(#_a):not(#_b) body #advancedCard #mkErrSec>summary em{background:#e5484d!important;color:#fff!important;border:0!important}html:not(#_a):not(#_b) body #advancedCard #mkErrSec.mkerr-ok>summary em{background:#2ea043!important}.mkerr-none{font-size:12.5px;opacity:.75;padding:4px 2px}.mkerr-acts{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:8px}.mkerr-it{border:1px solid rgba(255,255,255,.14);border-radius:10px;margin:6px 0;background:rgba(229,72,77,.09)}.mkerr-it>summary{cursor:pointer;padding:8px 10px;font-size:12.5px;line-height:1.7;list-style:none;display:flex;gap:8px;align-items:flex-start}.mkerr-it>summary::-webkit-details-marker{display:none}.mkerr-tag{flex:none;font-size:10.5px;padding:0 8px;border-radius:999px;background:rgba(229,72,77,.45);color:#fff}.mkerr-msg{min-width:0;flex:1;overflow-wrap:anywhere}.mkerr-n{flex:none;font-size:11px;opacity:.75}.mkerr-it pre{margin:0;padding:8px 10px 10px;border-top:1px solid rgba(255,255,255,.1);font:11.5px/1.6 ui-monospace,Menlo,Consolas,monospace;white-space:pre-wrap;overflow-wrap:anywhere;text-align:left;user-select:text;-webkit-user-select:text;max-height:320px;overflow:auto}";
+        (document.head || document.documentElement).appendChild(st);
+    } catch (e) { }
+})();
+</script>
 <script id="mkRegistry">
 /* Module registry — one namespace (MK.*) for the standalone helpers that used to be loose window.mu* / mk* globals.
    Each entry is a live two-way alias to the legacy window name (read AND write pass through), so the scripts that define
@@ -4445,7 +4586,7 @@ button:focus-visible,input:focus-visible,select:focus-visible {
 
     
     <script id="mkLibLoader">
-(function () { var libraryUrls = ["https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js", "https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js", "https://cdn.jsdelivr.net/npm/docx@9.5.1/build/index.umd.js", "https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js", "https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.6.2/cropper.min.js", "https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.6.2/cropper.min.css"], pcs = libraryUrls.pop(), isHostMode = !!window.__MU_HOST, hasStarted = !1; function loadStylesheet() { try {
+(function () { var libraryUrls = ["https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js", "https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js", "https://cdn.jsdelivr.net/npm/docx@8.5.0/build/index.umd.js", "https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js", "https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.6.2/cropper.min.js", "https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.6.2/cropper.min.css"], pcs = libraryUrls.pop(), isHostMode = !!window.__MU_HOST, hasStarted = !1; function loadStylesheet() { try {
     var linkElement = document.createElement("link");
     linkElement.rel = "stylesheet", linkElement.href = pcs, linkElement.media = "print", linkElement.onload = function () { linkElement.media = "all"; }, document.head.appendChild(linkElement);
 }
@@ -22965,7 +23106,7 @@ function mkSyncRetryFire() { const S = window.__mkSync; if (S.retryTimer = null,
 // not a failure. write-failed / unavailable / verify-failed schedule automatic retries (5 s, 30 s, 2 min,
 // 5 min), after which only a manual "Retry now" helps. Any other reason is a hard failure shown as it is.
 function mkSyncNote(res) { const S = window.__mkSync; if (res && res.ok) {
-    S.lastOk = Date.now(), S.failCount = 0, S.hardFail = "", S.lastReason = "";
+    S.lastOk = Date.now(), S.failCount = 0, S.hardFail = "", S.lastReason = ""; try { window.mkErrLog && window.mkErrLog.resolveCloud(); } catch { }
     try {
         localStorage.setItem(MK_LAST_OK_KEY, String(S.lastOk));
     }
@@ -26396,7 +26537,7 @@ ${content}`.trim();
 function sanitizeFilename(name) { return String(name || "Markhin_Note").replace(/[\\/:*?"<>|]/g, "_").replace(/\s+/g, " ").trim().match(/^[\s\S]{0,120}/u)[0] || "Markhin_Note"; }
 // Shared text-analysis helper used by both the tiny live counter under the editor and the Note DNA panel,
 // so the two always agree on the same numbers. not letter, digit, mark.
-const MU_EMOJI_STRIP_RE = /\p{Extended_Pictographic}|\p{Emoji_Modifier}|\p{Regional_Indicator}/gu, MU_SYMBOL_RE = /[^\p{L}\p{N}\p{M}\p{Cf}\s]/gu, MU_EMOJI_CLUSTER_RE = /[0-9#*]\uFE0F?\u20E3|\p{Regional_Indicator}{2}|\p{Extended_Pictographic}(?:\uFE0F|\p{Emoji_Modifier})*(?:\u200D\p{Extended_Pictographic}(?:\uFE0F|\p{Emoji_Modifier})*)*/gu;
+const MU_EMOJI_STRIP_RE = /\p{Extended_Pictographic}|\p{Emoji_Modifier}|\p{Regional_Indicator}/gu, MU_SYMBOL_RE = /[^\p{L}\p{N}\p{M}\p{Cf}\s]/gu, MU_EMOJI_CLUSTER_RE = /[0-9#*]\uFE0F?\u20E3|\p{Regional_Indicator}{2}|(?:\p{Emoji_Presentation}|\p{Extended_Pictographic}\uFE0F)\p{Emoji_Modifier}?[\u{E0020}-\u{E007F}]*(?:\u200D(?:\p{Emoji_Presentation}|\p{Extended_Pictographic})\uFE0F?\p{Emoji_Modifier}?)*/gu, MU_INVIS_RE = /[\u0000-\u0008\u000E-\u001F\u007F-\u009F\u00AD\u061C\u180E\u200B-\u200F\u202A-\u202E\u2060-\u206F\uFEFF]/g;
 // Remove every emoji cluster, then any stray emoji leftovers (lone variation selector, keycap mark,
 // modifier, regional indicator) so none of it leaks into letter/word counts
 function mu_stripEmoji(str) { return String(str || "").replace(MU_EMOJI_CLUSTER_RE, "").replace(/[\uFE0F\u20E3]|\p{Emoji_Modifier}|\p{Regional_Indicator}/gu, ""); }
@@ -26406,19 +26547,61 @@ function mu_isSymbolOnlyToken(tok) { if (!tok)
     const bare = mu_stripEmoji(tok); return /[\p{L}\p{N}]/u.test(bare) ? !1 : bare.replace(/[\p{M}\p{Cf}]/gu, "") !== ""; }
 // A "word" = a whitespace-separated token that holds at least one letter or digit once emoji are removed.
 // Emoji (and tokens made only of emoji, symbols or punctuation) are NOT words
-function mu_countWords(raw) { const t = String(raw || "").trim(); if (!t)
-    return 0; let n = 0; return t.split(/\s+/).forEach(tok => { tok && /[\p{L}\p{N}]/u.test(mu_stripEmoji(tok)) && n++; }), n; }
+const MU_RE_ARABIC = /\p{Script=Arabic}/u, MU_RE_LATIN = /\p{Script=Latin}/u, MU_CHECKLIST_MARK = "\u2063\u2064\u2063";
+// Text with every emoji turned into a space and every invisible formatting character (ZWNJ, bidi marks, BOM...) removed: the one place where words are split
+function mu_statTokText(raw) { return String(raw == null ? "" : raw).replace(MU_EMOJI_CLUSTER_RE, " ").replace(/[\uFE0F\u20E3]|\p{Emoji_Modifier}|\p{Regional_Indicator}/gu, " ").replace(MU_INVIS_RE, ""); }
+// A "word" = a whitespace-separated token that holds at least one letter or digit. Emoji / pure symbols are not words
+function mu_countWords(raw) { let n = 0; mu_statTokText(raw).split(/\s+/).forEach(tok => { tok && /[\p{L}\p{N}]/u.test(tok) && n++; }); return n; }
 window.mu_countWords = mu_countWords;
-// Emoji are taken out first, so they are never part of the letter / word / symbol numbers
-function computeTextStats(raw) { const fullText = String(raw || ""), emojiMatches = fullText.match(MU_EMOJI_CLUSTER_RE) || [], emojiCount = emojiMatches.length, distinctEmojiCount = new Set(emojiMatches.map(e => e.replace(/\uFE0F/g, ""))).size, text = mu_stripEmoji(fullText),
-// code points, not UTF-16 units
-cpLen = s => { let n = 0; for (const _ of s)
-    n++; return n; }, spaces = (text.match(/\s/g) || []).length,
-    // Symbols/punctuation (@ # , . ! ؟)
-    symbolMatches = text.match(MU_SYMBOL_RE) || [], symbols = symbolMatches.length, distinctSymbols = new Set(symbolMatches).size, textLen = cpLen(text), charsWithSpace = textLen - symbols, charsNoSpace = charsWithSpace - spaces,
-    // Everything together: letters, digits,
-    // spaces, symbols AND emoji (each emoji counts once)
-    totalChars = textLen + emojiCount, digitRe = /[0-9\u06F0-\u06F9\u0660-\u0669]/, digits = (text.match(new RegExp(digitRe.source, "g")) || []).length, trimmedText = fullText.trim(), words = mu_countWords(trimmedText); let symbolOnlyWords = 0; trimmedText && trimmedText.split(/\s+/).forEach(tok => { mu_isSymbolOnlyToken(tok) && symbolOnlyWords++; }); const arabicLetterCount = (text.match(/[\u0600-\u06FF\u0750-\u077F]/g) || []).filter(ch => !digitRe.test(ch)).length, enLetters = (text.match(/[A-Za-z]/g) || []).length, faLetterRe = /[\u0600-\u06FF\u0750-\u077F]/, enLetterRe = /[A-Za-z]/, digitReG = new RegExp(digitRe.source, "g"); let faWords = 0, enWords = 0; trimmedText && trimmedText.split(/\s+/).forEach(tok => { const withoutDigits = tok.replace(digitReG, ""), isFa = faLetterRe.test(withoutDigits), isEn = enLetterRe.test(tok); isFa && !isEn ? faWords++ : isEn && !isFa && enWords++; }); const sentences = (mu_stripEmoji(trimmedText).match(/[^.!?؟]+[.!?؟]+/g) || []).length || (trimmedText ? 1 : 0), avgWordLength = words ? Math.round(Math.max(0, charsNoSpace) / words * 10) / 10 : 0; return { words: words, symbols: symbols, distinctSymbols: distinctSymbols, symbolOnlyWords: symbolOnlyWords, charsWithSpace: charsWithSpace, charsNoSpace: charsNoSpace, totalChars: totalChars, spaces: spaces, digits: digits, faLetters: arabicLetterCount, enLetters: enLetters, faWords: faWords, enWords: enWords, emojiCount: emojiCount, distinctEmojiCount: distinctEmojiCount, sentences: sentences, avgWordLength: avgWordLength }; }
+// Sentences: a . ! ? ؟ … ends a sentence only when followed by a space / end of line (so 3.14 or a.b are not split);
+// every line starts a new sentence; list numbers like "1." are ignored
+function mu_countSentences(t) { let n = 0; String(t).split(/[\r\n\u2028\u2029]+/).forEach(line => { line.replace(/([.!?\u061F\u2026\u06D4]+["'\u00BB\u201D\u2019)\]]*)(?=\s|$)/g, "$1\u0001").split("\u0001").forEach(seg => { /\p{L}/u.test(seg) && n++; }); }); return n; }
+function computeTextStats(raw) {
+    const full = String(raw == null ? "" : raw), emojiMatches = full.match(MU_EMOJI_CLUSTER_RE) || [], emojiCount = emojiMatches.length, distinctEmojiCount = new Set(emojiMatches.map(e => e.replace(/\uFE0F/g, ""))).size,
+        // what is really visible: emoji are counted on their own, invisible characters and line breaks are not characters
+        clean = mu_stripEmoji(full).replace(MU_INVIS_RE, "").replace(/\r\n?/g, "\n"), lineBreaks = (clean.match(/[\n\u2028\u2029]/g) || []).length, spaces = (clean.match(/[^\S\n\u2028\u2029]/g) || []).length,
+        alnum = (clean.match(/[\p{L}\p{N}]/gu) || []).length, digits = (clean.match(/\p{Nd}/gu) || []).length, symbolMatches = clean.match(MU_SYMBOL_RE) || [], symbols = symbolMatches.length, distinctSymbols = new Set(symbolMatches).size,
+        charsWithSpace = alnum + spaces, charsNoSpace = alnum, totalChars = alnum + spaces + symbols + emojiCount, tokText = mu_statTokText(full);
+    let letters = 0, faLetters = 0, enLetters = 0;
+    for (const ch of clean.match(/\p{L}/gu) || []) { if (ch === "\u0640")
+        continue; letters++, MU_RE_ARABIC.test(ch) ? faLetters++ : MU_RE_LATIN.test(ch) && enLetters++; }
+    let words = 0, symbolOnlyWords = 0, faWords = 0, enWords = 0, otherWords = 0, wordChars = 0; const seen = new Set;
+    for (const tok of tokText.split(/\s+/)) {
+        if (!tok)
+            continue;
+        if (!/[\p{L}\p{N}]/u.test(tok)) { /[^\p{M}]/u.test(tok) && symbolOnlyWords++; continue; }
+        words++, wordChars += (tok.match(/[\p{L}\p{N}]/gu) || []).length;
+        let fa = 0, la = 0; for (const ch of tok.match(/\p{L}/gu) || []) { if (ch === "\u0640")
+            continue; MU_RE_ARABIC.test(ch) ? fa++ : MU_RE_LATIN.test(ch) && la++; }
+        fa || la ? fa >= la ? faWords++ : enWords++ : otherWords++;
+        seen.add(tok.toLowerCase().replace(/\p{M}/gu, "").replace(/[\u064A\u0649]/g, "\u06CC").replace(/\u0643/g, "\u06A9").replace(/[\u06F0-\u06F9]/g, d => d.charCodeAt(0) - 1776).replace(/[\u0660-\u0669]/g, d => d.charCodeAt(0) - 1632).replace(/^[^\p{L}\p{N}]+|[^\p{L}\p{N}]+$/gu, ""));
+    }
+    return { words: words, uniqueWords: seen.size, symbols: symbols, distinctSymbols: distinctSymbols, symbolOnlyWords: symbolOnlyWords, letters: letters, charsWithSpace: charsWithSpace, charsNoSpace: charsNoSpace, totalChars: totalChars, spaces: spaces, lineBreaks: lineBreaks, digits: digits, faLetters: faLetters, enLetters: enLetters, faWords: faWords, enWords: enWords, otherWords: otherWords, emojiCount: emojiCount, distinctEmojiCount: distinctEmojiCount, sentences: mu_countSentences(tokText), avgWordLength: words ? Math.round(wordChars / words * 10) / 10 : 0 };
+}
+// Saved note HTML -> the text a person actually sees (entities decoded, <b>he</b>llo stays ONE word, blocks / <br> = new line,
+// tables = one line per row, images / audio / buttons skipped). Embedded data: URIs are cut out first so big notes stay fast
+function mu_htmlToStatText(html) {
+    const tpl = document.createElement("template"); tpl.innerHTML = String(html).replace(/(\s(?:src|href|poster|data)\s*=\s*)(["'])data:[^"']*\2/gi, "$1$2$2"); const root = tpl.content;
+    root.querySelectorAll("table").forEach(t => { if (!root.contains(t))
+        return; const d = document.createElement("div"); t.querySelectorAll("tr").forEach(tr => { if (tr.closest("table") !== t)
+        return; const cells = [...tr.children].filter(c => /^T[DH]$/.test(c.tagName)).map(c => c.textContent.replace(/\s+/g, " ").trim()).filter(Boolean); if (cells.length) { const r = document.createElement("div"); r.textContent = cells.join(" "), d.appendChild(r); } }), t.replaceWith(d); });
+    return typeof window.muDomText == "function" ? window.muDomText(root) : root.textContent || "";
+}
+// Plain text of a note for statistics. Locked notes are skipped unless allowDecrypted (and then only if they are open in memory)
+function mu_noteStatText(item, allowDecrypted) {
+    if (!item || isNoteLocked(item) && !allowDecrypted)
+        return ""; const html = String(item.html || ""), plain = String(item.text || ""); let t = ""; if (html)
+        try { t = mu_htmlToStatText(html); }
+        catch (e) { t = ""; } if (!t && plain)
+        t = plain;
+    if (t.indexOf(MU_CHECKLIST_MARK) >= 0)
+        t = t.split(MU_CHECKLIST_MARK).join("").replace(/^[ \t]*[\u2611\u2610][ \t]*/gm, ""); return t.replace(/\u00a0/g, " "); }
+const MU_STATS_CACHE = new Map;
+function mu_noteStats(item, allowDecrypted) {
+    if (!item || isNoteLocked(item) && !allowDecrypted)
+        return null; const sig = (item.lastEdited || "") + "|" + String(item.html || "").length + "|" + String(item.text || "").length, hit = MU_STATS_CACHE.get(item.id); if (hit && hit.sig === sig)
+        return hit.stats; const stats = computeTextStats(mu_noteStatText(item, allowDecrypted)); return MU_STATS_CACHE.set(item.id, { sig: sig, stats: stats }), stats; }
+window.mu_noteStats = mu_noteStats;
 // Unified "name your output file" dialog
 let __filenamePromptSeq = 0;
 function promptFilename(defaultName, ext, opts = {}) {
@@ -26796,10 +26979,10 @@ catch { }
 const printable = document.createElement("div"); printable.dir = currentLang === "fa" ? "rtl" : "ltr", printable.className = "mu-print-root", printable.style.cssText = "position:fixed;inset:0;background:#fff;color:#111;padding:40px;z-index:2147483647;overflow:auto;font-family:Tahoma,Vazirmatn,Arial,sans-serif;"; const bodyHtml = item => !isNoteLocked(item) && item.html ? mu_bidiHtml(sanitizeHtml(item.html)) : mu_bidiHtml(escapeHtml(getTxtContent(item.id, item))); printable.innerHTML = '<style>.mu-print-root,.mu-print-root *{color:#111!important;-webkit-text-fill-color:#111!important;text-shadow:none!important}.mu-print-body{white-space:pre-wrap;line-height:1.9;unicode-bidi:plaintext;text-align:start;overflow-wrap:anywhere}.mu-print-body div,.mu-print-body p,.mu-print-body li,.mu-print-body blockquote{unicode-bidi:plaintext}.mu-print-body img{max-width:100%;height:auto}.mu-print-body .img-toolbar,.mu-print-body button,.mu-print-body audio{display:none!important}' + mu_fixedTableCss('.mu-print-body') + '</style><h1 style="margin-top:0">Markhin Note</h1>' + list.map((item, i) => `<section style="page-break-after:always;margin-bottom:40px"><h2 dir="auto">${escapeHtml(`${i + 1}. ${item.name}`)}</h2><div class="mu-print-body">${bodyHtml(item)}</div></section>`).join(""), document.body.appendChild(printable), printable.querySelectorAll(".mu-print-body").forEach(function (b) { b.style.maxWidth = "640px"; }), mu_fitTableFonts(printable); const oldTitle = document.title; document.title = chosenName || (list.length === 1 ? sanitizeFilename(list[0].name) : "Markhin_Note_All_Notes"), await Promise.all(Array.from(printable.querySelectorAll("img")).map(img => img.complete ? 0 : new Promise(r => { img.onload = img.onerror = r, setTimeout(r, 2500); }))), setTimeout(() => { window.print(), setTimeout(() => { printable.remove(), document.title = oldTitle; }, 700); }, 80); }
 let __docxEnginePromise = null;
 function loadScriptOnce(src) { return new Promise((resolve, reject) => { if (Array.from(document.scripts).find(x => x.src === src) && window.docx)
-    return resolve(window.docx); const script = document.createElement("script"); script.src = src, script.async = !0, script.onload = () => window.docx ? resolve(window.docx) : reject(new Error("DOCX script loaded but global engine was not created")), script.onerror = () => reject(new Error("Could not load " + src)), document.head.appendChild(script); }); }
+    return resolve(window.docx); const script = document.createElement("script"); script.src = src, script.async = !0, script.onload = () => window.docx ? resolve(window.docx) : reject(new Error("DOCX script loaded but global engine was not created")), script.onerror = () => { try { script.remove(); } catch (_) { } reject(new Error("Could not load " + src)); }, document.head.appendChild(script); }); }
 async function ensureDOCXEngine() { if (window.docx && window.docx.Document && window.docx.Packer)
     return window.docx; if (__docxEnginePromise)
-    return __docxEnginePromise; const urls = ["https://cdn.jsdelivr.net/npm/docx@9.5.1/build/index.umd.js", "https://unpkg.com/docx@9.5.1/build/index.umd.js", "https://cdn.jsdelivr.net/npm/docx@8.5.0/build/index.umd.js", "https://unpkg.com/docx@8.5.0/build/index.umd.js"]; __docxEnginePromise = (async () => { let lastError = null; for (const url of urls)
+    return __docxEnginePromise; const urls = ["https://cdn.jsdelivr.net/npm/docx@8.5.0/build/index.umd.js", "https://unpkg.com/docx@8.5.0/build/index.umd.js", "https://fastly.jsdelivr.net/npm/docx@8.5.0/build/index.umd.js", "https://gcore.jsdelivr.net/npm/docx@8.5.0/build/index.umd.js"]; __docxEnginePromise = (async () => { let lastError = null; for (const url of urls)
     try {
         const engine = await loadScriptOnce(url);
         if (engine && engine.Document && engine.Packer)
@@ -29081,10 +29264,10 @@ async function setGhostNote(id) { const item = categories.find(c => c.id === id)
 } item.ghostUntil = Date.now() + hours * 36e5, mu_touchMeta(item), saveToLocalStorage(), mu_refreshNoteBadgeRow(id), showToast(fa ? "Ghost Note فعال شد." : "Ghost Note armed."); }
 function noteAgeDays(item) { return Math.max(0, (Date.now() - (Date.parse(item.lastEdited) || Date.now())) / 864e5); }
 function openNoteDNA(id) { const item = categories.find(c => c.id === id); if (!item)
-    return; const fa = currentLang === "fa", rawText = (item.text || item.html || "").replace(/<[^>]*>/g, " "), trimmed = rawText.replace(/\s+/g, " ").trim(), stats = computeTextStats(rawText), words = stats.words, chars = trimmed.replace(/\s/g, "").length, images = (item.html || "").match(/<img\b/gi)?.length || 0, links = (item.html || "").match(/<a\b/gi)?.length || 0,
+    return; const fa = currentLang === "fa", rawText = mu_noteStatText(item, !0), trimmed = rawText.replace(/\s+/g, " ").trim(), stats = computeTextStats(rawText), words = stats.words, chars = trimmed.replace(/\s/g, "").length, images = (item.html || "").match(/<img\b/gi)?.length || 0, links = (item.html || "").match(/<a\b/gi)?.length || 0,
     // Vocabulary: unique, meaningful words (stopwords filtered, same rule as the Knowledge Graph) gives a
     // "richness" score, and word frequency surfaces this note's real keywords
-    uniqueWords = kgWordSet(item).size, richness = words ? Math.min(100, Math.round(uniqueWords / words * 100)) : 0, freq = {}; (trimmed.toLowerCase().match(/[\p{L}\p{N}]{2,}/gu) || []).forEach(w => { KG_STOPWORDS.has(w) || (freq[w] = (freq[w] || 0) + 1); }); const topKeywords = Object.entries(freq).sort((a, b) => b[1] - a[1]).slice(0, 10), maxFreq = topKeywords.length ? topKeywords[0][1] : 1, readMins = Math.max(1, Math.round(words / 200)), readBar = Math.min(100, Math.round(readMins / 15 * 100)), tags = Array.isArray(item.tags) ? item.tags : [], keywordsHtml = topKeywords.length ? topKeywords.map(([w, c]) => `<span class="dna-info-chip kg-info-chip" style="opacity:${(.55 + c / maxFreq * .45).toFixed(2)}">${escapeHtml(w)}${c > 1 ? ` ×${c}` : ""}</span>`).join("") : `<span style="opacity:.5;font-size:11px">${fa ? "کلمه معناداری برای تحلیل پیدا نشد." : "No meaningful keywords found."}</span>`, tagsHtml = tags.length ? tags.map(t => `<span class="kg-info-chip kg-chip-tag">#${escapeHtml(t)}</span>`).join("") : `<span style="opacity:.5;font-size:11px">${fa ? "بدون تگ" : "No tags"}</span>`, stat = (label, val, small) => `<div class="advanced-stat dna-stat"><span>${label}</span><b${small ? ' style="font-size:12.5px"' : ""}>${val}</b></div>`, block = (icon, title, inner) => `<div class="dna-block"><p class="dna-block-title"><span class="dna-block-ic">${icon}</span>${title}</p>${inner}</div>`, grid = items => `<div class="dna-grid">${items.join("")}</div>`, heroHtml = `<div class="dna-hero"><div class="dna-hero-stat"><b>${words}</b><span>${fa ? "کلمات" : "Words"}</span></div><div class="dna-hero-stat"><b>${uniqueWords}</b><span>${fa ? "کلمات یکتا" : "Unique words"}</span></div><div class="dna-hero-stat"><b>${readMins}<small>${fa ? "دقیقه" : "min"}</small></b><span>${fa ? "زمان مطالعه" : "Read time"}</span></div><div class="dna-hero-stat"><b>${stats.sentences}</b><span>${fa ? "جملات (تقریبی)" : "Sentences (approx.)"}</span></div></div>`, textBlock = block("📝", fa ? "متن" : "Text", grid([stat(fa ? "نویسه‌ها (با فاصله)" : "Characters (with spaces)", stats.charsWithSpace), stat(fa ? "نویسه‌ها (بدون فاصله)" : "Characters (no spaces)", stats.charsNoSpace), stat(fa ? "فاصله‌ها" : "Spaces", stats.spaces), stat(fa ? "کاراکتر (همه‌چیز باهم)" : "All characters (everything)", stats.totalChars), stat(fa ? "میانگین طول کلمه" : "Avg word length", stats.avgWordLength)])), langBlock = block("🌐", fa ? "زبان و اعداد" : "Languages & digits", grid([stat(fa ? "کلمات فارسی" : "Persian words", stats.faWords), stat(fa ? "حروف فارسی" : "Persian letters", stats.faLetters), stat(fa ? "کلمات انگلیسی" : "English words", stats.enWords), stat(fa ? "حروف انگلیسی" : "English letters", stats.enLetters), stat(fa ? "اعداد" : "Digits", stats.digits)])), symBlock = block("✨", fa ? "نمادها و ایموجی" : "Symbols & emoji", grid([stat(fa ? "نمادها" : "Symbols", stats.symbols), stat(fa ? "نمادهای یکتا" : "Unique symbols", stats.distinctSymbols), stat(fa ? "توکن‌های فقط-نماد (جزو کلمات نیستند)" : "Symbol-only tokens (not words)", stats.symbolOnlyWords), stat(fa ? "تعداد ایموجی" : "Emoji count", stats.emojiCount), stat(fa ? "ایموجی یکتا" : "Unique emoji", stats.distinctEmojiCount)])), mediaBlock = block("🖼️", fa ? "محتوا" : "Content", grid([stat(fa ? "تصاویر" : "Images", images), stat(fa ? "لینک‌ها" : "Links", links)])), infoBlock = block("ℹ️", fa ? "اطلاعات یادداشت" : "Note info", grid([stat(fa ? "سن تقریبی" : "Approx. age", `${noteAgeDays(item).toFixed(1)} ${fa ? "روز" : "d"}`), stat(fa ? "آخرین ویرایش" : "Last edited", escapeHtml(item.lastEdited || "—"), !0), stat(fa ? "پوشه" : "Folder", escapeHtml(item.folder || "—"), !0)])), vocabBlock = block("📚", `${fa ? "غنای واژگان" : "Vocabulary richness"} — ${richness}%`, `<div class="dna-bar-row"><span class="dna-bar-label">${fa ? "تنوع کلمات" : "Word variety"}</span><div class="dna-bar-track"><div class="dna-bar-fill" style="width:${richness}%"></div></div><span class="dna-bar-val">${richness}%</span></div><div class="dna-bar-row"><span class="dna-bar-label">${fa ? "حجم مطالعه" : "Read length"}</span><div class="dna-bar-track"><div class="dna-bar-fill" style="width:${readBar}%"></div></div><span class="dna-bar-val">${readMins}${fa ? "د" : "m"}</span></div>`), kwBlock = block("🔑", fa ? "کلیدواژه‌های اصلی" : "Top keywords", `<div class="dna-keywords">${keywordsHtml}</div>`), tagBlock = block("🏷️", fa ? "تگ‌ها" : "Tags", `<div class="dna-keywords">${tagsHtml}</div>`); showAdvanced(`<div class="advanced-head"><h3>🧬 ${fa ? "دی‌ان‌ای یادداشت" : "Note DNA"}</h3><button class="btn-main" onclick="closeAdvancedModal()">✕</button></div><div class="dna-wrap"><div class="dna-helix-head"><span class="dna-emoji">🧬</span><h2 style="margin:0">${escapeHtml(item.name)}</h2></div>` + heroHtml + textBlock + langBlock + symBlock + mediaBlock + infoBlock + vocabBlock + kwBlock + tagBlock + "</div>"); }
+    uniqueWords = stats.uniqueWords, richness = words ? Math.min(100, Math.round(uniqueWords / words * 100)) : 0, freq = {}; (trimmed.toLowerCase().match(/[\p{L}\p{N}]{2,}/gu) || []).forEach(w => { KG_STOPWORDS.has(w) || (freq[w] = (freq[w] || 0) + 1); }); const topKeywords = Object.entries(freq).sort((a, b) => b[1] - a[1]).slice(0, 10), maxFreq = topKeywords.length ? topKeywords[0][1] : 1, readMins = words ? Math.max(1, Math.round(words / 200)) : 0, readBar = Math.min(100, Math.round(readMins / 15 * 100)), tags = Array.isArray(item.tags) ? item.tags : [], keywordsHtml = topKeywords.length ? topKeywords.map(([w, c]) => `<span class="dna-info-chip kg-info-chip" style="opacity:${(.55 + c / maxFreq * .45).toFixed(2)}">${escapeHtml(w)}${c > 1 ? ` ×${c}` : ""}</span>`).join("") : `<span style="opacity:.5;font-size:11px">${fa ? "کلمه معناداری برای تحلیل پیدا نشد." : "No meaningful keywords found."}</span>`, tagsHtml = tags.length ? tags.map(t => `<span class="kg-info-chip kg-chip-tag">#${escapeHtml(t)}</span>`).join("") : `<span style="opacity:.5;font-size:11px">${fa ? "بدون تگ" : "No tags"}</span>`, stat = (label, val, small) => `<div class="advanced-stat dna-stat"><span>${label}</span><b${small ? ' style="font-size:12.5px"' : ""}>${val}</b></div>`, block = (icon, title, inner) => `<div class="dna-block"><p class="dna-block-title"><span class="dna-block-ic">${icon}</span>${title}</p>${inner}</div>`, grid = items => `<div class="dna-grid">${items.join("")}</div>`, heroHtml = `<div class="dna-hero"><div class="dna-hero-stat"><b>${words}</b><span>${fa ? "کلمات" : "Words"}</span></div><div class="dna-hero-stat"><b>${uniqueWords}</b><span>${fa ? "کلمات یکتا" : "Unique words"}</span></div><div class="dna-hero-stat"><b>${readMins}<small>${fa ? "دقیقه" : "min"}</small></b><span>${fa ? "زمان مطالعه" : "Read time"}</span></div><div class="dna-hero-stat"><b>${stats.sentences}</b><span>${fa ? "جملات (تقریبی)" : "Sentences (approx.)"}</span></div></div>`, textBlock = block("📝", fa ? "متن" : "Text", grid([stat(fa ? "نویسه‌ها (با فاصله)" : "Characters (with spaces)", stats.charsWithSpace), stat(fa ? "نویسه‌ها (بدون فاصله)" : "Characters (no spaces)", stats.charsNoSpace), stat(fa ? "فاصله‌ها" : "Spaces", stats.spaces), stat(fa ? "کاراکتر (همه‌چیز باهم)" : "All characters (everything)", stats.totalChars), stat(fa ? "میانگین طول کلمه" : "Avg word length", stats.avgWordLength)])), langBlock = block("🌐", fa ? "زبان و اعداد" : "Languages & digits", grid([stat(fa ? "کلمات فارسی" : "Persian words", stats.faWords), stat(fa ? "حروف فارسی" : "Persian letters", stats.faLetters), stat(fa ? "کلمات انگلیسی" : "English words", stats.enWords), stat(fa ? "حروف انگلیسی" : "English letters", stats.enLetters), stat(fa ? "اعداد" : "Digits", stats.digits)])), symBlock = block("✨", fa ? "نمادها و ایموجی" : "Symbols & emoji", grid([stat(fa ? "نمادها" : "Symbols", stats.symbols), stat(fa ? "نمادهای یکتا" : "Unique symbols", stats.distinctSymbols), stat(fa ? "توکن‌های فقط-نماد (جزو کلمات نیستند)" : "Symbol-only tokens (not words)", stats.symbolOnlyWords), stat(fa ? "تعداد ایموجی" : "Emoji count", stats.emojiCount), stat(fa ? "ایموجی یکتا" : "Unique emoji", stats.distinctEmojiCount)])), mediaBlock = block("🖼️", fa ? "محتوا" : "Content", grid([stat(fa ? "تصاویر" : "Images", images), stat(fa ? "لینک‌ها" : "Links", links)])), infoBlock = block("ℹ️", fa ? "اطلاعات یادداشت" : "Note info", grid([stat(fa ? "سن تقریبی" : "Approx. age", `${noteAgeDays(item).toFixed(1)} ${fa ? "روز" : "d"}`), stat(fa ? "آخرین ویرایش" : "Last edited", escapeHtml(item.lastEdited || "—"), !0), stat(fa ? "پوشه" : "Folder", escapeHtml(item.folder || "—"), !0)])), vocabBlock = block("📚", `${fa ? "غنای واژگان" : "Vocabulary richness"} — ${richness}%`, `<div class="dna-bar-row"><span class="dna-bar-label">${fa ? "تنوع کلمات" : "Word variety"}</span><div class="dna-bar-track"><div class="dna-bar-fill" style="width:${richness}%"></div></div><span class="dna-bar-val">${richness}%</span></div><div class="dna-bar-row"><span class="dna-bar-label">${fa ? "حجم مطالعه" : "Read length"}</span><div class="dna-bar-track"><div class="dna-bar-fill" style="width:${readBar}%"></div></div><span class="dna-bar-val">${readMins}${fa ? "د" : "m"}</span></div>`), kwBlock = block("🔑", fa ? "کلیدواژه‌های اصلی" : "Top keywords", `<div class="dna-keywords">${keywordsHtml}</div>`), tagBlock = block("🏷️", fa ? "تگ‌ها" : "Tags", `<div class="dna-keywords">${tagsHtml}</div>`); showAdvanced(`<div class="advanced-head"><h3>🧬 ${fa ? "دی‌ان‌ای یادداشت" : "Note DNA"}</h3><button class="btn-main" onclick="closeAdvancedModal()">✕</button></div><div class="dna-wrap"><div class="dna-helix-head"><span class="dna-emoji">🧬</span><h2 style="margin:0">${escapeHtml(item.name)}</h2></div>` + heroHtml + textBlock + langBlock + symBlock + mediaBlock + infoBlock + vocabBlock + kwBlock + tagBlock + "</div>"); }
 // Deleting a note is permanent: it is removed outright, and a tombstone is recorded so a sync or restore
 // can't bring it back
 const _deleteCategoryOriginal = deleteCategory;
@@ -29894,6 +30077,8 @@ document.addEventListener("DOMContentLoaded", () => { initAdvancedSystems(); });
         autosaveCategory: function () { return autosaveCategory.apply(void 0, arguments); },
         clearFolderTombstone: function () { return clearFolderTombstone.apply(void 0, arguments); },
         computeTextStats: function () { return computeTextStats.apply(void 0, arguments); },
+        mu_noteStats: function () { return mu_noteStats.apply(void 0, arguments); },
+        mu_noteStatText: function () { return mu_noteStatText.apply(void 0, arguments); },
         confirmDeleteFolder: function () { return confirmDeleteFolder.apply(void 0, arguments); },
         getVisibleCategories: function () { return getVisibleCategories.apply(void 0, arguments); },
         handleCategoryClick: function () { return handleCategoryClick.apply(void 0, arguments); },
@@ -30525,7 +30710,7 @@ document.addEventListener("DOMContentLoaded", () => { initAdvancedSystems(); });
         } });
     // MU_Dashboard — ماژول داشبورد (آمار/میانبرها/فهرست‌های فیلترشده) + پنل بکاپ ابری تلگرام
     const MU_Dashboard = (function () {
-        function markhinDash_wordCount(item) { const t = String(item.text || (item.html ? item.html.replace(/<[^>]+>/g, " ") : "") || "").trim(); return HX().mu_countWords(t); }
+        function markhinDash_wordCount(item) { const st = HX().mu_noteStats(item); return st ? st.words : 0; }
         function markhinDash_isGhostActive(item) { return !!item.ghostUntil && Date.now() < Number(item.ghostUntil); }
         function markhinDash_isCapsuleActive(item) { return !!item.unlockAt && Date.now() < Number(item.unlockAt); }
         function markhinDash_notes() { return allItems().filter(x => HX().typeOf("isArchived") != "function" || !HX().isArchived(x)); }
@@ -30938,12 +31123,12 @@ document.addEventListener("DOMContentLoaded", () => { initAdvancedSystems(); });
         // Object.create(null): a tag/folder named "constructor", "toString"… must not hit
         // Object.prototype.
         // Layout: stats / collections / folders / tags / recent, as collapsible sections.
-        function markhinDashboardMain() { const fa = HX().currentLang === "fa", notes = markhinDash_notes(), _wc = new Map; notes.forEach(x => _wc.set(x, markhinDash_wordCount(x))); const wcOf = x => _wc.has(x) ? _wc.get(x) : markhinDash_wordCount(x), words = notes.reduce((n, x) => n + wcOf(x), 0), chars = notes.reduce((n, x) => n + HX().computeTextStats(String(x.text || (x.html ? x.html.replace(/<[^>]+>/g, " ") : "") || "")).charsWithSpace, 0), allChars = notes.reduce((n, x) => n + HX().computeTextStats(String(x.text || (x.html ? x.html.replace(/<[^>]+>/g, " ") : "") || "").replace(/\u200B/g, "")).totalChars, 0), tagCounts = Object.create(null); notes.forEach(x => (x.tags || []).forEach(t => { tagCounts[t] = (tagCounts[t] || 0) + 1; })); const tags = Object.keys(tagCounts).sort((a, b) => tagCounts[b] - tagCounts[a]), folders = [...new Set(notes.map(x => x.folder).filter(Boolean))], pinnedN = notes.filter(x => x.pinned).length, favN = notes.filter(x => x.favorite).length, lockedN = notes.filter(x => HX().isNoteLocked(x)).length, fakeN = notes.filter(x => x.fakeContent).length, ghostN = notes.filter(markhinDash_isGhostActive).length, capsuleN = notes.filter(markhinDash_isCapsuleActive).length, archivedN = allItems().filter(HX().isArchived).length, avgWords = notes.length ? Math.round(words / notes.length) : 0, longest = notes.slice().sort((a, b) => wcOf(b) - wcOf(a))[0], recent = notes.slice().sort((a, b) => (Date.parse(b.lastEdited) || 0) - (Date.parse(a.lastEdited) || 0)).slice(0, 5), maxTagCount = tags.length ? tagCounts[tags[0]] : 1, statCard = (icon, label, val, onclick, tone, kind) => `<div class="markhin-dashboard-item mdx-stat mdx-${kind || "row"} mdx-t-${tone || "violet"}${onclick ? " markhin-dash-clickable" : ""}"${onclick ? ` onclick="${onclick}"` : ""}><span class="mdx-ic">${icon || ""}</span><span class="mdx-lb">${label}</span><b>${val}</b></div>`, noteFoldersOf = x => { try {
+        function markhinDashboardMain() { const fa = HX().currentLang === "fa", notes = markhinDash_notes(), _st = new Map; notes.forEach(x => _st.set(x, HX().mu_noteStats(x))); const wcOf = x => { const q = _st.get(x); return q ? q.words : 0; }, readable = notes.filter(x => _st.get(x)), unreadableN = notes.length - readable.length, words = readable.reduce((n, x) => n + _st.get(x).words, 0), chars = readable.reduce((n, x) => n + _st.get(x).letters, 0), allChars = readable.reduce((n, x) => n + _st.get(x).totalChars, 0), unreadableNote = unreadableN ? `<p class="mdb-note" style="margin:6px 4px 0">🔒 ${fa ? unreadableN + " یادداشت قفل‌شده در آمار کلمه و حرف حساب نمی‌شود، چون متنشان رمزنگاری شده است." : unreadableN + " locked note" + (unreadableN === 1 ? "" : "s") + " not counted in word and character stats (their text is encrypted)."}</p>` : "", tagCounts = Object.create(null); notes.forEach(x => (x.tags || []).forEach(t => { tagCounts[t] = (tagCounts[t] || 0) + 1; })); const tags = Object.keys(tagCounts).sort((a, b) => tagCounts[b] - tagCounts[a]), folders = [...new Set(notes.map(x => x.folder).filter(Boolean))], pinnedN = notes.filter(x => x.pinned).length, favN = notes.filter(x => x.favorite).length, lockedN = notes.filter(x => HX().isNoteLocked(x)).length, fakeN = notes.filter(x => x.fakeContent).length, ghostN = notes.filter(markhinDash_isGhostActive).length, capsuleN = notes.filter(markhinDash_isCapsuleActive).length, archivedN = allItems().filter(HX().isArchived).length, avgWords = readable.length ? Math.round(words / readable.length) : 0, longest = notes.slice().sort((a, b) => wcOf(b) - wcOf(a))[0], recent = notes.slice().sort((a, b) => (Date.parse(b.lastEdited) || 0) - (Date.parse(a.lastEdited) || 0)).slice(0, 5), maxTagCount = tags.length ? tagCounts[tags[0]] : 1, statCard = (icon, label, val, onclick, tone, kind) => `<div class="markhin-dashboard-item mdx-stat mdx-${kind || "row"} mdx-t-${tone || "violet"}${onclick ? " markhin-dash-clickable" : ""}"${onclick ? ` onclick="${onclick}"` : ""}><span class="mdx-ic">${icon || ""}</span><span class="mdx-lb">${label}</span><b>${val}</b></div>`, noteFoldersOf = x => { try {
             return ((window.mu_noteFolders ? window.mu_noteFolders(x) : [x.folder]) || []).filter(f => f && f !== HX().DEFAULT_FOLDER);
         }
         catch {
             return x.folder ? [x.folder] : [];
-        } }, folderCounts = Object.create(null); let noFolderN = 0; notes.forEach(x => { const fl = noteFoldersOf(x); fl.length || noFolderN++, fl.forEach(f => { folderCounts[f] = (folderCounts[f] || 0) + 1; }); }); const folderNames = Object.keys(folderCounts).sort((a, b) => folderCounts[b] - folderCounts[a]), sec = (icon, title, badge, body, open) => `<details class="mdb-sec"${open ? " open" : ""}><summary><span>${icon} ${title}</span>${badge === "" ? "" : `<em>${badge}</em>`}</summary><div class="mdb-body">${body}</div></details>`, heroGrid = [[fa ? "یادداشت‌ها" : "Notes", notes.length, "violet"], [fa ? "کلمات" : "Words", words, "teal"], [fa ? "حروف" : "Letters", chars, "gold"], [fa ? "کاراکتر" : "Total chars", allChars, "blue"], [fa ? "میانگین کلمات" : "Avg words", avgWords, "rose"]].map(c => `<div class="mdx-cell mdx-t-${c[2]}"><b>${c[1]}</b><span class="mdx-lb">${c[0]}</span></div>`).join(""), collections = [statCard("📌", fa ? "پین‌شده" : "Pinned", pinnedN, "markhinDash_showList('pinned')", "rose"), statCard("⭐", fa ? "علاقه‌مندی" : "Favorite", favN, "markhinDash_showList('favorite')", "gold"), statCard("🔒", fa ? "قفل‌شده" : "Locked", lockedN, "markhinDash_showList('locked')", "blue"), statCard("📦", fa ? "بایگانی" : "Archived", archivedN, "markhinDash_showList('archived')", "teal"), fakeN ? statCard("🎭", fa ? "فریب‌دهنده" : "Decoy", fakeN, "markhinDash_showList('fake')", "violet") : "", ghostN ? statCard("👻", fa ? "Ghost فعال" : "Active Ghost", ghostN, "markhinDash_showList('ghost')", "blue") : "", capsuleN ? statCard("⏳", fa ? "کپسول زمانی" : "Time Capsule", capsuleN, "markhinDash_showList('capsule')", "orange") : "", statCard("🔐", fa ? "گاوصندوق" : "Vault", window.MK?.vault?.sync && window.MK?.vault?.sync.count ? window.MK?.vault?.sync.count() : 0, "MK.vault.open()", "violet")].join(""), chip = (attr, val, label, n) => `<button type="button" class="mdb-chip" ${attr}="${HX().escapeHtml(val)}"><bdi>${label}</bdi> <small>${n}</small></button>`, folderChips = folderNames.map(f => chip("data-dfolder", f, "📁 " + HX().escapeHtml(f), folderCounts[f])).join("") + (noFolderN && folderNames.length ? chip("data-dfolder", "", fa ? "بدون پوشه" : "No folder", noFolderN) : ""), TAG_MAX = 30, tagChips = tags.slice(0, TAG_MAX).map(t => { const c = tagCounts[t]; return `<button type="button" class="mdb-chip tag" style="font-size:${(11 + c / maxTagCount * 4).toFixed(1)}px" data-dtag="${HX().escapeHtml(t)}"><bdi>#${HX().escapeHtml(t)}</bdi> <small>${c}</small></button>`; }).join("") + (tags.length > TAG_MAX ? `<span class="mdb-note">+${tags.length - TAG_MAX} ${fa ? "تگ دیگر (با جستجوی #تگ پیدا می‌شوند)" : "more tags (find them with #tag search)"}</span>` : ""), recentHtml = recent.length ? recent.map(x => markhinDash_noteRowHtml(x, { metaLabel: new Date(Date.parse(x.lastEdited) || Date.now()).toLocaleDateString(fa ? "fa-IR" : "en-US") })).join("") : `<div class="markhin-smart-empty">${fa ? "یادداشتی وجود ندارد." : "No notes yet."}</div>`, longestHtml = longest ? `<div class="markhin-smart-item" data-id="${HX().escapeHtml(longest.id)}"><b>🏆 ${HX().escapeHtml(longest.titleHidden ? "•••••" : longest.name || "")}</b><div class="snippet">${fa ? "طولانی‌ترین یادداشت" : "Longest note"} — ${markhinDash_wordCount(longest)} ${fa ? "کلمه" : "words"}</div></div>` : ""; HX().showAdvanced(markhinDash_headHtml(`📊 ${fa ? "داشبورد" : "Dashboard"}`, !1, void 0, !1) + `<div class="mdx-strip">${heroGrid}</div><p class="dna-section-title mdx-title">${fa ? "دسته‌بندی‌ها — روی هرکدام بزن" : "Collections — tap to open"}</p><div class="markhin-dashboard-grid mdb-grid">${collections}</div><div class="mdb-secs">` + (folderChips ? sec("📁", fa ? "پوشه‌ها" : "Folders", folderNames.length, `<div class="mdb-chips">${folderChips}</div>`, !0) : "") + sec("#", fa ? "تگ‌ها" : "Tags", tags.length, tags.length ? `<div class="mdb-chips">${tagChips}</div>` : `<span class="mdb-note">${fa ? "هنوز تگی ثبت نشده." : "No tags yet."}</span>`, tags.length > 0 && tags.length <= 12) + sec("🕘", fa ? "اخیراً ویرایش‌شده" : "Recently edited", recent.length, `<div class="markhin-smart-results">${recentHtml}</div>`, !0) + (longestHtml ? sec("🏆", fa ? "رکورد" : "Record", "", `<div class="markhin-smart-results">${longestHtml}</div>`, !1) : "") + "</div>"); {
+        } }, folderCounts = Object.create(null); let noFolderN = 0; notes.forEach(x => { const fl = noteFoldersOf(x); fl.length || noFolderN++, fl.forEach(f => { folderCounts[f] = (folderCounts[f] || 0) + 1; }); }); const folderNames = Object.keys(folderCounts).sort((a, b) => folderCounts[b] - folderCounts[a]), sec = (icon, title, badge, body, open) => `<details class="mdb-sec"${open ? " open" : ""}><summary><span>${icon} ${title}</span>${badge === "" ? "" : `<em>${badge}</em>`}</summary><div class="mdb-body">${body}</div></details>`, heroGrid = [[fa ? "یادداشت‌ها" : "Notes", notes.length, "violet"], [fa ? "کلمات" : "Words", words, "teal"], [fa ? "حروف" : "Letters", chars, "gold"], [fa ? "کاراکتر" : "Total chars", allChars, "blue"], [fa ? "میانگین کلمات" : "Avg words", avgWords, "rose"]].map(c => `<div class="mdx-cell mdx-t-${c[2]}"><b>${c[1]}</b><span class="mdx-lb">${c[0]}</span></div>`).join(""), collections = [statCard("📌", fa ? "پین‌شده" : "Pinned", pinnedN, "markhinDash_showList('pinned')", "rose"), statCard("⭐", fa ? "علاقه‌مندی" : "Favorite", favN, "markhinDash_showList('favorite')", "gold"), statCard("🔒", fa ? "قفل‌شده" : "Locked", lockedN, "markhinDash_showList('locked')", "blue"), statCard("📦", fa ? "بایگانی" : "Archived", archivedN, "markhinDash_showList('archived')", "teal"), fakeN ? statCard("🎭", fa ? "فریب‌دهنده" : "Decoy", fakeN, "markhinDash_showList('fake')", "violet") : "", ghostN ? statCard("👻", fa ? "Ghost فعال" : "Active Ghost", ghostN, "markhinDash_showList('ghost')", "blue") : "", capsuleN ? statCard("⏳", fa ? "کپسول زمانی" : "Time Capsule", capsuleN, "markhinDash_showList('capsule')", "orange") : "", statCard("🔐", fa ? "گاوصندوق" : "Vault", window.MK?.vault?.sync && window.MK?.vault?.sync.count ? window.MK?.vault?.sync.count() : 0, "MK.vault.open()", "violet")].join(""), chip = (attr, val, label, n) => `<button type="button" class="mdb-chip" ${attr}="${HX().escapeHtml(val)}"><bdi>${label}</bdi> <small>${n}</small></button>`, folderChips = folderNames.map(f => chip("data-dfolder", f, "📁 " + HX().escapeHtml(f), folderCounts[f])).join("") + (noFolderN && folderNames.length ? chip("data-dfolder", "", fa ? "بدون پوشه" : "No folder", noFolderN) : ""), TAG_MAX = 30, tagChips = tags.slice(0, TAG_MAX).map(t => { const c = tagCounts[t]; return `<button type="button" class="mdb-chip tag" style="font-size:${(11 + c / maxTagCount * 4).toFixed(1)}px" data-dtag="${HX().escapeHtml(t)}"><bdi>#${HX().escapeHtml(t)}</bdi> <small>${c}</small></button>`; }).join("") + (tags.length > TAG_MAX ? `<span class="mdb-note">+${tags.length - TAG_MAX} ${fa ? "تگ دیگر (با جستجوی #تگ پیدا می‌شوند)" : "more tags (find them with #tag search)"}</span>` : ""), recentHtml = recent.length ? recent.map(x => markhinDash_noteRowHtml(x, { metaLabel: new Date(Date.parse(x.lastEdited) || Date.now()).toLocaleDateString(fa ? "fa-IR" : "en-US") })).join("") : `<div class="markhin-smart-empty">${fa ? "یادداشتی وجود ندارد." : "No notes yet."}</div>`, longestHtml = longest && wcOf(longest) > 0 ? `<div class="markhin-smart-item" data-id="${HX().escapeHtml(longest.id)}"><b>🏆 ${HX().escapeHtml(longest.titleHidden ? "•••••" : longest.name || "")}</b><div class="snippet">${fa ? "طولانی‌ترین یادداشت" : "Longest note"} — ${wcOf(longest)} ${fa ? "کلمه" : "words"}</div></div>` : ""; HX().showAdvanced(markhinDash_headHtml(`📊 ${fa ? "داشبورد" : "Dashboard"}`, !1, void 0, !1) + `<div class="mdx-strip">${heroGrid}</div>${unreadableNote}<p class="dna-section-title mdx-title">${fa ? "دسته‌بندی‌ها — روی هرکدام بزن" : "Collections — tap to open"}</p><div class="markhin-dashboard-grid mdb-grid">${collections}</div><div class="mdb-secs">` + (folderChips ? sec("📁", fa ? "پوشه‌ها" : "Folders", folderNames.length, `<div class="mdb-chips">${folderChips}</div>`, !0) : "") + sec("#", fa ? "تگ‌ها" : "Tags", tags.length, tags.length ? `<div class="mdb-chips">${tagChips}</div>` : `<span class="mdb-note">${fa ? "هنوز تگی ثبت نشده." : "No tags yet."}</span>`, tags.length > 0 && tags.length <= 12) + sec("🕘", fa ? "اخیراً ویرایش‌شده" : "Recently edited", recent.length, `<div class="markhin-smart-results">${recentHtml}</div>`, !0) + (longestHtml ? sec("🏆", fa ? "رکورد" : "Record", "", `<div class="markhin-smart-results">${longestHtml}</div>`, !1) : "") + (window.mkErrLog ? window.mkErrLog.section(fa) : "") + "</div>"); {
             const _card = document.getElementById("advancedCard");
             _card && (_card.querySelectorAll("[data-dtag]").forEach(b => { b.onclick = () => markhinDash_showList("tag", b.dataset.dtag); }), _card.querySelectorAll("[data-dfolder]").forEach(b => { b.onclick = () => markhinDash_showList("folder", b.dataset.dfolder); }));
         }
@@ -35436,7 +35621,7 @@ window.muIcon = function (name) { var P = { trash: '<path d="M4 7h16"/><path d="
         "mu_notesfs_theme_v1", "mxe_theme", "mu_nfs_edtheme_sync_v1",
         // notes page: display order, preview, grid/list view, menu layout
         "mu_notesfs_sort_v1", "markhin_note_sort_mode_v1", "mu_notesfs_lines_v1", "markhin_note_preview_enabled_v1",
-        "markhin_note_preview_lines_v1", "mu_notesfs_view_v1", "mu_notesfs_fview_v1", "mu_nav_pair_v1", "mu_ab_sections_v1", "mu_nfs_toolbar_v1", "mk_ed_fade_v1", "mk_bx_colors_v1",
+        "markhin_note_preview_lines_v1", "mu_notesfs_view_v1", "mu_notesfs_fview_v1", "mu_nav_pair_v1", "mu_ab_sections_v1", "mu_nfs_toolbar_v1", "mk_ed_fade_v1", "mu_tgClockOn_v1", "mu_tgClockZone_v1", "mk_bx_colors_v1",
         // note viewer
         "markhin_viewer_style_v1", "markhin_viewer_fs_v1", "mu_live_mode",
         // font, eco, zoom, language
@@ -35701,7 +35886,7 @@ function initZoomWatch() { syncMode(), initSoftPinch(), zoomWatchDone || (zoomWa
         catch { }
     }
 }
-catch { } } function gearSvg() { return '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3.2"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>'; } function closeBtn() { return '<button class="btn-main" onclick="MK.liteHost.closeDialog()" aria-label="' + (isFa() ? "بستن" : "Close") + '">✕</button>'; } function openSettings() { var fa = isFa(), card = document.getElementById("advancedCard"), skinRow = '<div class="mu-set-row" style="flex-direction:column;align-items:stretch"><div class="mu-set-text"><div class="mu-set-title">' + (fa ? "تم ورژن جدید" : "New version theme") + '</div><div class="mu-set-desc">' + (fa ? "یکی از تم‌های برنامه را انتخاب کنید. با زدن دکمه روز/شب در صفحه یادداشت‌ها دوباره به حالت روز و شب برمی‌گردد." : "Pick one of the app themes. Tapping the day / night button on the Notes page goes back to plain day / night.") + "</div></div>" + (MK.nfsSkin ? MK.nfsSkin.chipsHtml(fa) : "") + "</div>"; MK.liteHost.showDialog('<div class="advanced-head"><h3>' + (fa ? "تنظیمات" : "Settings") + "</h3>" + closeBtn() + "</div>" + skinRow + '<div class="mu-set-row" style="flex-direction:column;align-items:stretch"><div class="mu-set-text"><div class="mu-set-title">زبان / Language</div><div class="mu-set-desc"><div dir="rtl" style="text-align:right">زبان برنامه را انتخاب کنید.</div><div dir="ltr" style="text-align:left">Choose the app language.</div></div></div><div class="mu-vs-seg" id="muLangSeg" role="group" aria-label="زبان / Language">' + [["fa", "فارسی (Persian)"], ["en", "English (انگلیسی)"]].map(function (o) { return '<button type="button" class="mu-vs-opt" data-lang="' + o[0] + '" aria-pressed="' + ((fa ? "fa" : "en") === o[0] ? "true" : "false") + `" onclick="MU_Lite.setLang('` + o[0] + `')">` + o[1] + "</button>"; }).join("") + '</div></div><div class="mu-set-row"><div class="mu-set-text"><div class="mu-set-title">' + (fa ? "زوم صفحه" : "Page zoom") + '<span class="mu-set-badge" id="muZoomBadge">' + (zoomOn() ? fa ? "روشن" : "ON" : fa ? "خاموش" : "OFF") + '</span></div><div class="mu-set-desc">' + (fa ? "وقتی روشن باشد می‌توانید با دو انگشت روی صفحه زوم کنید (از 100% تا 5 برابر). پیش‌فرض: در تلگرام خاموش، در بقیه‌ی جاها روشن. «شبکه دانش» همیشه زوم مخصوص خودش را دارد و به این گزینه وابسته نیست. داخل تلگرام هم کار می‌کند." : "When on, you can pinch-zoom the page (100% up to 5x). Default: off in Telegram, on elsewhere. The Knowledge Graph always has its own zoom and does not depend on this option. Works inside Telegram too.") + '</div><button type="button" class="btn-main" id="muZoomReset" style="margin-top:8px;font-size:11px;padding:6px 12px;' + (zoomOn() ? "" : "display:none") + '" onclick="MU_Lite.resetZoom()">↺ ' + (fa ? "بازنشانی زوم (100%)" : "Reset zoom (100%)") + '</button></div><button type="button" class="mu-switch" id="muZoomSwitch" role="switch" aria-checked="' + (zoomOn() ? "true" : "false") + '" aria-label="' + (fa ? "زوم صفحه" : "Page zoom") + '" onclick="MU_Lite.toggleZoom()"></button></div><div class="mu-set-row" style="flex-direction:column;align-items:stretch"><div class="mu-set-text"><div class="mu-set-title">' + (fa ? "سبک کادر نمایش یادداشت" : "Note viewer style") + '</div><div class="mu-set-desc">' + (fa ? "با «نمایش یادداشت» هر بار بپرسد، یا همیشه با یک سبک ثابت باز شود." : "Ask each time you press “View note”, or always open with one fixed style.") + '</div></div><div class="mu-vs-seg" id="muViewerStyleSeg" role="group">' + [["ocean", fa ? "ساده" : "Simple"], ["retro", fa ? "ویندوز 95" : "Windows 95"], ["ask", fa ? "انتخاب هر بار (پیش‌فرض)" : "Ask each time (default)"]].map(function (o) { return '<button type="button" class="mu-vs-opt" data-vs="' + o[0] + '" aria-pressed="' + (window.mu_getViewerStyle && window.mu_getViewerStyle() === o[0] ? "true" : "false") + `" onclick="MU_Lite.setViewerStyle('` + o[0] + `')">` + o[1] + "</button>"; }).join("") + "</div></div>" + (window.MU_NDot ? MU_NDot.html(fa) : "") + (window.MK_Bio ? MK_Bio.settingsHtml(fa) : "") + (window.MU_Eco ? MU_Eco.html(fa, ["all", "viewer"]) : "") + (window.mu_imgOptRowHtml ? mu_imgOptRowHtml(fa) : "") + (window.MK_EdFade ? MK_EdFade.html(fa) : "") + (window.MU_NfsToolbar ? MU_NfsToolbar.html(fa) : "") + (window.MU_ResetSettings ? MU_ResetSettings.html(fa) : "") + "<div class='mu-morse-line' dir='ltr' role='img' aria-label='MARKHIN' style='flex:none;min-height:13px;display:flex;justify-content:center;align-items:center;gap:14px;flex-wrap:nowrap;white-space:nowrap;overflow:hidden;margin:20px 0 8px;font:700 14px/1 monospace;opacity:.55;-webkit-user-select:none;user-select:none;pointer-events:none'><span style='letter-spacing:4px'>\u2014\u2014</span><span style='letter-spacing:4px'>\u2022\u2014</span><span style='letter-spacing:4px'>\u2022\u2014\u2022</span><span style='letter-spacing:4px'>\u2014\u2022\u2014</span><span style='letter-spacing:4px'>\u2022\u2022\u2022\u2022</span><span style='letter-spacing:4px'>\u2022\u2022</span><span style='letter-spacing:4px'>\u2014\u2022</span></div>"), card && card.classList.remove("kg-wide"); } window.MU_Lite = { openSettings: openSettings, setZoom: function (on) { return setZoomState(on); }, toggleZoom: function () { return setZoomState(!zoomOn()); }, resetZoom: function () { resetZoom(); }, getZoomScale: pageScale, isZoomOn: zoomOn, setLang: function (l) { try {
+catch { } } function gearSvg() { return '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3.2"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>'; } function closeBtn() { return '<button class="btn-main" onclick="MK.liteHost.closeDialog()" aria-label="' + (isFa() ? "بستن" : "Close") + '">✕</button>'; } function openSettings() { var fa = isFa(), card = document.getElementById("advancedCard"), skinRow = '<div class="mu-set-row" style="flex-direction:column;align-items:stretch"><div class="mu-set-text"><div class="mu-set-title">' + (fa ? "تم ورژن جدید" : "New version theme") + '</div><div class="mu-set-desc">' + (fa ? "یکی از تم‌های برنامه را انتخاب کنید. با زدن دکمه روز/شب در صفحه یادداشت‌ها دوباره به حالت روز و شب برمی‌گردد." : "Pick one of the app themes. Tapping the day / night button on the Notes page goes back to plain day / night.") + "</div></div>" + (MK.nfsSkin ? MK.nfsSkin.chipsHtml(fa) : "") + "</div>"; MK.liteHost.showDialog('<div class="advanced-head"><h3>' + (fa ? "تنظیمات" : "Settings") + "</h3>" + closeBtn() + "</div>" + skinRow + '<div class="mu-set-row" style="flex-direction:column;align-items:stretch"><div class="mu-set-text"><div class="mu-set-title">زبان / Language</div><div class="mu-set-desc"><div dir="rtl" style="text-align:right">زبان برنامه را انتخاب کنید.</div><div dir="ltr" style="text-align:left">Choose the app language.</div></div></div><div class="mu-vs-seg" id="muLangSeg" role="group" aria-label="زبان / Language">' + [["fa", "فارسی (Persian)"], ["en", "English (انگلیسی)"]].map(function (o) { return '<button type="button" class="mu-vs-opt" data-lang="' + o[0] + '" aria-pressed="' + ((fa ? "fa" : "en") === o[0] ? "true" : "false") + `" onclick="MU_Lite.setLang('` + o[0] + `')">` + o[1] + "</button>"; }).join("") + '</div></div><div class="mu-set-row"><div class="mu-set-text"><div class="mu-set-title">' + (fa ? "زوم صفحه" : "Page zoom") + '<span class="mu-set-badge" id="muZoomBadge">' + (zoomOn() ? fa ? "روشن" : "ON" : fa ? "خاموش" : "OFF") + '</span></div><div class="mu-set-desc">' + (fa ? "وقتی روشن باشد می‌توانید با دو انگشت روی صفحه زوم کنید (از 100% تا 5 برابر). پیش‌فرض: در تلگرام خاموش، در بقیه‌ی جاها روشن. «شبکه دانش» همیشه زوم مخصوص خودش را دارد و به این گزینه وابسته نیست. داخل تلگرام هم کار می‌کند." : "When on, you can pinch-zoom the page (100% up to 5x). Default: off in Telegram, on elsewhere. The Knowledge Graph always has its own zoom and does not depend on this option. Works inside Telegram too.") + '</div><button type="button" class="btn-main" id="muZoomReset" style="margin-top:8px;font-size:11px;padding:6px 12px;' + (zoomOn() ? "" : "display:none") + '" onclick="MU_Lite.resetZoom()">↺ ' + (fa ? "بازنشانی زوم (100%)" : "Reset zoom (100%)") + '</button></div><button type="button" class="mu-switch" id="muZoomSwitch" role="switch" aria-checked="' + (zoomOn() ? "true" : "false") + '" aria-label="' + (fa ? "زوم صفحه" : "Page zoom") + '" onclick="MU_Lite.toggleZoom()"></button></div><div class="mu-set-row" style="flex-direction:column;align-items:stretch"><div class="mu-set-text"><div class="mu-set-title">' + (fa ? "سبک کادر نمایش یادداشت" : "Note viewer style") + '</div><div class="mu-set-desc">' + (fa ? "با «نمایش یادداشت» هر بار بپرسد، یا همیشه با یک سبک ثابت باز شود." : "Ask each time you press “View note”, or always open with one fixed style.") + '</div></div><div class="mu-vs-seg" id="muViewerStyleSeg" role="group">' + [["ocean", fa ? "ساده" : "Simple"], ["retro", fa ? "ویندوز 95" : "Windows 95"], ["ask", fa ? "انتخاب هر بار (پیش‌فرض)" : "Ask each time (default)"]].map(function (o) { return '<button type="button" class="mu-vs-opt" data-vs="' + o[0] + '" aria-pressed="' + (window.mu_getViewerStyle && window.mu_getViewerStyle() === o[0] ? "true" : "false") + `" onclick="MU_Lite.setViewerStyle('` + o[0] + `')">` + o[1] + "</button>"; }).join("") + "</div></div>" + (window.MU_NDot ? MU_NDot.html(fa) : "") + (window.MK_Bio ? MK_Bio.settingsHtml(fa) : "") + (window.MU_Eco ? MU_Eco.html(fa, ["all", "viewer"]) : "") + (window.mu_imgOptRowHtml ? mu_imgOptRowHtml(fa) : "") + (window.MK_EdFade ? MK_EdFade.html(fa) : "") + (window.MU_TgClock ? MU_TgClock.html(fa) : "") + (window.MU_NfsToolbar ? MU_NfsToolbar.html(fa) : "") + (window.MU_ResetSettings ? MU_ResetSettings.html(fa) : "") + "<div class='mu-morse-line' dir='ltr' role='img' aria-label='MARKHIN' style='flex:none;min-height:13px;display:flex;justify-content:center;align-items:center;gap:14px;flex-wrap:nowrap;white-space:nowrap;overflow:hidden;margin:20px 0 8px;font:700 14px/1 monospace;opacity:.55;-webkit-user-select:none;user-select:none;pointer-events:none'><span style='letter-spacing:4px'>\u2014\u2014</span><span style='letter-spacing:4px'>\u2022\u2014</span><span style='letter-spacing:4px'>\u2022\u2014\u2022</span><span style='letter-spacing:4px'>\u2014\u2022\u2014</span><span style='letter-spacing:4px'>\u2022\u2022\u2022\u2022</span><span style='letter-spacing:4px'>\u2022\u2022</span><span style='letter-spacing:4px'>\u2014\u2022</span></div>"), card && card.classList.remove("kg-wide"); } window.MU_Lite = { openSettings: openSettings, setZoom: function (on) { return setZoomState(on); }, toggleZoom: function () { return setZoomState(!zoomOn()); }, resetZoom: function () { resetZoom(); }, getZoomScale: pageScale, isZoomOn: zoomOn, setLang: function (l) { try {
         if (MK.liteHost.lang() === l)
             return;
     }
@@ -55151,5 +55336,169 @@ html body #muNav#muNav .mu-nav-grp:not(.mu-collapsed)>.mu-nav-body>.mu-nav-inner
 html body #muNav#muNav .mu-nav-grp:not(.mu-collapsed)>.mu-nav-body>.mu-nav-inner>*:nth-child(7){transition-delay:0.310s!important}
 html body #muNav#muNav .mu-nav-grp:not(.mu-collapsed)>.mu-nav-body>.mu-nav-inner>*:nth-child(8){transition-delay:0.355s!important}
 </style>
+<style id="muTgClockCss">
+#muTgClock{display:none;position:fixed;left:50%;top:var(--mu-clk-top,0px);height:var(--mu-clk-h,44px);transform:translateX(-50%);z-index:10001;flex-direction:column;align-items:center;justify-content:center;gap:1px;min-width:64px;max-width:40vw;padding:0 8px;margin:0;border:0;background:transparent;color:var(--mu-clk-fg,#fff);font-family:inherit;line-height:1.1;text-align:center;cursor:pointer;-webkit-tap-highlight-color:transparent;-webkit-user-select:none;user-select:none;touch-action:manipulation;contain:layout paint style}
+html.mu-tg-fs #muTgClock{display:flex}
+html.mk-boot #muTgClock,html.mu-clk-off #muTgClock{display:none!important}
+#muTgClock .mkc-t{direction:ltr;font-size:15px;font-weight:700;letter-spacing:.2px;font-variant-numeric:tabular-nums;white-space:nowrap}
+#muTgClock .mkc-l{display:flex;align-items:center;gap:4px;max-width:100%;font-size:9.5px;font-weight:600;opacity:.78;white-space:nowrap;overflow:hidden}
+#muTgClock .mkc-l bdi{overflow:hidden;text-overflow:ellipsis}
+#muTgClock .mkc-d{flex:none;width:5px;height:5px;border-radius:50%;background:#8a8f98}
+#muTgClock.mkc-ok .mkc-d{background:#34c759}
+#muTgClock:active{opacity:.6}
+</style>
+<script id="muTgWorldClock">
+(function () {
+    "use strict";
+    if (window.__muTgClockInit) return;
+    window.__muTgClockInit = 1;
+    var ZONES = [
+        ["UTC", "ساعت جهانی", "World time"], ["Asia/Tehran", "تهران", "Tehran"], ["Europe/London", "لندن", "London"],
+        ["Europe/Istanbul", "استانبول", "Istanbul"], ["Asia/Dubai", "دبی", "Dubai"], ["Europe/Moscow", "مسکو", "Moscow"],
+        ["Asia/Kolkata", "دهلی", "Delhi"], ["Asia/Shanghai", "پکن", "Beijing"], ["Asia/Tokyo", "توکیو", "Tokyo"],
+        ["Australia/Sydney", "سیدنی", "Sydney"], ["America/New_York", "نیویورک", "New York"], ["America/Los_Angeles", "لس‌آنجلس", "Los Angeles"]
+    ];
+    var KEY = "mu_tgClockZone_v1", ON_KEY = "mu_tgClockOn_v1", DTF = window.__mkOrigDTF || Intl.DateTimeFormat, fmts = {}, idx = 0, el, tEl, lEl, tm = 0;
+    // ---- accurate time: server time + monotonic clock, so a wrong or changed device clock does not matter ----
+    var anchorSrv = 0, anchorPerf = 0, synced = false, syncBusy = false, lastSync = 0;
+    function now() { return synced ? anchorSrv + (performance.now() - anchorPerf) : Date.now(); }
+    function setAnchor(srvMs, t0, t1) {
+        if (!(srvMs > 0)) return false;
+        var rtt = t1 - t0, est = srvMs + rtt / 2;
+        if (Math.abs(est - Date.now()) > 3 * 864e5 && synced) return false;
+        anchorSrv = est, anchorPerf = t1, synced = true, lastSync = t1; return true;
+    }
+    function withTimeout(url, opt, ms) {
+        var c = window.AbortController ? new AbortController() : null, id = c && setTimeout(function () { c.abort(); }, ms);
+        if (c) opt.signal = c.signal;
+        return fetch(url, opt).then(function (r) { id && clearTimeout(id); return r; }, function (e) { id && clearTimeout(id); throw e; });
+    }
+    function viaWorldTime() {
+        var t0 = performance.now();
+        return withTimeout("https://worldtimeapi.org/api/timezone/Etc/UTC", { cache: "no-store" }, 4000).then(function (r) { return r.json(); }).then(function (j) {
+            var t1 = performance.now(), ms = parseInt(String(j.utc_datetime || "").split(".")[1] || "0", 10), frac = String(j.utc_datetime || "").split(".")[1] || "0";
+            frac = parseInt((frac.replace(/[^0-9].*$/, "") + "000").slice(0, 3), 10) || 0;
+            return setAnchor(j.unixtime * 1e3 + frac, t0, t1);
+        });
+    }
+    function viaOrigin() {
+        if (!/^https?:$/.test(location.protocol)) return Promise.resolve(false);
+        var t0 = performance.now();
+        return withTimeout(location.href.split("#")[0], { method: "HEAD", cache: "no-store" }, 4000).then(function (r) {
+            var t1 = performance.now(), d = r.headers.get("date"), ms = d ? Date.parse(d) : 0;
+            // the Date header has one-second resolution: centre it inside its second
+            return ms ? setAnchor(ms + 500, t0, t1) : false;
+        });
+    }
+    function sync(force) {
+        if (syncBusy || document.hidden || !navigator.onLine) return;
+        if (!force && synced && performance.now() - lastSync < 6e5) return;
+        syncBusy = true;
+        viaWorldTime().catch(function () { return false; }).then(function (ok) { return ok || viaOrigin().catch(function () { return false; }); })
+            .then(function () { syncBusy = false; paint(true); }, function () { syncBusy = false; });
+    }
+    // ---- formatting (time zones and DST come from the system's tz database) ----
+    function fmt(z) {
+        return fmts[z] || (fmts[z] = new DTF("en-GB", { timeZone: z, hourCycle: "h23", hour: "2-digit", minute: "2-digit", second: "2-digit", year: "numeric", month: "2-digit", day: "2-digit" }));
+    }
+    function parts(z, ms) {
+        var o = {}; fmt(z).formatToParts(new Date(ms)).forEach(function (p) { o[p.type] = p.value; }); return o;
+    }
+    function offsetStr(z, ms) {
+        var p = parts(z, ms), asUtc = Date.UTC(+p.year, +p.month - 1, +p.day, +p.hour % 24, +p.minute, +p.second), mins = Math.round((asUtc - Math.floor(ms / 1e3) * 1e3) / 6e4), s = mins < 0 ? "-" : "+", a = Math.abs(mins), h = Math.floor(a / 60), m = a % 60;
+        return "UTC" + (mins === 0 ? "" : s + h + (m ? ":" + (m < 10 ? "0" : "") + m : ""));
+    }
+    function isFa() { try { if (typeof currentLang !== "undefined") return currentLang === "fa"; } catch (e) { } var l = (document.documentElement.lang || navigator.language || "").toLowerCase(); return l.indexOf("fa") === 0; }
+    var lastT = "", lastL = "";
+    function paint(force) {
+        if (!el) return;
+        var ms = now(), z = ZONES[idx], p;
+        try { p = parts(z[0], ms); } catch (e) { return; }
+        var t = p.hour + ":" + p.minute + ":" + p.second;
+        if (t !== lastT) { lastT = t; tEl.textContent = t; }
+        var lab = (isFa() ? z[1] : z[2]) + " · " + offsetStr(z[0], ms);
+        if (force || lab !== lastL) { lastL = lab; lEl.firstChild.nextSibling.textContent = lab; }
+        el.classList.toggle("mkc-ok", synced);
+        el.title = synced ? "Synced" : "Device clock";
+    }
+    // ---- placement: the band between the system status bar and the content area (where Telegram's own buttons sit) ----
+    var lastTop = -1, lastH = -1;
+    function place() {
+        var W = window.Telegram && Telegram.WebApp, sa = 0, ca = 0, tot = window.__muSatPx || 0;
+        try { sa = Number(W.safeAreaInset.top) || 0; ca = Number(W.contentSafeAreaInset.top) || 0; } catch (e) { }
+        if (!ca && tot > 0) { ca = Math.min(44, tot); sa = Math.max(0, tot - ca); }
+        if (ca < 28) ca = 28;
+        if (sa !== lastTop || ca !== lastH) { lastTop = sa; lastH = ca; el.style.setProperty("--mu-clk-top", sa + "px"); el.style.setProperty("--mu-clk-h", ca + "px"); }
+    }
+    function lum(c) {
+        var m = /rgba?\(\s*(\d+)[ ,]+(\d+)[ ,]+(\d+)(?:[ ,/]+([\d.]+))?/.exec(c || ""); if (!m || (m[4] !== undefined && +m[4] === 0)) return null;
+        return (0.2126 * m[1] + 0.7152 * m[2] + 0.0722 * m[3]) / 255;
+    }
+    var lastFg = "";
+    function color() {
+        try {
+            var st = document.getElementById("muTgTopStrip"), L = st ? lum(getComputedStyle(st).backgroundColor) : null;
+            if (L === null) L = lum(getComputedStyle(document.body).backgroundColor);
+            if (L === null) L = lum(getComputedStyle(document.documentElement).backgroundColor);
+            var fg = L !== null && L > 0.6 ? "#111318" : "#ffffff";
+            if (fg !== lastFg) { lastFg = fg; el.style.setProperty("--mu-clk-fg", fg); }
+        } catch (e) { }
+    }
+    var R = document.documentElement;
+    function isOn() { try { return localStorage.getItem(ON_KEY) !== "0"; } catch (e) { return true; } }
+    function syncOn() {
+        var v = isOn(), l = document.querySelectorAll("[data-tgclk]"), i;
+        R.classList.toggle("mu-clk-off", !v);
+        for (i = 0; i < l.length; i++) l[i].setAttribute("aria-checked", v ? "true" : "false");
+    }
+    function setOn(v) {
+        try { localStorage.setItem(ON_KEY, v ? "1" : "0"); } catch (e) { }
+        try { typeof mu_flushStorage === "function" && mu_flushStorage(); } catch (e) { }
+        syncOn();
+        if (v && el) { lastT = ""; lastL = ""; color(); place(); paint(true); sync(true); tick(); }
+    }
+    function rowHtml(fa) {
+        var title = fa ? "ساعت جهانی در هدر تلگرام" : "World clock in the Telegram header",
+            desc = fa ? "ساعت UTC (ساعت جهانی) را در هدر تلگرام، در حالت تمام‌صفحه، نشان می‌دهد. با لمس ساعت، شهرهای دیگر را هم می‌توان دید. پیش‌فرض: روشن."
+                : "Shows UTC (world time) in the Telegram header when the app is full-screen. Tap the clock to see other cities. On by default.";
+        return '<div class="mu-set-row"><div class="mu-set-text"><div class="mu-set-title">' + title + '</div><div class="mu-set-desc">' + desc
+            + '</div></div><button type="button" class="mu-switch" role="switch" data-tgclk="1" aria-checked="' + (isOn() ? "true" : "false") + '" aria-label="' + title + '" onclick="MU_TgClock.toggle()"></button></div>';
+    }
+    window.MU_TgClock = { on: isOn, set: setOn, toggle: function () { setOn(!isOn()); }, html: rowHtml, key: ON_KEY };
+    syncOn();
+    function tick() {
+        clearTimeout(tm);
+        if (!isOn()) { tm = setTimeout(tick, 2000); return; }
+        if (!document.hidden && document.documentElement.classList.contains("mu-tg-fs")) { place(); paint(); }
+        tm = setTimeout(tick, 1000 - (now() % 1000) + 15);
+    }
+    var colT = 0;
+    function colorSoon() { clearTimeout(colT); colT = setTimeout(color, 250); }
+    function build() {
+        if (el || !document.body) return;
+        try { var zs = localStorage.getItem(KEY); for (var zi = 0; zi < ZONES.length; zi++) if (ZONES[zi][0] === zs) idx = zi; } catch (e) { }
+        el = document.createElement("button"); el.id = "muTgClock"; el.type = "button"; el.setAttribute("aria-label", "World clock");
+        el.innerHTML = '<span class="mkc-t"></span><span class="mkc-l"><i class="mkc-d"></i><bdi></bdi></span>';
+        tEl = el.firstChild; lEl = el.lastChild;
+        el.addEventListener("click", function (e) {
+            e.preventDefault(); e.stopPropagation();
+            idx = (idx + 1) % ZONES.length; lastT = ""; lastL = "";
+            try { localStorage.setItem(KEY, ZONES[idx][0]); } catch (x) { }
+            try { typeof mu_flushStorage === "function" && mu_flushStorage(); } catch (x) { }
+            paint(true); try { var W = Telegram.WebApp; W.HapticFeedback && W.HapticFeedback.selectionChanged(); } catch (x) { }
+        });
+        document.body.appendChild(el);
+        color(); place(); paint(true); sync(true); tick();
+        try { new MutationObserver(colorSoon).observe(document.documentElement, { attributes: true, attributeFilter: ["class", "style", "data-theme"] }); new MutationObserver(colorSoon).observe(document.body, { attributes: true, attributeFilter: ["class", "style"] }); } catch (e) { }
+        try { var W = Telegram.WebApp; ["safeAreaChanged", "contentSafeAreaChanged", "fullscreenChanged", "themeChanged"].forEach(function (n) { W.onEvent(n, function () { place(); colorSoon(); }); }); } catch (e) { }
+        window.addEventListener("resize", function () { place(); colorSoon(); });
+        window.addEventListener("online", function () { sync(true); });
+        window.addEventListener("mk-splash-done", colorSoon);
+        document.addEventListener("visibilitychange", function () { if (!document.hidden) { sync(true); tick(); } });
+    }
+    if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", build); else build();
+})();
+</script>
+
 </body>
 </html>
