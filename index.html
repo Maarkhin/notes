@@ -19662,17 +19662,25 @@ html body:not(#_m1):not(#_m2):not(#_m3):not(#_m4) #contentsContainer .mxe .mxe-p
 })();
 </script>
 <style id="muNavCollapse">
-#muNav .mu-nav-sec[data-navtoggle]{cursor:pointer;display:flex;align-items:center;justify-content:space-between;gap:8px;user-select:none;-webkit-tap-highlight-color:transparent}
+/* Smooth group open/close: the items live in .mu-nav-body (grid 1fr <-> 0fr) so the height animates instead of snapping with display:none */
+#muNav .mu-nav-sec[data-navtoggle]{cursor:pointer;display:flex;align-items:center;justify-content:space-between;gap:8px;user-select:none;-webkit-user-select:none;-webkit-tap-highlight-color:transparent;touch-action:manipulation}
 #muNav .mu-nav-sec[data-navtoggle]:hover{opacity:.9}
-#muNav .mu-nav-chev{flex:0 0 auto;transition:transform .2s ease}
-#muNav .mu-nav-grp.mu-collapsed .mu-nav-chev{transform:rotate(90deg)}
-[dir="rtl"] #muNav .mu-nav-grp.mu-collapsed .mu-nav-chev,#muNav[dir="rtl"] .mu-nav-grp.mu-collapsed .mu-nav-chev{transform:rotate(90deg)}
-#muNav .mu-nav-grp.mu-collapsed>:not(.mu-nav-sec){display:none!important}
-#muNav .mu-nav-sec[data-navtoggle]{transition:font-size .2s ease,opacity .2s ease,padding .2s ease}
-#muNav .mu-nav-panel .mu-nav-grp.mu-collapsed>.mu-nav-sec[data-navtoggle]{font-size:16px!important;font-weight:700!important;opacity:1!important;padding-top:10px!important;padding-bottom:10px!important;color:var(--nfs-ink,var(--nfs-text))!important}
-#muNav .mu-nav-panel .mu-nav-grp.mu-collapsed .mu-nav-chev{width:18px;height:18px}
+#muNav .mu-nav-chev{flex:0 0 auto;transition:transform .3s cubic-bezier(.32,.72,0,1)}
 #muNav .mu-nav-grp.mu-collapsed .mu-nav-chev{transform:rotate(-90deg)}
 #muNav[dir="rtl"] .mu-nav-grp.mu-collapsed .mu-nav-chev{transform:rotate(90deg)}
+#muNav .mu-nav-sec[data-navtoggle]{transition:font-size .3s cubic-bezier(.32,.72,0,1),opacity .3s ease,padding .3s cubic-bezier(.32,.72,0,1)}
+#muNav .mu-nav-panel .mu-nav-grp.mu-collapsed>.mu-nav-sec[data-navtoggle]{font-size:16px!important;font-weight:700!important;opacity:1!important;padding-top:10px!important;padding-bottom:10px!important;color:var(--nfs-ink,var(--nfs-text))!important}
+#muNav .mu-nav-panel .mu-nav-grp.mu-collapsed .mu-nav-chev{width:18px;height:18px}
+#muNav .mu-nav-body{display:grid;grid-template-rows:1fr;flex:0 0 auto;transition:grid-template-rows .3s cubic-bezier(.32,.72,0,1),margin-top .3s cubic-bezier(.32,.72,0,1)}
+#muNav .mu-nav-inner{min-height:0;min-width:0;overflow:hidden;display:flex;flex-direction:column;gap:1px;opacity:1;transform:translateZ(0);transition:opacity .24s ease .04s,transform .3s cubic-bezier(.32,.72,0,1),visibility 0s linear 0s}
+#muNav .mu-nav-panel.mu-nav-paired .mu-nav-inner{gap:6px}
+#muNav .mu-nav-grp.mu-collapsed>.mu-nav-body{grid-template-rows:0fr;margin-top:-1px}
+#muNav .mu-nav-panel.mu-nav-paired .mu-nav-grp.mu-collapsed>.mu-nav-body{margin-top:-6px}
+#muNav .mu-nav-grp.mu-collapsed>.mu-nav-body>.mu-nav-inner{opacity:0;transform:translate3d(0,-8px,0);visibility:hidden;transition:opacity .14s ease,transform .3s cubic-bezier(.32,.72,0,1),visibility 0s linear .3s}
+@media(prefers-reduced-motion:reduce){#muNav .mu-nav-body,#muNav .mu-nav-inner,#muNav .mu-nav-chev,#muNav .mu-nav-sec[data-navtoggle]{transition-duration:.01s!important;transition-delay:0s!important}}
+/* Telegram WebView: no per-item stagger layers while the panel slides, only the panel itself moves (lighter + smoother) */
+html.mk-tg #muNav .mu-nav-panel>*{opacity:1!important;transform:none!important;transition:none!important}
+html.mk-tg #muNav .mu-nav-panel{will-change:transform}
 </style>
 </head>
 <body class="theme-oceanic">
@@ -28468,7 +28476,7 @@ Includes the formats you selected among: JSON backup, CSV, Markdown, TXT, and DO
 function exportBundle() { const items = getExportableCategories(); if (!items.length && !getBackupCategories().some(isNoteLocked) && !mu_vaultAvailable()) {
     alert(currentLang === "fa" ? "یادداشتی برای خروجی وجود ندارد." : "There are no notes to export.");
     return;
-} const fa = currentLang === "fa", opts = [["json", fa ? "پشتیبان JSON" : "JSON Backup", fa ? "اطلاعات کامل برنامه" : "Full app data"], ["csv", "CSV", fa ? "داده‌های جدولی" : "Tabular data"], ["md", "Markdown", fa ? "یادداشت‌ها با قالب Markdown" : "Notes in Markdown"], ["txt", fa ? "متن ساده" : "Plain Text", fa ? "نسخه متنی" : "Plain-text notes"], ["docx", "DOCX", fa ? "فایل Word" : "Word document"], ["readme", "README", fa ? "راهنمای بسته" : "Bundle guide"]].concat(mu_vaultAvailable() ? [["vault", fa ? "🔐 گاوصندوق (رمزنگاری‌شده)" : "🔐 Vault (encrypted)", fa ? "فقط داده رمزنگاری‌شده؛ با همان پین باز می‌شود" : "Encrypted data only; opens with the same PIN", "off"]] : []); showAdvanced(`<div class="advanced-head"><h3>📦 ${fa ? "انتخاب خروجی‌های ZIP" : "Choose ZIP contents"}</h3><button class="btn-main" onclick="closeAdvancedModal()">✕</button></div><p style="opacity:.62;font-size:11px;line-height:1.7">${fa ? "خروجی‌هایی را که می‌خواهی داخل ZIP باشند انتخاب کن. اگر یکی خطا بدهد، فقط همان خروجی رد می‌شود و بقیه ادامه پیدا می‌کنند." : "Choose the exports to include. If one fails, only that export is skipped and the rest continue."}</p><div class="zip-export-picker-actions"><span class="image-export-count">${items.length} ${fa ? "یادداشت" : "notes"}</span><span><button class="btn-main image-export-all-btn" onclick="toggleZipExportChecks(true)">${fa ? "انتخاب همه" : "Select all"}</button> <button class="btn-main image-export-all-btn" onclick="toggleZipExportChecks(false)">${fa ? "لغو همه" : "Clear all"}</button></span></div><div class="zip-export-picker-grid" id="zipExportPickerGrid">${opts.map(([key, name, desc, def]) => `<label class="zip-export-option"><input type="checkbox" data-zip-key="${key}" ${def === "off" ? "" : "checked"}><span class="zip-export-option-text"><span class="zip-export-option-name">${name}</span><span class="zip-export-option-desc">${desc}</span></span></label>`).join("")}</div><div class="zip-export-picker-actions"><button class="btn-main" onclick="closeAdvancedModal()">${fa ? "انصراف" : "Cancel"}</button><button class="btn-main" onclick="startSelectedZipExport()">📦 ${fa ? "ساخت بسته ZIP" : "Build ZIP"}</button></div>`); }
+} const fa = currentLang === "fa", opts = [["json", fa ? "پشتیبان JSON" : "JSON Backup", fa ? "اطلاعات کامل برنامه" : "Full app data"], ["txt", fa ? "متن ساده" : "Plain Text", fa ? "نسخه متنی" : "Plain-text notes"], ["csv", "CSV", fa ? "داده‌های جدولی" : "Tabular data"], ["md", "Markdown", fa ? "یادداشت‌ها با قالب Markdown" : "Notes in Markdown"], ["docx", "DOCX", fa ? "فایل Word" : "Word document"], ["readme", "README", fa ? "راهنمای بسته" : "Bundle guide"]].concat(mu_vaultAvailable() ? [["vault", fa ? "🔐 گاوصندوق (رمزنگاری‌شده)" : "🔐 Vault (encrypted)", fa ? "فقط داده رمزنگاری‌شده؛ با همان پین باز می‌شود" : "Encrypted data only; opens with the same PIN", "off"]] : []); showAdvanced(`<div class="advanced-head"><h3>📦 ${fa ? "انتخاب خروجی‌های ZIP" : "Choose ZIP contents"}</h3><button class="btn-main" onclick="closeAdvancedModal()">✕</button></div><p style="opacity:.62;font-size:11px;line-height:1.7">${fa ? "خروجی‌هایی را که می‌خواهی داخل ZIP باشند انتخاب کن. اگر یکی خطا بدهد، فقط همان خروجی رد می‌شود و بقیه ادامه پیدا می‌کنند." : "Choose the exports to include. If one fails, only that export is skipped and the rest continue."}</p><div class="zip-export-picker-actions"><span class="image-export-count">${items.length} ${fa ? "یادداشت" : "notes"}</span><span><button class="btn-main image-export-all-btn" onclick="toggleZipExportChecks(true)">${fa ? "انتخاب همه" : "Select all"}</button> <button class="btn-main image-export-all-btn" onclick="toggleZipExportChecks(false)">${fa ? "لغو همه" : "Clear all"}</button></span></div><div class="zip-export-picker-grid" id="zipExportPickerGrid">${opts.map(([key, name, desc, def]) => `<label class="zip-export-option"><input type="checkbox" data-zip-key="${key}" ${def === "off" ? "" : "checked"}><span class="zip-export-option-text"><span class="zip-export-option-name">${name}</span><span class="zip-export-option-desc">${desc}</span></span></label>`).join("")}</div><div class="zip-export-picker-actions"><button class="btn-main" onclick="closeAdvancedModal()">${fa ? "انصراف" : "Cancel"}</button><button class="btn-main" onclick="startSelectedZipExport()">📦 ${fa ? "ساخت بسته ZIP" : "Build ZIP"}</button></div>`); }
 function toggleZipExportChecks(value) { document.querySelectorAll("#zipExportPickerGrid input[data-zip-key]").forEach(cb => cb.checked = !!value); }
 async function startSelectedZipExport() { const selected = {}; if (document.querySelectorAll("#zipExportPickerGrid input[data-zip-key]").forEach(cb => selected[cb.dataset.zipKey] = cb.checked), !Object.values(selected).some(Boolean)) {
     alert(currentLang === "fa" ? "حداقل یک خروجی را انتخاب کن." : "Select at least one export.");
@@ -40385,7 +40393,7 @@ body.mu-nfsbk-on #mkBackupBar { display:none!important; }
     // bottom sheets: sort order + preview lines
     function closeSheet() { S2.pick = null; var sh = $2("muNfsSheet"); sh && (sh.classList.remove("mu-open"), sh.innerHTML = ""); }
     function sheetOpen() { var sh = $2("muNfsSheet"); return !!(sh && sh.classList.contains("mu-open")); }
-    var IO_IN = [{ id: "in-json", ic: "📥", fa: "ورودی JSON", en: "Import JSON", inp: "importFileInput" }, { id: "in-csv", ic: "📊", fa: "ورودی CSV", en: "Import CSV", inp: "importCsvInput" }, { id: "in-txt", ic: "📝", fa: "ورودی TXT / MD", en: "Import TXT / MD", inp: "importTextInput" }, { id: "in-docx", ic: "📘", fa: "ورودی DOCX", en: "Import DOCX", inp: "importDocxInput" }, { id: "in-html", ic: "🌐", fa: "ورودی HTML", en: "Import HTML", inp: "importHtmlInput" }], IO_OUT = [{ id: "out-json", ic: "🧾", fa: "خروجی JSON", en: "Export JSON", fn: "openStructuredExportPicker", a: "json" }, { id: "out-csv", ic: "📊", fa: "خروجی CSV", en: "Export CSV", fn: "openStructuredExportPicker", a: "csv" }, { id: "out-html", ic: "🌐", fa: "خروجی HTML", en: "Export HTML", fn: "openHtmlExportPicker" }, { id: "out-txt", ic: "📝", fa: "خروجی TXT", en: "Export TXT", fn: "openStructuredExportPicker", a: "txt" }, { id: "out-pdf", ic: "📕", fa: "خروجی PDF", en: "Export PDF", fn: "openPDFExportPicker" }, { id: "out-docx", ic: "📘", fa: "خروجی DOCX", en: "Export DOCX", fn: "openDOCXExportPicker" }, { id: "out-md", ic: "🔖", fa: "خروجی Markdown", en: "Export Markdown", fn: "openStructuredExportPicker", a: "md" }, { id: "out-png", ic: "🖼️", fa: "خروجی تصویر PNG", en: "Export PNG images", fn: "exportImages", a: "png" }, { id: "out-jpg", ic: "🖼️", fa: "خروجی تصویر JPG", en: "Export JPG images", fn: "exportImages", a: "jpg" }, { id: "out-zip", ic: "📦", fa: "بسته کامل (همه فرمت‌ها)", en: "Full bundle (all formats)", fn: "exportBundle" }];
+    var IO_IN = [{ id: "in-json", ic: "📥", fa: "ورودی JSON", en: "Import JSON", inp: "importFileInput" }, { id: "in-csv", ic: "📊", fa: "ورودی CSV", en: "Import CSV", inp: "importCsvInput" }, { id: "in-txt", ic: "📝", fa: "ورودی TXT / MD", en: "Import TXT / MD", inp: "importTextInput" }, { id: "in-docx", ic: "📘", fa: "ورودی DOCX", en: "Import DOCX", inp: "importDocxInput" }, { id: "in-html", ic: "🌐", fa: "ورودی HTML", en: "Import HTML", inp: "importHtmlInput" }], IO_OUT = [{ id: "out-json", ic: "🧾", fa: "خروجی JSON", en: "Export JSON", fn: "openStructuredExportPicker", a: "json" }, { id: "out-txt", ic: "📝", fa: "خروجی TXT", en: "Export TXT", fn: "openStructuredExportPicker", a: "txt" }, { id: "out-html", ic: "🌐", fa: "خروجی HTML", en: "Export HTML", fn: "openHtmlExportPicker" }, { id: "out-csv", ic: "📊", fa: "خروجی CSV", en: "Export CSV", fn: "openStructuredExportPicker", a: "csv" }, { id: "out-pdf", ic: "📕", fa: "خروجی PDF", en: "Export PDF", fn: "openPDFExportPicker" }, { id: "out-docx", ic: "📘", fa: "خروجی DOCX", en: "Export DOCX", fn: "openDOCXExportPicker" }, { id: "out-md", ic: "🔖", fa: "خروجی Markdown", en: "Export Markdown", fn: "openStructuredExportPicker", a: "md" }, { id: "out-png", ic: "🖼️", fa: "خروجی تصویر PNG", en: "Export PNG images", fn: "exportImages", a: "png" }, { id: "out-jpg", ic: "🖼️", fa: "خروجی تصویر JPG", en: "Export JPG images", fn: "exportImages", a: "jpg" }, { id: "out-zip", ic: "📦", fa: "بسته کامل (همه فرمت‌ها)", en: "Full bundle (all formats)", fn: "exportBundle" }];
     function ioRun(id) { for (var all = IO_IN.concat(IO_OUT), it = null, i2 = 0; i2 < all.length; i2++)
         if (all[i2].id === id) {
             it = all[i2];
@@ -40433,7 +40441,7 @@ body.mu-nfsbk-on #mkBackupBar { display:none!important; }
         try { __navCollMem = JSON.parse(localStorage.getItem("mkNavCollapsed") || "{}") || {}; }
         catch (e) { __navCollMem = {}; }
     } return __navCollMem; }
-    function navToggleGrp(sec) { var grp = sec.closest(".mu-nav-grp"); if (!grp) return; var k = sec.getAttribute("data-navtoggle"), c = grp.classList.toggle("mu-collapsed"); sec.setAttribute("aria-expanded", c ? "false" : "true"); navColl()[k] = c ? 1 : 0; try { localStorage.setItem("mkNavCollapsed", JSON.stringify(navColl())); } catch (e) { } }
+    function navToggleGrp(sec) { var grp = sec.closest(".mu-nav-grp"); if (!grp) return; var k = sec.getAttribute("data-navtoggle"), c = grp.classList.toggle("mu-collapsed"); sec.setAttribute("aria-expanded", c ? "false" : "true"); navColl()[k] = c ? 1 : 0; clearTimeout(window.__mkNavSaveT), window.__mkNavSaveT = setTimeout(function () { try { localStorage.setItem("mkNavCollapsed", JSON.stringify(navColl())); } catch (e) { } }, 400); }
     document.addEventListener("click", function (e) { var t = e.target && e.target.closest && e.target.closest("#muNavPanel .mu-nav-sec[data-navtoggle]"); if (t) { e.preventDefault(), e.stopPropagation(), navToggleGrp(t); } }, !0);
     document.addEventListener("keydown", function (e) { if (e.key !== "Enter" && e.key !== " ") return; var t = e.target && e.target.closest && e.target.closest("#muNavPanel .mu-nav-sec[data-navtoggle]"); if (t) { e.preventDefault(), navToggleGrp(t); } }, !0);
     var NAV_GROUPS = [{ fa: "مدیریت یادداشت‌ها", en: "Notes Management", items: [{ k: "notes", ic: "bulb", fa: "یادداشت‌ها", en: "Notes", pr: "a" }, { k: "folders", ic: "folder", fa: "پوشه‌ها", en: "Folders", pr: "a" }, { k: "list", ic: "list", fa: "لیست", en: "List", pr: "b" }, { k: "vault", ic: "vault", fa: "گاوصندوق", en: "Vault", pr: "b" }, { k: "search", ic: "search", fa: "جستجوی هوشمند", en: "Smart Search", pr: "b" }, { k: "delete", ic: "trash", fa: "حذف", en: "Delete", pr: "b" }] }, { fa: "مجموعه‌ها", en: "Collections", items: [{ k: "archive", ic: "archive", fa: "بایگانی", en: "Archive" }, { k: "favorites", ic: "star", fa: "علاقه‌مندی‌ها", en: "Favorites", pr: "d" }, { k: "locked", ic: "lock", fa: "قفل‌شده‌ها", en: "Locked", pr: "d" }, { k: "pinned", ic: "pin", fa: "پین‌شده‌ها", en: "Pinned", pr: "h" }, { k: "tags", ic: "tags", fa: "برچسب‌ها", en: "Tags", pr: "h" }] }, { fa: "پشتیبان‌گیری داده‌ها", en: "Data backup", items: [{ k: "cloud", ic: "cloud", fa: "بکاپ ابری تلگرام", en: "Telegram Cloud Backup" }, { k: "imp", ic: "imp", fa: "ورودی‌ها", en: "Import", pr: "c" }, { k: "exp", ic: "exp", fa: "خروجی‌ها", en: "Export", pr: "c" }] }, { fa: "ابزارها", en: "Tools", items: [{ k: "fileviewer", ic: "fview", fa: "نمایشگر و رمزگشایی فایل‌ها", en: "File Viewer & Decryptor" }, { k: "morse", ic: "morse", fa: "مبدل کد مورس", en: "Morse Code Converter", pr: "e" }, { k: "binary", ic: "binary", fa: "مبدل کد باینری", en: "Binary Code Converter", pr: "e" }, { k: "kg", ic: "graph", fa: "شبکه دانش", en: "Knowledge Graph", pr: "g" }, { k: "portal", ic: "portal", fa: "پورتال رندوم", en: "Random Portal", pr: "g" }] }], navTimer = 0, navIsOpen = !1;
@@ -40486,8 +40494,8 @@ body.mu-nfsbk-on #mkBackupBar { display:none!important; }
     } }
     function buildNav() { var p = $2("muNavPanel"); if (p) {
         var cur = curPage();
-        p.classList.toggle("mu-nav-paired", pairOn()), p.innerHTML = '<div class="mu-nav-head"><button type="button" class="mu-nav-set' + (cur === "settings" ? " on" : "") + '" data-nav="settings" aria-label="' + (fa2() ? "تنظیمات" : "Settings") + '" title="' + (fa2() ? "تنظیمات" : "Settings") + '">' + ICONS.gear + '</button><button type="button" class="mu-nav-layout" data-nav="layout" aria-label="' + (fa2() ? "تغییر نمایش منو" : "Change menu layout") + '" title="' + (fa2() ? "تغییر نمایش منو" : "Change menu layout") + '">' + (pairOn() ? ICONS.rows : ICONS.grid) + "<span>" + (fa2() ? "نمایش" : "Layout") + '</span></button><button type="button" class="mu-nav-dash' + (cur === "dash" ? " on" : "") + '" data-nav="dash" aria-label="' + (fa2() ? "داشبورد" : "Dashboard") + '" title="' + (fa2() ? "داشبورد" : "Dashboard") + '"><span dir="auto">' + (fa2() ? "داشبورد" : "Dashboard") + '</span></button><span class="mu-nav-hspacer" aria-hidden="true" style="flex:1 1 0;min-width:0"></span><button type="button" class="mu-nav-lang" data-nav="lang" aria-label="' + (fa2() ? "تغییر زبان" : "Change language") + '">' + ICONS.globe + '<span dir="auto">' + (fa2() ? "English" : "فارسی") + "</span></button></div>" + NAV_GROUPS.map(function (g, gi) { return (gi ? '<div class="mu-nav-sep"></div>' : "") + '<div class="mu-nav-grp' + (navColl()[g.en] ? " mu-collapsed" : "") + '" data-grp="' + g.en + '"><div class="mu-nav-sec" role="button" tabindex="0" data-navtoggle="' + g.en + '" aria-expanded="' + (navColl()[g.en] ? "false" : "true") + '"><span dir="auto">' + esc(fa2() ? g.fa : g.en) + '</span><svg class="mu-nav-chev" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg></div>' + (function () { for (var out = [], i = 0, its = g.items; i < its.length;)
-            pairOn() && its[i].pr && its[i + 1] && its[i + 1].pr === its[i].pr ? (out.push('<div class="mu-nav-pair">' + navItemHtml(its[i], cur) + navItemHtml(its[i + 1], cur) + "</div>"), i += 2) : pairOn() ? (out.push('<div class="mu-nav-pair mu-nav-solo">' + navItemHtml(its[i], cur) + "</div>"), i++) : (out.push(navItemHtml(its[i], cur)), i++); return out.join(""); })() + "</div>"; }).join("");
+        p.classList.toggle("mu-nav-paired", pairOn()), p.innerHTML = '<div class="mu-nav-head"><button type="button" class="mu-nav-set' + (cur === "settings" ? " on" : "") + '" data-nav="settings" aria-label="' + (fa2() ? "تنظیمات" : "Settings") + '" title="' + (fa2() ? "تنظیمات" : "Settings") + '">' + ICONS.gear + '</button><button type="button" class="mu-nav-layout" data-nav="layout" aria-label="' + (fa2() ? "تغییر نمایش منو" : "Change menu layout") + '" title="' + (fa2() ? "تغییر نمایش منو" : "Change menu layout") + '">' + (pairOn() ? ICONS.rows : ICONS.grid) + "<span>" + (fa2() ? "نمایش" : "Layout") + '</span></button><button type="button" class="mu-nav-dash' + (cur === "dash" ? " on" : "") + '" data-nav="dash" aria-label="' + (fa2() ? "داشبورد" : "Dashboard") + '" title="' + (fa2() ? "داشبورد" : "Dashboard") + '"><span dir="auto">' + (fa2() ? "داشبورد" : "Dashboard") + '</span></button><span class="mu-nav-hspacer" aria-hidden="true" style="flex:1 1 0;min-width:0"></span><button type="button" class="mu-nav-lang" data-nav="lang" aria-label="' + (fa2() ? "تغییر زبان" : "Change language") + '">' + ICONS.globe + '<span dir="auto">' + (fa2() ? "English" : "فارسی") + "</span></button></div>" + NAV_GROUPS.map(function (g, gi) { return (gi ? '<div class="mu-nav-sep"></div>' : "") + '<div class="mu-nav-grp' + (navColl()[g.en] ? " mu-collapsed" : "") + '" data-grp="' + g.en + '"><div class="mu-nav-sec" role="button" tabindex="0" data-navtoggle="' + g.en + '" aria-expanded="' + (navColl()[g.en] ? "false" : "true") + '"><span dir="auto">' + esc(fa2() ? g.fa : g.en) + '</span><svg class="mu-nav-chev" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg></div><div class="mu-nav-body"><div class="mu-nav-inner">' + (function () { for (var out = [], i = 0, its = g.items; i < its.length;)
+            pairOn() && its[i].pr && its[i + 1] && its[i + 1].pr === its[i].pr ? (out.push('<div class="mu-nav-pair">' + navItemHtml(its[i], cur) + navItemHtml(its[i + 1], cur) + "</div>"), i += 2) : pairOn() ? (out.push('<div class="mu-nav-pair mu-nav-solo">' + navItemHtml(its[i], cur) + "</div>"), i++) : (out.push(navItemHtml(its[i], cur)), i++); return out.join(""); })() + "</div></div></div>"; }).join("");
     } }
     // Markhin sigil: a black & white emblem at the bottom of the menu (grid layout only). Tap it and it
     // types a line
@@ -55002,5 +55010,140 @@ html.mu-nfs-open.mu-nfs-dark:not(#_dn):not(#_zb) #advancedModal #advancedCard.mk
     window.__mkCGmark = 1;
 })();
 </script>
+<style id="mkNavGlass">
+/* ===== mkNavGlass v2: side menu = frosted glass. Blur only on the sliding panel (a full-screen blur flashed on open/close). ===== */
+html body #muNav .mu-nav-bg {
+    background: radial-gradient(120% 80% at 100% 0%, rgba(0,0,0,.22), rgba(0,0,0,.46)) !important;
+}
+html body #muNav .mu-nav-panel {
+    --mkg-tint: rgba(22,24,32,.50);
+    background:
+        radial-gradient(130% 38% at 18% -6%, rgba(255,255,255,.26), transparent 62%),
+        radial-gradient(90% 40% at 108% 104%, rgba(124,246,255,.14), transparent 70%),
+        linear-gradient(160deg, rgba(255,255,255,.12), rgba(255,255,255,.02) 40%, rgba(255,255,255,.07)),
+        var(--mkg-tint) !important;
+    -webkit-backdrop-filter: blur(30px) saturate(185%) brightness(1.06) !important;
+    backdrop-filter: blur(30px) saturate(185%) brightness(1.06) !important;
+    border: 1px solid rgba(255,255,255,.22) !important;
+    box-shadow: 0 28px 70px rgba(0,0,0,.5), 0 2px 10px rgba(0,0,0,.25),
+                inset 0 1px 0 rgba(255,255,255,.42), inset 0 0 0 1px rgba(255,255,255,.05), inset 0 -1px 0 rgba(255,255,255,.08) !important;
+}
+html:not(.mu-nfs-dark) body #muNav .mu-nav-panel {
+    --mkg-tint: rgba(252,252,255,.58);
+    background:
+        radial-gradient(130% 38% at 18% -6%, rgba(255,255,255,.85), transparent 62%),
+        radial-gradient(90% 40% at 108% 104%, rgba(90,170,255,.12), transparent 70%),
+        linear-gradient(160deg, rgba(255,255,255,.5), rgba(255,255,255,.1) 45%, rgba(255,255,255,.3)),
+        var(--mkg-tint) !important;
+    -webkit-backdrop-filter: blur(30px) saturate(170%) !important;
+    backdrop-filter: blur(30px) saturate(170%) !important;
+    border: 1px solid rgba(255,255,255,.75) !important;
+    box-shadow: 0 28px 70px rgba(0,0,0,.24), 0 0 0 1px rgba(0,0,0,.06),
+                inset 0 1px 0 #fff, inset 0 -1px 0 rgba(255,255,255,.4) !important;
+}
+@supports (background: color-mix(in srgb, red 50%, transparent)) {
+    html body #muNav .mu-nav-panel { --mkg-tint: color-mix(in srgb, var(--nfs-nav-bg, #141414) 50%, transparent); }
+    html:not(.mu-nfs-dark) body #muNav .mu-nav-panel { --mkg-tint: color-mix(in srgb, var(--nfs-nav-bg, #fafafa) 56%, transparent); }
+}
+/* items: glass chips; pressed = brighter, selected = lit with a soft inner glow */
+html body #muNav .mu-nav-panel .mu-nav-item,
+html body #muNav .mu-nav-panel.mu-nav-paired .mu-nav-pair .mu-nav-item,
+html body #muNav .mu-nav-panel .mu-nav-head .mu-nav-layout,
+html body #muNav .mu-nav-panel .mu-nav-head .mu-nav-old {
+    transition: background-color .15s ease, box-shadow .15s ease, transform .12s ease !important;
+}
+html body #muNav .mu-nav-panel.mu-nav-paired .mu-nav-pair .mu-nav-item,
+html body #muNav .mu-nav-panel .mu-nav-head .mu-nav-layout {
+    background: rgba(255,255,255,.09) !important;
+    border: 1px solid rgba(255,255,255,.16) !important;
+    box-shadow: inset 0 1px 0 rgba(255,255,255,.14);
+}
+html:not(.mu-nfs-dark) body #muNav .mu-nav-panel.mu-nav-paired .mu-nav-pair .mu-nav-item,
+html:not(.mu-nfs-dark) body #muNav .mu-nav-panel .mu-nav-head .mu-nav-layout {
+    background: rgba(255,255,255,.42) !important;
+    border-color: rgba(255,255,255,.8) !important;
+    box-shadow: inset 0 1px 0 #fff, 0 1px 3px rgba(0,0,0,.05);
+}
+html body #muNav .mu-nav-panel .mu-nav-item:active,
+html body #muNav .mu-nav-panel.mu-nav-paired .mu-nav-pair .mu-nav-item:active,
+html body #muNav .mu-nav-panel .mu-nav-head .mu-nav-layout:active {
+    background: rgba(255,255,255,.22) !important;
+    transform: scale(.975);
+}
+html body #muNav .mu-nav-panel .mu-nav-item.on,
+html body #muNav .mu-nav-panel.mu-nav-paired .mu-nav-pair .mu-nav-item.on {
+    background: linear-gradient(145deg, rgba(255,255,255,.34), rgba(255,255,255,.12)) !important;
+    border: 1px solid rgba(255,255,255,.38) !important;
+    box-shadow: inset 0 1px 0 rgba(255,255,255,.55), inset 0 0 14px rgba(255,255,255,.1), 0 4px 14px rgba(0,0,0,.18) !important;
+}
+html:not(.mu-nfs-dark) body #muNav .mu-nav-panel .mu-nav-item.on,
+html:not(.mu-nfs-dark) body #muNav .mu-nav-panel.mu-nav-paired .mu-nav-pair .mu-nav-item.on {
+    background: linear-gradient(145deg, rgba(255,255,255,.95), rgba(255,255,255,.55)) !important;
+    border-color: #fff !important;
+    box-shadow: inset 0 1px 0 #fff, 0 4px 14px rgba(0,0,0,.12) !important;
+}
+/* dividers fade out at the ends instead of a hard line */
+html body #muNav .mu-nav-panel .mu-nav-sep {
+    background: linear-gradient(90deg, transparent, rgba(127,127,127,.45), transparent) !important;
+    height: 1px !important;
+    border: 0 !important;
+}
+/* lightweight modes (blur off) and reduced-transparency setting: nearly opaque panel, readable text */
+html.mk-tg-lite body #muNav .mu-nav-panel,
+html.mu-host body #muNav .mu-nav-panel { background: rgba(24,24,28,.95) !important; }
+html.mk-tg-lite:not(.mu-nfs-dark) body #muNav .mu-nav-panel,
+html.mu-host:not(.mu-nfs-dark) body #muNav .mu-nav-panel { background: rgba(250,250,252,.96) !important; }
+@media (prefers-reduced-transparency: reduce) {
+    html body #muNav .mu-nav-panel { background: rgba(24,24,28,.96) !important; -webkit-backdrop-filter: none !important; backdrop-filter: none !important; }
+    html:not(.mu-nfs-dark) body #muNav .mu-nav-panel { background: rgba(250,250,252,.97) !important; }
+}
+</style>
+<style id="mkNavRing">
+/* mkNavRing: one clean ring around every menu option - black in the light theme, white in the dark theme.
+   #muNav#muNav lifts the specificity above the glass rules (they also set a border colour, on selected items too). */
+html body #muNav#muNav .mu-nav-panel .mu-nav-head .mu-nav-set,
+html body #muNav#muNav .mu-nav-panel .mu-nav-head .mu-nav-set.on,
+html body #muNav#muNav .mu-nav-panel .mu-nav-head .mu-nav-dash,
+html body #muNav#muNav .mu-nav-panel .mu-nav-head .mu-nav-dash.on,
+html body #muNav#muNav .mu-nav-panel .mu-nav-item,
+html body #muNav#muNav .mu-nav-panel .mu-nav-item.on,
+html body #muNav#muNav .mu-nav-panel.mu-nav-paired .mu-nav-pair .mu-nav-item,
+html body #muNav#muNav .mu-nav-panel.mu-nav-paired .mu-nav-pair .mu-nav-item.on,
+html body #muNav#muNav .mu-nav-panel .mu-nav-head .mu-nav-layout,
+html body #muNav#muNav .mu-nav-panel .mu-nav-head .mu-nav-old,
+html body #muNav#muNav .mu-nav-panel .mu-nav-head .mu-nav-lang {
+    border: 1px solid #000000 !important;
+    outline: 0 !important;
+}
+html.mu-nfs-dark body #muNav#muNav .mu-nav-panel .mu-nav-head .mu-nav-set,
+html.mu-nfs-dark body #muNav#muNav .mu-nav-panel .mu-nav-head .mu-nav-set.on,
+html.mu-nfs-dark body #muNav#muNav .mu-nav-panel .mu-nav-head .mu-nav-dash,
+html.mu-nfs-dark body #muNav#muNav .mu-nav-panel .mu-nav-head .mu-nav-dash.on,
+html.mu-nfs-dark body #muNav#muNav .mu-nav-panel .mu-nav-item,
+html.mu-nfs-dark body #muNav#muNav .mu-nav-panel .mu-nav-item.on,
+html.mu-nfs-dark body #muNav#muNav .mu-nav-panel.mu-nav-paired .mu-nav-pair .mu-nav-item,
+html.mu-nfs-dark body #muNav#muNav .mu-nav-panel.mu-nav-paired .mu-nav-pair .mu-nav-item.on,
+html.mu-nfs-dark body #muNav#muNav .mu-nav-panel .mu-nav-head .mu-nav-layout,
+html.mu-nfs-dark body #muNav#muNav .mu-nav-panel .mu-nav-head .mu-nav-old,
+html.mu-nfs-dark body #muNav#muNav .mu-nav-panel .mu-nav-head .mu-nav-lang {
+    border-color: #ffffff !important;
+}
+</style>
+<style id="mkNavSoftOpen">
+/* gentle, fluid group opening: body eases down, options fade/slide in one after another */
+html body #muNav#muNav .mu-nav-body{transition:grid-template-rows .5s cubic-bezier(.25,.8,.25,1),margin-top .5s cubic-bezier(.25,.8,.25,1)!important}
+html body #muNav#muNav .mu-nav-grp:not(.mu-collapsed)>.mu-nav-body>.mu-nav-inner{transition:opacity .35s ease .05s,transform .5s cubic-bezier(.25,.8,.25,1),visibility 0s linear 0s!important}
+html body #muNav#muNav .mu-nav-grp.mu-collapsed>.mu-nav-body>.mu-nav-inner{transition:opacity .35s ease,transform .5s cubic-bezier(.25,.8,.25,1),visibility 0s linear .5s!important}
+html body #muNav#muNav .mu-nav-inner>*{transition:opacity .4s ease,transform .5s cubic-bezier(.25,.8,.25,1)}
+html body #muNav#muNav .mu-nav-grp.mu-collapsed>.mu-nav-body>.mu-nav-inner>*{opacity:0;transform:translate3d(0,-6px,0);transition-duration:.35s,.5s;transition-delay:0s}
+html body #muNav#muNav .mu-nav-grp:not(.mu-collapsed)>.mu-nav-body>.mu-nav-inner>*:nth-child(1){transition-delay:0.040s!important}
+html body #muNav#muNav .mu-nav-grp:not(.mu-collapsed)>.mu-nav-body>.mu-nav-inner>*:nth-child(2){transition-delay:0.085s!important}
+html body #muNav#muNav .mu-nav-grp:not(.mu-collapsed)>.mu-nav-body>.mu-nav-inner>*:nth-child(3){transition-delay:0.130s!important}
+html body #muNav#muNav .mu-nav-grp:not(.mu-collapsed)>.mu-nav-body>.mu-nav-inner>*:nth-child(4){transition-delay:0.175s!important}
+html body #muNav#muNav .mu-nav-grp:not(.mu-collapsed)>.mu-nav-body>.mu-nav-inner>*:nth-child(5){transition-delay:0.220s!important}
+html body #muNav#muNav .mu-nav-grp:not(.mu-collapsed)>.mu-nav-body>.mu-nav-inner>*:nth-child(6){transition-delay:0.265s!important}
+html body #muNav#muNav .mu-nav-grp:not(.mu-collapsed)>.mu-nav-body>.mu-nav-inner>*:nth-child(7){transition-delay:0.310s!important}
+html body #muNav#muNav .mu-nav-grp:not(.mu-collapsed)>.mu-nav-body>.mu-nav-inner>*:nth-child(8){transition-delay:0.355s!important}
+</style>
 </body>
 </html>
