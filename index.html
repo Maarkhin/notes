@@ -34798,7 +34798,7 @@ catch { } }, (function () {
         }
         catch { }
         var snapshot2 = snapshot();
-        ctx.lastHtml = snapshot2.html, ctx.lastName = String(_ci && _ci.name || ""), nt();
+        ctx.lastHtml = snapshot2.html, ctx.lastName = String(_ci && _ci.name || "");
     } } function teardownUI() { try {
         deselectImg();
     }
@@ -34910,15 +34910,23 @@ catch { } }, (function () {
     catch { } if (!rc || !rc.height && !rc.width) {
         var el = rg.startContainer.nodeType === 1 ? rg.startContainer : rg.startContainer.parentElement;
         el && el !== vb && (rc = el.getBoundingClientRect());
-    } return rc && (rc.height || rc.width) ? rc : null; } function keepCaretVisible() { if (S2.active) {
-        var rc = caretRect();
-        if (rc) {
-            var vbr = vb.getBoundingClientRect(), v = vvBox(), top = Math.max(vbr.top, v.top) + 14, bottom = Math.min(vbr.bottom, v.top + v.height) - 14;
-            rc.bottom > bottom ? vb.scrollTop += rc.bottom - bottom : rc.top < top && (vb.scrollTop -= top - rc.top);
-        }
+    } return rc && (rc.height || rc.width) ? rc : null; } var selT = 0;
+    // Where the visible text area really is: the viewer body clipped to the visible viewport (keyboard) and to any
+    // part of the title bar / toolbar / tag row / OK footer that overlaps it (the Ocean look floats them over the text)
+    function safeBox() { var vbr = vb.getBoundingClientRect(), v = vvBox(), top = Math.max(vbr.top, v.top), bottom = Math.min(vbr.bottom, v.top + v.height), mid = (top + bottom) / 2; [".mu-viewer-head", ".mu-viewer-tools", ".mu-viewer-tags", ".mu-viewer-foot"].forEach(function (sel) { try { var el = r2.querySelector(sel); if (!el || el.hidden) return; var cs = getComputedStyle(el); if (cs.display === "none" || cs.visibility === "hidden") return; var b = el.getBoundingClientRect(); if (!b.height || b.bottom <= top || b.top >= bottom) return; (b.top + b.bottom) / 2 < mid ? top = Math.max(top, b.bottom) : bottom = Math.min(bottom, b.top); } catch { } }); return { top: top, bottom: bottom }; }
+    function rectsOf(rg) { var top = Infinity, bottom = -Infinity, rs = null; try { rs = rg.getClientRects(); } catch { } if (rs) for (var i = 0; i < rs.length; i++) { var r = rs[i]; (r.height || r.width) && (top = Math.min(top, r.top), bottom = Math.max(bottom, r.bottom)); } if (!isFinite(top)) { var el = rg.startContainer.nodeType === 1 ? rg.startContainer : rg.startContainer.parentElement; if (el && el !== vb) { var b = el.getBoundingClientRect(); (b.height || b.width) && (top = b.top, bottom = b.bottom); } } return isFinite(top) ? { top: top, bottom: bottom } : null; }
+    function keepCaretVisible() { if (S2.active) {
+        var sel = window.getSelection(); if (!sel || !sel.rangeCount) return;
+        var rg = sel.getRangeAt(0); if (!vb.contains(rg.startContainer) || !vb.contains(rg.endContainer)) return;
+        var box = rectsOf(rg); if (!box) return;
+        var sb = safeBox(), pad = 22, topPad = sel.isCollapsed ? pad : 64;
+        // a selection taller than the free area: follow the end the finger is dragging
+        if (!sel.isCollapsed && box.bottom - box.top > sb.bottom - sb.top - topPad - pad && sel.focusNode && vb.contains(sel.focusNode)) { try { var fr = document.createRange(); fr.setStart(sel.focusNode, sel.focusOffset), fr.collapse(!0); var fb = rectsOf(fr); fb && (box = fb); } catch { } }
+        var tmin = sb.top + topPad, bmax = sb.bottom - pad;
+        if (box.bottom > bmax) vb.scrollTop += box.bottom - bmax; else if (box.top < tmin) vb.scrollTop -= tmin - box.top;
     } }
     // Finger drag outside the text area scrolls the note (with a little momentum)
-    var kcRaf = 0; function kcSoon() { kcRaf || (kcRaf = requestAnimationFrame(function () { kcRaf = 0, keepCaretVisible(); })); } function onVV() { S2.active && (fitNow(), kcSoon(), setTimeout(keepCaretVisible, 120), setTimeout(keepCaretVisible, 350)); } window.visualViewport && (window.visualViewport.addEventListener("resize", onVV), window.visualViewport.addEventListener("scroll", function () { S2.active && fitNow(); })), window.addEventListener("resize", onVV), document.addEventListener("selectionchange", function () { S2.active && !(window.__mkScrollRecent && window.__mkScrollRecent(2500)) && kcSoon(); }), vb.addEventListener("focus", function () { S2.active && (setTimeout(keepCaretVisible, 120), setTimeout(keepCaretVisible, 350)); }), vb.addEventListener("input", function () { kcSoon(); }), (function () { var t0 = null, lastY = 0, lastT = 0, vel = 0, dragging = !1, raf = 0; function stopFling() { raf && (cancelAnimationFrame(raf), raf = 0); } r2.addEventListener("touchstart", function (e) { if (stopFling(), !S2.active || e.touches.length !== 1) {
+    var kcRaf = 0; function kcSoon() { kcRaf || (kcRaf = requestAnimationFrame(function () { kcRaf = 0, keepCaretVisible(); })); } function onVV() { S2.active && (fitNow(), kcSoon(), setTimeout(keepCaretVisible, 120), setTimeout(keepCaretVisible, 350)); } window.visualViewport && (window.visualViewport.addEventListener("resize", onVV), window.visualViewport.addEventListener("scroll", function () { S2.active && fitNow(); })), window.addEventListener("resize", onVV), document.addEventListener("selectionchange", function () { if (S2.active) { var s0 = window.getSelection(); if (s0 && s0.rangeCount && !s0.isCollapsed && s0.anchorNode && vb.contains(s0.anchorNode)) { clearTimeout(selT), selT = setTimeout(keepCaretVisible, 260); } else !(window.__mkScrollRecent && window.__mkScrollRecent(2500)) && kcSoon(); } }), vb.addEventListener("focus", function () { S2.active && (setTimeout(keepCaretVisible, 120), setTimeout(keepCaretVisible, 350)); }), vb.addEventListener("input", function () { kcSoon(); }), (function () { var t0 = null, lastY = 0, lastT = 0, vel = 0, dragging = !1, raf = 0; function stopFling() { raf && (cancelAnimationFrame(raf), raf = 0); } r2.addEventListener("touchstart", function (e) { if (stopFling(), !S2.active || e.touches.length !== 1) {
         t0 = null;
         return;
     } if (vb.contains(e.target)) {
@@ -34969,9 +34977,7 @@ catch { } }, (function () {
             var gsel = window.getSelection();
             gsel && gsel.removeAllRanges();
         }
-        catch { }
-        selectImg(w);
-        return;
+        catch { } try { var aeI = document.activeElement; aeI && aeI !== document.body && (aeI === vb || vb.contains(aeI)) && aeI.blur(); } catch { } selectImg(w); return;
     } ensureSlots(); var rowEl = w.parentNode; if (rowEl && rowEl.classList && rowEl.classList.contains("mu-img-row")) {
         var sides = rowEl.querySelectorAll(":scope > .mu-img-side"), rcw = w.getBoundingClientRect(), pick = null;
         if (sides.length === 1 ? pick = sides[0] : sides.length > 1 && (pick = e.clientX < rcw.left + rcw.width / 2 ? sides[0] : sides[sides.length - 1]), pick)
