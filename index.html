@@ -19661,6 +19661,19 @@ html body:not(#_m1):not(#_m2):not(#_m3):not(#_m4) #contentsContainer .mxe .mxe-p
     }, true);
 })();
 </script>
+<style id="muNavCollapse">
+#muNav .mu-nav-sec[data-navtoggle]{cursor:pointer;display:flex;align-items:center;justify-content:space-between;gap:8px;user-select:none;-webkit-tap-highlight-color:transparent}
+#muNav .mu-nav-sec[data-navtoggle]:hover{opacity:.9}
+#muNav .mu-nav-chev{flex:0 0 auto;transition:transform .2s ease}
+#muNav .mu-nav-grp.mu-collapsed .mu-nav-chev{transform:rotate(90deg)}
+[dir="rtl"] #muNav .mu-nav-grp.mu-collapsed .mu-nav-chev,#muNav[dir="rtl"] .mu-nav-grp.mu-collapsed .mu-nav-chev{transform:rotate(90deg)}
+#muNav .mu-nav-grp.mu-collapsed>:not(.mu-nav-sec){display:none!important}
+#muNav .mu-nav-sec[data-navtoggle]{transition:font-size .2s ease,opacity .2s ease,padding .2s ease}
+#muNav .mu-nav-panel .mu-nav-grp.mu-collapsed>.mu-nav-sec[data-navtoggle]{font-size:16px!important;font-weight:700!important;opacity:1!important;padding-top:10px!important;padding-bottom:10px!important;color:var(--nfs-ink,var(--nfs-text))!important}
+#muNav .mu-nav-panel .mu-nav-grp.mu-collapsed .mu-nav-chev{width:18px;height:18px}
+#muNav .mu-nav-grp.mu-collapsed .mu-nav-chev{transform:rotate(-90deg)}
+#muNav[dir="rtl"] .mu-nav-grp.mu-collapsed .mu-nav-chev{transform:rotate(90deg)}
+</style>
 </head>
 <body class="theme-oceanic">
 <script id="mkThemeBoot">
@@ -20916,7 +20929,7 @@ try {
 catch { }
 (function () { var once = function () { ["touchstart", "pointerdown", "mousedown"].forEach(function (ev) { window.removeEventListener(ev, once, !0); }), mu_tgFsRefresh(); }; ["touchstart", "pointerdown", "mousedown"].forEach(function (ev) { window.addEventListener(ev, once, { capture: !0, passive: !0 }); }); })(), window.__mkSplashDone && mu_tgFsRefreshBurst();
 // Plain JS flag (window.__muTgOk): true only inside a real Telegram client with CloudStorage.
-function mu_applyTelegramSetup() { TG = window.Telegram && window.Telegram.WebApp ? window.Telegram.WebApp : null, IS_TELEGRAM = !!TG || /Telegram/i.test(navigator.userAgent || ""), hasCloudStorage = mu_tgCloudAvailable(TG), window.__muTgOk = !!(IS_TELEGRAM && hasCloudStorage); try {
+function mu_applyTelegramSetup() { TG = window.Telegram && window.Telegram.WebApp ? window.Telegram.WebApp : null, IS_TELEGRAM = !!(TG && (TG.initData && String(TG.initData).length || TG.platform && TG.platform !== "unknown")) || /Telegram/i.test(navigator.userAgent || ""), hasCloudStorage = mu_tgCloudAvailable(TG), window.__muTgOk = !!(IS_TELEGRAM && hasCloudStorage); try {
     TG && TG.ready && TG.ready(), TG && TG.expand && TG.expand();
 }
 catch { }
@@ -26094,14 +26107,14 @@ async function copyCategory(id) {
     const t = i18n[currentLang], item = categories.find(c => c.id === id);
     if (!item)
         return;
-    const textToCopy = item.isDecoy ? item.fakeContent || t.unauthorized : (() => { try {
+    const textToCopy = mu_bidiText(item.isDecoy ? item.fakeContent || t.unauthorized : (() => { try {
         const live = hiddenState[id] ? null : document.getElementById("text-" + id);
         if (live && MK.domText)
             return MK.domText(live).replace(/\u00a0/g, " ");
         if (item.html)
             return htmlToPlainText(item.html);
     }
-    catch { } return item.text || item.html || ""; })();
+    catch { } return item.text || item.html || ""; })());
     // Telegram's in-app WebView (and some browser contexts) exposes navigator.clipboard but then rejects
     // the actual writeText() call
     let copied = !1, lastErr = null;
@@ -26204,7 +26217,7 @@ async function buildMixedEncryptedExportZip(items, chosenName, format) {
             const content = plain.map((item, index) => `========================================
 ${index + 1}. ${item.name}${item.folder ? ` [Folder: ${item.folder}]` : ""}
 ========================================
-${getTxtContent(item.id, item).replace(/\n+$/, "")}
+${mu_bidiText(getTxtContent(item.id, item).replace(/\n+$/, ""))}
 `).join(`
 `);
             files.push({ name: "PLAIN/markhin_notes.txt", data: new Blob([content], { type: "text/plain;charset=utf-8" }) });
@@ -26432,13 +26445,13 @@ function createImageExportCard(item) {
     const exportFontFamily = item && typeof item.fontFamily == "string" && item.fontFamily.trim() ? item.fontFamily.trim() : "Arial, sans-serif", exportFontSize = item && Number(item.fontSize) > 0 ? Number(item.fontSize) : 18;
     card.style.cssText = `position:relative;width:100%;box-sizing:border-box;padding:56px;background:#fff;color:#111;font-family:${exportFontFamily};font-size:${exportFontSize}px;line-height:1.9;word-break:break-word;overflow:hidden;`;
     const title = document.createElement("h1");
-    if (title.textContent = item.name || "Markhin Note", title.style.cssText = "margin:0 0 10px;font-size:30px;line-height:1.35;font-weight:800;", card.appendChild(title), item.folder) {
+    if (title.textContent = item.name || "Markhin Note", title.style.cssText = "margin:0 0 10px;font-size:30px;line-height:1.35;font-weight:800;", window.muExportBidi && muExportBidi.setBlock(title, item.name || "Markhin Note"), card.appendChild(title), item.folder) {
         const folder = document.createElement("div");
-        folder.textContent = `${currentLang === "fa" ? "پوشه" : "Folder"}: ${item.folder}`, folder.style.cssText = "font-size:13px;color:#666;margin-bottom:22px;", card.appendChild(folder);
+        folder.textContent = `${currentLang === "fa" ? "پوشه" : "Folder"}: ${item.folder}`, folder.style.cssText = "font-size:13px;color:#666;margin-bottom:22px;", window.muExportBidi && muExportBidi.setBlock(folder, item.folder), card.appendChild(folder);
     }
     const body = document.createElement("div");
     return body.className = "image-export-body", body.style.cssText = "white-space:pre-wrap;overflow-wrap:anywhere;", body.innerHTML = sanitizeHtml(item.html || escapeHtml(item.text || "").replace(/\r\n?/g, `
-`).replace(/\n/g, "<br>")), body.querySelectorAll(".img-toolbar, .audio-wrapper button").forEach(el => el.remove()), body.querySelectorAll("audio").forEach(audio => { const label = document.createElement("div"); label.textContent = currentLang === "fa" ? "🎵 فایل صوتی" : "🎵 Audio file", label.style.cssText = "padding:10px 14px;border:1px solid #ddd;border-radius:10px;margin:10px 0;color:#555;", audio.replaceWith(label); }), body.querySelectorAll("img").forEach(img => { img.style.maxWidth = "100%", img.style.height = "auto", img.style.display = "block", img.style.margin = "14px auto"; }), mu_fitTableFonts(body), card.appendChild(body), card.appendChild(Object.assign(document.createElement("style"), { textContent: mu_fixedTableCss(".image-export-body") })), card;
+`).replace(/\n/g, "<br>")), body.querySelectorAll(".img-toolbar, .audio-wrapper button").forEach(el => el.remove()), body.querySelectorAll("audio").forEach(audio => { const label = document.createElement("div"); label.textContent = currentLang === "fa" ? "🎵 فایل صوتی" : "🎵 Audio file", label.style.cssText = "padding:10px 14px;border:1px solid #ddd;border-radius:10px;margin:10px 0;color:#555;", audio.replaceWith(label); }), body.querySelectorAll("img").forEach(img => { img.style.maxWidth = "100%", img.style.height = "auto", img.style.display = "block", img.style.margin = "14px auto"; }), window.muExportBidi && muExportBidi.apply(body), mu_fitTableFonts(body), card.appendChild(body), card.appendChild(Object.assign(document.createElement("style"), { textContent: mu_fixedTableCss(".image-export-body") })), card;
 }
 async function canvasToFormatBlob(canvas, format) { const wantJpeg = format === "jpg", mime = wantJpeg ? "image/jpeg" : "image/png", quality = wantJpeg ? .92 : void 0, attempt = src => new Promise((resolve, reject) => { src.toBlob(b => b ? resolve(b) : reject(new Error("toBlob failed")), mime, quality); }); let blob = null; try {
     blob = await attempt(canvas);
@@ -26557,13 +26570,13 @@ async function renderNoteToImage(item, format) {
         else if (!b.t)
             y += lineH;
         else {
-            const rtl = isRtlLine(b.t);
+            const rtl = window.muExportBidi ? muExportBidi.kind(b.t) === "rtl" : isRtlLine(b.t);
             for (const r of wrap(b.t)) {
                 if (y + lineH + pad > MAX_H) {
                     truncated = !0;
                     break;
                 }
-                plan.push({ txt: r, rtl: rtl, y: y + bodySize }), y += lineH;
+                plan.push({ txt: window.muExportBidi ? muExportBidi.chains(r) : r, rtl: rtl, y: y + bodySize }), y += lineH;
             }
             if (truncated)
                 break;
@@ -26772,7 +26785,7 @@ async function exportPDFPrint(items, chosenName) { let list = items; try {
 catch { }
 // The browser's own "Save as PDF" dialog uses the page title as its suggested file name — passing the name
 // chosen in promptFilename() through here keeps that suggestion consistent with every other
-const printable = document.createElement("div"); printable.dir = currentLang === "fa" ? "rtl" : "ltr", printable.className = "mu-print-root", printable.style.cssText = "position:fixed;inset:0;background:#fff;color:#111;padding:40px;z-index:2147483647;overflow:auto;font-family:Tahoma,Vazirmatn,Arial,sans-serif;"; const bodyHtml = item => !isNoteLocked(item) && item.html ? sanitizeHtml(item.html) : escapeHtml(getTxtContent(item.id, item)); printable.innerHTML = '<style>.mu-print-root,.mu-print-root *{color:#111!important;-webkit-text-fill-color:#111!important;text-shadow:none!important}.mu-print-body{white-space:pre-wrap;line-height:1.9;unicode-bidi:plaintext;text-align:start;overflow-wrap:anywhere}.mu-print-body div,.mu-print-body p,.mu-print-body li,.mu-print-body blockquote{unicode-bidi:plaintext}.mu-print-body img{max-width:100%;height:auto}.mu-print-body .img-toolbar,.mu-print-body button,.mu-print-body audio{display:none!important}' + mu_fixedTableCss('.mu-print-body') + '</style><h1 style="margin-top:0">Markhin Note</h1>' + list.map((item, i) => `<section style="page-break-after:always;margin-bottom:40px"><h2 dir="auto">${escapeHtml(`${i + 1}. ${item.name}`)}</h2><div class="mu-print-body">${bodyHtml(item)}</div></section>`).join(""), document.body.appendChild(printable), printable.querySelectorAll(".mu-print-body").forEach(function (b) { b.style.maxWidth = "640px"; }), mu_fitTableFonts(printable); const oldTitle = document.title; document.title = chosenName || (list.length === 1 ? sanitizeFilename(list[0].name) : "Markhin_Note_All_Notes"), await Promise.all(Array.from(printable.querySelectorAll("img")).map(img => img.complete ? 0 : new Promise(r => { img.onload = img.onerror = r, setTimeout(r, 2500); }))), setTimeout(() => { window.print(), setTimeout(() => { printable.remove(), document.title = oldTitle; }, 700); }, 80); }
+const printable = document.createElement("div"); printable.dir = currentLang === "fa" ? "rtl" : "ltr", printable.className = "mu-print-root", printable.style.cssText = "position:fixed;inset:0;background:#fff;color:#111;padding:40px;z-index:2147483647;overflow:auto;font-family:Tahoma,Vazirmatn,Arial,sans-serif;"; const bodyHtml = item => !isNoteLocked(item) && item.html ? mu_bidiHtml(sanitizeHtml(item.html)) : mu_bidiHtml(escapeHtml(getTxtContent(item.id, item))); printable.innerHTML = '<style>.mu-print-root,.mu-print-root *{color:#111!important;-webkit-text-fill-color:#111!important;text-shadow:none!important}.mu-print-body{white-space:pre-wrap;line-height:1.9;unicode-bidi:plaintext;text-align:start;overflow-wrap:anywhere}.mu-print-body div,.mu-print-body p,.mu-print-body li,.mu-print-body blockquote{unicode-bidi:plaintext}.mu-print-body img{max-width:100%;height:auto}.mu-print-body .img-toolbar,.mu-print-body button,.mu-print-body audio{display:none!important}' + mu_fixedTableCss('.mu-print-body') + '</style><h1 style="margin-top:0">Markhin Note</h1>' + list.map((item, i) => `<section style="page-break-after:always;margin-bottom:40px"><h2 dir="auto">${escapeHtml(`${i + 1}. ${item.name}`)}</h2><div class="mu-print-body">${bodyHtml(item)}</div></section>`).join(""), document.body.appendChild(printable), printable.querySelectorAll(".mu-print-body").forEach(function (b) { b.style.maxWidth = "640px"; }), mu_fitTableFonts(printable); const oldTitle = document.title; document.title = chosenName || (list.length === 1 ? sanitizeFilename(list[0].name) : "Markhin_Note_All_Notes"), await Promise.all(Array.from(printable.querySelectorAll("img")).map(img => img.complete ? 0 : new Promise(r => { img.onload = img.onerror = r, setTimeout(r, 2500); }))), setTimeout(() => { window.print(), setTimeout(() => { printable.remove(), document.title = oldTitle; }, 700); }, 80); }
 let __docxEnginePromise = null;
 function loadScriptOnce(src) { return new Promise((resolve, reject) => { if (Array.from(document.scripts).find(x => x.src === src) && window.docx)
     return resolve(window.docx); const script = document.createElement("script"); script.src = src, script.async = !0, script.onload = () => window.docx ? resolve(window.docx) : reject(new Error("DOCX script loaded but global engine was not created")), script.onerror = () => reject(new Error("Could not load " + src)), document.head.appendChild(script); }); }
@@ -26827,6 +26840,14 @@ async function mu_docxImageBytes(src) { if (/^data:/i.test(src)) {
     return { bytes: new Uint8Array(buf), mime: res.headers.get("content-type") || "image/png" };
 } return null; }
 function mu_docxImageType(mime) { return /jpeg|jpg/i.test(mime) ? "jpg" : /gif/i.test(mime) ? "gif" : /bmp/i.test(mime) ? "bmp" : /svg/i.test(mime) ? "svg" : "png"; }
+function mu_docxTextRuns(part, brk, fmt, TextRun) {
+    const base = { bold: fmt.bold, italics: fmt.italics, underline: fmt.underline ? {} : void 0, strike: fmt.strike, highlight: fmt.highlight, color: fmt.color, font: fmt.font, size: fmt.size || void 0 };
+    if (!window.muExportBidi || !part)
+        return [new TextRun({ text: part, break: brk ? 1 : void 0, ...base, rightToLeft: fmt.rtl || void 0 })];
+    // one run per script: Persian runs are right-to-left runs, English / digits / symbols are not, so Word orders them
+    // exactly like the app; number chains and code lines are forced left-to-right
+    return window.muExportBidi.docxSegments(part, !!fmt.code).map((s, i) => new TextRun({ text: s.t, break: i === 0 && brk ? 1 : void 0, ...base, rightToLeft: s.rtl || void 0 }));
+}
 async function mu_docxRunsFromInline(node, engine, fmt) {
     const { TextRun: TextRun, ExternalHyperlink: ExternalHyperlink } = engine, runs = [];
     if (node.nodeType === Node.TEXT_NODE)
@@ -26834,7 +26855,7 @@ async function mu_docxRunsFromInline(node, engine, fmt) {
         // inside a text node
         return node.textContent && node.textContent.replace(/\r\n?/g, `
 `).split(`
-`).forEach((part, i) => runs.push(new TextRun({ text: part, break: i > 0 ? 1 : void 0, bold: fmt.bold, italics: fmt.italics, underline: fmt.underline ? {} : void 0, strike: fmt.strike, highlight: fmt.highlight, color: fmt.color, font: fmt.font, size: fmt.size || void 0, rightToLeft: fmt.rtl || void 0 }))), runs;
+`).forEach((part, i) => runs.push(...mu_docxTextRuns(part, i > 0, fmt, TextRun))), runs;
     if (node.nodeType !== Node.ELEMENT_NODE)
         return runs;
     const tag = node.tagName;
@@ -26875,8 +26896,8 @@ async function mu_htmlToDocxBlocks(html, engine, rtl) {
     const blocks = [], align = rtl ? AlignmentType.RIGHT : void 0, bidi = rtl || void 0, blockTags = new Set(["P", "DIV", "UL", "OL", "BLOCKQUOTE", "PRE", "TABLE", "IMG", "H1", "H2", "H3", "H4", "H5", "H6", "AUDIO"]);
     // A single trailing <br> / trailing "\n" draws no extra line in the editor, but in Word it added a
     // phantom empty line (so every blank line came out doubled). Drop it
-    async function paragraphFromInline(nodes, opts = {}) { nodes = Array.from(nodes); const lastNode = nodes[nodes.length - 1]; lastNode && lastNode.nodeType === Node.ELEMENT_NODE && lastNode.tagName === "BR" ? nodes.pop() : lastNode && lastNode.nodeType === Node.TEXT_NODE && (lastNode.textContent = lastNode.textContent.replace(/\r?\n$/, "")); let runs = []; for (const n of nodes)
-        runs.push(...await mu_docxRunsFromInline(n, engine, { rtl: rtl })); runs.length || (runs = [new TextRun("")]), blocks.push(new Paragraph({ children: runs, alignment: opts.alignment !== void 0 ? opts.alignment : align, bidirectional: bidi, heading: opts.heading })); }
+    async function paragraphFromInline(nodes, opts = {}) { nodes = Array.from(nodes); const lastNode = nodes[nodes.length - 1]; lastNode && lastNode.nodeType === Node.ELEMENT_NODE && lastNode.tagName === "BR" ? nodes.pop() : lastNode && lastNode.nodeType === Node.TEXT_NODE && (lastNode.textContent = lastNode.textContent.replace(/\r?\n$/, "")); const pTxt0 = nodes.map(x => x.textContent || "").join(""), pKind0 = window.muExportBidi ? window.muExportBidi.kind(pTxt0) : "", pRtl0 = pKind0 ? pKind0 === "rtl" : rtl, pCode0 = pKind0 === "code"; let runs = []; for (const n of nodes)
+        runs.push(...await mu_docxRunsFromInline(n, engine, { rtl: pRtl0, code: pCode0 })); runs.length || (runs = [new TextRun("")]), blocks.push(new Paragraph({ children: runs, alignment: opts.alignment !== void 0 ? opts.alignment : (pRtl0 ? AlignmentType.RIGHT : void 0), bidirectional: pRtl0 || void 0, heading: opts.heading })); }
     // Real Word tables: merge, widths, row heights, alignment, shading, borders, spacing, theme.
     const TBL_BG = ["FF6B6B", "FFA94D", "FFD43B", "51CF66", "20C997", "4CC9F0", "9775FA", "F783AC"], TBL_TH = ["4CC9F0", "20C997", "FFA94D", "F783AC", "9775FA", "FF6B6B", "ADB5BD"], blendHex = (hex, a) => [0, 2, 4].map(i => Math.round(parseInt(hex.substr(i, 2), 16) * a + 255 * (1 - a)).toString(16).padStart(2, "0")).join("").toUpperCase();
     async function docxTable(tbl) { const { Table: Table, TableRow: TableRow, TableCell: TableCell, WidthType: WidthType, ShadingType: ShadingType, BorderStyle: BorderStyle, HeightRule: HeightRule, TableLayoutType: TableLayoutType, VerticalAlign: VerticalAlign } = engine; if (!Table || !TableRow || !TableCell || !WidthType) {
@@ -27024,7 +27045,7 @@ async function mu_htmlToDocxBlocks(html, engine, rtl) {
 // base64 first
 async function createDOCXBlob(items) { items = await mu_resolveItemsMediaForExport(items); const engine = await ensureDOCXEngine(), { Document: Document, Packer: Packer, Paragraph: Paragraph, TextRun: TextRun, HeadingLevel: HeadingLevel, AlignmentType: AlignmentType } = engine, children = []; for (let index = 0; index < items.length; index++) {
     const item = items[index], rtl = mu_docxIsRTL(item);
-    index > 0 && children.push(new Paragraph({ pageBreakBefore: !0, children: [new TextRun("")] })), children.push(new Paragraph({ heading: HeadingLevel.HEADING_1, alignment: rtl ? AlignmentType.RIGHT : void 0, bidirectional: rtl || void 0, children: [new TextRun(String(item.name || "Markhin Note"))] })), item.folder && children.push(new Paragraph({ alignment: rtl ? AlignmentType.RIGHT : void 0, bidirectional: rtl || void 0, children: [new TextRun({ text: `${currentLang === "fa" ? "پوشه" : "Folder"}: ${item.folder}`, italics: !0 })] }));
+    index > 0 && children.push(new Paragraph({ pageBreakBefore: !0, children: [new TextRun("")] })), children.push(...(() => { const nm = String(item.name || "Markhin Note"), tk = window.muExportBidi ? window.muExportBidi.kind(nm) : "", tr = tk ? tk === "rtl" : rtl; return [new Paragraph({ heading: HeadingLevel.HEADING_1, alignment: tr ? AlignmentType.RIGHT : void 0, bidirectional: tr || void 0, children: window.muExportBidi ? window.muExportBidi.docxSegments(nm, tk === "code").map(sg => new TextRun({ text: sg.t, rightToLeft: sg.rtl || void 0 })) : [new TextRun(nm)] })]; })()), item.folder && children.push(new Paragraph({ alignment: rtl ? AlignmentType.RIGHT : void 0, bidirectional: rtl || void 0, children: [new TextRun({ text: `${currentLang === "fa" ? "پوشه" : "Folder"}: ${item.folder}`, italics: !0 })] }));
     try {
         const blocks = await mu_htmlToDocxBlocks(item.html || (item.text ? escapeHtml(item.text) : ""), engine, rtl);
         children.push(...blocks);
@@ -27042,7 +27063,7 @@ function mu_lockedNoteDocxParagraphs(item, engine, rtl) { const { Paragraph: Par
 // mu_lockedNoteDocxParagraphs() instead of skipping/unlocking them
 async function mu_docxChildrenAllWithLocked(allItems, engine) { const { Paragraph: Paragraph, TextRun: TextRun, HeadingLevel: HeadingLevel, AlignmentType: AlignmentType } = engine, children = []; for (let index = 0; index < allItems.length; index++) {
     const item = allItems[index], rtl = mu_docxIsRTL(item);
-    if (index > 0 && children.push(new Paragraph({ pageBreakBefore: !0, children: [new TextRun("")] })), children.push(new Paragraph({ heading: HeadingLevel.HEADING_1, alignment: rtl ? AlignmentType.RIGHT : void 0, bidirectional: rtl || void 0, children: [new TextRun(String(item.name || "Markhin Note"))] })), item.folder && children.push(new Paragraph({ alignment: rtl ? AlignmentType.RIGHT : void 0, bidirectional: rtl || void 0, children: [new TextRun({ text: `${currentLang === "fa" ? "پوشه" : "Folder"}: ${item.folder}`, italics: !0 })] })), isNoteLocked(item)) {
+    if (index > 0 && children.push(new Paragraph({ pageBreakBefore: !0, children: [new TextRun("")] })), children.push(...(() => { const nm = String(item.name || "Markhin Note"), tk = window.muExportBidi ? window.muExportBidi.kind(nm) : "", tr = tk ? tk === "rtl" : rtl; return [new Paragraph({ heading: HeadingLevel.HEADING_1, alignment: tr ? AlignmentType.RIGHT : void 0, bidirectional: tr || void 0, children: window.muExportBidi ? window.muExportBidi.docxSegments(nm, tk === "code").map(sg => new TextRun({ text: sg.t, rightToLeft: sg.rtl || void 0 })) : [new TextRun(nm)] })]; })()), item.folder && children.push(new Paragraph({ alignment: rtl ? AlignmentType.RIGHT : void 0, bidirectional: rtl || void 0, children: [new TextRun({ text: `${currentLang === "fa" ? "پوشه" : "Folder"}: ${item.folder}`, italics: !0 })] })), isNoteLocked(item)) {
         children.push(...mu_lockedNoteDocxParagraphs(item, engine, rtl));
         continue;
     }
@@ -27238,7 +27259,18 @@ else if (IS_KNOWN_INAPP_BROWSER) {
     }
 }
 // Neither worked — fall through to the generic chain below Method 1: normal Blob-anchor download
-let url = null; if (!IS_TELEGRAM && !IS_KNOWN_INAPP_BROWSER)
+let url = null;
+// FIX: page opened from storage / a messenger file (content:// or opaque "null" origin) in a normal browser:
+// blob: links are unreliable there, so try a data: URL download first
+if (!IS_TELEGRAM && !IS_KNOWN_INAPP_BROWSER && (location.protocol === "content:" || location.origin === "null") && blob.size < 12 * 1024 * 1024)
+    try {
+        const dUrl = await mu_withTimeout(new Promise((resolve, reject) => { const r = new FileReader; r.onload = () => resolve(r.result), r.onerror = reject, r.readAsDataURL(blob); }), 4e3), da = document.createElement("a");
+        return da.href = dUrl, da.download = safeName, da.rel = "noopener", da.style.display = "none", da.dataset.muDownloadAnchor = "1", document.body.appendChild(da), da.click(), da.remove(), "data";
+    }
+    catch (e) {
+        console.warn("content:// data-URL download failed, trying blob…", e);
+    }
+if (!IS_TELEGRAM && !IS_KNOWN_INAPP_BROWSER)
     try {
         url = URL.createObjectURL(blob);
         const a = document.createElement("a");
@@ -27784,7 +27816,7 @@ function buildStructuredExport(type, items, opts) {
 ` : "";
             return `# ${index + 1}. ${markdownEscape(item.name)}${folder}
 
-${htmlToMarkdown(item.html, item.text)}`;
+${mu_bidiText(htmlToMarkdown(item.html, item.text), !0)}`;
         }).join(`
 
 ---
@@ -27795,7 +27827,7 @@ ${htmlToMarkdown(item.html, item.text)}`;
         return safeItems.map((item, index) => `========================================
 ${index + 1}. ${item.name}${item.folder ? ` [Folder: ${item.folder}]` : ""}
 ========================================
-${getTxtContent(item.id, item).replace(/\n+$/, "")}
+${mu_bidiText(getTxtContent(item.id, item).replace(/\n+$/, ""))}
 `).join(`
 `);
     if (type === "html") {
@@ -27803,9 +27835,9 @@ ${getTxtContent(item.id, item).replace(/\n+$/, "")}
         // wrote, not the app shell/UI
         const fa = currentLang === "fa", esc = s => escapeHtml(String(s ?? "")), single = safeItems.length === 1, docTitle = single ? safeItems[0].name || (fa ? "یادداشت" : "Note") : fa ? "یادداشت‌های Markhin" : "Markhin Notes", body = safeItems.map((item, index) => `
 <article class="mu-note" dir="auto">
-    <h2>${single ? "" : `${index + 1}. `}${esc(item.name || (fa ? "بدون عنوان" : "Untitled"))}</h2>
+    <h2 dir="auto">${single ? "" : `${index + 1}. `}${esc(item.name || (fa ? "بدون عنوان" : "Untitled"))}</h2>
     ${item.folder ? `<div class="mu-note-folder">${fa ? "پوشه" : "Folder"}: ${esc(item.folder)}</div>` : ""}
-    <div class="mu-note-body">${isNoteLocked(item) ? mu_lockedNoteHtmlBlock(item) : mu_cleanNoteHtmlForExport(item.html) || `<p>${esc(getTxtContent(item.id, item))}</p>`}</div>
+    <div class="mu-note-body">${isNoteLocked(item) ? mu_lockedNoteHtmlBlock(item) : mu_bidiHtml(mu_cleanNoteHtmlForExport(item.html)) || `<p>${esc(getTxtContent(item.id, item))}</p>`}</div>
 </article>`).join(`
 <hr class="mu-note-sep">
 `);
@@ -27832,7 +27864,7 @@ ${getTxtContent(item.id, item).replace(/\n+$/, "")}
   .mu-note-body .mu-row-l>.mu-img-side{text-align:left}.mu-note-body .mu-row-r>.mu-img-side{text-align:right}
   .mu-note-body .mu-row-c>.mu-img-side:first-child{text-align:right}.mu-note-body .mu-row-c>.mu-img-side:last-child{text-align:left}
   .mu-note-body p{margin:0 0 1em}
-  .mu-note-body div,.mu-note-body p,.mu-note-body li,.mu-note-body blockquote,.mu-note-body pre{unicode-bidi:plaintext}
+  .mu-note-body,.mu-note-body div,.mu-note-body p,.mu-note-body li,.mu-note-body blockquote,.mu-note-body pre{unicode-bidi:plaintext}.mu-note-body .mu-nb{direction:ltr;unicode-bidi:isolate-override}
   .mk-hs{font-size:1.45em;line-height:1.35}.mk-c1{color:#ef4444}.mk-c2{color:#f97316}.mk-c3{color:#eab308}.mk-c4{color:#22c55e}.mk-c5{color:#14b8a6}.mk-c6{color:#3b82f6}.mk-c7{color:#8b5cf6}.mk-c8{color:#ec4899}.mk-c9{color:#9ca3af}.mk-cx{color:var(--mk-x,inherit)}.mk-hl{background:#fff176;color:#111;border-radius:3px;padding:0 2px}
   .mu-note-body blockquote{border-inline-start:3px solid #60a5fa;margin:10px 0;padding:8px 14px;background:rgba(96,165,250,.06);border-radius:8px}
   .mu-note-body pre,.mu-note-body code{font-family:Consolas,Menlo,monospace}
@@ -27852,7 +27884,7 @@ ${body}
 </body>
 </html>`;
     }
-    return "\uFEFF" + [["ID", "Name", "Folder", "Text", "Tags", "Pinned", "Favorite", "FontFamily", "FontSize"], ...safeItems.map(item => [item.id, item.name, item.folder || "", getTxtContent(item.id, item) || "", (item.tags || []).join("; "), item.pinned ? "1" : "0", item.favorite ? "1" : "0", item.fontFamily || "", item.fontSize || ""])].map(row => row.map(csvEscape).join(",")).join(`\r
+    return "\uFEFF" + [["ID", "Name", "Folder", "Text", "Tags", "Pinned", "Favorite", "FontFamily", "FontSize"], ...safeItems.map(item => [item.id, item.name, item.folder || "", mu_bidiText(getTxtContent(item.id, item) || ""), (item.tags || []).join("; "), item.pinned ? "1" : "0", item.favorite ? "1" : "0", item.fontFamily || "", item.fontSize || ""])].map(row => row.map(csvEscape).join(",")).join(`\r
 `);
 }
 function getStructuredExtension(type) { return { json: "json", csv: "csv", md: "md", txt: "txt", html: "html" }[type] || type; }
@@ -27920,7 +27952,7 @@ function mu_buildTxtAllWithLocked(allItems) {
     return allItems.map((item, index) => {
         const header = `========================================
 ${index + 1}. ${item.name}${item.folder ? ` [Folder: ${item.folder}]` : ""}
-========================================`, body = isNoteLocked(item) ? mu_lockedNoteTxtBlock(item) : getTxtContent(item.id, item).replace(/\n+$/, "");
+========================================`, body = isNoteLocked(item) ? mu_lockedNoteTxtBlock(item) : mu_bidiText(getTxtContent(item.id, item).replace(/\n+$/, ""));
         return `${header}
 ${body}
 `;
@@ -27963,7 +27995,7 @@ async function downloadTxtAllIndividualZip() { const fa = currentLang === "fa", 
     closeAdvancedModal();
     return;
 } try {
-    const all = getBackupCategories(), usedNames = new Set, files = all.map((item, index) => { const body = isNoteLocked(item) ? mu_lockedNoteTxtBlock(item) : getTxtContent(item.id, item).replace(/\n+$/, ""); return { name: mu_uniqueZipName(usedNames, "NOTES", sanitizeFilename(item.name || `note_${index + 1}`), "txt"), data: new Blob([body], { type: "text/plain;charset=utf-8" }) }; });
+    const all = getBackupCategories(), usedNames = new Set, files = all.map((item, index) => { const body = isNoteLocked(item) ? mu_lockedNoteTxtBlock(item) : mu_bidiText(getTxtContent(item.id, item).replace(/\n+$/, "")); return { name: mu_uniqueZipName(usedNames, "NOTES", sanitizeFilename(item.name || `note_${index + 1}`), "txt"), data: new Blob([body], { type: "text/plain;charset=utf-8" }) }; });
     files.push({ name: "markhin_all_notes.txt", data: new Blob([mu_buildTxtAllWithLocked(all)], { type: "text/plain;charset=utf-8" }) });
     const zip = await buildZipRobust(files);
     await robustDownload(zip, `${chosenName}.zip`, "application/zip");
@@ -27981,7 +28013,7 @@ function mu_buildCsvAllWithLocked(allItems) {
     const encryptedNoteMessage = currentLang === "fa" ? "🔒 این یادداشت رمزنگاری‌شده است و بدون رمز عبور اصلی قابل خواندن نیست." : "🔒 This note is encrypted and cannot be read without its original password.";
     // the Ciphertext/Salt/IV columns alone aren't enough to restore a locked note — decryptNotePayload()
     // also checks v/alg/kdf/hash/iterations and rejects the note if they're missing
-    return "\uFEFF" + [["ID", "Name", "Folder", "Text", "Tags", "Pinned", "Favorite", "FontFamily", "FontSize", "Encrypted", "CryptoVersion", "Alg", "KDF", "Hash", "Iterations", "Ciphertext", "Salt", "IV"], ...allItems.map(item => { const locked = isNoteLocked(item), enc = locked ? item.encrypted || {} : null; return [item.id, item.name, item.folder || "", locked ? encryptedNoteMessage : getTxtContent(item.id, item) || "", (item.tags || []).join("; "), item.pinned ? "1" : "0", item.favorite ? "1" : "0", item.fontFamily || "", item.fontSize || "", locked ? "1" : "0", locked ? enc.v ?? NOTE_CRYPTO_VERSION : "", locked ? enc.alg || NOTE_AES_ALGORITHM : "", locked ? enc.kdf || "PBKDF2" : "", locked ? enc.hash || NOTE_KDF_HASH : "", locked ? enc.iterations || NOTE_KDF_ITERATIONS : "", locked && enc.ciphertext || "", locked && enc.salt || "", locked && enc.iv || ""]; })].map(row => row.map(csvEscape).join(",")).join(`\r
+    return "\uFEFF" + [["ID", "Name", "Folder", "Text", "Tags", "Pinned", "Favorite", "FontFamily", "FontSize", "Encrypted", "CryptoVersion", "Alg", "KDF", "Hash", "Iterations", "Ciphertext", "Salt", "IV"], ...allItems.map(item => { const locked = isNoteLocked(item), enc = locked ? item.encrypted || {} : null; return [item.id, item.name, item.folder || "", locked ? encryptedNoteMessage : mu_bidiText(getTxtContent(item.id, item) || ""), (item.tags || []).join("; "), item.pinned ? "1" : "0", item.favorite ? "1" : "0", item.fontFamily || "", item.fontSize || "", locked ? "1" : "0", locked ? enc.v ?? NOTE_CRYPTO_VERSION : "", locked ? enc.alg || NOTE_AES_ALGORITHM : "", locked ? enc.kdf || "PBKDF2" : "", locked ? enc.hash || NOTE_KDF_HASH : "", locked ? enc.iterations || NOTE_KDF_ITERATIONS : "", locked && enc.ciphertext || "", locked && enc.salt || "", locked && enc.iv || ""]; })].map(row => row.map(csvEscape).join(",")).join(`\r
 `);
 }
 async function downloadCsvAllWithLocked() { const fa = currentLang === "fa", chosenName = await promptFilename("markhin_data", "csv", { desc: fa ? "نام فایل CSV شامل همه یادداشت‌ها (از جمله رمزنگاری‌شده)." : "Name for the CSV file containing all notes (including encrypted ones)." }); if (chosenName === null) {
@@ -28078,7 +28110,7 @@ function mu_buildMdAllWithLocked(allItems) {
 ` + allItems.map((item, index) => {
         const folder = item.folder ? `
 > Folder: ${markdownEscape(item.folder)}
-` : "", body = isNoteLocked(item) ? mu_lockedNoteMdBlock(item) : htmlToMarkdown(item.html, item.text);
+` : "", body = isNoteLocked(item) ? mu_lockedNoteMdBlock(item) : mu_bidiText(htmlToMarkdown(item.html, item.text), !0);
         return `# ${index + 1}. ${markdownEscape(item.name)}${folder}
 
 ${body}`;
@@ -28176,7 +28208,7 @@ async function downloadMdAllIndividualZip() {
     }
     try {
         const ordered = await mu_getMdOrderedItems(), usedNames = new Set, files = ordered.map((item, index) => {
-            const body = isNoteLocked(item) ? mu_lockedNoteMdBlock(item) : htmlToMarkdown(item.html, item.text), folder = item.folder ? `
+            const body = isNoteLocked(item) ? mu_lockedNoteMdBlock(item) : mu_bidiText(htmlToMarkdown(item.html, item.text), !0), folder = item.folder ? `
 > Folder: ${markdownEscape(item.folder)}
 ` : "", single = `# ${markdownEscape(item.name)}${folder}
 
@@ -30322,7 +30354,7 @@ document.addEventListener("DOMContentLoaded", () => { initAdvancedSystems(); });
     <h1>${HX().escapeHtml(item.name)}</h1>
     ${lastEdited ? `<p class="mu-meta"><span>🕒 ${fa ? "آخرین ویرایش" : "Last edited"}: ${HX().escapeHtml(lastEdited)}</span></p>` : ""}
     ${tags.length ? `<p class="mu-tags">${tags.map(t => "<span>#" + HX().escapeHtml(t) + "</span>").join("")}</p>` : ""}
-    <article>${HX().mu_wrapTablesHtml(HX().sanitizeHtml(resolvedHtml || HX().escapeHtml(item.text || "")))}</article>
+    <article>${HX().mu_wrapTablesHtml((h => window.muExportBidi ? window.muExportBidi.html(h) : h)(HX().sanitizeHtml(resolvedHtml || HX().escapeHtml(item.text || ""))))}</article>
     <hr>
     <footer>${fa ? "خروجی گرفته‌شده از Markhin Note" : "Exported from Markhin Note"} — ${HX().escapeHtml(stamp)}</footer>
 </main>
@@ -30332,7 +30364,7 @@ document.addEventListener("DOMContentLoaded", () => { initAdvancedSystems(); });
     };
     // Builds a standalone shareable HTML document for one note. white-space:pre-wrap on the article
     // mirrors the editor's .text-box style
-    async function buildShareableHtml(item) { const fa = HX().currentLang === "fa", resolvedHtml = await HX().mu_resolveMediaSrcInHtml(item.html || ""); return '<!doctype html><html lang="' + (fa ? "fa" : "en") + '" dir="' + (fa ? "rtl" : "ltr") + '"><meta charset="utf-8"><title>' + HX().escapeHtml(item.name) + "</title><style>body{margin:0;padding:24px;background:#fff;color:#111;font-family:Arial,sans-serif}article{line-height:1.8;white-space:pre-wrap;overflow-wrap:anywhere;direction:ltr;unicode-bidi:plaintext;text-align:start}article div,article p,article li,article blockquote,article pre,article a{unicode-bidi:plaintext}article ul,article ol{padding-inline:0;list-style-position:inside}" + (window.MK && MK.table ? MK.table.exportCss(["article"]) : "") + "" + window.mu_tableViewCss("article") + "</style><article>" + HX().mu_wrapTablesHtml(HX().sanitizeHtml(resolvedHtml || HX().escapeHtml(item.text || ""))) + "</article>"; }
+    async function buildShareableHtml(item) { const fa = HX().currentLang === "fa", resolvedHtml = await HX().mu_resolveMediaSrcInHtml(item.html || ""); return '<!doctype html><html lang="' + (fa ? "fa" : "en") + '" dir="' + (fa ? "rtl" : "ltr") + '"><meta charset="utf-8"><title>' + HX().escapeHtml(item.name) + "</title><style>body{margin:0;padding:24px;background:#fff;color:#111;font-family:Arial,sans-serif}article{line-height:1.8;white-space:pre-wrap;overflow-wrap:anywhere;direction:ltr;unicode-bidi:plaintext;text-align:start}article div,article p,article li,article blockquote,article pre,article a{unicode-bidi:plaintext}article ul,article ol{padding-inline:0;list-style-position:inside}" + (window.MK && MK.table ? MK.table.exportCss(["article"]) : "") + "" + window.mu_tableViewCss("article") + "</style><article>" + HX().mu_wrapTablesHtml((h => window.muExportBidi ? window.muExportBidi.html(h) : h)(HX().sanitizeHtml(resolvedHtml || HX().escapeHtml(item.text || "")))) + "</article>"; }
     function openShareFormatPicker(id) {
         const item = HX().categories.find(x => x.id === id);
         if (!item)
@@ -33361,9 +33393,14 @@ HX().scheduleCloudBackup(!1, !0), HX().showToast(fa ? `✅ ذخیره شد — �
                 }
                 run.translated = await mu_translateAny(run.sourceText, sourceLang, targetLang);
             }
+            // Undo checkpoint: snapshot the note exactly as it was right before the translation is applied,
+            // so the Undo button becomes active and can restore the pre-translation text
+            const muPreTranslateHtml = textEl.innerHTML; try { window.mu_historyInit(id, muPreTranslateHtml); window.mu_historyPush(id, muPreTranslateHtml); } catch { }
             // Apply translations in place; media runs are skipped entirely
             runs.forEach(run => { if (run.preserve || !run.nodes.length)
                 return; const anchor = run.nodes[0], parent = anchor.parentNode; parent && (parent.insertBefore(document.createTextNode(run.translated || ""), anchor), run.nodes.forEach(n => n.remove())); });
+            // Second checkpoint: the translated result (so Redo works after an Undo)
+            try { window.mu_historyPush(id, textEl.innerHTML); } catch { }
             const item = categories.find(c => c.id === id);
             item && (item.html = textEl.innerHTML, item.text = textWithVisualSpacing(textEl).replace(/\u00a0/g, " "), item.lastEdited = mkStamp(), saveToLocalStorage()), showToast(fa ? "✅ ترجمه انجام شد." : "✅ Translation complete.", 1800);
         }
@@ -33817,6 +33854,271 @@ HX().scheduleCloudBackup(!1, !0), HX().showToast(fa ? `✅ ذخیره شد — �
         isTextField(f[i]) && refreshField(f[i]); for (var b = document.querySelectorAll(".text-box"), j = 0; j < b.length; j++)
         refreshBoxAll(b[j]); }
     document.readyState === "complete" ? setTimeout(refreshAll, 0) : window.addEventListener("load", function () { setTimeout(refreshAll, 300); });
+})();
+</script>
+
+<script id="muExportBidiJs">
+(function () {
+    "use strict";
+    // (the guard must not be window.muExportBidi: the script id would already create that global)
+    if (window.__muExportBidiLoaded)
+        return;
+    window.__muExportBidiLoaded = !0;
+    // Bidi-faithful OUTPUTS. Inside the app every line is laid out with the same rule (first strong letter decides the
+    // direction, "code" lines such as 98\u062f654 are forced left-to-right, digit/letter chains are isolated). Exports used to drop
+    // that: image / PDF cards followed the app language, Word got ONE direction per note, HTML / print lost the code-line
+    // and number-chain rules, and TXT / Markdown carried no direction at all. This helper re-applies the very same rule
+    // (it reuses window.muBidiMark / muBidiDir / muIsCodeLine) to every output.
+    //   kind(text)            -> "" (blank) | "rtl" | "ltr" | "code"
+    //   html(htmlString)      -> same HTML with explicit per-line direction (dir + inline style) and isolated number chains
+    //   apply(element)        -> same, in place (used for the image / PDF card)
+    //   setBlock(el, text)    -> direction for one standalone element (titles)
+    //   text(str, isMarkdown) -> plain text with invisible per-line marks (TXT / MD / CSV cell / copy)
+    //   chains(str)           -> only the number-chain / code-line isolation (canvas text)
+    //   docxSegments(str, code)-> [{t, rtl}] runs for Word
+    // Set window.mkBidiExportText = false to switch the invisible marks in plain-text outputs off.
+    var RTL_LET = /[\u0590-\u05FF\u0620-\u064A\u066E-\u06D5\u06FA-\u06FF\u0700-\u08FF\uFB1D-\uFDFF\uFE70-\uFEFC]/;
+    var BLANK = /^[\s\u200B-\u200F\u202A-\u202E\u2066-\u2069\u2060\uFEFF]*$/;
+    var MARKS_G = /[\u2066\u2069\u202C\u202D]/g;
+    var LRO = "\u202D", PDF = "\u202C", LRM = "\u200E", RLM = "\u200F";
+    var HAS_WORD;
+    try {
+        HAS_WORD = new RegExp("[\\p{L}\\p{N}]", "u");
+    }
+    catch (e) {
+        HAS_WORD = /[A-Za-z0-9\u00C0-\u024F\u0600-\u06FF]/;
+    }
+    function api() { return window.__muNumBidiApi || null; }
+    function chainRe() { var a = api(); return a && a.CHAIN_SRC ? new RegExp(a.CHAIN_SRC, "g") : null; }
+    function isCode(s) { try {
+        return !!(window.muIsCodeLine && window.muIsCodeLine(s));
+    }
+    catch (e) {
+        return !1;
+    } }
+    function kind(text) {
+        var s = String(text == null ? "" : text);
+        if (BLANK.test(s))
+            return "";
+        var line = s.split(/[\r\n\u2028\u2029]+/).filter(function (p) { return !BLANK.test(p); })[0] || s;
+        if (isCode(line))
+            return "code";
+        try {
+            if (window.muBidiDir)
+                return window.muBidiDir(s) === "rtl" ? "rtl" : "ltr";
+        }
+        catch (e) { }
+        return RTL_LET.test(line.replace(/^[\s\u200B-\u200F]+/, "").charAt(0)) ? "rtl" : (RTL_LET.test(line) && !/[A-Za-z]/.test(line) ? "rtl" : "ltr");
+    }
+    // ---- HTML / DOM -------------------------------------------------------------------------------------------------
+    function styleBlock(el, k) {
+        if (!el || el.nodeType !== 1 || !k)
+            return;
+        if (k === "code") {
+            el.setAttribute("dir", "ltr"), el.style.direction = "ltr", el.style.unicodeBidi = "bidi-override", el.style.textAlign = "left";
+        }
+        else {
+            // same as the editor: direction from the rule, unicode-bidi:plaintext so lines inside one block stay independent
+            el.setAttribute("dir", k), el.style.direction = k, el.style.unicodeBidi = "plaintext", el.style.textAlign = "start";
+        }
+    }
+    function setBlock(el, text) { try {
+        styleBlock(el, kind(text));
+    }
+    catch (e) { } }
+    var BLOCK_NAMES = /^(DIV|P|UL|OL|LI|BLOCKQUOTE|PRE|TABLE|THEAD|TBODY|TFOOT|TR|TD|TH|H[1-6]|HR|CAPTION|AUDIO)$/;
+    var ATOMIC = /(^|\s)(mu-img-row|mu-img-side|img-drag-wrapper|audio-wrapper|img-top-divider|img-above-line|img-below-line)(\s|$)/;
+    function isAtomic(n) { return n.nodeType === 1 && (typeof n.className == "string" && ATOMIC.test(n.className) || n.nodeName === "IMG" || n.nodeName === "CANVAS" || n.nodeName === "AUDIO" || n.nodeName === "VIDEO"); }
+    function isBlockish(n) { return n.nodeType === 1 && (BLOCK_NAMES.test(n.nodeName) || isAtomic(n)); }
+    // Lines that live inside ONE block (separated by <br> or a newline) become one block each, so every line carries its own
+    // direction (html2canvas / Word / any renderer without unicode-bidi:plaintext need that).
+    function splitOne(c) {
+        var kids = Array.prototype.slice.call(c.childNodes), hasBreak = kids.some(function (k) { return k.nodeName === "BR" || k.nodeType === 3 && /\n/.test(k.nodeValue); });
+        if (!hasBreak)
+            return;
+        var items = [], cur = [], i, j;
+        function flush() { items.push({ nodes: cur }), cur = []; }
+        for (i = 0; i < kids.length; i++) {
+            var k = kids[i];
+            if (k.nodeName === "BR")
+                flush();
+            else if (k.nodeType === 3 && /\n/.test(k.nodeValue)) {
+                var parts = k.nodeValue.split("\n");
+                for (j = 0; j < parts.length; j++) {
+                    j > 0 && flush();
+                    parts[j] && cur.push(document.createTextNode(parts[j]));
+                }
+            }
+            else if (isBlockish(k)) {
+                cur.length && flush();
+                items.push({ block: k });
+            }
+            else
+                cur.push(k);
+        }
+        cur.length && flush();
+        if (items.length < 2)
+            return;
+        while (c.firstChild)
+            c.removeChild(c.firstChild);
+        items.forEach(function (it) {
+            if (it.block) {
+                c.appendChild(it.block);
+                return;
+            }
+            var d = document.createElement("div");
+            d.className = "mu-ln";
+            it.nodes.length ? it.nodes.forEach(function (n) { d.appendChild(n); }) : d.appendChild(document.createElement("br"));
+            c.appendChild(d);
+        });
+    }
+    function splitLines(root) {
+        var list = [root].concat(Array.prototype.slice.call(root.querySelectorAll("div,li,blockquote,td,th")));
+        list.forEach(function (c) {
+            if (c.closest && (c.closest("pre,code,.mu-img-row,.img-drag-wrapper,.audio-wrapper") || isAtomic(c)) && c !== root)
+                return;
+            splitOne(c);
+        });
+    }
+    function markDirs(root) {
+        if (typeof window.muBidiMark !== "function")
+            return;
+        var had = root.classList.contains("text-box");
+        had || root.classList.add("text-box");
+        try {
+            window.muBidiMark(root);
+        }
+        finally {
+            had || root.classList.remove("text-box");
+        }
+        var els = [root].concat(Array.prototype.slice.call(root.querySelectorAll("[data-mu-d]")));
+        els.forEach(function (el) { var d = el.getAttribute("data-mu-d"); if (!d)
+            return; el.removeAttribute("data-mu-d"), el.removeAttribute("data-mu-at"), styleBlock(el, d === "code" ? "code" : d === "rtl" ? "rtl" : "ltr"); });
+    }
+    function isoChains(root) {
+        var a = api(), re = chainRe();
+        if (!a || !re)
+            return;
+        Array.prototype.forEach.call(root.querySelectorAll("span.mu-nb"), function (sp) { sp.setAttribute("dir", "ltr"), sp.style.direction = "ltr", sp.style.unicodeBidi = "isolate-override"; });
+        var w = document.createTreeWalker(root, NodeFilter.SHOW_TEXT, null), list = [], n;
+        while (n = w.nextNode()) {
+            if (!a.QUICK.test(n.nodeValue))
+                continue;
+            var p = n.parentNode;
+            if (p && p.closest && p.closest("span.mu-nb,code,pre"))
+                continue;
+            var codeBlock = p && p.closest && p.closest("[dir=ltr]");
+            if (codeBlock && codeBlock.style && codeBlock.style.unicodeBidi === "bidi-override")
+                continue;
+            list.push(n);
+        }
+        list.forEach(function (tn) {
+            var s = tn.nodeValue.replace(MARKS_G, ""), frag = document.createDocumentFragment(), last = 0, m, any = !1;
+            re.lastIndex = 0;
+            while (m = re.exec(s)) {
+                any = !0;
+                m.index > last && frag.appendChild(document.createTextNode(s.slice(last, m.index)));
+                var sp = document.createElement("span");
+                sp.className = "mu-nb", sp.setAttribute("dir", "ltr"), sp.style.direction = "ltr", sp.style.unicodeBidi = "isolate-override", sp.textContent = m[0], frag.appendChild(sp), last = m.index + m[0].length;
+            }
+            if (any) {
+                last < s.length && frag.appendChild(document.createTextNode(s.slice(last)));
+                tn.parentNode.replaceChild(frag, tn);
+            }
+        });
+    }
+    function apply(root) { try {
+        splitLines(root), markDirs(root), isoChains(root);
+    }
+    catch (e) {
+        try {
+            console.warn("muExportBidi.apply failed", e);
+        }
+        catch (_) { }
+    } return root; }
+    function html(h) { try {
+        var box = document.createElement("div");
+        box.innerHTML = String(h == null ? "" : h);
+        apply(box);
+        return box.innerHTML;
+    }
+    catch (e) {
+        return h;
+    } }
+    // ---- plain text -------------------------------------------------------------------------------------------------
+    var MD_LEAD = /^(\s*(?:[#>]+\s*|[*+\-]\s+|\d+[.)]\s+)*)/;
+    function wrapChains(core) { var re = chainRe(), a = api(); return re && a.QUICK.test(core) ? core.replace(re, function (m) { return LRO + m + PDF; }) : core; }
+    function chains(s) { s = String(s == null ? "" : s); var core = s.replace(MARKS_G, ""); return isCode(core) ? LRO + core + PDF : wrapChains(core); }
+    function text(s, md) { try {
+        if (window.mkBidiExportText === !1)
+            return s;
+        s = String(s == null ? "" : s);
+        if (!s)
+            return s;
+        var lines = s.split("\n"), fence = !1;
+        for (var i = 0; i < lines.length; i++) {
+            var ln = lines[i], cr = "";
+            /\r$/.test(ln) && (cr = "\r", ln = ln.slice(0, -1));
+            if (md && /^\s*(```|~~~)/.test(ln)) {
+                fence = !fence, lines[i] = ln + cr;
+                continue;
+            }
+            if (fence || md && /^\s*\|/.test(ln) || !HAS_WORD.test(ln)) {
+                lines[i] = ln + cr;
+                continue;
+            }
+            var core = ln.replace(MARKS_G, ""), k = kind(core);
+            if (!k) {
+                lines[i] = ln + cr;
+                continue;
+            }
+            if (k === "code") {
+                lines[i] = LRO + core + PDF + cr;
+                continue;
+            }
+            core = wrapChains(core);
+            var lead = md ? MD_LEAD.exec(core)[1] : "", rest = core.slice(lead.length);
+            if (!/^[\u200E\u200F]/.test(rest.replace(/^\s+/, "")))
+                rest = (k === "rtl" ? RLM : LRM) + rest;
+            lines[i] = lead + rest + cr;
+        }
+        return lines.join("\n");
+    }
+    catch (e) {
+        return s;
+    } }
+    // ---- Word -------------------------------------------------------------------------------------------------------
+    var RTL_RUN = /[\u0590-\u08FF\uFB1D-\uFDFF\uFE70-\uFEFC\u200C\u200D]+(?:[\s\u00A0.,;:!?\-\u2013\u2014()\[\]\u00AB\u00BB"'\u060C\u061B\u061F]*[\u0590-\u08FF\uFB1D-\uFDFF\uFE70-\uFEFC\u200C\u200D]+)*/g;
+    function scriptRuns(str) {
+        var out = [], last = 0, m;
+        RTL_RUN.lastIndex = 0;
+        while (m = RTL_RUN.exec(str)) {
+            m.index > last && out.push({ t: str.slice(last, m.index), rtl: !1 });
+            out.push({ t: m[0], rtl: !0 }), last = m.index + m[0].length;
+        }
+        last < str.length && out.push({ t: str.slice(last), rtl: !1 });
+        return out;
+    }
+    function docxSegments(str, code) {
+        str = String(str == null ? "" : str).replace(MARKS_G, "");
+        if (!str)
+            return [{ t: "", rtl: !1 }];
+        if (code)
+            return [{ t: LRO + str + PDF, rtl: !1 }];
+        var re = chainRe(), a = api(), out = [];
+        if (!re || !a.QUICK.test(str))
+            return scriptRuns(str);
+        var last = 0, m;
+        while (m = re.exec(str)) {
+            m.index > last && out.push.apply(out, scriptRuns(str.slice(last, m.index)));
+            out.push({ t: LRO + m[0] + PDF, rtl: !1 }), last = m.index + m[0].length;
+        }
+        last < str.length && out.push.apply(out, scriptRuns(str.slice(last)));
+        return out.length ? out : [{ t: str, rtl: !1 }];
+    }
+    window.muExportBidi = { kind: kind, html: html, apply: apply, setBlock: setBlock, text: text, chains: chains, docxSegments: docxSegments, strip: function (s) { return String(s == null ? "" : s).replace(MARKS_G, ""); } };
+    window.mu_bidiHtml = function (h) { return window.muExportBidi.html(h); };
+    window.mu_bidiText = function (s, md) { return window.muExportBidi.text(s, md); };
 })();
 </script>
 
@@ -35120,7 +35422,7 @@ window.muIcon = function (name) { var P = { trash: '<path d="M4 7h16"/><path d="
         "mu_notesfs_theme_v1", "mxe_theme", "mu_nfs_edtheme_sync_v1",
         // notes page: display order, preview, grid/list view, menu layout
         "mu_notesfs_sort_v1", "markhin_note_sort_mode_v1", "mu_notesfs_lines_v1", "markhin_note_preview_enabled_v1",
-        "markhin_note_preview_lines_v1", "mu_notesfs_view_v1", "mu_nav_pair_v1", "mu_ab_sections_v1", "mu_nfs_toolbar_v1", "mk_ed_fade_v1", "mk_bx_colors_v1",
+        "markhin_note_preview_lines_v1", "mu_notesfs_view_v1", "mu_notesfs_fview_v1", "mu_nav_pair_v1", "mu_ab_sections_v1", "mu_nfs_toolbar_v1", "mk_ed_fade_v1", "mk_bx_colors_v1",
         // note viewer
         "markhin_viewer_style_v1", "markhin_viewer_fs_v1", "mu_live_mode",
         // font, eco, zoom, language
@@ -35808,7 +36110,53 @@ catch {
         var box = findEditableTextBox(t);
         box && fixBox(box, !0);
     } }
-    document.addEventListener("input", handleInputEvent, !0), document.addEventListener("compositionend", handleInputEvent, !0), document.addEventListener("focusin", function (e) { var b = findEditableTextBox(e.target); b && fixBox(b, !1); }, !0);
+    // FIX (dead Backspace/Delete): the caret sits right after / before an invisible isolate (U+2066 / U+2069) that this
+// module wraps around @handles, links, numbers … Backspace then removed only that invisible mark and the input
+// handler instantly re-added it, so nothing ever seemed to be deleted. When a delete changed nothing but isolates,
+// remove the neighbouring real character instead.
+var delPre = null;
+document.addEventListener("beforeinput", function (e) {
+    delPre = null;
+    try {
+        if (!/^delete/.test(e.inputType || "") || !/Backward|Forward/.test(e.inputType))
+            return;
+        var bx = findEditableTextBox(e.target), sl = window.getSelection();
+        if (!bx || !sl || !sl.rangeCount || !sl.isCollapsed)
+            return;
+        var an = sl.anchorNode;
+        if (!an || an.nodeType !== 3 || !bx.contains(an))
+            return;
+        delPre = { node: an, clean: an.nodeValue.replace(/[\u2066\u2069]/g, "") };
+    }
+    catch (_) {
+        delPre = null;
+    }
+}, !0);
+function fixDeadDelete(e2) { var p = delPre; delPre = null; try {
+    if (!p || !p.node.isConnected || !/^delete/.test(e2.inputType || ""))
+        return;
+    var sl = window.getSelection();
+    if (!sl || !sl.rangeCount || !sl.isCollapsed || sl.anchorNode !== p.node)
+        return;
+    var n = p.node, s = n.nodeValue;
+    if (s.replace(/[\u2066\u2069]/g, "") !== p.clean)
+        return;
+    var o = sl.anchorOffset, c = s.slice(0, o).replace(/[\u2066\u2069]/g, "").length, back = e2.inputType.indexOf("Backward") > -1, want = back ? c - 1 : c;
+    if (want < 0 || want >= p.clean.length)
+        return;
+    for (var k = 0, i = 0; i < s.length; i++)
+        if (s.charAt(i) !== "\u2066" && s.charAt(i) !== "\u2069") {
+            if (k === want)
+                break;
+            k++;
+        }
+    if (i >= s.length)
+        return;
+    n.nodeValue = s.slice(0, i) + s.slice(i + 1);
+    sl.collapse(n, back ? i : Math.min(o, n.nodeValue.length));
+}
+catch (_) { } }
+document.addEventListener("input", fixDeadDelete, !0), document.addEventListener("input", handleInputEvent, !0), document.addEventListener("compositionend", handleInputEvent, !0), document.addEventListener("focusin", function (e) { var b = findEditableTextBox(e.target); b && fixBox(b, !1); }, !0);
     // read-only text (viewer, titles, previews, AI answers)
     function skipNode(n2) { var p = n2.parentElement; if (!p)
         return !0; var tag = p.nodeName; return !!(tag === "SCRIPT" || tag === "STYLE" || tag === "TEXTAREA" || tag === "INPUT" || tag === "NOSCRIPT" || inEditable(n2) || p.closest('[data-mu-code],[data-mu-d="code"]')); }
@@ -39340,7 +39688,7 @@ body.mu-nfsbk-on #mkBackupBar { display:none!important; }
     })();
     // true once the note opened from the list has actually been shown id of a note opened from the Notes
     // page.
-    var KEY_VIEW = "mu_notesfs_view_v1", KEY_THEME = "mu_notesfs_theme_v1", KEY_SORT = "mu_notesfs_sort_v1", KEY_LINES = "mu_notesfs_lines_v1", BATCH = 40, RETseen = !1, RET = null, RETst = null, S2 = { fsel: null, fopen: !1, sel: null, pick: null, view: "grid", theme: "light", page: "notes", sort: "created_desc", lines: 9, list: [], shown: 0, q: "", groups: [], collapsed: {}, limit: {} }, SORTS = [{ v: "edited_desc", fa: "آخرین ویرایش (جدیدترین اول)", en: "Last edited (newest first)" }, { v: "edited_asc", fa: "آخرین ویرایش (قدیمی‌ترین اول)", en: "Last edited (oldest first)" }, { v: "created_desc", fa: "تاریخ ساخت (جدیدترین اول)", en: "Date created (newest first)" }, { v: "created_asc", fa: "تاریخ ساخت (قدیمی‌ترین اول)", en: "Date created (oldest first)" }, { v: "alpha_asc", fa: "الفبا (آ ← ی)", en: "Name (A → Z)" }, { v: "alpha_desc", fa: "الفبا (ی ← آ)", en: "Name (Z → A)" }, { v: "manual", fa: "دلخواه (نگه دار و جابه‌جا کن)", en: "Custom (hold & drag)" }];
+    var KEY_VIEW = "mu_notesfs_view_v1", KEY_FVIEW = "mu_notesfs_fview_v1", KEY_THEME = "mu_notesfs_theme_v1", KEY_SORT = "mu_notesfs_sort_v1", KEY_LINES = "mu_notesfs_lines_v1", BATCH = 40, RETseen = !1, RET = null, RETst = null, S2 = { fsel: null, fopen: !1, sel: null, pick: null, view: "grid", fview: "list", theme: "light", page: "notes", sort: "created_desc", lines: 9, list: [], shown: 0, q: "", groups: [], collapsed: {}, limit: {} }, SORTS = [{ v: "edited_desc", fa: "آخرین ویرایش (جدیدترین اول)", en: "Last edited (newest first)" }, { v: "edited_asc", fa: "آخرین ویرایش (قدیمی‌ترین اول)", en: "Last edited (oldest first)" }, { v: "created_desc", fa: "تاریخ ساخت (جدیدترین اول)", en: "Date created (newest first)" }, { v: "created_asc", fa: "تاریخ ساخت (قدیمی‌ترین اول)", en: "Date created (oldest first)" }, { v: "alpha_asc", fa: "الفبا (آ ← ی)", en: "Name (A → Z)" }, { v: "alpha_desc", fa: "الفبا (ی ← آ)", en: "Name (Z → A)" }, { v: "manual", fa: "دلخواه (نگه دار و جابه‌جا کن)", en: "Custom (hold & drag)" }];
     function svg(inner, sw) { return '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="' + (sw || 2) + '" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' + inner + "</svg>"; }
     var ICONS = { tags: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9.5 4L8 20M16 4l-1.5 16M5 9h15M4 15h15"/></svg>', search: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="M20.5 20.5 16 16"/></svg>', rows: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" aria-hidden="true"><rect x="4" y="4" width="16" height="6.5" rx="2"/><rect x="4" y="13.5" width="16" height="6.5" rx="2"/></svg>', grid: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" aria-hidden="true"><rect x="4" y="4" width="6.5" height="6.5" rx="1.6"/><rect x="13.5" y="4" width="6.5" height="6.5" rx="1.6"/><rect x="4" y="13.5" width="6.5" height="6.5" rx="1.6"/><rect x="13.5" y="13.5" width="6.5" height="6.5" rx="1.6"/></svg>', sun: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2.5v2.5M12 19v2.5M2.5 12H5M19 12h2.5M5.3 5.3l1.8 1.8M16.9 16.9l1.8 1.8M5.3 18.7l1.8-1.8M16.9 7.1l1.8-1.8"/></svg>', moon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 14.5A8 8 0 0 1 9.5 4a8 8 0 1 0 10.5 10.5z"/></svg>', menu: svg('<path d="M4 6.5h16M4 12h16M4 17.5h16"/>'), sort: svg('<path d="M8 20V5M8 5L4.5 8.5M8 5l3.5 3.5"/><path d="M16 4v15M16 19l-3.5-3.5M16 19l3.5-3.5"/>'), prev: svg('<rect x="3.5" y="4.5" width="17" height="15" rx="2.6"/><path d="M7.5 9h9M7.5 12.5h9M7.5 16h5.5"/>'), tick: svg('<path d="M5 12.5l4.5 4.5L19 7.5"/>', 2.4), plus: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>', minus: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M5 12h14"/></svg>', chev: '<svg class="mu-nfs-chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg>', bulb: svg('<path d="M9 18h6M10 21h4M12 3a6 6 0 0 0-3.6 10.8c.6.5.9 1.1.9 1.8V16h5.4v-.6c0-.7.3-1.3.9-1.8A6 6 0 0 0 12 3z"/>'), folder: svg('<path d="M3.5 7.5a2 2 0 0 1 2-2h4l2 2.2h7a2 2 0 0 1 2 2v7.8a2 2 0 0 1-2 2h-13a2 2 0 0 1-2-2z"/>'), archive: svg('<rect x="3.5" y="4.5" width="17" height="4.5" rx="1.2"/><path d="M5 9v9.5A1.5 1.5 0 0 0 6.5 20h11a1.5 1.5 0 0 0 1.5-1.5V9M12 11.5v5M9.8 14.5l2.2 2.2 2.2-2.2"/>'), star: svg('<path d="M12 3.8l2.5 5.2 5.7.8-4.1 4 1 5.7L12 16.8 6.9 19.5l1-5.7-4.1-4 5.7-.8z"/>'), exit: svg('<path d="M15 5l-7 7 7 7"/>'), close: svg('<path d="M6 6l12 12M18 6L6 18"/>', 2.2), pin: svg('<path d="M9 4h6l-1 5 3 3v1.5H7V12l3-3z"/><path d="M12 13.5V20"/>'), lock: svg('<rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/>'), unlock: svg('<rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V8a4 4 0 0 1 7.4-2"/>'), vault: svg('<rect x="4.5" y="10.5" width="15" height="10" rx="2.2"/><path d="M8 10.5V8a4 4 0 018 0v2.5"/><circle cx="12" cy="15.5" r="1.2"/>'), trash: svg('<path d="M4 7h16M9 7V4.5h6V7M6.5 7l1 13h9l1-13M10 11v6M14 11v6"/>'), dup: svg('<rect x="8.5" y="8.5" width="11.5" height="11.5" rx="3"/><path d="M15.5 8.5V6.8A2.8 2.8 0 0 0 12.7 4H6.8A2.8 2.8 0 0 0 4 6.8v5.9a2.8 2.8 0 0 0 2.8 2.8h1.7"/><path d="M14.25 11.9v4.7M11.9 14.25h4.7"/>'), mic: svg('<rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5.5 11.5a6.5 6.5 0 0 0 13 0M12 18v3"/>'), list: svg('<rect x="3.5" y="3.5" width="17" height="17" rx="5"/><path d="M8 12.4l2.9 2.9L16.2 9.4"/>'), graph: svg('<circle cx="6" cy="7" r="2.3"/><circle cx="18" cy="6" r="2.3"/><circle cx="12" cy="17.5" r="2.6"/><path d="M8 8l2.7 7.2M16.2 7.7l-2.6 7.6M8.3 7l7.4-.6"/>'), fview: svg('<path d="M14 3.5H7.5a2 2 0 0 0-2 2v13a2 2 0 0 0 2 2h9a2 2 0 0 0 2-2V8z"/><path d="M14 3.5V8h4.5"/><circle cx="10.8" cy="13.4" r="1.5"/><path d="M12.3 13.4h3M14.6 13.4v1.6"/>'), portal: svg('<circle cx="12" cy="12" r="8.5"/><circle cx="12" cy="12" r="4.8"/><circle cx="12" cy="12" r="1.2"/>'), morse: svg('<circle cx="5.5" cy="12" r="1.5"/><path d="M10 12h4.5M18.5 12h.01"/><path d="M3.5 5.5h17M3.5 18.5h17" opacity=".45"/>'), binary: svg('<ellipse cx="7.5" cy="8" rx="3" ry="4"/><path d="M16 4.5V12M14 6l2-1.5"/><path d="M14 19.5h6M7.5 15.5v5M5.5 17l2-1.5"/>'), globe: svg('<circle cx="12" cy="12" r="8.5"/><path d="M3.5 12h17M12 3.5c2.4 2.4 3.6 5.2 3.6 8.5s-1.2 6.1-3.6 8.5c-2.4-2.4-3.6-5.2-3.6-8.5S9.6 5.9 12 3.5z"/>'), imp: svg('<path d="M12 4v11M7.8 11l4.2 4.2 4.2-4.2"/><path d="M4.5 16.5v1.8a1.7 1.7 0 0 0 1.7 1.7h11.6a1.7 1.7 0 0 0 1.7-1.7v-1.8"/>'), exp: svg('<path d="M12 15V4M7.8 8l4.2-4.2L16.2 8"/><path d="M4.5 16.5v1.8a1.7 1.7 0 0 0 1.7 1.7h11.6a1.7 1.7 0 0 0 1.7-1.7v-1.8"/>'), dash: svg('<rect x="3.5" y="3.5" width="7" height="8.5" rx="2"/><rect x="13.5" y="3.5" width="7" height="5" rx="2"/><rect x="13.5" y="11.5" width="7" height="9" rx="2"/><rect x="3.5" y="15" width="7" height="5.5" rx="2"/>'), gear: svg('<path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/>'), cloud: svg('<path d="M7 18.5a4.2 4.2 0 0 1-.6-8.4 5.6 5.6 0 0 1 10.8 1.2A3.6 3.6 0 0 1 17 18.5z"/><path d="M12 15.5V10M9.8 12l2.2-2.2 2.2 2.2"/>') };
     function $2(id) { return document.getElementById(id); }
@@ -39928,7 +40276,8 @@ body.mu-nfsbk-on #mkBackupBar { display:none!important; }
     } return out; }
     function bodyHtml(inf) { var bl = bodyLines(inf), same = !inf.locked && bl.join("\n") === inf.body, cm = same && inf.bcm ? inf.bcm : null, lfa = same && inf.blf ? inf.blf : null, off = 0; return bl.map(function (l, li) { var o0 = off + (l.length - l.replace(/^\s+/, "").length), lf = lfa && lfa[li] || "", ccls = "", pn = ""; lf && lf.split(",").forEach(function (x) { x === "q" ? ccls += " mu-pv-q" : x === "u" ? ccls += " mu-pv-ul" : /^o\d+$/.test(x) && (ccls += " mu-pv-ol", pn = x.slice(1)); }); return off += l.length + 1, l = l.trim(), '<span class="mu-nfs-ln' + ccls + '"' + (pn ? ' data-pvn="' + pn + '"' : "") + ' dir="auto">' + (l ? inf.locked ? esc(l) : cm ? hlc(l, cm, o0) : hl(l) : "&#8203;") + "</span>"; }).join(""); }
     function cardHtml(inf) { return hlPrep(inf), '<button type="button" class="mu-nfs-card' + (inf.cl ? " mu-nfs-cl" : "") + (inf.fav ? " mu-nfs-hasstar" : "") + (isSel(inf.id) ? " mu-nfs-sel" : "") + '" data-id="' + esc(inf.id) + '" data-g="' + (inf.pin ? 1 : 0) + (inf.fav ? 1 : 0) + (inf.col ? '" data-mk-color="' + esc(inf.col) : "") + '"><div class="mu-nfs-ttl" dir="auto">' + (inf.locked || !inf.title && !inf.cl ? esc((inf.locked ? "🔒 " : "") + (inf.title || (fa2() ? "بدون عنوان" : "Untitled"))) : hl(inf.title)) + "</div>" + (inf.cl ? H.get("mkCl").rows(inf) : inf.body && S2.lines > 0 ? '<div class="mu-nfs-txt">' + bodyHtml(inf) + "</div>" : "") + mediaHtml(inf) + (inf.fav ? '<em class="mu-nfs-star" aria-hidden="true"></em>' : "") + "</button>"; }
-    function colCount() { return S2.view === "list" ? 1 : 2; }
+    function curView() { return S2.page === "folders" ? S2.fview : S2.view; }
+    function colCount() { return curView() === "list" ? 1 : 2; }
     function colsHtml(items) { var n2 = colCount(), bufs = [], h = [], k, i, c2, m; for (k = 0; k < n2; k++)
         bufs.push(""), h.push(0); for (i = 0; i < items.length; i++) {
         for (m = 0, c2 = 1; c2 < n2; c2++)
@@ -39995,7 +40344,7 @@ body.mu-nfsbk-on #mkBackupBar { display:none!important; }
     // Empty box: placeholder follows the app language (Persian = right-to-left, English = left-to-right).
     // Once the user types, each line follows the language of what was typed
     function setInputDir() { var inp = $2("muNfsSearch"); inp && inp.setAttribute("dir", inp.value ? "auto" : fa2() ? "rtl" : "ltr"); }
-    function loadPrefs() { var v = lsGet(KEY_VIEW); S2.view = v === "list" ? "list" : "grid"; var th = lsGet(KEY_THEME); th !== "light" && th !== "dark" && (th = "light"), S2.theme = th; var so = lsGet(KEY_SORT); S2.sort = SORTS.some(function (o) { return o.v === so; }) ? so : "created_desc"; var ln = parseInt(lsGet(KEY_LINES), 10); S2.lines = ln >= 0 && ln <= 9 ? ln : 9; }
+    function loadPrefs() { var v = lsGet(KEY_VIEW); S2.view = v === "list" ? "list" : "grid"; var fv = lsGet(KEY_FVIEW); S2.fview = fv === "grid" ? "grid" : "list"; var th = lsGet(KEY_THEME); th !== "light" && th !== "dark" && (th = "light"), S2.theme = th; var so = lsGet(KEY_SORT); S2.sort = SORTS.some(function (o) { return o.v === so; }) ? so : "created_desc"; var ln = parseInt(lsGet(KEY_LINES), 10); S2.lines = ln >= 0 && ln <= 9 ? ln : 9; }
     // The note editor panel follows this page's day / night theme. Toggling the theme here always re-syncs
     // it; a theme changed inside the editor itself stays until this page's theme is toggled again
     var KEY_EDSYNC = "mu_nfs_edtheme_sync_v1";
@@ -40028,7 +40377,7 @@ body.mu-nfsbk-on #mkBackupBar { display:none!important; }
         var pb = $2("muNfsPrevBtn");
         pb && (pb.innerHTML = ICONS.prev + (S2.lines > 0 ? '<span class="mu-nfs-badge">' + nfa(S2.lines) + "</span>" : ""), pb.setAttribute("aria-label", fa2() ? "پیش‌نمایش یادداشت‌ها" : "Note preview"), pb.title = fa2() ? "پیش‌نمایش یادداشت‌ها" : "Note preview");
         var vb = $2("muNfsViewBtn");
-        vb && (vb.innerHTML = S2.view === "grid" ? ICONS.rows : ICONS.grid, vb.setAttribute("aria-label", S2.view === "grid" ? fa2() ? "نمایش لیستی" : "List view" : fa2() ? "نمایش شبکه‌ای" : "Grid view"));
+        vb && (vb.innerHTML = curView() === "grid" ? ICONS.rows : ICONS.grid, vb.setAttribute("aria-label", curView() === "grid" ? fa2() ? "نمایش لیستی" : "List view" : fa2() ? "نمایش شبکه‌ای" : "Grid view"));
         tb();
         var tb2 = $2("muNfsThemeBtn");
         tb2 && (tb2.innerHTML = S2.theme === "dark" ? ICONS.sun : ICONS.moon, tb2.setAttribute("aria-label", S2.theme === "dark" ? fa2() ? "حالت روز" : "Light mode" : fa2() ? "حالت شب" : "Dark mode"));
@@ -40079,7 +40428,15 @@ body.mu-nfsbk-on #mkBackupBar { display:none!important; }
         }
         sh.innerHTML = '<div class="mu-nfs-sheetbg" data-sheet-x="1"></div><div class="mu-nfs-sheetbox" role="dialog">' + html + "</div>", sh.classList.add("mu-open");
     } }
-    var NAV_GROUPS = [{ fa: "یادداشت‌ها", en: "Notes", items: [{ k: "notes", ic: "bulb", fa: "یادداشت‌ها", en: "Notes", pr: "a" }, { k: "folders", ic: "folder", fa: "پوشه‌ها", en: "Folders", pr: "a" }, { k: "list", ic: "list", fa: "لیست", en: "List", pr: "b" }, { k: "vault", ic: "vault", fa: "گاوصندوق", en: "Vault", pr: "b" }, { k: "search", ic: "search", fa: "جستجوی هوشمند", en: "Smart Search", pr: "b" }, { k: "delete", ic: "trash", fa: "حذف", en: "Delete", pr: "b" }] }, { fa: "پشتیبان‌گیری داده‌ها", en: "Data backup", items: [{ k: "cloud", ic: "cloud", fa: "بکاپ ابری تلگرام", en: "Telegram Cloud Backup" }, { k: "imp", ic: "imp", fa: "ورودی‌ها", en: "Import", pr: "c" }, { k: "exp", ic: "exp", fa: "خروجی‌ها", en: "Export", pr: "c" }] }, { fa: "مجموعه‌ها", en: "Collections", items: [{ k: "archive", ic: "archive", fa: "بایگانی", en: "Archive" }, { k: "favorites", ic: "star", fa: "علاقه‌مندی‌ها", en: "Favorites", pr: "d" }, { k: "locked", ic: "lock", fa: "قفل‌شده‌ها", en: "Locked", pr: "d" }, { k: "pinned", ic: "pin", fa: "پین‌شده‌ها", en: "Pinned", pr: "h" }, { k: "tags", ic: "tags", fa: "برچسب‌ها", en: "Tags", pr: "h" }] }, { fa: "ابزارها", en: "Tools", items: [{ k: "fileviewer", ic: "fview", fa: "نمایشگر و رمزگشایی فایل‌ها", en: "File Viewer & Decryptor" }, { k: "morse", ic: "morse", fa: "مبدل کد مورس", en: "Morse Code Converter", pr: "e" }, { k: "binary", ic: "binary", fa: "مبدل کد باینری", en: "Binary Code Converter", pr: "e" }, { k: "kg", ic: "graph", fa: "شبکه دانش", en: "Knowledge Graph", pr: "g" }, { k: "portal", ic: "portal", fa: "پورتال رندوم", en: "Random Portal", pr: "g" }] }], navTimer = 0, navIsOpen = !1;
+    var __navCollMem = null;
+    function navColl() { if (!__navCollMem) {
+        try { __navCollMem = JSON.parse(localStorage.getItem("mkNavCollapsed") || "{}") || {}; }
+        catch (e) { __navCollMem = {}; }
+    } return __navCollMem; }
+    function navToggleGrp(sec) { var grp = sec.closest(".mu-nav-grp"); if (!grp) return; var k = sec.getAttribute("data-navtoggle"), c = grp.classList.toggle("mu-collapsed"); sec.setAttribute("aria-expanded", c ? "false" : "true"); navColl()[k] = c ? 1 : 0; try { localStorage.setItem("mkNavCollapsed", JSON.stringify(navColl())); } catch (e) { } }
+    document.addEventListener("click", function (e) { var t = e.target && e.target.closest && e.target.closest("#muNavPanel .mu-nav-sec[data-navtoggle]"); if (t) { e.preventDefault(), e.stopPropagation(), navToggleGrp(t); } }, !0);
+    document.addEventListener("keydown", function (e) { if (e.key !== "Enter" && e.key !== " ") return; var t = e.target && e.target.closest && e.target.closest("#muNavPanel .mu-nav-sec[data-navtoggle]"); if (t) { e.preventDefault(), navToggleGrp(t); } }, !0);
+    var NAV_GROUPS = [{ fa: "مدیریت یادداشت‌ها", en: "Notes Management", items: [{ k: "notes", ic: "bulb", fa: "یادداشت‌ها", en: "Notes", pr: "a" }, { k: "folders", ic: "folder", fa: "پوشه‌ها", en: "Folders", pr: "a" }, { k: "list", ic: "list", fa: "لیست", en: "List", pr: "b" }, { k: "vault", ic: "vault", fa: "گاوصندوق", en: "Vault", pr: "b" }, { k: "search", ic: "search", fa: "جستجوی هوشمند", en: "Smart Search", pr: "b" }, { k: "delete", ic: "trash", fa: "حذف", en: "Delete", pr: "b" }] }, { fa: "مجموعه‌ها", en: "Collections", items: [{ k: "archive", ic: "archive", fa: "بایگانی", en: "Archive" }, { k: "favorites", ic: "star", fa: "علاقه‌مندی‌ها", en: "Favorites", pr: "d" }, { k: "locked", ic: "lock", fa: "قفل‌شده‌ها", en: "Locked", pr: "d" }, { k: "pinned", ic: "pin", fa: "پین‌شده‌ها", en: "Pinned", pr: "h" }, { k: "tags", ic: "tags", fa: "برچسب‌ها", en: "Tags", pr: "h" }] }, { fa: "پشتیبان‌گیری داده‌ها", en: "Data backup", items: [{ k: "cloud", ic: "cloud", fa: "بکاپ ابری تلگرام", en: "Telegram Cloud Backup" }, { k: "imp", ic: "imp", fa: "ورودی‌ها", en: "Import", pr: "c" }, { k: "exp", ic: "exp", fa: "خروجی‌ها", en: "Export", pr: "c" }] }, { fa: "ابزارها", en: "Tools", items: [{ k: "fileviewer", ic: "fview", fa: "نمایشگر و رمزگشایی فایل‌ها", en: "File Viewer & Decryptor" }, { k: "morse", ic: "morse", fa: "مبدل کد مورس", en: "Morse Code Converter", pr: "e" }, { k: "binary", ic: "binary", fa: "مبدل کد باینری", en: "Binary Code Converter", pr: "e" }, { k: "kg", ic: "graph", fa: "شبکه دانش", en: "Knowledge Graph", pr: "g" }, { k: "portal", ic: "portal", fa: "پورتال رندوم", en: "Random Portal", pr: "g" }] }], navTimer = 0, navIsOpen = !1;
     function modalEl() { return $2("advancedModal"); }
     function modalVisible() { var m = modalEl(); return !!(m && m.style.display === "flex"); }
     function fsOpen() { var r = $2("muNotesFs"); return !!(r && r.classList.contains("mu-open")); }
@@ -40129,7 +40486,7 @@ body.mu-nfsbk-on #mkBackupBar { display:none!important; }
     } }
     function buildNav() { var p = $2("muNavPanel"); if (p) {
         var cur = curPage();
-        p.classList.toggle("mu-nav-paired", pairOn()), p.innerHTML = '<div class="mu-nav-head"><button type="button" class="mu-nav-set' + (cur === "settings" ? " on" : "") + '" data-nav="settings" aria-label="' + (fa2() ? "تنظیمات" : "Settings") + '" title="' + (fa2() ? "تنظیمات" : "Settings") + '">' + ICONS.gear + '</button><button type="button" class="mu-nav-layout" data-nav="layout" aria-label="' + (fa2() ? "تغییر نمایش منو" : "Change menu layout") + '" title="' + (fa2() ? "تغییر نمایش منو" : "Change menu layout") + '">' + (pairOn() ? ICONS.rows : ICONS.grid) + "<span>" + (fa2() ? "نمایش" : "Layout") + '</span></button><button type="button" class="mu-nav-dash' + (cur === "dash" ? " on" : "") + '" data-nav="dash" aria-label="' + (fa2() ? "داشبورد" : "Dashboard") + '" title="' + (fa2() ? "داشبورد" : "Dashboard") + '"><span dir="auto">' + (fa2() ? "داشبورد" : "Dashboard") + '</span></button><span class="mu-nav-hspacer" aria-hidden="true" style="flex:1 1 0;min-width:0"></span><button type="button" class="mu-nav-lang" data-nav="lang" aria-label="' + (fa2() ? "تغییر زبان" : "Change language") + '">' + ICONS.globe + '<span dir="auto">' + (fa2() ? "English" : "فارسی") + "</span></button></div>" + NAV_GROUPS.map(function (g, gi) { return (gi ? '<div class="mu-nav-sep"></div>' : "") + '<div class="mu-nav-grp"><div class="mu-nav-sec">' + esc(fa2() ? g.fa : g.en) + "</div>" + (function () { for (var out = [], i = 0, its = g.items; i < its.length;)
+        p.classList.toggle("mu-nav-paired", pairOn()), p.innerHTML = '<div class="mu-nav-head"><button type="button" class="mu-nav-set' + (cur === "settings" ? " on" : "") + '" data-nav="settings" aria-label="' + (fa2() ? "تنظیمات" : "Settings") + '" title="' + (fa2() ? "تنظیمات" : "Settings") + '">' + ICONS.gear + '</button><button type="button" class="mu-nav-layout" data-nav="layout" aria-label="' + (fa2() ? "تغییر نمایش منو" : "Change menu layout") + '" title="' + (fa2() ? "تغییر نمایش منو" : "Change menu layout") + '">' + (pairOn() ? ICONS.rows : ICONS.grid) + "<span>" + (fa2() ? "نمایش" : "Layout") + '</span></button><button type="button" class="mu-nav-dash' + (cur === "dash" ? " on" : "") + '" data-nav="dash" aria-label="' + (fa2() ? "داشبورد" : "Dashboard") + '" title="' + (fa2() ? "داشبورد" : "Dashboard") + '"><span dir="auto">' + (fa2() ? "داشبورد" : "Dashboard") + '</span></button><span class="mu-nav-hspacer" aria-hidden="true" style="flex:1 1 0;min-width:0"></span><button type="button" class="mu-nav-lang" data-nav="lang" aria-label="' + (fa2() ? "تغییر زبان" : "Change language") + '">' + ICONS.globe + '<span dir="auto">' + (fa2() ? "English" : "فارسی") + "</span></button></div>" + NAV_GROUPS.map(function (g, gi) { return (gi ? '<div class="mu-nav-sep"></div>' : "") + '<div class="mu-nav-grp' + (navColl()[g.en] ? " mu-collapsed" : "") + '" data-grp="' + g.en + '"><div class="mu-nav-sec" role="button" tabindex="0" data-navtoggle="' + g.en + '" aria-expanded="' + (navColl()[g.en] ? "false" : "true") + '"><span dir="auto">' + esc(fa2() ? g.fa : g.en) + '</span><svg class="mu-nav-chev" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg></div>' + (function () { for (var out = [], i = 0, its = g.items; i < its.length;)
             pairOn() && its[i].pr && its[i + 1] && its[i + 1].pr === its[i].pr ? (out.push('<div class="mu-nav-pair">' + navItemHtml(its[i], cur) + navItemHtml(its[i + 1], cur) + "</div>"), i += 2) : pairOn() ? (out.push('<div class="mu-nav-pair mu-nav-solo">' + navItemHtml(its[i], cur) + "</div>"), i++) : (out.push(navItemHtml(its[i], cur)), i++); return out.join(""); })() + "</div>"; }).join("");
     } }
     // Markhin sigil: a black & white emblem at the bottom of the menu (grid layout only). Tap it and it
@@ -40651,7 +41008,7 @@ body.mu-nfsbk-on #mkBackupBar { display:none!important; }
         onScroll: function () { S2.page !== "notes" || api.__scRaf || (api.__scRaf = requestAnimationFrame(function () { if (api.__scRaf = 0, !(S2.page !== "notes" || S2.shown >= S2.list.length)) {
             var body = $2("muNfsBody");
             body && body.scrollHeight - body.scrollTop - body.clientHeight < 600 && paint(S2.shown);
-        } })); }, toggleView: function () { S2.view = S2.view === "grid" ? "list" : "grid", lsSet(KEY_VIEW, S2.view), applyChrome(), render(); }, toggleTheme: function () { try {
+        } })); }, toggleView: function () { S2.page === "folders" ? (S2.fview = S2.fview === "grid" ? "list" : "grid", lsSet(KEY_FVIEW, S2.fview)) : (S2.view = S2.view === "grid" ? "list" : "grid", lsSet(KEY_VIEW, S2.view)), applyChrome(), render(); }, toggleTheme: function () { try {
             MK.themeInstant && MK.themeInstant();
         }
         catch { } try {
@@ -54574,5 +54931,76 @@ html body #contentsContainer .mxe .text-box table th:not([class*=mk-bg]){backgro
 html body #contentsContainer .mxe .text-box table.mk-t-clean td,html body #contentsContainer .mxe .text-box table.mk-t-clean th{border-width:0 0 1px 0!important}
 html body #contentsContainer .mxe .text-box table.mk-t-clean th:not([class*=mk-bg]){background:transparent!important}
 </style>
+<style id="mkZipBuildBtnFix">
+/* Build ZIP button: readable in light and dark themes (beats the generic #advancedCard .btn-main surface rule) */
+html.mu-nfs-open.mu-nfs-light:not(#_dn):not(#_zb) #advancedModal #advancedCard.mk-page.xp-card .zip-export-picker-actions>.btn-main:last-child,html.mu-nfs-open.mu-nfs-light:not(#_dn):not(#_zb) #advancedModal #advancedCard.mk-page.xp-card .zip-export-picker-actions>.btn-main:last-child:hover,html.mu-nfs-open.mu-nfs-light:not(#_dn):not(#_zb) #advancedModal #advancedCard.mk-page.xp-card .zip-export-picker-actions>.btn-main:last-child:active,html.mu-nfs-open.mu-nfs-light:not(#_dn):not(#_zb) #advancedModal #advancedCard.mk-page.xp-card .zip-export-picker-actions>.btn-main:last-child:focus,html.mu-nfs-open.mu-nfs-light:not(#_dn):not(#_zb) #advancedModal #advancedCard.mk-page.xp-card .zip-export-picker-actions>.btn-main:last-child:focus-visible {
+    background:#3a3a3a!important;
+    background-image:none!important;
+    border:1px solid #3a3a3a!important;
+    color:#fff!important;
+    -webkit-text-fill-color:#fff!important;
+    text-shadow:none!important;
+    font-weight:800!important;
+}
+html.mu-nfs-open.mu-nfs-dark:not(#_dn):not(#_zb) #advancedModal #advancedCard.mk-page.xp-card .zip-export-picker-actions>.btn-main:last-child,html.mu-nfs-open.mu-nfs-dark:not(#_dn):not(#_zb) #advancedModal #advancedCard.mk-page.xp-card .zip-export-picker-actions>.btn-main:last-child:hover,html.mu-nfs-open.mu-nfs-dark:not(#_dn):not(#_zb) #advancedModal #advancedCard.mk-page.xp-card .zip-export-picker-actions>.btn-main:last-child:active,html.mu-nfs-open.mu-nfs-dark:not(#_dn):not(#_zb) #advancedModal #advancedCard.mk-page.xp-card .zip-export-picker-actions>.btn-main:last-child:focus,html.mu-nfs-open.mu-nfs-dark:not(#_dn):not(#_zb) #advancedModal #advancedCard.mk-page.xp-card .zip-export-picker-actions>.btn-main:last-child:focus-visible {
+    background:#d9d9d9!important;
+    background-image:none!important;
+    border:1px solid #d9d9d9!important;
+    color:#111!important;
+    -webkit-text-fill-color:#111!important;
+    text-shadow:none!important;
+    font-weight:800!important;
+}
+</style>
+<script id="mkContrastGuard">
+/* Contrast guard: any button/label/text whose colour is unreadable on its real background is fixed automatically,
+   in every theme and every modal. It measures the final rendered colours, so it also catches future CSS conflicts. */
+(function () {
+    if (window.__mkCG) return; window.__mkCG = 1;
+    var MIN = 4.5, CAP = 400, TXT = "button,.btn-main,.custom-btn,[role=button],summary,label,h1,h2,h3,h4,p,span,a,small,b,strong,li,td,th";
+    var SKIP = "[contenteditable],.text-box,.mxe-body,.note-body,.markhin-note-content,script,style,svg,svg *,input,textarea,select,option,code,pre,canvas,video,audio,img";
+    function parse(s) { var m = /rgba?\(\s*([\d.]+)[,\s]+([\d.]+)[,\s]+([\d.]+)(?:[,\s/]+([\d.]+%?))?/.exec(s || ""); if (!m) return null; var a = m[4] === undefined ? 1 : (/%$/.test(m[4]) ? parseFloat(m[4]) / 100 : parseFloat(m[4])); return [+m[1], +m[2], +m[3], a]; }
+    function blend(f, b) { var a = f[3]; return [f[0] * a + b[0] * (1 - a), f[1] * a + b[1] * (1 - a), f[2] * a + b[2] * (1 - a), 1]; }
+    function lum(c) { var v = c.slice(0, 3).map(function (x) { x /= 255; return x <= .03928 ? x / 12.92 : Math.pow((x + .055) / 1.055, 2.4); }); return .2126 * v[0] + .7152 * v[1] + .0722 * v[2]; }
+    function cr(a, b) { var x = lum(a), y = lum(b); return (Math.max(x, y) + .05) / (Math.min(x, y) + .05); }
+    // real background behind el; null when it is a gradient / image (unknown, left alone)
+    function bgOf(el) { var chain = [], n = el; while (n && n.nodeType === 1) { chain.push(n); n = n.parentElement; } var acc = null;
+        for (var i = 0; i < chain.length; i++) { var cs = getComputedStyle(chain[i]); if (cs.backgroundImage && cs.backgroundImage !== "none") return null;
+            var c = parse(cs.backgroundColor); if (c && c[3] > 0) { acc = acc ? blend(acc, c) : c; if (acc[3] >= .99 || c[3] >= .99) { if (acc[3] < .99) { /* partial */ } else return acc; } } }
+        var base = [255, 255, 255, 1]; if (!acc) return base; return acc[3] >= .99 ? acc : blend(acc, base); }
+    function hasText(el) { for (var n = el.firstChild; n; n = n.nextSibling) if (n.nodeType === 3 && n.nodeValue.trim()) return true; return false; }
+    function visible(el) { return !!(el.offsetWidth || el.offsetHeight || el.getClientRects().length); }
+    function check(el) { try {
+        if (el.hasAttribute("data-mk-cg")) { el.style.removeProperty("color"); el.style.removeProperty("-webkit-text-fill-color"); el.removeAttribute("data-mk-cg"); }
+        if (!hasText(el) || !visible(el)) return;
+        var cs = getComputedStyle(el), fg = parse(cs.webkitTextFillColor && parse(cs.webkitTextFillColor) ? cs.webkitTextFillColor : cs.color); if (!fg) return;
+        if (cs.backgroundClip === "text" || cs.webkitBackgroundClip === "text") return;
+        var bg = bgOf(el); if (!bg) return; if (fg[3] < 1) fg = blend(fg, bg);
+        if (cr(fg, bg) >= MIN) return;
+        var c = cr([255, 255, 255, 1], bg) >= cr([17, 17, 17, 1], bg) ? "#fff" : "#111";
+        el.style.setProperty("color", c, "important"); el.style.setProperty("-webkit-text-fill-color", c, "important"); el.setAttribute("data-mk-cg", "1");
+    } catch (e) { } }
+    function scan(root) { var list = []; try { if (root.nodeType !== 1) return; if (root.matches(TXT)) list.push(root); var q = root.querySelectorAll(TXT); for (var i = 0; i < q.length && list.length < CAP; i++) list.push(q[i]); } catch (e) { return; }
+        for (var j = 0; j < list.length; j++) { if (list[j].closest && list[j].closest(SKIP)) continue; check(list[j]); } }
+    var pend = new Set(), t = 0, full = 0;
+    var ms = document.createElement("style"); ms.textContent = "html.mk-cg-m *,html.mk-cg-m *:before,html.mk-cg-m *:after{transition:none!important}"; (document.head || document.documentElement).appendChild(ms);
+    function flush() { var R = document.documentElement; R.classList.add("mk-cg-m"); try { flush2(); } finally { R.classList.remove("mk-cg-m"); } }
+    function flush2() { t = 0; var items = Array.from(pend); pend.clear(); var f = full; full = 0;
+        if (f) { scan(document.getElementById("advancedModal") || document.body); document.querySelectorAll("button,.btn-main").forEach(function (b, i) { if (i < CAP && !b.closest(SKIP)) check(b); }); }
+        items.forEach(function (n) { if (n.isConnected) scan(n); }); }
+    function later(ms) { if (t) clearTimeout(t); t = setTimeout(flush, ms || 120); }
+    function queue(n) { if (n && n.nodeType === 1) { pend.add(n); later(); } }
+    function start() {
+        new MutationObserver(function (ms) { for (var i = 0; i < ms.length; i++) { var m = ms[i]; if (m.type === "childList") m.addedNodes.forEach(queue); else if (m.type === "attributes" && m.attributeName === "class" && m.target === document.documentElement && (m.oldValue || "").replace(/\s*\bmk-cg-m\b/, "").trim() === (document.documentElement.className || "").replace(/\s*\bmk-cg-m\b/, "").trim()) continue;
+                else if (m.target === document.documentElement || m.target === document.body || m.target.id === "advancedModal" || m.target.id === "advancedCard" || m.target.id === "muNotesFs") { full = 1; later(); } } })
+            .observe(document.documentElement, { childList: true, subtree: true, attributes: true, attributeOldValue: true, attributeFilter: ["class", "data-theme", "data-nfs-theme", "data-mxe-theme"] });
+        ["pointerover", "pointerup", "focusin"].forEach(function (ev) { document.addEventListener(ev, function (e) { var b = e.target && e.target.closest && e.target.closest("button,.btn-main,[role=button]"); if (b) { setTimeout(function () { check(b); }, 120); setTimeout(function () { check(b); }, 450); } }, true); });
+        full = 1; later(800);
+    }
+    if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", start); else start();
+    window.mkContrastGuardScan = function () { full = 1; flush(); };
+    window.__mkCGmark = 1;
+})();
+</script>
 </body>
 </html>
