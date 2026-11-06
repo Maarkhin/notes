@@ -22600,7 +22600,7 @@ window.mkLiveSyncNow = function () { __cloudLive.sig = null, __cloudLive.parts =
     let deafSince = 0, lastHeal = 0, pendSince = 0, lpSince = 0, healing = !1;
     const heal = async (why) => { if (healing) return; healing = !0, lastHeal = Date.now(); try {
         const s = __cloudLive;
-        s.busy = !1, s.fails = 0, s.tries = 0, s.sig = null, s.parts = null, s.pendingSig = null, window.__mkSyncBusy = !1, window.__mkStartupBusy = !1, window.__mkNoSchedule = 0, window.__mkIdxHint = null, __cloudOpChain = Promise.resolve();
+        s.busy = !1, s.fails = 0, s.tries = 0, s.sig = null, s.parts = null, s.pendingSig = null, window.__mkIdxHint = null; const __pushingNow = !!(window.__mkAutoBk && window.__mkAutoBk.active || window.__mkManualBk && window.__mkManualBk.active || window.__mkBkImporting); if (!__pushingNow) window.__mkSyncBusy = !1, window.__mkStartupBusy = !1, window.__mkNoSchedule = 0, __cloudOpChain = Promise.resolve();
         if (!window.__mkAutoBk || !window.__mkAutoBk.active) { }
         s.running = !0, cloudLiveSchedule(1200);
         window.__mkHealLog = (window.__mkHealLog || []).concat([[Date.now(), why]]).slice(-20);
@@ -22629,7 +22629,7 @@ window.mkLiveSyncNow = function () { __cloudLive.sig = null, __cloudLive.parts =
         else deafSince = 0;
         if (deafSince && now - deafSince > 5e3 && now - lastHeal > 8e3) { deafSince = 0, heal("stamp-mismatch"); return; }
         // engine silent for a long time while it should be running
-        if (s.okAt && now - s.okAt > 45e3 && now - lastHeal > 3e4 && document.visibilityState !== "hidden") heal("probe-silent");
+        if (s.okAt && now - s.okAt > 45e3 && now - lastHeal > 3e4 && document.visibilityState !== "hidden" && !pushing && !window.__mkSyncBusy && !window.__mkStartupBusy) heal("probe-silent");
     }
     catch { } }, 2500);
 }
