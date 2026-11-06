@@ -40667,10 +40667,10 @@ body.mu-nfsbk-on #mkBackupBar { display:none!important; }
     } return S2.page; }
     function pairOn() { try {
         var v = localStorage.getItem("mu_nav_pair_v1");
-        return v === null ? !0 : v === "1";
+        return v === null ? !1 : v === "1";
     }
     catch {
-        return !0;
+        return !1;
     } }
     function pairSet(v) { try {
         localStorage.setItem("mu_nav_pair_v1", v ? "1" : "0");
@@ -55349,7 +55349,7 @@ html body #muNav#muNav .mu-nav-grp:not(.mu-collapsed)>.mu-nav-body>.mu-nav-inner
 html body #muNav#muNav .mu-nav-grp:not(.mu-collapsed)>.mu-nav-body>.mu-nav-inner>*:nth-child(8){transition-delay:0.355s!important}
 </style>
 <style id="muTgClockCss">
-#muTgClock{display:none;position:fixed;left:50%;top:var(--mu-clk-top,0px);height:var(--mu-clk-h,44px);transform:translateX(-50%);z-index:10210;flex-direction:column;align-items:center;justify-content:center;gap:1px;min-width:64px;max-width:40vw;padding:0 8px;margin:0;border:0;background:transparent;color:var(--mu-clk-fg,#fff);font-family:inherit;line-height:1.1;text-align:center;cursor:pointer;-webkit-tap-highlight-color:transparent;-webkit-user-select:none;user-select:none;touch-action:manipulation;contain:layout paint style}
+#muTgClock{display:none;position:fixed;left:50%;top:var(--mu-clk-top,0px);height:var(--mu-clk-h,44px);transform:translateX(-50%);z-index:10210;flex-direction:column;align-items:center;justify-content:center;gap:1px;width:min(176px,40vw);box-sizing:border-box;padding:0 8px;margin:0;border:0;background:transparent;color:var(--mu-clk-fg,#fff);font-family:inherit;line-height:1.1;text-align:center;cursor:pointer;-webkit-tap-highlight-color:transparent;-webkit-user-select:none;user-select:none;touch-action:manipulation;contain:layout paint style}
 html.mu-tg-fs #muTgClock{display:flex}
 html.mk-boot #muTgClock,html.mu-clk-off #muTgClock{display:none!important}
 #muTgClock .mkc-t{direction:ltr;font-size:15px;font-weight:700;letter-spacing:.2px;font-variant-numeric:tabular-nums;white-space:nowrap}
@@ -55360,11 +55360,11 @@ html.mk-boot #muTgClock,html.mu-clk-off #muTgClock{display:none!important}
 #muTgClock.mkc-ok .mkc-d{background:#34c759}
 #muTgClock:active{opacity:.6}
 #muTgClockBd{display:none;position:fixed;inset:0;z-index:10209;background:rgba(0,0,0,.28);-webkit-tap-highlight-color:transparent}
-#muTgClockMenu{display:none;position:fixed;left:50%;transform:translateX(-50%);top:var(--mu-clkm-top,84px);width:min(340px,calc(100vw - 24px));max-height:min(62vh,520px);z-index:10211;flex-direction:column;border-radius:18px;overflow:hidden;box-shadow:0 12px 40px rgba(0,0,0,.35);font-family:inherit;direction:rtl;background:#fff;color:#111318;border:1px solid rgba(128,128,128,.25)}
+#muTgClockMenu{display:none;position:fixed;left:50%;transform:translateX(-50%);top:var(--mu-clkm-top,84px);width:min(340px,calc(100vw - 24px));max-height:var(--mu-clkm-mh,min(62vh,520px));z-index:10211;flex-direction:column;border-radius:18px;overflow:hidden;box-shadow:0 12px 40px rgba(0,0,0,.35);font-family:inherit;direction:rtl;background:#fff;color:#111318;border:1px solid rgba(128,128,128,.25)}
 #muTgClockMenu.mkc-dark{background:#1b1e26 !important;color:#f2f4f8}
 html.mu-clk-open #muTgClockBd,html.mu-clk-open #muTgClockMenu{display:flex}
 #muTgClockMenu,#muTgClockMenu .mkm-h,#muTgClockMenu .mkm-c,#muTgClockMenu .mkm-t,#muTgClockMenu .mkm-o{color:#111318!important}#muTgClockMenu.mkc-dark,#muTgClockMenu.mkc-dark .mkm-h,#muTgClockMenu.mkc-dark .mkm-c,#muTgClockMenu.mkc-dark .mkm-t,#muTgClockMenu.mkc-dark .mkm-o{color:#f2f4f8!important}
-#muTgClockMenu .mkm-h{flex:none;padding:12px 16px 8px;font-size:13px;font-weight:700;opacity:.75}
+#muTgClockMenu .mkm-h{display:flex;align-items:center;gap:8px;padding:12px 16px 8px;font-size:13px;font-weight:700;opacity:.75}
 #muTgClockMenu .mkm-s{flex:none;display:block;width:auto;margin:0 12px 8px;padding:9px 12px;border:1px solid rgba(128,128,128,.35);border-radius:12px;background:rgba(128,128,128,.12);color:inherit!important;font:inherit;font-size:14px;outline:none;-webkit-appearance:none;appearance:none}
 #muTgClockMenu .mkm-s::placeholder{color:inherit;opacity:.5}
 #muTgClockMenu .mkm-l{overflow-y:auto;-webkit-overflow-scrolling:touch;overscroll-behavior:contain;padding:0 6px 8px}
@@ -55378,6 +55378,22 @@ html.mu-clk-open #muTgClockBd,html.mu-clk-open #muTgClockMenu{display:flex}
 #muTgClockMenu .mkm-k{flex:none;width:16px;text-align:center;color:#3390ec;font-weight:800}
 </style>
 <style id="mkWcCss">
+@keyframes mkmIn{from{opacity:0;transform:translate(-50%,-6px)}to{opacity:1;transform:translate(-50%,0)}}
+@keyframes mkmBd{from{opacity:0}to{opacity:1}}
+html.mu-clk-open #muTgClockMenu{animation:mkmIn .16s ease-out}
+html.mu-clk-open #muTgClockBd{animation:mkmBd .16s ease-out}
+@media (prefers-reduced-motion:reduce){html.mu-clk-open #muTgClockMenu,html.mu-clk-open #muTgClockBd{animation:none}}
+#muTgClockMenu .mkm-l{contain:content}
+
+#muTgClockMenu .mkm-b{flex:none;width:30px;height:30px;margin:0;padding:0;border:0;border-radius:10px;background:rgba(128,128,128,.18);color:inherit!important;font:inherit;font-size:16px;line-height:1;cursor:pointer;-webkit-tap-highlight-color:transparent}
+#muTgClockMenu .mkm-ti{flex:1;min-width:0;text-align:center;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+#muTgClockMenu .mkm-b[style*="display: none"]+.mkm-ti{padding-inline-start:0}
+#muTgClockMenu .mkm-cnt{display:flex;align-items:center;gap:8px;font-size:13px;font-weight:600;opacity:.7}
+#muTgClockMenu .mkm-cnt::before{content:"";flex:none;width:7px;height:7px;border-left:2px solid currentColor;border-bottom:2px solid currentColor;transform:rotate(45deg)}
+#muTgClockMenu[style*="direction: ltr"] .mkm-cnt{flex-direction:row-reverse}
+#muTgClockMenu[style*="direction: ltr"] .mkm-cnt::before{transform:rotate(-135deg)}
+#muTgClockMenu .mkm-empty{padding:18px;text-align:center;opacity:.6;font-size:13px}
+
 #mkWcSec{display:block;margin-top:4px;padding-bottom:6px}
 #mkWcSec .mkw-sep{height:1px;margin:10px 0 12px;background:linear-gradient(90deg,transparent,rgba(127,127,127,.45),transparent)}
 #mkWcSec .mkw-clock{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;width:100%;min-height:64px;padding:10px 14px;margin:0;font:inherit;color:inherit;background:rgba(127,127,127,.11);border:1px solid currentColor;border-radius:16px;cursor:pointer;-webkit-tap-highlight-color:transparent;text-align:center}
@@ -55463,11 +55479,85 @@ html.mu-clk-open #muTgClockBd,html.mu-clk-open #muTgClockMenu{display:flex}
         ["Africa/Casablanca", "کازابلانکا", "Casablanca"],
         ["Africa/Algiers", "الجزایر", "Algiers"],
         ["Africa/Tunis", "تونس", "Tunis"],
-        ["Africa/Accra", "آکرا", "Accra"]
+        ["Africa/Accra", "آکرا", "Accra"],
+        ["Asia/Pyongyang", "پیونگ‌یانگ", "Pyongyang"],
+        ["Asia/Ulaanbaatar", "اولان‌باتور", "Ulaanbaatar"],
+        ["Asia/Bishkek", "بیشکک", "Bishkek"],
+        ["Asia/Dushanbe", "دوشنبه", "Dushanbe"],
+        ["Asia/Ashgabat", "عشق‌آباد", "Ashgabat"],
+        ["Asia/Samarkand", "سمرقند", "Samarkand"],
+        ["Asia/Thimphu", "تیمپو", "Thimphu"],
+        ["Asia/Vientiane", "وینتیان", "Vientiane"],
+        ["Asia/Phnom_Penh", "پنوم‌پن", "Phnom Penh"],
+        ["Asia/Brunei", "بندر سری بگاوان", "Bandar Seri Begawan"],
+        ["Asia/Macau", "ماکائو", "Macau"],
+        ["Asia/Bahrain", "منامه", "Manama"],
+        ["Asia/Aden", "صنعا", "Sanaa"],
+        ["Asia/Nicosia", "نیکوزیا", "Nicosia"],
+        ["Asia/Yekaterinburg", "یکاترینبورگ", "Yekaterinburg"],
+        ["Asia/Novosibirsk", "نووسیبیرسک", "Novosibirsk"],
+        ["Asia/Irkutsk", "ایرکوتسک", "Irkutsk"],
+        ["Asia/Vladivostok", "ولادی‌وستوک", "Vladivostok"],
+        ["Asia/Kamchatka", "کامچاتکا", "Kamchatka"],
+        ["Indian/Maldives", "ماله", "Malé"],
+        ["Europe/Minsk", "مینسک", "Minsk"],
+        ["Europe/Kaliningrad", "کالینینگراد", "Kaliningrad"],
+        ["Europe/Samara", "سامارا", "Samara"],
+        ["Europe/Belgrade", "بلگراد", "Belgrade"],
+        ["Europe/Sofia", "صوفیه", "Sofia"],
+        ["Europe/Zagreb", "زاگرب", "Zagreb"],
+        ["Europe/Sarajevo", "سارایوو", "Sarajevo"],
+        ["Europe/Skopje", "اسکوپیه", "Skopje"],
+        ["Europe/Tirane", "تیرانا", "Tirana"],
+        ["Europe/Ljubljana", "لیوبلیانا", "Ljubljana"],
+        ["Europe/Bratislava", "براتیسلاوا", "Bratislava"],
+        ["Europe/Riga", "ریگا", "Riga"],
+        ["Europe/Vilnius", "ویلنیوس", "Vilnius"],
+        ["Europe/Tallinn", "تالین", "Tallinn"],
+        ["Europe/Chisinau", "کیشینو", "Chisinau"],
+        ["Europe/Luxembourg", "لوکزامبورگ", "Luxembourg"],
+        ["Europe/Monaco", "موناکو", "Monaco"],
+        ["Europe/Malta", "والتا", "Valletta"],
+        ["Atlantic/Azores", "آزور", "Azores"],
+        ["Atlantic/Canary", "جزایر قناری", "Canary Islands"],
+        ["Africa/Khartoum", "خارطوم", "Khartoum"],
+        ["Africa/Tripoli", "طرابلس", "Tripoli"],
+        ["Africa/Dakar", "داکار", "Dakar"],
+        ["Africa/Abidjan", "آبیجان", "Abidjan"],
+        ["Africa/Kinshasa", "کینشاسا", "Kinshasa"],
+        ["Africa/Luanda", "لوآندا", "Luanda"],
+        ["Africa/Dar_es_Salaam", "دارالسلام", "Dar es Salaam"],
+        ["Africa/Kampala", "کامپالا", "Kampala"],
+        ["Africa/Harare", "هراره", "Harare"],
+        ["Africa/Maputo", "ماپوتو", "Maputo"],
+        ["Africa/Mogadishu", "موگادیشو", "Mogadishu"],
+        ["Africa/Djibouti", "جیبوتی", "Djibouti"],
+        ["America/St_Johns", "سنت‌جان", "St. John’s"],
+        ["America/Regina", "رجینا", "Regina"],
+        ["America/Nuuk", "نوک", "Nuuk"],
+        ["America/Panama", "پاناما", "Panama City"],
+        ["America/Costa_Rica", "سن‌خوزه", "San José"],
+        ["America/Guatemala", "گواتمالا", "Guatemala City"],
+        ["America/Jamaica", "کینگستون", "Kingston"],
+        ["America/Puerto_Rico", "سن‌خوان", "San Juan"],
+        ["America/Santo_Domingo", "سانتو دومینگو", "Santo Domingo"],
+        ["America/La_Paz", "لاپاز", "La Paz"],
+        ["America/Montevideo", "مونته‌ویدئو", "Montevideo"],
+        ["America/Guayaquil", "گوایاکیل", "Guayaquil"],
+        ["America/Asuncion", "آسونسیون", "Asunción"],
+        ["America/Manaus", "مانائوس", "Manaus"],
+        ["Australia/Darwin", "داروین", "Darwin"],
+        ["Australia/Hobart", "هوبارت", "Hobart"],
+        ["Pacific/Guam", "گوام", "Guam"],
+        ["Pacific/Port_Moresby", "پورت‌مورزبی", "Port Moresby"],
+        ["Pacific/Tongatapu", "نوکوآلوفا", "Nuku’alofa"],
+        ["Pacific/Apia", "آپیا", "Apia"],
+        ["Pacific/Tahiti", "پاپیته", "Papeete"],
+        ["Pacific/Kiritimati", "کیریتیماتی", "Kiritimati"]
     ];
     var KEY = "mu_tgClockZone_v1", ON_KEY = "mu_tgClockOn_v1", DTF = window.__mkOrigDTF || Intl.DateTimeFormat, fmts = {}, idx = 0, el, tEl, lEl, tm = 0;
     // ---- accurate time: server time + monotonic clock, so a wrong or changed device clock does not matter ----
-    var anchorSrv = 0, anchorPerf = 0, synced = false, syncBusy = false, lastSync = 0;
+    var anchorSrv = 0, anchorPerf = 0, synced = false, syncBusy = false, lastSync = 0, lastTry = 0;
     function now() { return synced ? anchorSrv + (performance.now() - anchorPerf) : Date.now(); }
     function setAnchor(srvMs, t0, t1) {
         if (!(srvMs > 0)) return false;
@@ -55499,8 +55589,9 @@ html.mu-clk-open #muTgClockBd,html.mu-clk-open #muTgClockMenu{display:flex}
     }
     function sync(force) {
         if (syncBusy || document.hidden || !navigator.onLine) return;
-        if (!force && synced && performance.now() - lastSync < 6e5) return;
-        syncBusy = true;
+        var tn = performance.now();
+        if (lastTry && tn - lastTry < (synced ? (force ? 3e4 : 6e5) : 3e4)) return;
+        lastTry = tn; syncBusy = true;
         viaWorldTime().catch(function () { return false; }).then(function (ok) { return ok || viaOrigin().catch(function () { return false; }); })
             .then(function () { syncBusy = false; paint(true); }, function () { syncBusy = false; });
     }
@@ -55511,12 +55602,14 @@ html.mu-clk-open #muTgClockBd,html.mu-clk-open #muTgClockMenu{display:flex}
     function parts(z, ms) {
         var o = {}; fmt(z).formatToParts(new Date(ms)).forEach(function (p) { o[p.type] = p.value; }); return o;
     }
-    function offsetStr(z, ms) {
+    var offC = {};
+    function offsetStr(z, ms) { var c = offC[z]; if (c && ms < c[0]) return c[1]; var v = offsetRaw(z, ms); offC[z] = [Math.floor(ms / 6e4) * 6e4 + 6e4, v]; return v; }
+    function offsetRaw(z, ms) {
         var p = parts(z, ms), asUtc = Date.UTC(+p.year, +p.month - 1, +p.day, +p.hour % 24, +p.minute, +p.second), mins = Math.round((asUtc - Math.floor(ms / 1e3) * 1e3) / 6e4), s = mins < 0 ? "-" : "+", a = Math.abs(mins), h = Math.floor(a / 60), m = a % 60;
         return "UTC" + (mins === 0 ? "" : s + h + (m ? ":" + (m < 10 ? "0" : "") + m : ""));
     }
     function isFa() { try { if (typeof currentLang !== "undefined") return currentLang === "fa"; } catch (e) { } var l = (document.documentElement.lang || navigator.language || "").toLowerCase(); return l.indexOf("fa") === 0; }
-    var lastT = "", lastL = "";
+    var lastT = "", lastL = "", okLast = null;
     function paint(force) {
         if (!el) return;
         var ms = now(), z = ZONES[idx], p;
@@ -55525,8 +55618,7 @@ html.mu-clk-open #muTgClockBd,html.mu-clk-open #muTgClockMenu{display:flex}
         if (t !== lastT) { lastT = t; tEl.textContent = t; }
         var city = (isFa() ? z[1] : z[2]) + " ·", off = offsetStr(z[0], ms), lab = city + off;
         if (force || lab !== lastL) { lastL = lab; lEl.children[1].textContent = city; lEl.children[2].textContent = off; }
-        el.classList.toggle("mkc-ok", synced);
-        el.title = synced ? "Synced" : "Device clock";
+        if (okLast !== synced) { okLast = synced; el.classList.toggle("mkc-ok", synced); el.title = synced ? "Synced" : "Device clock"; }
     }
     // ---- placement: the band between the system status bar and the content area (where Telegram's own buttons sit) ----
     var lastTop = -1, lastH = -1;
@@ -55544,11 +55636,13 @@ html.mu-clk-open #muTgClockBd,html.mu-clk-open #muTgClockMenu{display:flex}
     var lastFg = "";
     function color() {
         try {
+            if (document.body && document.body.classList.contains("mu-scrolling")) return;
             var st = document.getElementById("muTgTopStrip"), L = st ? lum(getComputedStyle(st).backgroundColor) : null;
             if (L === null) L = lum(getComputedStyle(document.body).backgroundColor);
             if (L === null) L = lum(getComputedStyle(document.documentElement).backgroundColor);
             var fg = L !== null && L > 0.6 ? "#111318" : "#ffffff";
             if (fg !== lastFg) { lastFg = fg; el.style.setProperty("--mu-clk-fg", fg); }
+            if (menuOpen) menuDark();
         } catch (e) { }
     }
     var R = document.documentElement;
@@ -55582,64 +55676,109 @@ html.mu-clk-open #muTgClockBd,html.mu-clk-open #muTgClockMenu{display:flex}
         tm = setTimeout(tick, 1000 - (now() % 1000) + 15);
     }
     var colT = 0;
-    function colorSoon() { clearTimeout(colT); colT = setTimeout(color, 250); }
-var menuEl = null, bdEl = null, menuOpen = false, rows = []; var pinMode = false;
+    function colorSoon() { clearTimeout(colT); colT = setTimeout(color, 400); }
+var CONT = [["AS", "آسیا", "Asia"], ["EU", "اروپا", "Europe"], ["NA", "آمریکای شمالی", "North America"], ["SA", "آمریکای جنوبی", "South America"], ["AF", "آفریقا", "Africa"], ["OC", "اقیانوسیه", "Oceania"]];
+    var CMAP = {"Asia/Tehran":["AS","ایران","Iran"],"Europe/London":["EU","بریتانیا","United Kingdom"],"Europe/Istanbul":["AS","ترکیه","Turkey"],"Asia/Dubai":["AS","امارات","UAE"],"Europe/Moscow":["EU","روسیه","Russia"],"Asia/Kolkata":["AS","هند","India"],"Asia/Shanghai":["AS","چین","China"],"Asia/Tokyo":["AS","ژاپن","Japan"],"Australia/Sydney":["OC","استرالیا","Australia"],"America/New_York":["NA","آمریکا","United States"],"America/Los_Angeles":["NA","آمریکا","United States"],"America/Vancouver":["NA","کانادا","Canada"],"America/Toronto":["NA","کانادا","Canada"],"America/Chicago":["NA","آمریکا","United States"],"America/Denver":["NA","آمریکا","United States"],"America/Mexico_City":["NA","مکزیک","Mexico"],"America/Sao_Paulo":["SA","برزیل","Brazil"],"America/Anchorage":["NA","آمریکا","United States"],"Pacific/Honolulu":["NA","آمریکا","United States"],"Europe/Paris":["EU","فرانسه","France"],"Europe/Berlin":["EU","آلمان","Germany"],"Europe/Rome":["EU","ایتالیا","Italy"],"Europe/Madrid":["EU","اسپانیا","Spain"],"Europe/Amsterdam":["EU","هلند","Netherlands"],"Africa/Cairo":["AF","مصر","Egypt"],"Africa/Lagos":["AF","نیجریه","Nigeria"],"Africa/Johannesburg":["AF","آفریقای جنوبی","South Africa"],"Asia/Riyadh":["AS","عربستان سعودی","Saudi Arabia"],"Asia/Baghdad":["AS","عراق","Iraq"],"Asia/Kabul":["AS","افغانستان","Afghanistan"],"Asia/Karachi":["AS","پاکستان","Pakistan"],"Asia/Tashkent":["AS","ازبکستان","Uzbekistan"],"Asia/Dhaka":["AS","بنگلادش","Bangladesh"],"Asia/Bangkok":["AS","تایلند","Thailand"],"Asia/Singapore":["AS","سنگاپور","Singapore"],"Asia/Hong_Kong":["AS","هنگ‌کنگ","Hong Kong"],"Asia/Seoul":["AS","کره جنوبی","South Korea"],"Pacific/Auckland":["OC","نیوزیلند","New Zealand"],"America/Montreal":["NA","کانادا","Canada"],"America/Edmonton":["NA","کانادا","Canada"],"America/Winnipeg":["NA","کانادا","Canada"],"America/Halifax":["NA","کانادا","Canada"],"America/Phoenix":["NA","آمریکا","United States"],"America/Havana":["NA","کوبا","Cuba"],"America/Bogota":["SA","کلمبیا","Colombia"],"America/Lima":["SA","پرو","Peru"],"America/Caracas":["SA","ونزوئلا","Venezuela"],"America/Santiago":["SA","شیلی","Chile"],"America/Argentina/Buenos_Aires":["SA","آرژانتین","Argentina"],"Atlantic/Reykjavik":["EU","ایسلند","Iceland"],"Europe/Dublin":["EU","ایرلند","Ireland"],"Europe/Lisbon":["EU","پرتغال","Portugal"],"Europe/Brussels":["EU","بلژیک","Belgium"],"Europe/Zurich":["EU","سوئیس","Switzerland"],"Europe/Vienna":["EU","اتریش","Austria"],"Europe/Prague":["EU","جمهوری چک","Czechia"],"Europe/Warsaw":["EU","لهستان","Poland"],"Europe/Budapest":["EU","مجارستان","Hungary"],"Europe/Stockholm":["EU","سوئد","Sweden"],"Europe/Oslo":["EU","نروژ","Norway"],"Europe/Copenhagen":["EU","دانمارک","Denmark"],"Europe/Helsinki":["EU","فنلاند","Finland"],"Europe/Athens":["EU","یونان","Greece"],"Europe/Kyiv":["EU","اوکراین","Ukraine"],"Europe/Bucharest":["EU","رومانی","Romania"],"Asia/Baku":["AS","جمهوری آذربایجان","Azerbaijan"],"Asia/Tbilisi":["AS","گرجستان","Georgia"],"Asia/Yerevan":["AS","ارمنستان","Armenia"],"Asia/Qatar":["AS","قطر","Qatar"],"Asia/Kuwait":["AS","کویت","Kuwait"],"Asia/Muscat":["AS","عمان","Oman"],"Asia/Amman":["AS","اردن","Jordan"],"Asia/Beirut":["AS","لبنان","Lebanon"],"Asia/Damascus":["AS","سوریه","Syria"],"Asia/Jerusalem":["AS","اسرائیل و فلسطین","Israel & Palestine"],"Asia/Almaty":["AS","قزاقستان","Kazakhstan"],"Asia/Kathmandu":["AS","نپال","Nepal"],"Asia/Colombo":["AS","سریلانکا","Sri Lanka"],"Asia/Yangon":["AS","میانمار","Myanmar"],"Asia/Jakarta":["AS","اندونزی","Indonesia"],"Asia/Kuala_Lumpur":["AS","مالزی","Malaysia"],"Asia/Manila":["AS","فیلیپین","Philippines"],"Asia/Taipei":["AS","تایوان","Taiwan"],"Asia/Ho_Chi_Minh":["AS","ویتنام","Vietnam"],"Australia/Perth":["OC","استرالیا","Australia"],"Australia/Adelaide":["OC","استرالیا","Australia"],"Australia/Brisbane":["OC","استرالیا","Australia"],"Pacific/Fiji":["OC","فیجی","Fiji"],"Africa/Nairobi":["AF","کنیا","Kenya"],"Africa/Addis_Ababa":["AF","اتیوپی","Ethiopia"],"Africa/Casablanca":["AF","مراکش","Morocco"],"Africa/Algiers":["AF","الجزایر","Algeria"],"Africa/Tunis":["AF","تونس","Tunisia"],"Africa/Accra":["AF","غنا","Ghana"],"Asia/Pyongyang":["AS","کره شمالی","North Korea"],"Asia/Ulaanbaatar":["AS","مغولستان","Mongolia"],"Asia/Bishkek":["AS","قرقیزستان","Kyrgyzstan"],"Asia/Dushanbe":["AS","تاجیکستان","Tajikistan"],"Asia/Ashgabat":["AS","ترکمنستان","Turkmenistan"],"Asia/Samarkand":["AS","ازبکستان","Uzbekistan"],"Asia/Thimphu":["AS","بوتان","Bhutan"],"Asia/Vientiane":["AS","لائوس","Laos"],"Asia/Phnom_Penh":["AS","کامبوج","Cambodia"],"Asia/Brunei":["AS","برونئی","Brunei"],"Asia/Macau":["AS","ماکائو","Macau"],"Asia/Bahrain":["AS","بحرین","Bahrain"],"Asia/Aden":["AS","یمن","Yemen"],"Asia/Nicosia":["AS","قبرس","Cyprus"],"Asia/Yekaterinburg":["AS","روسیه","Russia"],"Asia/Novosibirsk":["AS","روسیه","Russia"],"Asia/Irkutsk":["AS","روسیه","Russia"],"Asia/Vladivostok":["AS","روسیه","Russia"],"Asia/Kamchatka":["AS","روسیه","Russia"],"Indian/Maldives":["AS","مالدیو","Maldives"],"Europe/Minsk":["EU","بلاروس","Belarus"],"Europe/Kaliningrad":["EU","روسیه","Russia"],"Europe/Samara":["EU","روسیه","Russia"],"Europe/Belgrade":["EU","صربستان","Serbia"],"Europe/Sofia":["EU","بلغارستان","Bulgaria"],"Europe/Zagreb":["EU","کرواسی","Croatia"],"Europe/Sarajevo":["EU","بوسنی و هرزگوین","Bosnia and Herzegovina"],"Europe/Skopje":["EU","مقدونیه شمالی","North Macedonia"],"Europe/Tirane":["EU","آلبانی","Albania"],"Europe/Ljubljana":["EU","اسلوونی","Slovenia"],"Europe/Bratislava":["EU","اسلواکی","Slovakia"],"Europe/Riga":["EU","لتونی","Latvia"],"Europe/Vilnius":["EU","لیتوانی","Lithuania"],"Europe/Tallinn":["EU","استونی","Estonia"],"Europe/Chisinau":["EU","مولداوی","Moldova"],"Europe/Luxembourg":["EU","لوکزامبورگ","Luxembourg"],"Europe/Monaco":["EU","موناکو","Monaco"],"Europe/Malta":["EU","مالت","Malta"],"Atlantic/Azores":["EU","پرتغال","Portugal"],"Atlantic/Canary":["EU","اسپانیا","Spain"],"Africa/Khartoum":["AF","سودان","Sudan"],"Africa/Tripoli":["AF","لیبی","Libya"],"Africa/Dakar":["AF","سنگال","Senegal"],"Africa/Abidjan":["AF","ساحل عاج","Côte d’Ivoire"],"Africa/Kinshasa":["AF","کنگو (کینشاسا)","DR Congo"],"Africa/Luanda":["AF","آنگولا","Angola"],"Africa/Dar_es_Salaam":["AF","تانزانیا","Tanzania"],"Africa/Kampala":["AF","اوگاندا","Uganda"],"Africa/Harare":["AF","زیمبابوه","Zimbabwe"],"Africa/Maputo":["AF","موزامبیک","Mozambique"],"Africa/Mogadishu":["AF","سومالی","Somalia"],"Africa/Djibouti":["AF","جیبوتی","Djibouti"],"America/St_Johns":["NA","کانادا","Canada"],"America/Regina":["NA","کانادا","Canada"],"America/Nuuk":["NA","گرینلند","Greenland"],"America/Panama":["NA","پاناما","Panama"],"America/Costa_Rica":["NA","کاستاریکا","Costa Rica"],"America/Guatemala":["NA","گواتمالا","Guatemala"],"America/Jamaica":["NA","جامائیکا","Jamaica"],"America/Puerto_Rico":["NA","پورتوریکو","Puerto Rico"],"America/Santo_Domingo":["NA","جمهوری دومینیکن","Dominican Republic"],"America/La_Paz":["SA","بولیوی","Bolivia"],"America/Montevideo":["SA","اروگوئه","Uruguay"],"America/Guayaquil":["SA","اکوادور","Ecuador"],"America/Asuncion":["SA","پاراگوئه","Paraguay"],"America/Manaus":["SA","برزیل","Brazil"],"Australia/Darwin":["OC","استرالیا","Australia"],"Australia/Hobart":["OC","استرالیا","Australia"],"Pacific/Guam":["OC","گوام","Guam"],"Pacific/Port_Moresby":["OC","پاپوا گینه نو","Papua New Guinea"],"Pacific/Tongatapu":["OC","تونگا","Tonga"],"Pacific/Apia":["OC","ساموا","Samoa"],"Pacific/Tahiti":["OC","پلی‌نزی فرانسه","French Polynesia"],"Pacific/Kiritimati":["OC","کیریباتی","Kiribati"]};
+    var menuEl = null, bdEl = null, menuOpen = false, rows = [], nav = [], query = "", titleEl = null, backEl = null, inpEl = null, listEl = null;
     function hap() { try { var W = Telegram.WebApp; W.HapticFeedback && W.HapticFeedback.selectionChanged(); } catch (x) { } }
+    function nm(x, fa) { return fa ? x[1] : x[2]; }
     function buildMenu() {
         if (menuEl) return;
         bdEl = document.createElement("div"); bdEl.id = "muTgClockBd";
         menuEl = document.createElement("div"); menuEl.id = "muTgClockMenu"; menuEl.setAttribute("role", "dialog");
-        var h = document.createElement("div"); h.className = "mkm-h"; menuEl.appendChild(h);
-        var si = document.createElement("input"); si.type = "search"; si.className = "mkm-s"; si.autocomplete = "off"; si.setAttribute("enterkeyhint", "search"); menuEl.appendChild(si);
-        si.addEventListener("input", function () { filterMenu(si.value); });
-        var list = document.createElement("div"); list.className = "mkm-l"; menuEl.appendChild(list);
-        ZONES.forEach(function (z, i) {
-            var r = document.createElement("button"); r.type = "button"; r.className = "mkm-r";
-            r.innerHTML = '<span class="mkm-k"></span><span class="mkm-n"><span class="mkm-c"></span><span class="mkm-o"></span></span><span class="mkm-t"></span>';
-            r.addEventListener("click", function (e) { e.preventDefault(); e.stopPropagation(); pick(i); });
-            list.appendChild(r); rows.push(r);
-        });
+        var h = document.createElement("div"); h.className = "mkm-h";
+        backEl = document.createElement("button"); backEl.type = "button"; backEl.className = "mkm-b"; backEl.setAttribute("aria-label", "Back");
+        backEl.addEventListener("click", function (e) { e.preventDefault(); e.stopPropagation(); if (nav.length) { nav.pop(); renderList(); hap(); } });
+        titleEl = document.createElement("span"); titleEl.className = "mkm-ti";
+        h.appendChild(backEl); h.appendChild(titleEl); menuEl.appendChild(h);
+        inpEl = document.createElement("input"); inpEl.type = "search"; inpEl.className = "mkm-s"; inpEl.autocomplete = "off"; inpEl.setAttribute("enterkeyhint", "search"); menuEl.appendChild(inpEl);
+        inpEl.addEventListener("input", function () { query = norm(inpEl.value); renderList(); });
+        listEl = document.createElement("div"); listEl.className = "mkm-l"; menuEl.appendChild(listEl);
         bdEl.addEventListener("click", function (e) { e.preventDefault(); e.stopPropagation(); closeMenu(); });
         bdEl.addEventListener("touchmove", function (e) { e.preventDefault(); }, { passive: false });
         document.body.appendChild(bdEl); document.body.appendChild(menuEl);
     }
     function norm(x) { return String(x || "").toLowerCase().replace(/[\u200c\u200b]/g, "").replace(/ي/g, "ی").replace(/ك/g, "ک").trim(); }
-    function filterMenu(q) {
-        q = norm(q); var i, z, ok;
-        for (i = 0; i < ZONES.length; i++) { z = ZONES[i]; ok = !q || norm(z[1]).indexOf(q) >= 0 || norm(z[2]).indexOf(q) >= 0 || norm(z[0]).indexOf(q) >= 0; rows[i].style.display = ok ? "" : "none"; }
+    function addRow(opt) {
+        var r = document.createElement("button"); r.type = "button"; r.className = "mkm-r";
+        r.innerHTML = '<span class="mkm-k"></span><span class="mkm-n"><span class="mkm-c"></span><span class="mkm-o"></span></span><span class="mkm-t"></span>';
+        r.children[1].children[0].textContent = opt.name;
+        if (opt.zi !== undefined) { r.setAttribute("data-zi", opt.zi); }
+        else { r.children[2].textContent = opt.cnt; r.children[2].className = "mkm-t mkm-cnt"; r.children[1].children[1].style.display = "none"; }
+        r.addEventListener("click", function (e) { e.preventDefault(); e.stopPropagation(); opt.go(); });
+        listEl.appendChild(r); return r;
+    }
+    function zonesOf(pred) { var o = []; ZONES.forEach(function (z, i) { var m = CMAP[z[0]]; if (pred(z, m, i)) o.push(i); }); return o; }
+    function renderList() {
+        if (!listEl) return;
+        var fa = isFa(), chev = fa ? "‹ " : " ›", i;
+        listEl.innerHTML = "";
+        function cityRow(zi, label) { addRow({ zi: zi, name: label, go: function () { pick(zi); } }); }
+        function label(zi, withCountry) { var z = ZONES[zi], m = CMAP[z[0]]; return nm(z, fa) + (withCountry && m ? " · " + nm(m, fa) : ""); }
+        var title = fa ? "انتخاب شهر / ساعت" : "Choose a city / time zone", showBack = false;
+        if (query) {
+            title = fa ? "نتایج جستجو" : "Search results";
+            zonesOf(function (z, m) { return norm(z[1]).indexOf(query) >= 0 || norm(z[2]).indexOf(query) >= 0 || norm(z[0]).indexOf(query) >= 0 || (m && (norm(m[1]).indexOf(query) >= 0 || norm(m[2]).indexOf(query) >= 0)); }).forEach(function (zi) { cityRow(zi, label(zi, true)); });
+            if (!listEl.children.length) { var e = document.createElement("div"); e.className = "mkm-empty"; e.textContent = fa ? "موردی پیدا نشد" : "No results"; listEl.appendChild(e); }
+        } else if (!nav.length) {
+            zonesOf(function (z, m) { return !m; }).forEach(function (zi) { cityRow(zi, label(zi, false)); });
+            CONT.forEach(function (c) {
+                var n = zonesOf(function (z, m) { return m && m[0] === c[0]; }).length;
+                addRow({ name: nm(c, fa), cnt: String(n), go: function () { nav.push(["c", c[0]]); renderList(); hap(); } });
+            });
+        } else if (nav.length === 1) {
+            var cc = CONT.filter(function (c) { return c[0] === nav[0][1]; })[0]; title = nm(cc, fa); showBack = true;
+            var seen = {}, order = [];
+            zonesOf(function (z, m) { return m && m[0] === cc[0]; }).forEach(function (zi) { var m = CMAP[ZONES[zi][0]], key = m[2]; if (!seen[key]) { seen[key] = []; order.push([key, m]); } seen[key].push(zi); });
+            order.sort(function (a, b) { return fa ? a[1][1].localeCompare(b[1][1], "fa") : a[0].localeCompare(b[0]); });
+            order.forEach(function (o) {
+                var zs = seen[o[0]];
+                if (zs.length === 1) cityRow(zs[0], nm(o[1], fa) + " · " + nm(ZONES[zs[0]], fa));
+                else addRow({ name: nm(o[1], fa), cnt: String(zs.length), go: function () { nav.push(["k", o[0]]); renderList(); hap(); } });
+            });
+        } else {
+            var key = nav[1][1], zs = zonesOf(function (z, m) { return m && m[2] === key; });
+            title = nm(CMAP[ZONES[zs[0]][0]], fa); showBack = true;
+            zs.forEach(function (zi) { cityRow(zi, nm(ZONES[zi], fa)); });
+        }
+        titleEl.textContent = title; backEl.style.display = showBack ? "" : "none"; backEl.textContent = fa ? "→" : "←";
+        paintMenu(); listEl.scrollTop = 0;
+    }
+    function menuDark() {
+        if (!menuEl) return;
+        var d; try { var L = lum(getComputedStyle(tEl).color); d = L !== null && L > 0.35; } catch (e) { d = lastFg === "#ffffff"; }
+        menuEl.classList.toggle("mkc-dark", d);
+    }
+    function reposMenu(full) {
+        if (!menuOpen || !menuEl) return;
+        var fsOn = document.documentElement.classList.contains("mu-tg-fs"), top = fsOn ? (Math.max(0, Number(lastTop) || 0) + Math.max(28, Number(lastH) || 44) + 4) : 56;
+        menuEl.style.setProperty("--mu-clkm-top", top + "px");
+        if (full) menuEl.style.setProperty("--mu-clkm-mh", Math.max(220, Math.min(520, Math.round((window.innerHeight || 700) * 0.62), (window.innerHeight || 700) - top - 16)) + "px");
     }
     function paintMenu() {
         if (!menuOpen || !menuEl) return;
-        var ms = now(), fa = isFa(), i, z, r, t;
-        menuEl.children[1].placeholder = fa ? "جستجوی شهر…" : "Search city…"; menuEl.firstChild.textContent = pinMode ? (fa ? "افزودن / حذف شهر در منو" : "Add / remove cities in the menu") : (fa ? "انتخاب شهر / ساعت" : "Choose a city / time zone");
+        var ms = now(), fa = isFa(), rs = listEl.children, i, r, zi, z, p;
+        inpEl.placeholder = fa ? "جستجوی شهر یا کشور…" : "Search city or country…";
         menuEl.style.direction = fa ? "rtl" : "ltr";
-        menuEl.classList.toggle("mkc-dark", (function () { try { var L = lum(getComputedStyle(tEl).color); return L !== null && L > 0.35; } catch (e) { return lastFg === "#ffffff"; } })());
-        for (i = 0; i < ZONES.length; i++) {
-            z = ZONES[i]; r = rows[i];
-            try { var p = parts(z[0], ms); t = p.hour + ":" + p.minute; r.children[2].textContent = t; r.children[1].children[1].textContent = offsetStr(z[0], ms); } catch (e) { }
-            r.children[1].children[0].textContent = fa ? z[1] : z[2];
-            var on = pinMode ? pins().indexOf(z[0]) >= 0 : i === idx;
-            r.children[0].textContent = on ? "✓" : "";
-            r.classList.toggle("mkm-sel", on);
+        for (i = 0; i < rs.length; i++) {
+            r = rs[i]; zi = r.getAttribute("data-zi"); if (zi === null) continue; zi = +zi; z = ZONES[zi];
+            try { p = parts(z[0], ms); r.children[2].textContent = p.hour + ":" + p.minute; r.children[1].children[1].textContent = offsetStr(z[0], ms); } catch (e) { }
+            r.children[0].textContent = zi === idx ? "✓" : ""; r.classList.toggle("mkm-sel", zi === idx);
         }
     }
-    function openMenu(pm) {
-        pinMode = !!pm; buildMenu(); menuOpen = true; color(); place();
-        var fsOn = document.documentElement.classList.contains("mu-tg-fs"), top = fsOn ? (Math.max(0, Number(lastTop) || 0) + Math.max(28, Number(lastH) || 44) + 4) : 56;
-        menuEl.style.setProperty("--mu-clkm-top", top + "px");
-        R.classList.add("mu-clk-open"); try { menuEl.children[1].value = ""; filterMenu(""); } catch (e) { } paintMenu(); hap();
-        var sel = pinMode ? null : rows[idx]; try { sel ? sel.scrollIntoView({ block: "center" }) : (menuEl.children[2].scrollTop = 0); } catch (e) { }
+    function openMenu() {
+        buildMenu(); menuOpen = true; color(); place(); nav = []; query = ""; inpEl.value = "";
+        R.classList.add("mu-clk-open"); reposMenu(true); menuDark(); renderList(); hap();
     }
     function closeMenu() { menuOpen = false; R.classList.remove("mu-clk-open"); }
-    function toggleMenu() { menuOpen ? closeMenu() : openMenu(false); }
+    function toggleMenu() { menuOpen ? closeMenu() : openMenu(); }
     function pick(i) {
-        if (pinMode) { togglePin(ZONES[i][0]); paintMenu(); hap(); return; }
         idx = i; lastT = ""; lastL = "";
         try { localStorage.setItem(KEY, ZONES[idx][0]); } catch (x) { }
         try { typeof mu_flushStorage === "function" && mu_flushStorage(); } catch (x) { }
         paint(true); paintWc(); hap(); closeMenu();
     }
-    document.addEventListener("keydown", function (e) { if (menuOpen && e.key === "Escape") closeMenu(); });
+    document.addEventListener("keydown", function (e) { if (menuOpen && e.key === "Escape") { if (nav.length && !query) { nav.pop(); renderList(); } else closeMenu(); } });
     // ---- world clock at the bottom of the side menu: same clock as the header, tap it to pick a city ----
     var wcEl = null, wcT = null, wcB = null, wcO = null, wcBtn = null, wcLast = "";
     function paintWc() {
@@ -55657,7 +55796,7 @@ var menuEl = null, bdEl = null, menuOpen = false, rows = []; var pinMode = false
             wcEl = document.createElement("div"); wcEl.id = "mkWcSec";
             wcEl.innerHTML = '<div class="mkw-sep"></div><button type="button" class="mkw-clock" aria-label="World clock"><span class="mkw-ct"></span><span class="mkw-cl"><i class="mkc-d"></i><bdi></bdi><span class="mkw-co" dir="ltr"></span></span></button>';
             wcBtn = wcEl.lastChild; wcT = wcBtn.firstChild; wcB = wcBtn.lastChild.children[1]; wcO = wcBtn.lastChild.children[2];
-            wcBtn.addEventListener("click", function (e) { e.preventDefault(); e.stopPropagation(); menuOpen ? closeMenu() : openMenu(false); });
+            wcBtn.addEventListener("click", function (e) { e.preventDefault(); e.stopPropagation(); menuOpen ? closeMenu() : openMenu(); });
         }
         pn.appendChild(wcEl); wcLast = ""; paintWc();
     }
@@ -55678,8 +55817,8 @@ var menuEl = null, bdEl = null, menuOpen = false, rows = []; var pinMode = false
         document.body.appendChild(el);
         color(); place(); paint(true); sync(true); tick();
         try { new MutationObserver(colorSoon).observe(document.documentElement, { attributes: true, attributeFilter: ["class", "style", "data-theme"] }); new MutationObserver(colorSoon).observe(document.body, { attributes: true, attributeFilter: ["class", "style"] }); } catch (e) { }
-        try { var W = Telegram.WebApp; ["safeAreaChanged", "contentSafeAreaChanged", "fullscreenChanged", "themeChanged"].forEach(function (n) { W.onEvent(n, function () { place(); colorSoon(); }); }); } catch (e) { }
-        window.addEventListener("resize", function () { place(); colorSoon(); });
+        try { var W = Telegram.WebApp; ["safeAreaChanged", "contentSafeAreaChanged", "fullscreenChanged", "themeChanged"].forEach(function (n) { W.onEvent(n, function () { place(); colorSoon(); reposMenu(true); }); }); } catch (e) { }
+        window.addEventListener("resize", function () { place(); colorSoon(); reposMenu(false); });
         window.addEventListener("online", function () { sync(true); });
         window.addEventListener("mk-splash-done", colorSoon); hookNav();
         document.addEventListener("visibilitychange", function () { if (!document.hidden) { sync(true); tick(); } });
