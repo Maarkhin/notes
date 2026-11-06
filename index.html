@@ -21388,7 +21388,7 @@ catch { } }
 // Called from every place a note is actually removed — the toolbar delete button, the AI delete/merge
 // tools, bulk delete and Ghost Note expiry are all covered the same way
 function recordTombstone(id) { if (id == null)
-    return; const arr = loadTombstones().filter(t => String(t.id) !== String(id)); arr.push({ id: String(id), deletedAt: Date.now() }), saveTombstones(arr); }
+    return; const arr = loadTombstones().filter(t => String(t.id) !== String(id)); arr.push({ id: String(id), deletedAt: Date.now() }), saveTombstones(arr); try { window.mkOpEmitDelete && window.mkOpEmitDelete(id); } catch { } }
 // Called when a deleted note is deliberately brought back (an import or a "restore and undo deletions"):
 // it isn't deleted anymore, so it should be free to sync/restore normally again
 function clearTombstone(id) { id != null && saveTombstones(loadTombstones().filter(t => String(t.id) !== String(id))); }
@@ -22285,7 +22285,7 @@ function cloudAutoSaveOn() { try {
 catch {
     return !0;
 } }
-function cloudFlushBackup() { if (clearTimeout(__cloudBackupTimer), __cloudBackupFirstAt = 0, !__cloudBackupPending)
+function cloudFlushBackup() { if (__cloudBackupPending && document.visibilityState !== "hidden" && window.mkOpsBusy && window.mkOpsBusy()) { clearTimeout(__cloudBackupTimer), __cloudBackupTimer = setTimeout(cloudFlushBackup, 120); return; } if (clearTimeout(__cloudBackupTimer), __cloudBackupFirstAt = 0, !__cloudBackupPending)
     return;
 __cloudBackupPending = !1;
 // A flush that was explicitly forced (see scheduleCloudBackup's `force`) is let through even when the switch is off.
@@ -22565,6 +22565,355 @@ catch { } }
     }
     catch { }
 }
+// ===== FAST OPS CHANNEL (v9) =====
+// Light operations AND note content (create / edit / rename / folder / tags / color) travel on their OWN tiny Cloud
+// slots, ahead of the heavy notes backup:
+//   mk_o_<dev>      : the device's recent light ops  [delete, pin, favorite, archive]  (< 4 KB)
+//   mk_q_<dev>_0..2 : 3 ring slots, each holding ONE whole note (JSON -> gzip -> base85, < 4 KB per key)
+//   mk_o_reg        : tiny registry of device ids, so a new device is seen from the very next probe
+// A device writes ONLY its own keys (two devices can never overwrite each other) and reads the others' keys with one
+// getItems call every ~0.35 s while hot / ~0.9 s otherwise. It never queues behind a running backup or the heavy probe.
+// The full auto backup is still taken afterwards (cloudFlushBackup waits for the fast writes, max 4 s) and stays the
+// safety net: notes too big for one slot (~9 KB of text after compression), media, Lists and bursts of > 80 ops reach
+// the other device through it, exactly as before.
+// Arrival rules (idempotent):
+//   delete : applied when the note was not edited after the delete; the tombstone is stored too
+//   p/f/a  : applied only when newer than the note's own metaEditedAt (same stamp stored -> no fight with the backup)
+//   note   : handed to cloudApplyMergeData() — the SAME merge the backup uses (newer wins, locks, media kept, folders,
+//            tombstones). Text taken from another device is remembered (mkOpsIsRemote) so it never produces a false
+//            "conflict copy" before the heavy sync catches up.
+// v10: the standalone List items, folder create/remove (rename) and pinned folders ride the same channel (op types L X C R P).
+// Everything applied here runs inside cloudQuiet() + __mkOpApplying: never echoed back, never re-uploaded.
+const MK_OPS = (() => {
+    const PFX = "mk_o_", REG_KEY = "mk_o_reg", QPFX = "mk_q_", NSLOT = 3, SLOTMAX = 3990, MAXLEN = 3700, MAXOPS = 80, LS_ID = "mk_dev_id_v1", LS_OWN = "mk_ops_own_v1", TYPES = { d: 1, p: 1, f: 1, a: 1, L: 1, X: 1, C: 1, R: 1, P: 1 }, XT = { L: 1, X: 1, C: 1, R: 1, P: 1 };
+    const S = window.__mkOps = { running: !1, timer: null, busy: !1, ownOps: [], flushing: !1, dirty: !1, devs: [], keysAt: 0, seen: {}, hotUntil: 0, fails: 0, flags: null, st: null, sent: 0, got: 0, applied: 0, probes: 0, lastUserAt: Date.now(), lastMs: 0,
+        noteQ: new Set, noteTimer: null, noteFirstAt: 0, noteBusy: !1, occ: [], ring: 0, remote: new Map, notesSent: 0, notesGot: 0, skipBig: 0, holdSince: 0 };
+    let devId = ""; try {
+        devId = localStorage.getItem(LS_ID) || "";
+        devId || (devId = Math.random().toString(36).slice(2, 8) + Date.now().toString(36).slice(-3), localStorage.setItem(LS_ID, devId));
+    }
+    catch { devId = Math.random().toString(36).slice(2, 10); }
+    const OWN_KEY = PFX + devId; S.devId = devId;
+    const keysOf = id => { const a = [PFX + id]; for (let i = 0; i < NSLOT; i++) a.push(QPFX + id + "_" + i); return a; };
+    const hot = ms => { S.hotUntil = Math.max(S.hotUntil, Date.now() + (ms || 9e4)); };
+    const eligible = () => { try {
+        return !!(IS_TELEGRAM && hasCloudStorage && typeof navigator < "u" && navigator.onLine !== !1);
+    }
+    catch { return !1; } };
+    const sendOn = () => { try { return eligible() && cloudIsLinked() && cloudAutoSaveOn(); } catch { return !1; } };
+    const recvOn = () => { try { return eligible() && cloudIsLinked(); } catch { return !1; } };
+    const serialize = () => JSON.stringify({ v: 1, d: devId, o: S.ownOps });
+    const saveOwn = () => { try { localStorage.setItem(LS_OWN, JSON.stringify(S.ownOps)); } catch { } };
+    // ---------- light ops: send ----------
+    function emit(t, id, ts, val, x) {
+        if (window.__mkOpApplying || !TYPES[t] || id == null || !sendOn())
+            return;
+        const sid = String(id);
+        S.ownOps = S.ownOps.filter(o => !(o[1] === sid && (o[0] === t || t === "d")));
+        const op = [t, sid, ts, val ? 1 : 0]; x != null && isFinite(x) && op.push(Number(x)); S.ownOps.push(op);
+        while (S.ownOps.length > MAXOPS || S.ownOps.length > 1 && serialize().length > MAXLEN)
+            S.ownOps.shift();
+        saveOwn(), hot(), flush();
+        try { cloudLiveHot(); } catch { }
+    }
+    async function flush() {
+        if (S.flushing) { S.dirty = !0; return; }
+        S.flushing = !0;
+        let ok = !1;
+        try {
+            for (let n = 0; n < 8; n++) {
+                S.dirty = !1;
+                ok = !!(eligible() && await cloudSetItem(OWN_KEY, serialize()));
+                if (ok) { S.sent++; S.lastMs = Date.now(); if (!S.dirty) break; continue; }
+                await cloudSleep(Math.min(8e3, 500 * Math.pow(2, n)));
+            }
+        }
+        finally { S.flushing = !1; }
+        ok || setTimeout(flush, 2e4);
+    }
+    // ---------- note content: send ----------
+    const metaSig = c => JSON.stringify([c.folder || "", c.extraFolders || [], c.tags || [], c.color || "", c.titleColor == null ? "" : c.titleColor, c.fontFamily || "", +c.fontSize || 0, c.unlockAt || "", c.ghostUntil || ""]);
+    const recent = (l, m) => Math.abs(Date.now() - Math.max(Date.parse(l) || 0, Date.parse(m) || 0)) < 12e4;
+    function queueNote(id) {
+        if (!sendOn()) return;
+        const now = Date.now(); S.noteQ.add(String(id)), S.noteFirstAt || (S.noteFirstAt = now), hot();
+        clearTimeout(S.noteTimer), S.noteTimer = setTimeout(runNotes, Math.max(0, Math.min(450, 1500 - (now - S.noteFirstAt))));
+    }
+    async function runNotes() {
+        S.noteTimer = null, S.noteFirstAt = 0;
+        if (S.noteBusy) return;
+        S.noteBusy = !0;
+        try { while (S.noteQ.size) { const ids = Array.from(S.noteQ); S.noteQ.clear(); for (const id of ids) await sendNote(id); } }
+        catch (e) { console.warn("fast ops: note send", e); }
+        finally { S.noteBusy = !1; }
+    }
+    function buildNote(item) {
+        const p = getPersistedCategory(item);
+        return { id: p.id, name: p.name, folder: p.folder, extraFolders: p.extraFolders && p.extraFolders.length ? p.extraFolders : void 0, text: p.text, html: cloudStripImages(p.html), encrypted: p.encrypted || void 0, hint: p.hint || void 0, tags: p.tags && p.tags.length ? p.tags : void 0, pinned: !!p.pinned, favorite: !!p.favorite, archived: !!p.archived, order: p.order, fontFamily: p.fontFamily, fontSize: p.fontSize, color: p.color, titleColor: p.titleColor, fakeContent: p.fakeContent || void 0, unlockAt: p.unlockAt || void 0, ghostUntil: p.ghostUntil || void 0, lastEdited: p.lastEdited, metaEditedAt: p.metaEditedAt };
+    }
+    async function encNote(obj) {
+        const u8 = new TextEncoder().encode(JSON.stringify(obj)); let mode = "r", data = u8;
+        if (typeof CompressionStream < "u") try { const g = await cloudGzBytes(u8); g.length < u8.length && (mode = "g", data = g); } catch { }
+        return String(obj.id) + "\n" + mode + "\n" + cloudB85Enc(data);
+    }
+    async function decNote(raw) {
+        try {
+            const a = raw.indexOf("\n"), b = raw.indexOf("\n", a + 1); if (a < 1 || b < 0) return null;
+            const id = raw.slice(0, a), mode = raw.slice(a + 1, b); let u8 = cloudB85Dec(raw.slice(b + 1));
+            mode === "g" && (u8 = await cloudGunzBytes(u8));
+            const o = JSON.parse(new TextDecoder().decode(u8));
+            return o && typeof o == "object" && String(o.id) === id && typeof o.name == "string" && typeof o.lastEdited == "string" ? o : null;
+        }
+        catch { return null; }
+    }
+    async function sendNote(id) {
+        const c = categories.find(x => x && String(x.id) === id); if (!c || !sendOn()) return;
+        try { if (window.MK && window.MK.vault && window.MK.vault.sync && window.MK.vault.sync.isHidden(c.id)) return; } catch { }
+        const val = await encNote(buildNote(c));
+        if (val.length > SLOTMAX) { S.skipBig++; return; }     // too big for one key: the full backup carries it
+        let slot = S.occ.indexOf(id); slot < 0 && (slot = S.ring++ % NSLOT, S.occ[slot] = id);
+        for (let n = 0; n < 4; n++) {
+            if (await cloudSetItem(QPFX + devId + "_" + slot, val)) { S.notesSent++, S.lastMs = Date.now(); return; }
+            await cloudSleep(400 * Math.pow(2, n));
+        }
+    }
+    // ---------- local changes: called from saveToLocalStorage (after mkAutoStamp) ----------
+    function scan() {
+        const first = !S.flags; first && (S.flags = new Map, S.st = new Map);
+        const quiet = !!(window.__mkNoSchedule > 0 || window.__mkOpApplying);
+        for (let i = 0; i < categories.length; i++) {
+            const c = categories[i]; if (!c || c.id == null) continue;
+            const id = String(c.id), bits = (c.pinned ? 1 : 0) | (c.favorite ? 2 : 0) | (c.archived ? 4 : 0), prev = S.flags.get(id);
+            S.flags.set(id, bits);
+            if (!(first || quiet || prev === void 0 || prev === bits)) {
+                const ts = Date.parse(c.metaEditedAt) || mkNowMs(), d = prev ^ bits;
+                d & 1 && emit("p", id, ts, c.pinned, c.pinned ? Number(c.order) || 0 : void 0), d & 2 && emit("f", id, ts, c.favorite), d & 4 && emit("a", id, ts, c.archived);
+            }
+            const l = c.lastEdited || "", m = c.metaEditedAt || "", st = S.st.get(id);
+            if (!st) { S.st.set(id, { l: l, m: m, s: metaSig(c) }); !first && !quiet && recent(l, m) && queueNote(id); }
+            else if (st.l !== l || st.m !== m) {
+                const s2 = metaSig(c), textCh = st.l !== l, metaCh = s2 !== st.s; st.l = l, st.m = m, st.s = s2;
+                !first && !quiet && (textCh || metaCh) && recent(l, m) && queueNote(id);
+            }
+        }
+    }
+    function emitDelete(id) { if (id == null) return; S.flags && S.flags.delete(String(id)), S.st && S.st.delete(String(id)), S.noteQ.delete(String(id)), S.remote.delete(String(id)); window.__mkNoSchedule > 0 || emit("d", id, mkNowMs()); }
+    // ---------- Lists + folders + folder pins: send (v10) ----------
+    // Same channel, same key (mk_o_<dev>), new op types. ids are prefixed so they can never clash with note ids:
+    //   L  l:<id>     list item added / edited / ticked   [type, id, updatedAt, done, text]
+    //   X  l:<id>     list item deleted                    [type, id, deletedAt, 0]
+    //   C  f:<name>   folder created                       [type, id, ts, 1]
+    //   R  f:<name>   folder removed (renamed away too)    [type, id, ts, 0]
+    //   P  pins       pinned-folders list (newest wins)    [type, id, ts, 0, [names]]
+    // Arrival reuses the backup's own merge rules (MK_List.merge, cloudMergeFolderTombstones, MU_FolderPins.applyRemote).
+    function emitX(t, id, ts, val, pl) {
+        if (!sendOn()) return;
+        id = String(id); if (id.length > 90) return;
+        S.ownOps = S.ownOps.filter(o => o[1] !== id);
+        const op = [t, id, ts, val ? 1 : 0]; pl != null && op.push(pl); S.ownOps.push(op);
+        while (S.ownOps.length > MAXOPS || S.ownOps.length > 1 && serialize().length > MAXLEN)
+            S.ownOps.shift();
+        saveOwn(), hot(), flush();
+        try { cloudLiveHot(); } catch { }
+    }
+    const opsQuiet = () => !!(window.__mkNoSchedule > 0 || window.__mkOpApplying);
+    function lsCur() {
+        const m = new Map, s = window.MK_List.snapshot();
+        (s.items || []).forEach(x => x && x.id != null && m.set(String(x.id), { t: x.t, d: x.d ? 1 : 0, u: Number(x.u) || 0 }));
+        return { m: m, tombs: Object.assign({}, s.tombs || {}) };
+    }
+    function lsStored() {   // state BEFORE this save (the hook runs before localStorage is written)
+        const m = new Map; let tombs = {};
+        try {
+            const it = JSON.parse(localStorage.getItem("markhin_lists_v1") || "[]");
+            Array.isArray(it) && it.forEach(x => x && x.id != null && x.id !== "" && typeof x.t == "string" && m.set(String(x.id), { t: x.t, d: x.d ? 1 : 0, u: Number(x.u) || 0 }));
+            tombs = JSON.parse(localStorage.getItem("markhin_lists_tomb_v1") || "{}") || {};
+        } catch { }
+        return { m: m, tombs: tombs };
+    }
+    function scanLists() {
+        if (!window.MK_List || typeof window.MK_List.snapshot != "function") return;
+        const quiet = opsQuiet(), prev = S.lsPrev || lsStored(), cur = lsCur();
+        S.lsPrev = cur;
+        if (quiet) return;
+        cur.m.forEach((v, id) => { const p = prev.m.get(id); (!p || p.u !== v.u || p.d !== v.d || p.t !== v.t) && emitX("L", "l:" + id, v.u || Date.now(), v.d, v.t); });
+        prev.m.forEach((v, id) => { if (!cur.m.has(id)) { const ts = Number(cur.tombs[id]) || 0; ts && emitX("X", "l:" + id, ts, 0); } });
+    }
+    const fMap = arr => { const m = new Map; try { (arr || []).forEach(f => typeof f == "string" && f && f !== DEFAULT_FOLDER && m.set(normalizeText(f), f)); } catch { } return m; };
+    function fStored() { try { const a = JSON.parse(localStorage.getItem("app_folders_v13") || "[]"); return fMap(Array.isArray(a) ? a : []); } catch { return new Map; } }
+    function pinsNow() { try { const P = window.MU_FolderPins; return P ? { list: P.list(), ts: Number(P.ts()) || 0 } : null; } catch { return null; } }
+    function scanFolders() {
+        const quiet = opsQuiet(), prev = S.fPrev || fStored(), cur = fMap(folders), pn = pinsNow(), psig = pn ? JSON.stringify(pn.list) : null, pp = S.pPrev;
+        S.fPrev = cur; psig != null && (S.pPrev = psig);
+        if (quiet) return;
+        cur.forEach((name, k) => { prev.has(k) || emitX("C", "f:" + name, mkNowMs(), 1); });
+        prev.forEach((name, k) => { if (!cur.has(k)) { let t = null; try { t = loadFolderTombstones().find(x => normalizeText(x.name) === k); } catch { } emitX("R", "f:" + name, t && t.deletedAt || mkNowMs(), 0); } });
+        // pins: a changed list is sent; on the very first scan only when it was touched a moment ago
+        pn && psig !== pp && (pp != null || Date.now() - pn.ts < 5e3) && emitX("P", "pins", pn.ts || mkNowMs(), 0, pn.list);
+    }
+    // ---------- arrival ----------
+    function parse(raw) {
+        try {
+            const p = JSON.parse(raw), lim = Date.now() + 864e5;
+            return p && Array.isArray(p.o) ? p.o.filter(o => Array.isArray(o) && TYPES[o[0]] && typeof o[1] == "string" && o[1].length < 100 && typeof o[2] == "number" && isFinite(o[2]) && o[2] <= lim) : null;
+        }
+        catch { return null; }
+    }
+    function apply(ops, notes) {
+        ops.sort((a, b) => a[2] - b[2]); notes = notes || [];
+        let changed = 0, maxTs = 0, sg0 = ""; try { sg0 = mkLiveStateSig(); } catch { }
+        window.__mkOpApplying = !0;
+        try {
+            cloudQuiet(() => {
+                const tomb = new Map(loadTombstones().map(t => [String(t.id), t])); let tCh = !1; const lops = [], fops = [], pops = [];
+                for (const o of ops) {
+                    const t = o[0], sid = o[1], ts = o[2], val = o[3], x = o[4], idx = categories.findIndex(c => c && String(c.id) === sid);
+                    if (t === "d") {
+                        const gone = idx !== -1 && (Date.parse(categories[idx].lastEdited) || 0) <= ts;
+                        if (idx === -1 || gone) {
+                            const ex = tomb.get(sid); (!ex || ex.deletedAt < ts) && (tomb.set(sid, { id: sid, deletedAt: ts }), tCh = !0);
+                        }
+                        if (gone) {
+                            categories.splice(idx, 1), S.flags && S.flags.delete(sid), S.st && S.st.delete(sid), S.remote.delete(sid), changed++, maxTs = Math.max(maxTs, ts);
+                            typeof activeOpenId < "u" && activeOpenId != null && String(activeOpenId) === sid && (activeOpenId = null);
+                            try { const sel = window.MarkhinSelectedNoteIds; sel && typeof sel.delete == "function" && (sel.delete(sid), sel.delete(Number(sid))); } catch { }
+                        }
+                        continue;
+                    }
+                    if (XT[t]) { (t === "L" || t === "X" ? lops : t === "P" ? pops : fops).push(o); continue; }
+                    if (idx === -1) continue;
+                    const c = categories[idx];
+                    if (ts <= (Date.parse(c.metaEditedAt) || Date.parse(c.lastEdited) || 0)) continue;
+                    c[t === "p" ? "pinned" : t === "f" ? "favorite" : "archived"] = !!val;
+                    t === "p" && val && x != null && isFinite(x) && (c.order = Number(x));
+                    c.metaEditedAt = mkStampMs(ts), changed++, maxTs = Math.max(maxTs, ts);
+                    t === "a" && val && typeof activeOpenId < "u" && activeOpenId != null && String(activeOpenId) === sid && (activeOpenId = null);
+                }
+                // ----- Lists / folders / pins (v10) -----
+                if (lops.length && window.MK_List) {
+                    const li = [], lt = {};
+                    lops.forEach(o => { const id = String(o[1]).slice(2); if (!id) return; if (o[0] === "X") lt[id] = Math.max(lt[id] || 0, o[2]); else if (typeof o[4] == "string") li.push({ id: id, t: o[4].slice(0, 300), d: !!o[3], u: o[2] }); });
+                    try { const n = window.MK_List.merge({ items: li, tombs: lt }) || 0; n && (changed += n, maxTs = Math.max(maxTs, ...lops.map(o => o[2]))); } catch (e) { console.warn("fast ops: list merge failed", e); }
+                    try { scanLists(); } catch { }
+                }
+                if (fops.length || pops.length) {
+                    let fch = 0;
+                    try {
+                        fops.forEach(o => {
+                            const name = String(o[1]).slice(2), key = normalizeText(name);
+                            if (!name || name === DEFAULT_FOLDER) return;
+                            const had = folders.some(x => normalizeText(x) === key);
+                            if (o[0] === "C") { if (had || isFolderTombstoned(name, o[2])) return; folders.push(name), clearFolderTombstone(name), fch++; }
+                            else { cloudMergeFolderTombstones([{ name: name, deletedAt: o[2] }]); had && !folders.some(x => normalizeText(x) === key) && fch++; }
+                        });
+                        if (pops.length && window.MU_FolderPins) {
+                            const last = pops[pops.length - 1], b = JSON.stringify(window.MU_FolderPins.list());
+                            window.MU_FolderPins.applyRemote(Array.isArray(last[4]) ? last[4] : [], last[2]);
+                            JSON.stringify(window.MU_FolderPins.list()) !== b && fch++;
+                        }
+                        if (fch) { changed += fch, maxTs = Math.max(maxTs, ...fops.concat(pops).map(o => o[2])); try { saveFoldersToLocalStorage(); } catch { } }
+                    } catch (e) { console.warn("fast ops: folder apply failed", e); }
+                    try { scanFolders(); } catch { }
+                }
+                tCh && saveTombstones(Array.from(tomb.values()));
+                if (notes.length) {
+                    const fl = new Set; notes.forEach(n => { n.folder && fl.add(n.folder), (n.extraFolders || []).forEach(f => typeof f == "string" && f && fl.add(f)); });
+                    try { cloudApplyMergeData({ notes: notes, folders: Array.from(fl) }, !1); } catch (e) { console.warn("fast ops: note merge failed", e); }
+                    notes.forEach(n => { const l = categories.find(c => c && String(c.id) === String(n.id)); l && l.lastEdited === n.lastEdited && S.remote.set(String(n.id), n.lastEdited); });
+                    let sg1 = ""; try { sg1 = mkLiveStateSig(); } catch { sg1 = "x" + Math.random(); } sg1 !== sg0 && !changed && changed++;
+                }
+                changed && saveToLocalStorage();
+            });
+        }
+        finally { window.__mkOpApplying = !1; }
+        if (changed) {
+            S.applied += changed, hot();
+            try { mkClockSeen(maxTs); } catch { }
+            try { mkLiveRepaint(); } catch (e) { console.warn("fast ops: repaint failed", e); }
+            try { window.dispatchEvent(new CustomEvent("mk-cloud-merged", { detail: { updated: changed, added: 0, retired: 0, fast: !0 } })); } catch { }
+            try { cloudLiveHot(); } catch { }
+        }
+        return changed;
+    }
+    async function probe() {
+        if (S.busy) return "skip";
+        if (!recvOn()) return "idle";
+        if (Date.now() - (window.__mkLastTypeAt || 0) < 700) return "wait";
+        S.busy = !0;
+        try {
+            // Safety-net discovery (rare): any mk_o_<id> key in the Cloud, in case a registry write was lost
+            const now = Date.now();
+            if (now - S.keysAt > 3e4) {
+                const ks = await Promise.race([cloudGetKeys(), cloudSleep(4e3).then(() => null)]);
+                S.keysAt = Date.now(), ks && ks.forEach(k => { if (typeof k == "string" && k.indexOf(PFX) === 0 && k !== OWN_KEY && k !== REG_KEY) { const id = k.slice(PFX.length); /^[A-Za-z0-9]{3,16}$/.test(id) && !S.devs.includes(id) && S.devs.length < 7 && S.devs.push(id); } });
+            }
+            const keys = [REG_KEY]; S.devs.forEach(id => keysOf(id).forEach(k => keys.push(k)));
+            const vals = await Promise.race([cloudGetItemsRaw(keys), cloudSleep(4e3).then(() => null)]);
+            if (!vals) return S.fails++, "fail";
+            S.fails = 0, S.probes++;
+            let reg = []; try { reg = JSON.parse(vals[REG_KEY] || "[]"); Array.isArray(reg) || (reg = []); } catch { reg = []; }
+            reg = reg.filter(x => typeof x == "string" && /^[A-Za-z0-9]{3,16}$/.test(x));
+            // A new device is read from the very next probe. Own registration is re-checked every probe (self-heals a lost race).
+            reg.forEach(id => { id !== devId && !S.devs.includes(id) && S.devs.length < 7 && S.devs.push(id); });
+            if (!reg.includes(devId)) { cloudSetItem(REG_KEY, JSON.stringify(reg.filter(x => x !== devId).concat(devId).slice(-8))); hot(); }
+            const batch = [], commit = {}, noteRaw = [];
+            for (const id of S.devs) {
+                const ok = PFX + id, raw = vals[ok] || "";
+                if (raw && raw !== S.seen[ok]) { const ops = parse(raw); ops && ops.forEach(o => batch.push(o)), commit[ok] = raw; }
+                for (let i = 0; i < NSLOT; i++) { const k = QPFX + id + "_" + i, r = vals[k] || ""; r && r !== S.seen[k] && (noteRaw.push(r), commit[k] = r); }
+            }
+            const notes = []; for (const r of noteRaw) { const n = await decNote(r); n && notes.push(n); }
+            if (!batch.length && !notes.length) return Object.assign(S.seen, commit), "same";
+            S.got += batch.length, S.notesGot += notes.length;
+            if (Date.now() - (window.__mkLastTypeAt || 0) < 700) return "wait";
+            apply(batch, notes); Object.assign(S.seen, commit);
+            return "changed";
+        }
+        finally { S.busy = !1; }
+    }
+    function delay() {
+        const now = Date.now(); let d = now < S.hotUntil ? 350 : now - S.lastUserAt > 3e5 ? 2500 : 900;
+        try { document.visibilityState === "hidden" && (d = Math.max(d, 4e3)); } catch { }
+        try { __cloudLive && __cloudLive.inactive && (d = Math.max(d, 6e3)); } catch { }
+        S.fails > 0 && (d = Math.min(3e4, d * Math.pow(2, Math.min(S.fails, 5))));
+        return Math.round(d * (.9 + Math.random() * .2));
+    }
+    function schedule(ms) { clearTimeout(S.timer), S.timer = null, S.running && (S.timer = setTimeout(tick, Math.max(0, ms))); }
+    async function tick() {
+        S.timer = null; let r = "fail";
+        try { r = await probe(); } catch (e) { S.fails++, console.warn("fast ops probe", e); }
+        schedule(r === "skip" || r === "wait" ? 250 : r === "idle" ? 3e3 : delay());
+    }
+    function kick(ms) { S.running || start(); schedule(ms || 0); }
+    function start() {
+        if (S.running) return;
+        S.running = !0;
+        try {
+            const old = JSON.parse(localStorage.getItem(LS_OWN) || "[]"), lim = Date.now() - 6048e5;
+            Array.isArray(old) && (S.ownOps = old.filter(o => Array.isArray(o) && TYPES[o[0]] && typeof o[1] == "string" && o[2] > lim));
+        }
+        catch { }
+        S.ownOps.length && setTimeout(() => { sendOn() && flush(); }, 3e3);
+        schedule(1200);
+    }
+    // The full backup waits (max 4 s) for pending fast writes, so the other device gets the change first
+    window.mkOpsBusy = () => {
+        const b = !!(S.noteTimer || S.noteBusy || S.flushing); if (!b) return S.holdSince = 0, !1;
+        const n = Date.now(); S.holdSince || (S.holdSince = n); return n - S.holdSince < 4e3;
+    };
+    window.mkOpsIsRemote = local => { try { return !!local && S.remote.get(String(local.id)) === local.lastEdited; } catch { return !1; } };
+    try {
+        document.addEventListener("visibilitychange", () => { document.visibilityState === "visible" ? kick(0) : S.noteTimer && (clearTimeout(S.noteTimer), runNotes()); });
+        window.addEventListener("pagehide", () => { S.noteTimer && (clearTimeout(S.noteTimer), runNotes()); });
+        window.addEventListener("focus", () => kick(0)), window.addEventListener("online", () => { S.fails = 0, kick(0); }), window.addEventListener("pageshow", () => kick(0));
+        ["pointerdown", "touchstart", "keydown"].forEach(ev => document.addEventListener(ev, () => { const was = Date.now() - S.lastUserAt > 3e5; S.lastUserAt = Date.now(), was && kick(0); }, { passive: !0, capture: !0 }));
+    }
+    catch { }
+    setTimeout(start, 1000);
+    window.mkListOpScan = scanLists, window.mkFolderOpScan = scanFolders, window.mkOpScan = scan, window.mkOpEmitDelete = emitDelete, window.mkOpsNow = () => { S.keysAt = 0, kick(0); };
+    return { scan, emitDelete, apply, probe, flush, S, kick, start, runNotes };
+})();
+
 window.mkLiveSyncNow = function () { __cloudLive.sig = null, __cloudLive.parts = null, __cloudLive.fails = 0, cloudLiveKick(0); };
 // ===== LIVE WATCHDOG (v8): the engine can never stay dead =====
 // Telegram clients (desktop especially) fire "deactivated" / hide the page when the person is working on ANOTHER
@@ -23745,7 +24094,7 @@ else
 // never twice for the same text.
 function mkConflictKeep(local, cloudItem) {
     const base = Math.max(window.__mkSeenAutoTs || 0, window.__mkSync && window.__mkSync.lastOk || 0, window.mkClock && window.mkClock.synced || 0), localMs = Date.parse(local.lastEdited) || 0;
-    if (!base || localMs <= base || isNoteLocked(local) || isNoteLocked(cloudItem))
+    if (!base || localMs <= base || isNoteLocked(local) || isNoteLocked(cloudItem) || window.mkOpsIsRemote && window.mkOpsIsRemote(local))
         return;
     const norm = s => String(s || "").replace(/\s+/g, " ").trim(), lt = norm(local.text), ct = norm(cloudItem.text != null && cloudItem.text !== "" ? cloudItem.text : cloudItem.html ? htmlToPlainText(cloudItem.html) : "");
     if (!lt || lt === ct)
@@ -25220,12 +25569,12 @@ else
             catch { }
         return showToast(currentLang === "fa" ? "⚠️ ذخیره‌سازی ناموفق بود — فضای مرورگر پر است. یک بکاپ (JSON) بگیر و چند یادداشت/تصویر حجیم را حذف کن." : "⚠️ Save failed — browser storage is full. Export a backup (JSON) and remove a few large notes/images.", 4200), !1;
     } return idbWrite2 && idbWrite2.then(function (ok) { ok || showToast(currentLang === "fa" ? "⚠️ ذخیره‌سازی ناموفق بود." : "⚠️ Save failed.", 4200); }), !0; }
-function saveToLocalStorage() { try { mkAutoStamp(window.__mkNoSchedule > 0); } catch { } if (mu_savePending = !0, scheduleCloudBackup(), !mu_idbAvailable)
+function saveToLocalStorage() { try { mkAutoStamp(window.__mkNoSchedule > 0); } catch { } try { window.mkOpScan && window.mkOpScan(); } catch { } if (mu_savePending = !0, scheduleCloudBackup(), !mu_idbAvailable)
     return mu_doSaveFlush(); if (!mu_saveTimer) {
     const size = mu_estimateNotesSize(), delay = size < 2e5 ? 0 : Math.min(3e3, Math.round(150 + size / 8e3));
     mu_saveTimer = setTimeout(function () { mu_saveTimer = null, mu_doSaveFlush(); }, delay);
 } return !0; }
-function saveFoldersToLocalStorage() { const customF = folders.filter(f => f !== DEFAULT_FOLDER); try {
+function saveFoldersToLocalStorage() { try { window.mkFolderOpScan && window.mkFolderOpScan(); } catch { } const customF = folders.filter(f => f !== DEFAULT_FOLDER); try {
     return localStorage.setItem("app_folders_v13", JSON.stringify(customF)), scheduleCloudBackup(), !0;
 }
 catch {
@@ -33135,7 +33484,7 @@ HX().scheduleCloudBackup(!1, !0), HX().showToast(fa ? `✅ ذخیره شد — �
     catch { } function touchTs() { pinsTs = Date.now(); try {
         localStorage.setItem(TS_KEY, String(pinsTs));
     }
-    catch { } } function savePins(skipCloudBackup) { try {
+    catch { } } function savePins(skipCloudBackup) { try { window.mkFolderOpScan && window.mkFolderOpScan(); } catch { } try {
         localStorage.setItem(KEY, JSON.stringify(pins));
     }
     catch { } if (!skipCloudBackup && HX().typeOf("scheduleCloudBackup") == "function")
@@ -36436,7 +36785,7 @@ function compareByRecency(a, b) { return (parseInt(b.id, 10) || b.u || 0) - (par
 }
 catch {
     return "fa";
-} } function isFa() { return lang() === "fa"; } function uiDir() { return isFa() ? "rtl" : "ltr"; } function num(n) { return String(n); } function save() { try {
+} } function isFa() { return lang() === "fa"; } function uiDir() { return isFa() ? "rtl" : "ltr"; } function num(n) { return String(n); } function save() { try { window.mkListOpScan && window.mkListOpScan(); } catch { } try {
     localStorage.setItem(KEY, JSON.stringify(items)), localStorage.setItem(TKEY, JSON.stringify(tombs));
 }
 catch { } try {
@@ -42991,7 +43340,7 @@ html.mu-nfs-open body .mkc .mkc-head {
         if (!lp || !cp)
             return !1;
         var base = Math.max(window.__mkSeenAutoTs || 0, window.__mkSync && window.__mkSync.lastOk || 0, window.mkClock && window.mkClock.synced || 0), lMs = Date.parse(local.lastEdited) || 0, cMs = Date.parse(cloudItem.lastEdited) || 0;
-        if (!base || lMs <= base || cMs <= base || cMs === lMs || clSame(lp.items, cp.items))
+        if (!base || lMs <= base || cMs <= base || cMs === lMs || window.mkOpsIsRemote && window.mkOpsIsRemote(local) || clSame(lp.items, cp.items))
             return !1;
         var out = cp.items.map(function (it) { return { t: it.t, d: it.d }; }), used = [];
         lp.items.forEach(function (li) {
