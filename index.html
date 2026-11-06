@@ -55346,6 +55346,21 @@ html.mk-boot #muTgClock,html.mu-clk-off #muTgClock{display:none!important}
 #muTgClock .mkc-d{flex:none;width:5px;height:5px;border-radius:50%;background:#8a8f98}
 #muTgClock.mkc-ok .mkc-d{background:#34c759}
 #muTgClock:active{opacity:.6}
+#muTgClockBd{display:none;position:fixed;inset:0;z-index:10209;background:rgba(0,0,0,.28);-webkit-tap-highlight-color:transparent}
+#muTgClockMenu{display:none;position:fixed;left:50%;transform:translateX(-50%);top:var(--mu-clkm-top,84px);width:min(340px,calc(100vw - 24px));max-height:min(62vh,520px);z-index:10211;flex-direction:column;border-radius:18px;overflow:hidden;box-shadow:0 12px 40px rgba(0,0,0,.35);font-family:inherit;direction:rtl;background:#fff;color:#111318;border:1px solid rgba(128,128,128,.25)}
+#muTgClockMenu.mkc-dark{background:#1b1e26 !important;color:#f2f4f8}
+html.mu-clk-open #muTgClockBd,html.mu-clk-open #muTgClockMenu{display:flex}
+#muTgClockMenu,#muTgClockMenu .mkm-h,#muTgClockMenu .mkm-c,#muTgClockMenu .mkm-t,#muTgClockMenu .mkm-o{color:#111318!important}#muTgClockMenu.mkc-dark,#muTgClockMenu.mkc-dark .mkm-h,#muTgClockMenu.mkc-dark .mkm-c,#muTgClockMenu.mkc-dark .mkm-t,#muTgClockMenu.mkc-dark .mkm-o{color:#f2f4f8!important}
+#muTgClockMenu .mkm-h{flex:none;padding:12px 16px 8px;font-size:13px;font-weight:700;opacity:.75}
+#muTgClockMenu .mkm-l{overflow-y:auto;-webkit-overflow-scrolling:touch;overscroll-behavior:contain;padding:0 6px 8px}
+#muTgClockMenu .mkm-r{display:flex;align-items:center;gap:10px;width:100%;padding:10px 12px;margin:0;border:0;border-radius:12px;background:transparent;color:inherit;font:inherit;text-align:start;cursor:pointer;-webkit-tap-highlight-color:transparent}
+#muTgClockMenu .mkm-r:active{background:rgba(128,128,128,.18)}
+#muTgClockMenu .mkm-r.mkm-sel{background:rgba(51,144,236,.16)}
+#muTgClockMenu .mkm-n{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px}
+#muTgClockMenu .mkm-c{font-size:14px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+#muTgClockMenu .mkm-o{font-size:11px;opacity:.6;direction:ltr;text-align:start}
+#muTgClockMenu .mkm-t{direction:ltr;font-size:15px;font-weight:700;font-variant-numeric:tabular-nums}
+#muTgClockMenu .mkm-k{flex:none;width:16px;text-align:center;color:#3390ec;font-weight:800}
 </style>
 <script id="muTgWorldClock">
 (function () {
@@ -55356,7 +55371,15 @@ html.mk-boot #muTgClock,html.mu-clk-off #muTgClock{display:none!important}
         ["UTC", "ساعت جهانی", "World time"], ["Asia/Tehran", "تهران", "Tehran"], ["Europe/London", "لندن", "London"],
         ["Europe/Istanbul", "استانبول", "Istanbul"], ["Asia/Dubai", "دبی", "Dubai"], ["Europe/Moscow", "مسکو", "Moscow"],
         ["Asia/Kolkata", "دهلی", "Delhi"], ["Asia/Shanghai", "پکن", "Beijing"], ["Asia/Tokyo", "توکیو", "Tokyo"],
-        ["Australia/Sydney", "سیدنی", "Sydney"], ["America/New_York", "نیویورک", "New York"], ["America/Los_Angeles", "لس‌آنجلس", "Los Angeles"]
+        ["Australia/Sydney", "سیدنی", "Sydney"], ["America/New_York", "نیویورک", "New York"], ["America/Los_Angeles", "لس‌آنجلس", "Los Angeles"],
+        ["America/Vancouver", "ونکوور", "Vancouver"], ["America/Toronto", "تورنتو", "Toronto"], ["America/Chicago", "شیکاگو", "Chicago"],
+        ["America/Denver", "دنور", "Denver"], ["America/Mexico_City", "مکزیکوسیتی", "Mexico City"], ["America/Sao_Paulo", "سائوپائولو", "São Paulo"],
+        ["America/Anchorage", "آنکوریج", "Anchorage"], ["Pacific/Honolulu", "هونولولو", "Honolulu"],
+        ["Europe/Paris", "پاریس", "Paris"], ["Europe/Berlin", "برلین", "Berlin"], ["Europe/Rome", "رم", "Rome"], ["Europe/Madrid", "مادرید", "Madrid"],
+        ["Europe/Amsterdam", "آمستردام", "Amsterdam"], ["Africa/Cairo", "قاهره", "Cairo"], ["Africa/Lagos", "لاگوس", "Lagos"], ["Africa/Johannesburg", "ژوهانسبورگ", "Johannesburg"],
+        ["Asia/Riyadh", "ریاض", "Riyadh"], ["Asia/Baghdad", "بغداد", "Baghdad"], ["Asia/Kabul", "کابل", "Kabul"], ["Asia/Karachi", "کراچی", "Karachi"],
+        ["Asia/Tashkent", "تاشکند", "Tashkent"], ["Asia/Dhaka", "داکا", "Dhaka"], ["Asia/Bangkok", "بانکوک", "Bangkok"], ["Asia/Singapore", "سنگاپور", "Singapore"],
+        ["Asia/Hong_Kong", "هنگ‌کنگ", "Hong Kong"], ["Asia/Seoul", "سئول", "Seoul"], ["Pacific/Auckland", "اوکلند", "Auckland"]
     ];
     var KEY = "mu_tgClockZone_v1", ON_KEY = "mu_tgClockOn_v1", DTF = window.__mkOrigDTF || Intl.DateTimeFormat, fmts = {}, idx = 0, el, tEl, lEl, tm = 0;
     // ---- accurate time: server time + monotonic clock, so a wrong or changed device clock does not matter ----
@@ -55448,7 +55471,7 @@ html.mk-boot #muTgClock,html.mu-clk-off #muTgClock{display:none!important}
     function isOn() { try { return localStorage.getItem(ON_KEY) !== "0"; } catch (e) { return true; } }
     function syncOn() {
         var v = isOn(), l = document.querySelectorAll("[data-tgclk]"), i;
-        R.classList.toggle("mu-clk-off", !v);
+        R.classList.toggle("mu-clk-off", !v); if (!v) { try { closeMenu(); } catch (e) { } }
         for (i = 0; i < l.length; i++) l[i].setAttribute("aria-checked", v ? "true" : "false");
     }
     function setOn(v) {
@@ -55469,24 +55492,65 @@ html.mk-boot #muTgClock,html.mu-clk-off #muTgClock{display:none!important}
     function tick() {
         clearTimeout(tm);
         if (!isOn()) { tm = setTimeout(tick, 2000); return; }
-        if (!document.hidden && document.documentElement.classList.contains("mu-tg-fs")) { place(); paint(); }
+        if (!document.hidden && document.documentElement.classList.contains("mu-tg-fs")) { place(); paint(); paintMenu(); } else if (menuOpen) closeMenu();
         tm = setTimeout(tick, 1000 - (now() % 1000) + 15);
     }
     var colT = 0;
     function colorSoon() { clearTimeout(colT); colT = setTimeout(color, 250); }
+var menuEl = null, bdEl = null, menuOpen = false, rows = [];
+    function hap() { try { var W = Telegram.WebApp; W.HapticFeedback && W.HapticFeedback.selectionChanged(); } catch (x) { } }
+    function buildMenu() {
+        if (menuEl) return;
+        bdEl = document.createElement("div"); bdEl.id = "muTgClockBd";
+        menuEl = document.createElement("div"); menuEl.id = "muTgClockMenu"; menuEl.setAttribute("role", "dialog");
+        var h = document.createElement("div"); h.className = "mkm-h"; menuEl.appendChild(h);
+        var list = document.createElement("div"); list.className = "mkm-l"; menuEl.appendChild(list);
+        ZONES.forEach(function (z, i) {
+            var r = document.createElement("button"); r.type = "button"; r.className = "mkm-r";
+            r.innerHTML = '<span class="mkm-k"></span><span class="mkm-n"><span class="mkm-c"></span><span class="mkm-o"></span></span><span class="mkm-t"></span>';
+            r.addEventListener("click", function (e) { e.preventDefault(); e.stopPropagation(); pick(i); });
+            list.appendChild(r); rows.push(r);
+        });
+        bdEl.addEventListener("click", function (e) { e.preventDefault(); e.stopPropagation(); closeMenu(); });
+        bdEl.addEventListener("touchmove", function (e) { e.preventDefault(); }, { passive: false });
+        document.body.appendChild(bdEl); document.body.appendChild(menuEl);
+    }
+    function paintMenu() {
+        if (!menuOpen || !menuEl) return;
+        var ms = now(), fa = isFa(), i, z, r, t;
+        menuEl.firstChild.textContent = fa ? "انتخاب شهر / ساعت" : "Choose a city / time zone";
+        menuEl.style.direction = fa ? "rtl" : "ltr";
+        menuEl.classList.toggle("mkc-dark", (function () { try { var L = lum(getComputedStyle(tEl).color); return L !== null && L > 0.35; } catch (e) { return lastFg === "#ffffff"; } })());
+        for (i = 0; i < ZONES.length; i++) {
+            z = ZONES[i]; r = rows[i];
+            try { var p = parts(z[0], ms); t = p.hour + ":" + p.minute; r.children[2].textContent = t; r.children[1].children[1].textContent = offsetStr(z[0], ms); } catch (e) { }
+            r.children[1].children[0].textContent = fa ? z[1] : z[2];
+            r.children[0].textContent = i === idx ? "✓" : "";
+            r.classList.toggle("mkm-sel", i === idx);
+        }
+    }
+    function openMenu() {
+        buildMenu(); menuOpen = true; color(); place();
+        menuEl.style.setProperty("--mu-clkm-top", ((Number(lastTop) || 0) + (Number(lastH) || 44) + 4) + "px");
+        R.classList.add("mu-clk-open"); paintMenu(); hap();
+        var sel = rows[idx]; try { sel && sel.scrollIntoView({ block: "center" }); } catch (e) { }
+    }
+    function closeMenu() { menuOpen = false; R.classList.remove("mu-clk-open"); }
+    function toggleMenu() { menuOpen ? closeMenu() : openMenu(); }
+    function pick(i) {
+        idx = i; lastT = ""; lastL = "";
+        try { localStorage.setItem(KEY, ZONES[idx][0]); } catch (x) { }
+        try { typeof mu_flushStorage === "function" && mu_flushStorage(); } catch (x) { }
+        paint(true); hap(); closeMenu();
+    }
+    document.addEventListener("keydown", function (e) { if (menuOpen && e.key === "Escape") closeMenu(); });
     function build() {
         if (el || !document.body) return;
         try { var zs = localStorage.getItem(KEY); for (var zi = 0; zi < ZONES.length; zi++) if (ZONES[zi][0] === zs) idx = zi; } catch (e) { }
         el = document.createElement("button"); el.id = "muTgClock"; el.type = "button"; el.setAttribute("aria-label", "World clock");
         el.innerHTML = '<span class="mkc-t"></span><span class="mkc-l"><i class="mkc-d"></i><bdi></bdi></span>';
         tEl = el.firstChild; lEl = el.lastChild;
-        el.addEventListener("click", function (e) {
-            e.preventDefault(); e.stopPropagation();
-            idx = (idx + 1) % ZONES.length; lastT = ""; lastL = "";
-            try { localStorage.setItem(KEY, ZONES[idx][0]); } catch (x) { }
-            try { typeof mu_flushStorage === "function" && mu_flushStorage(); } catch (x) { }
-            paint(true); try { var W = Telegram.WebApp; W.HapticFeedback && W.HapticFeedback.selectionChanged(); } catch (x) { }
-        });
+        el.addEventListener("click", function (e) { e.preventDefault(); e.stopPropagation(); toggleMenu(); });
         document.body.appendChild(el);
         color(); place(); paint(true); sync(true); tick();
         try { new MutationObserver(colorSoon).observe(document.documentElement, { attributes: true, attributeFilter: ["class", "style", "data-theme"] }); new MutationObserver(colorSoon).observe(document.body, { attributes: true, attributeFilter: ["class", "style"] }); } catch (e) { }
