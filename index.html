@@ -31427,12 +31427,16 @@ window.__mkFixAutoSyncBusy = !0, window.__mkFixProgHold = !0; const btn = docume
             <p>پایین هر تب، «مصرف کلیدها» نشان می‌دهد چند کلید از 1024 کلیدِ تلگرام مصرف شده است. «سرعت ذخیره‌سازی (پارالل)» (1 تا 6 درخواست هم‌زمان، پیش‌فرض 4) را پایین هر دو تب، بالای «مصرف کلیدها» عوض می‌کنی و تعداد بکاپ دستی (0 تا 2، پیش‌فرض 0) را در «⚙️ تنظیمات بکاپ» (تب بکاپ دستی)؛ توضیح کامل‌ترش با «📖 راهنمای کامل» همان‌جاست. تعداد بکاپ دستی در Cloud ذخیره می‌شود و روی همه‌ی دستگاه‌ها یکسان است؛ اما «ذخیره خودکار» و «سرعت ذخیره‌سازی» فقط برای همین دستگاه‌اند.</p>
 
             <h4 style="margin:14px 0 6px">📷 بکاپ رسانه (عکس و ویس) روی چند دستگاه</h4>
-            <p>این بخش اختیاری است و در همین پنل، زیر تب‌ها، کارت «📦 بکاپ رسانه» قرار دارد. عکس‌ها و ویس‌ها رمزنگاری می‌شوند و در چت خصوصی یک ربات شخصیِ خودت ذخیره می‌شوند؛ فهرستشان در Cloud تلگرام می‌ماند تا دستگاه‌های دیگر پیدایشان کنند. هیچ سروری در کار نیست.</p>
-            <p><b>راه‌اندازی (فقط یک بار، روی دستگاه اول):</b><br>۱) در تلگرام به <b>@BotFather</b> برو، دستور <b>/newbot</b> را بزن و توکن ربات را کپی کن.<br>۲) به همان ربات جدید یک بار <b>/start</b> بده (بدون این کار ربات نمی‌تواند برایت فایل بفرستد).<br>۳) در کارت «بکاپ رسانه» توکن، «رمز رسانه» و «تکرار رمز» را بنویس و «اتصال و تست» را بزن.<br>۴) اگر عکس و ویس قدیمی داری، تأیید آپلود را بزن (یا بعداً «ارسال همه»).</p>
-            <p><b>رمز رسانه چطور باشد؟</b> حداقل <b>۶ نویسه</b> و هر دو کادر دقیقاً یکسان. می‌تواند فقط عدد باشد (مثلاً یک رمز ۸ رقمی) یا ترکیبی از حرف و عدد. بهتر است ۸ نویسه یا بیشتر و غیرقابل حدس باشد (نه تاریخ تولد و نه ۱۲۳۴۵۶). رمز را روی کاغذ یا جای امن یادداشت کن: <b>رمز هیچ‌جا ذخیره نمی‌شود و اگر فراموشش کنی عکس‌ها و ویس‌های ذخیره‌شده قابل بازیابی نیستند.</b> رمز باید روی همه‌ی دستگاه‌ها همان رمز اول باشد.</p>
+            <p>این بخش اختیاری است و در همین پنل، در تب «📦 بکاپ رسانه» (کنار «بکاپ خودکار» و «بکاپ دستی») قرار دارد. عکس‌ها و ویس‌ها رمزنگاری می‌شوند و در چت خصوصی یک ربات شخصیِ خودت ذخیره می‌شوند؛ فهرستشان در Cloud تلگرام می‌ماند تا دستگاه‌های دیگر پیدایشان کنند. سرور ذخیره‌سازی در کار نیست؛ فقط درخواست‌های ربات به‌صورت پیش‌فرض از یک پروکسی ساده عبور می‌کند تا به api.telegram.org برسد و اگر کار نکرد برنامه خودکار مستقیم هم امتحان می‌کند. توکن ربات از همان آدرس رد می‌شود؛ در «⚙️ پیشرفته: آدرس پایهٔ API (پروکسی)» می‌توانی پروکسی دلخواه یا https://api.telegram.org (اتصال مستقیم) بگذاری.</p>
+            <p><b>راه‌اندازی (فقط یک بار، روی دستگاه اول):</b><br>۱) در تلگرام به <b>@BotFather</b> برو، دستور <b>/newbot</b> را بزن و توکن ربات را کپی کن.<br>۲) به همان ربات جدید یک بار <b>/start</b> بده (بدون این کار ربات نمی‌تواند برایت فایل بفرستد).<br>۳) در تب «بکاپ رسانه» توکن، «رمز رسانه» و «تکرار رمز» را بنویس و «اتصال و تست» را بزن.<br>۴) اگر عکس و ویس قدیمی داری، در پیامی که می‌پرسد «همین حالا آپلود شوند؟» تأیید را بزن (یا بعداً «ارسال همه»). آپلود فایل‌ها یکی‌یکی و با فاصله‌ی حدود ۳ ثانیه انجام می‌شود؛ پیشرفتش را در کادر «آپلود n از m» بالای دکمه‌ها می‌بینی.</p>
+            <p><b>رمز رسانه چطور باشد؟</b> حداقل <b>۶ نویسه</b> و هر دو کادر دقیقاً یکسان. می‌تواند فقط عدد باشد (مثلاً یک رمز ۸ رقمی) یا ترکیبی از حرف و عدد. بهتر است ۸ نویسه یا بیشتر و غیرقابل حدس باشد (نه تاریخ تولد و نه ۱۲۳۴۵۶). رمز را روی کاغذ یا جای امن یادداشت کن: <b>خودِ رمز هیچ‌جا ذخیره نمی‌شود و اگر فراموشش کنی عکس‌ها و ویس‌های ذخیره‌شده قابل بازیابی نیستند.</b> (فقط یک کلید غیرقابل‌استخراج روی همان دستگاه می‌ماند تا هر بار رمز نپرسد.) رمز باید روی همه‌ی دستگاه‌ها همان رمز اول باشد.</p>
             <p><b>دستگاه دوم:</b> برنامه را با همان حساب تلگرام و همان ربات باز کن و چند ثانیه صبر کن تا تنظیمات از Cloud خوانده شود. <b>دوباره توکن نساز و «اتصال و تست» را نزن</b>؛ فقط در «باز کردن قفل»، رمز رسانه‌ی همان دستگاه اول را وارد کن. بعد در یادداشت‌ها، تصویرهای خاکستری با برچسب «بزن و رمز را وارد کن» یا «در صف» یکی‌یکی دانلود می‌شوند؛ «همگام‌سازی همه» همه را (تا سقف حجم محلی) یک‌جا می‌گیرد. گزینه‌ی «رمز روی این دستگاه یادآوری شود» اگر روشن باشد، دفعه‌های بعد رمز نمی‌پرسد (فقط یک کلید غیرقابل‌استخراج نگه داشته می‌شود، نه خود رمز)؛ دکمه‌ی «قفل کردن» آن را پاک می‌کند.</p>
-            <p><b>محدودیت‌ها:</b> هر فایل تا حدود ۴۸ مگابایت آپلود می‌شود و فقط فایل‌های تا حدود ۲۰ مگابایت روی دستگاه دیگر دانلود می‌شوند (محدودیت Bot API تلگرام). رسانه‌ی یادداشت‌های قفل‌دار فعلاً همگام نمی‌شود. پیش از رسیدن یادداشت از بکاپ متنی، تصویرش هم دیده نمی‌شود؛ پس ابتدا مطمئن شو سینک یادداشت‌ها سبز است.</p>
+            <p><b>محدودیت‌ها:</b> هر فایل تا حدود ۴۹ مگابایت آپلود می‌شود و فقط فایل‌های تا حدود ۲۰ مگابایت روی دستگاه دیگر دانلود می‌شوند (محدودیت Bot API تلگرام). رسانه‌ی یادداشت‌های قفل‌دار فعلاً همگام نمی‌شود. پیش از رسیدن یادداشت از بکاپ متنی، تصویرش هم دیده نمی‌شود؛ پس ابتدا مطمئن شو سینک یادداشت‌ها سبز است.</p>
             <p><b>اگر عکس نیامد:</b> «ربات نمی‌تواند پیام بدهد» یعنی هنوز <b>/start</b> نداده‌ای. «رمز اشتباه است» یعنی رمزی غیر از رمز اول وارد کرده‌ای. «خطا — بزن تا دوباره» را بزن یا «تلاش مجدد خطاها» را انتخاب کن. اگر شمارنده‌ی «ناهمگام» در دستگاه اول صفر نیست، «ارسال همه» را بزن. اگر «مانیفست پر است» دیدی، فضای Cloud تمام شده است.</p>
+            <p><b>نوار پیشرفت و دکمه‌ها:</b> با زدن هر دکمه، همان دکمه تا پایان کار غیرفعال می‌شود و یک چرخانک نشان می‌دهد؛ نتیجه در کادر وضعیت بالای دکمه‌ها می‌آید. هنگام آپلود یا دریافت، کادری با عبارت «آپلود n از m»، نوار پیشرفت، درصد و مرحله‌ی فعلی (رمزنگاری، ارسال، دریافت…) نشان داده می‌شود و بعد از پایان حدود ۱۲ ثانیه خلاصه‌ی «موفق / کل» می‌ماند. «ارسال همه»: فایل‌های این دستگاه را که هنوز با کلید فعلی آپلود نشده‌اند صف می‌کند. «تلاش مجدد خطاها»: فایل‌های خطادار را دوباره صف می‌کند. «همگام‌سازی همه»: همه‌ی فایل‌های دیگر دستگاه‌ها را تا سقف حجم محلی دریافت می‌کند. «آزادسازی فضا»: نسخه‌ی محلیِ فایل‌هایی را که نسخه‌ی آپلودشده دارند پاک می‌کند (بعداً دوباره دریافت می‌شوند). «سقف حجم محلی»: حداقل ۲۰ مگابایت. «غیرفعال‌سازی / فعال‌سازی»: آپلود و دریافت خودکار را قطع یا وصل می‌کند و چیزی پاک نمی‌کند. «تست اتصال» و «قفل کردن» فقط وقتی قفل باز است دیده می‌شوند. «🔄 بازنشانی کامل» برای تأیید باید کلمه‌ی ok را تایپ کنی؛ پایین‌تر توضیح داده شده.</p>
+            <p><b>🔄 بازنشانی کامل:</b> برای وقتی که می‌خواهی همه‌چیز از اول شود، مثلاً رمز را فراموش کرده‌ای یا راه‌اندازی خراب شده است؛ حتی با قفل‌بودن هم کار می‌کند. با تأیید (تایپ ok) تنظیمات (توکن، رمز، کلید) و فهرست رسانه‌ی همه‌ی دستگاه‌ها از Cloud و از این دستگاه پاک می‌شود و فرم راه‌اندازی دوباره باز می‌شود: توکن ربات می‌دهی و رمز تازه می‌گذاری. عکس و ویس‌های روی دستگاه‌ها و فایل‌های داخل چت ربات پاک نمی‌شوند، ولی فایل‌های آپلودشده با کلید قبلی دیگر باز نمی‌شوند؛ بعد از راه‌اندازی تازه «ارسال همه» را بزن تا از روی دستگاه‌هایی که فایل‌ها را دارند دوباره آپلود شوند. روی دستگاه‌های دیگر پیام «تنظیمات عوض شد» می‌آید و باید رمز جدید را وارد کنند.</p>
+            <p><b>تغییر ربات:</b> دکمه‌ی «تغییر ربات» فقط وقتی قفل باز است کار می‌کند؛ توکن ربات جدید را می‌گیرد، اتصال و ارسال پیام تست را امتحان می‌کند (ربات جدید باید یک بار /start خورده باشد) و بعد فقط توکن را عوض می‌کند؛ رمز و کلید همان می‌مانند، از «بازنشانی کامل» (که کلید را عوض می‌کند) امن‌تر است. چون file_id هر فایل مخصوص همان ربات است، فایل‌های ربات قبلی برای ربات جدید باز نمی‌شوند و همه‌ی عکس/ویس‌های موجود روی این دستگاه دوباره با ربات جدید آپلود می‌شوند (پیشرفتش در نوار پیشرفت پیداست). فایلی که فقط در چت ربات قدیمی مانده و روی هیچ دستگاهی نیست از دست می‌رود؛ پس اگر لازم بود قبلش «همگام‌سازی همه» را بزن. روی دستگاه‌های دیگر پیام «تنظیمات عوض شد» می‌آید؛ فقط همان رمز قبلی را یک بار وارد کن تا ربات جدید را بگیرند و فایل‌هایشان را هم دوباره آپلود کنند.</p>
+            <p><b>خطای «decrypt-failed»:</b> یعنی آن فایل با کلید دیگری رمزنگاری شده است؛ معمولاً بعد از «بازنشانی کامل» و راه‌اندازی دوباره‌ی بکاپ رسانه (رمز یا کلید جدید). با زدن «🛠 تعمیر خودکار» (یا «همگام‌سازی همه») هر فایلی که نسخه‌اش روی همین دستگاه باشد با کلید فعلی دوباره آپلود می‌شود و رکورد خراب بقیه پاک می‌شود. «🗑 فراموش‌کردن فایل‌های خراب» فقط رکورد خراب را بدون آپلود مجدد حذف می‌کند. اگر فایل‌ها روی دستگاه دیگری هستند، روی همان دستگاه «آپلود مجدد همه با کلید فعلی» را بزن و بعد اینجا «همگام‌سازی همه». فایلی که هیچ‌جا نسخه‌اش نمانده باشد قابل بازیابی نیست. برای جلوگیری از این مشکل، «بازنشانی کامل» را فقط وقتی لازم است بزن؛ برای عوض‌کردن رمز از «تغییر رمز» استفاده کن، چون کلید را حفظ می‌کند. برنامه حالا کلید هر فایل را تشخیص می‌دهد: رکوردهای کلید قدیمی را کنار می‌گذارد، و «ارسال همه» همه‌ی فایل‌های این دستگاه را که با کلید فعلی ارسال نشده‌اند دوباره می‌فرستد. بعد از بازنشانی کامل و راه‌اندازی دوباره، روی هر دستگاه دیگر فقط کافی است رمز جدید را وارد کنی.</p>
 
             <h4 style="margin:14px 0 6px">⚠️ محدودیت‌ها</h4>
             <p>در بکاپ ابری فقط متن و اطلاعات یادداشت‌ها ذخیره می‌شود؛ تصاویر و صداها فقط با «📦 بکاپ رسانه» (ربات شخصی خودت) به دستگاه‌های دیگر می‌رسند، وگرنه روی همان دستگاه می‌مانند. چون بکاپ‌ها در فضای ابری خود تلگرام (نه روی این دستگاه) نگه‌داری می‌شوند، بین هر دستگاهی که همین ربات تلگرام را با همین حساب باز کنی مشترک‌اند.</p>
@@ -31528,12 +31532,16 @@ window.__mkFixAutoSyncBusy = !0, window.__mkFixProgHold = !0; const btn = docume
             <p>At the bottom of each tab, "Key usage" shows how many of Telegram's 1024 keys are used. The "Save speed" (parallel, 1 to 6 simultaneous requests, default 4) is changed at the bottom of both tabs, above "Key usage"; the number of manual backups (0 to 2, default 0) is changed in "⚙️ Backup settings" (Manual backup tab), where a fuller explanation is behind its "📖 Full guide" button. The manual-backup count is stored in Cloud and is the same on every device; "Save automatically after every change" and "Save speed" are per device only.</p>
 
             <h4 style="margin:14px 0 6px">📷 Media backup (photos &amp; voice) across devices</h4>
-            <p>This is optional. Its card, “📦 Media backup”, sits in this same panel under the tabs. Photos and voice notes are encrypted and stored in the private chat of your own personal bot; their list stays in Telegram Cloud so your other devices can find them. No server is involved.</p>
-            <p><b>Setup (once, on the first device):</b><br>1) In Telegram open <b>@BotFather</b>, send <b>/newbot</b> and copy the bot token.<br>2) Send <b>/start</b> to that new bot once (otherwise the bot cannot send you files).<br>3) In the “Media backup” card enter the token, a “Media password” and the repeat, then tap “Connect &amp; test”.<br>4) If you already have photos or voice notes, confirm the upload (or tap “Upload all” later).</p>
-            <p><b>What should the password be?</b> At least <b>6 characters</b>, and both boxes must match exactly. It may be digits only (for example an 8-digit code) or letters and digits. Prefer 8 or more characters that are hard to guess (not a birthday, not 123456). Write it down somewhere safe: <b>the password is never stored, and if you forget it the saved photos and voice notes cannot be recovered.</b> It must be the same original password on every device.</p>
+            <p>This is optional. It lives in this same panel, in the “📦 Media backup” tab (next to “Auto backup” and “Manual backup”). Photos and voice notes are encrypted and stored in the private chat of your own personal bot; their list stays in Telegram Cloud so your other devices can find them. There is no storage server; by default the bot requests just pass through a simple proxy to reach api.telegram.org, and the app automatically tries Telegram directly if the proxy fails. Your bot token passes through that address; under “⚙️ Advanced: custom API base URL (proxy)” you can set your own proxy or https://api.telegram.org (direct connection).</p>
+            <p><b>Setup (once, on the first device):</b><br>1) In Telegram open <b>@BotFather</b>, send <b>/newbot</b> and copy the bot token.<br>2) Send <b>/start</b> to that new bot once (otherwise the bot cannot send you files).<br>3) In the “Media backup” tab enter the token, a “Media password” and the repeat, then tap “Connect &amp; test”.<br>4) If you already have photos or voice notes, confirm in the dialog that asks whether to upload them now (or tap “Upload all” later). Files are uploaded one by one, about 3 seconds apart; you can follow it in the “Upload n of m” box above the buttons.</p>
+            <p><b>What should the password be?</b> At least <b>6 characters</b>, and both boxes must match exactly. It may be digits only (for example an 8-digit code) or letters and digits. Prefer 8 or more characters that are hard to guess (not a birthday, not 123456). Write it down somewhere safe: <b>the password itself is never stored, and if you forget it the saved photos and voice notes cannot be recovered.</b> (Only a non-extractable key stays on the device so it does not ask every time.) It must be the same original password on every device.</p>
             <p><b>Second device:</b> open the app with the same Telegram account and the same bot and wait a few seconds while the settings are read from Cloud. <b>Do not create a new token or tap “Connect &amp; test”</b>; just enter the first device's media password under “Unlock”. Then the gray images in your notes (marked “Tap and enter password” or “Queued”) are downloaded one by one; “Sync all” fetches everything at once (up to the local size limit). If “Remember the password on this device” is on, you will not be asked next time (only a non-extractable key is kept, never the password itself); “Lock” erases it.</p>
-            <p><b>Limits:</b> a file of up to about 48 MB can be uploaded, but only files up to about 20 MB can be downloaded on another device (Telegram Bot API limits). Media of locked notes is not synced yet. An image can only appear after its note has arrived through the text backup, so make sure note sync is green first.</p>
+            <p><b>Limits:</b> a file of up to about 49 MB can be uploaded, but only files up to about 20 MB can be downloaded on another device (Telegram Bot API limits). Media of locked notes is not synced yet. An image can only appear after its note has arrived through the text backup, so make sure note sync is green first.</p>
             <p><b>If a photo does not arrive:</b> “The bot cannot message you” means you have not sent <b>/start</b> yet. “Wrong password” means it is not the original password. Tap “Error — tap to retry” or “Retry failed”. If “Not synced” on the first device is not zero, tap “Upload all”. “Manifest is full” means the Cloud space is used up.</p>
+            <p><b>Progress bar &amp; buttons:</b> when you tap a button, that button is disabled and shows a spinner until it finishes; the result appears in the status box above the buttons. During an upload or download a box shows “Upload n of m”, a progress bar, the percentage and the current step (encrypting, sending, downloading…), and the “ok / total” summary stays for about 12 seconds after it ends. “Upload all” queues the files of this device that are not yet uploaded with the current key. “Retry failed” queues the failed files again. “Sync all” downloads every file from your other devices up to the local size limit. “Free space” deletes the local copy of files that have an uploaded copy (they are downloaded again when needed). “Local size limit” is at least 20 MB. “Disable / Enable” stops or resumes automatic upload and download and deletes nothing. “Test connection” and “Lock” appear only while unlocked. “🔄 Full reset” asks you to type ok to confirm; see below.</p>
+            <p><b>🔄 Full reset:</b> for when you want everything to start from scratch, for example you forgot the password or the setup is broken; it works even while locked. After you confirm (type ok), the settings (token, password, key) and the media list of ALL devices are removed from Cloud and from this device, and the setup form opens again: enter a bot token and set a fresh password. Photos/voice notes on the devices and files in the bot chat are not deleted, but files uploaded with the old key can no longer be opened; after the new setup tap “Upload all” so they are uploaded again from the devices that hold them. Your other devices show “settings changed” and must enter the new password.</p>
+            <p><b>Change bot:</b> “Change bot” works only while unlocked; it takes the new bot token, tests the connection and sends a test message (the new bot must have received /start once), then replaces only the token. The password and key stay the same, which makes it safer than “Full reset” (which creates a new key). Because a file_id only works for the bot that stored it, files held by the old bot cannot be opened by the new one, and every photo/voice note on this device is uploaded again with the new bot (follow it in the progress bar). A file that only exists in the old bot’s chat and on no device is lost, so tap “Sync all” first if needed. Your other devices show “settings changed”; just enter the same password once so they pick up the new bot and re-upload their files too.</p>
+            <p><b>“decrypt-failed” error:</b> the file was encrypted with a different key, usually after “Full reset” and setting the media backup up again (new password or key). Tap “🛠 Auto-repair” (or “Sync all”): every file that exists on this device is re-uploaded with the current key and the broken records of the others are dropped. “🗑 Forget broken files” only removes the broken records without re-uploading. If the files live on another device, tap “Re-upload all with current key” on that device, then “Sync all” here. A file that no longer exists anywhere cannot be recovered. To avoid this, use “Full reset” only when you really need to; to change the password use “Change password”, which keeps the key. The app now recognises which key each file was encrypted with: records from an old key are ignored, and “Upload all” re-sends every file on this device that is not uploaded with the current key. After removing the setup and setting it up again, you only need to enter the new password on each other device.</p>
 
             <h4 style="margin:14px 0 6px">⚠️ Limits</h4>
             <p>The cloud backup stores note text/metadata only; images and voice notes reach other devices only through “📦 Media backup” (your own bot), otherwise they stay on the device that has them. Since backups live in Telegram's own cloud (not on this device), they're shared across every device where you open this same bot with the same account.</p>
@@ -59832,13 +59840,13 @@ var CONT = [["AS", "آسیا", "Asia"], ["EU", "اروپا", "Europe"], ["NA", "
             connect: "اتصال و تست", unlock: "باز کردن قفل", lock: "قفل کردن", pwnote: "رمز هیچ‌جا ذخیره نمی‌شود؛ هر نشست یک بار پرسیده می‌شود. اگر فراموشش کنی رسانه‌ها قابل بازیابی نیستند.",
             cloudcfg: "این حساب قبلاً روی دستگاه دیگری تنظیم شده؛ فقط رمز رسانه را وارد کن.",
             total: "کل", uploaded: "آپلودشده", unsynced: "ناهمگام", here: "روی این دستگاه", errors: "خطا",
-            sendAll: "ارسال همه", retry: "تلاش مجدد خطاها", syncAll: "همگام‌سازی همه", free: "آزادسازی فضا", disable: "غیرفعال‌سازی", enable: "فعال‌سازی", remove: "حذف تنظیمات",
+            sendAll: "ارسال همه", repair: "🛠 تعمیر خودکار", forget: "🗑 فراموش‌کردن فایل‌های خراب", confirmForget: "رکورد فایل‌های خراب فقط از حافظه‌ی همین دستگاه پاک می‌شود و دیگر خطا نمی‌دهند. ادامه بدهم؟", forgotN: "فراموش شد", redoAll: "آپلود مجدد همه با کلید فعلی", confirmRedo: "همه‌ی عکس/ویس‌های موجود روی این دستگاه با کلید فعلی دوباره آپلود می‌شوند و رکوردهای قدیمی نادیده گرفته می‌شوند. ادامه بدهم؟", badNote: "بعضی فایل‌ها با کلید دیگری رمزنگاری شده‌اند (احتمالاً بعد از بازنشانی کامل و راه‌اندازی دوباره). «تعمیر خودکار» را بزن: اگر نسخه‌ی فایل روی این دستگاه باشد دوباره آپلود می‌شود، وگرنه رکورد خراب پاک می‌شود.", repaired: "تعمیر شد", redoN: "آپلود مجدد", lostN: "غیرقابل‌بازیابی", retry: "تلاش مجدد خطاها", syncAll: "همگام‌سازی همه", free: "آزادسازی فضا", disable: "غیرفعال‌سازی", enable: "فعال‌سازی", remove: "حذف تنظیمات",
             cap: "سقف حجم محلی (MB)", usage: "حجم رسانهٔ محلی", browser: "حافظهٔ مرورگر", keys: "کلید مانیفست",
             queue: "صف", idle: "بیکار", fullM: "⚠️ مانیفست پر است؛ رسانه‌های جدید در فهرست ابری ثبت نمی‌شوند.",
             okConnected: "✅ متصل شد:", errToken: "توکن نامعتبر است.", errPw: "رمز حداقل ۶ نویسه و هر دو یکسان باشد.", errChat: "شناسهٔ کاربر تلگرام در دسترس نیست؛ برنامه را داخل تلگرام باز کن.",
             errNet: "ارتباط با API ممکن نشد (شبکه/CORS). پایین‌تر در «پیشرفته (پروکسی)» همین پنل آدرس پروکسی بگذار.", errStart: "ربات نمی‌تواند پیام بدهد؛ ابتدا در تلگرام به ربات /start بده.", errWrong: "رمز اشتباه است.",
             qd: "⏳ در صف", dl: "⬇️ در حال دریافت…", er: "⚠️ خطا — بزن تا دوباره", lk: "🔒 بزن و رمز را وارد کن", big: "⛔ فایل بزرگ‌تر از حد Bot API",
-            confirmFree: "رسانه‌هایی که نسخهٔ آپلودشده دارند از این دستگاه پاک شوند؟ هر وقت لازم شد دوباره دریافت می‌شوند.", confirmRm: "تنظیمات ربات رسانه از این دستگاه و Cloud حذف شود؟ فایل‌های داخل چت ربات پاک نمی‌شوند.",
+            confirmFree: "رسانه‌هایی که نسخهٔ آپلودشده دارند از این دستگاه پاک شوند؟ هر وقت لازم شد دوباره دریافت می‌شوند.", confirmRm: "⚠️ هشدار: تنظیمات بکاپ رسانه از این دستگاه و Cloud حذف می‌شود.\n\nاگر دوباره راه‌اندازی کنی، کلید جدید ساخته می‌شود و فایل‌هایی که قبلاً آپلود شده‌اند دیگر باز نمی‌شوند (خطای decrypt-failed). برای عوض‌کردن رمز از «تغییر رمز» استفاده کن.\n\nفایل‌های داخل چت ربات و رسانه‌های روی دستگاه پاک نمی‌شوند.\n\nبرای تأیید، کلمه‌ی ok را تایپ کن:",
             ok: "تأیید", cancel: "انصراف", enterPw: "رمز رسانه را وارد کن", warnKeys: "⚠️ کلیدهای Cloud تقریباً پر است؛ سقف بکاپ متن کمتر می‌شود.", done: "انجام شد", capFull: "سقف حجم محلی پر شد.",
             remember: "رمز روی این دستگاه یادآوری شود (هر بار نپرسد)", errExists: "برای این حساب قبلاً بکاپ رسانه تنظیم شده است. فقط رمز رسانه را در بخش «باز کردن قفل» وارد کن (تنظیم مجدد، کلید دستگاه‌های دیگر را خراب می‌کند).",
             uploadOld: "{n} عکس/ویس قدیمی هنوز آپلود نشده. همین حالا آپلود شوند تا در دستگاه دیگر هم دیده شوند؟", found: "📦 بکاپ رسانه برای این حساب فعال است. روی تصویر خاکستری بزن و رمز رسانه را وارد کن.", cfgChanged: "تنظیمات بکاپ رسانه در دستگاه دیگر عوض شد؛ دوباره رمز را وارد کن.",
@@ -59854,13 +59862,13 @@ var CONT = [["AS", "آسیا", "Asia"], ["EU", "اروپا", "Europe"], ["NA", "
             connect: "Connect & test", unlock: "Unlock", lock: "Lock", pwnote: "The password is never stored; it is asked once per session. If you forget it the media cannot be recovered.",
             cloudcfg: "This account was already set up on another device; just enter the media password.",
             total: "Total", uploaded: "Uploaded", unsynced: "Not synced", here: "On this device", errors: "Errors",
-            sendAll: "Upload all", retry: "Retry failed", syncAll: "Sync all", free: "Free space", disable: "Disable", enable: "Enable", remove: "Remove setup",
+            sendAll: "Upload all", repair: "🛠 Auto-repair", forget: "🗑 Forget broken files", confirmForget: "The records of the broken files are dropped on this device only and stop raising errors. Continue?", forgotN: "forgotten", redoAll: "Re-upload all with current key", confirmRedo: "Every photo/voice note stored on this device will be uploaded again with the current key and old records will be ignored. Continue?", badNote: "Some files were encrypted with a different key (usually after removing the setup and setting it up again). Tap Auto-repair: files that exist on this device are re-uploaded, otherwise the broken record is dropped.", repaired: "Repaired", redoN: "re-uploaded", lostN: "unrecoverable", retry: "Retry failed", syncAll: "Sync all", free: "Free space", disable: "Disable", enable: "Enable", remove: "Remove setup",
             cap: "Local size limit (MB)", usage: "Local media size", browser: "Browser storage", keys: "Manifest keys",
             queue: "Queue", idle: "idle", fullM: "⚠️ Manifest is full; new media are not listed in the cloud.",
             okConnected: "✅ Connected:", errToken: "Invalid token.", errPw: "Password: at least 6 characters, both fields equal.", errChat: "Telegram user id unavailable; open the app inside Telegram.",
             errNet: "Cannot reach the API (network/CORS). Set a proxy under “Advanced (proxy)” further down in this panel.", errStart: "The bot cannot message you; send /start to it in Telegram first.", errWrong: "Wrong password.",
             qd: "⏳ Queued", dl: "⬇️ Downloading…", er: "⚠️ Error — tap to retry", lk: "🔒 Tap and enter password", big: "⛔ File larger than Bot API limit",
-            confirmFree: "Remove media that have an uploaded copy from this device? They are re-downloaded when needed.", confirmRm: "Remove the media-bot setup from this device and Cloud? Files already in the bot chat are not deleted.",
+            confirmFree: "Remove media that have an uploaded copy from this device? They are re-downloaded when needed.", confirmRm: "⚠️ Warning: the media backup setup will be removed from this device and Cloud.\n\nIf you set it up again, a new key is created and files uploaded earlier can no longer be opened (decrypt-failed error). To change the password use “Change password”.\n\nFiles in the bot chat and media on this device are not deleted.\n\nType ok to confirm:",
             ok: "OK", cancel: "Cancel", enterPw: "Enter the media password", warnKeys: "⚠️ Cloud keys are nearly full; the text backup limit shrinks.", done: "Done", capFull: "Local size limit reached.",
             remember: "Remember the password on this device (do not ask every time)", errExists: "Media backup is already set up for this account. Just enter the media password under “Unlock” (setting up again would break the key on other devices).",
             uploadOld: "{n} older photos/voice notes are not uploaded yet. Upload them now so they show up on your other device too?", found: "📦 Media backup is on for this account. Tap a gray image and enter the media password.", cfgChanged: "Media backup settings changed on another device; enter the password again.",
@@ -59869,6 +59877,44 @@ var CONT = [["AS", "آسیا", "Asia"], ["EU", "اروپا", "Europe"], ["NA", "
             chpw: "Change password", chpwT: "Change media password", oldPw: "Current password", newPw: "New password (min. 6 characters)", newPw2: "Repeat new password", pwChanged: "✅ Media password changed", errSame: "The new password must differ from the current one.", chpwNote: "Existing media are not re-uploaded and still open. On your other devices enter the new password once."
         }
     };
+    Object.assign(D.fa, {
+        intro: "عکس و ویس‌ها رمزنگاری می‌شوند و در چت خصوصی ربات شخصی خودت ذخیره می‌شوند. سرور ذخیره‌سازی در کار نیست؛ فقط درخواست‌های ربات به‌صورت پیش‌فرض از یک پروکسی ساده به api.telegram.org می‌رسد (در «پیشرفته» قابل تغییر).",
+        pwnote: "خودِ رمز هیچ‌جا ذخیره نمی‌شود. به‌صورت پیش‌فرض یک کلید غیرقابل‌استخراج روی همین دستگاه می‌ماند تا رمز را دوباره نپرسد (با «قفل کردن» پاک می‌شود). اگر رمز را فراموش کنی رسانه‌ها قابل بازیابی نیستند.",
+        pgUp: "آپلود", pgDn: "دریافت", pgOf: "از", pgDone: "✅ انجام شد (موفق / کل)", working: "در حال انجام…", queueL: "صف",
+        stEnc: "رمزنگاری فایل…", stSend: "ارسال به تلگرام… (بین فایل‌ها ~۳ ثانیه فاصله است)", stGet: "دریافت از تلگرام…", stDec: "رمزگشایی و ذخیره…",
+        phMan: "ذخیره‌ی فهرست در Cloud…", phConn: "اتصال به تلگرام…", phScan: "بررسی فایل‌های این دستگاه…", phRetry: "آماده‌سازی تلاش مجدد…", phPull: "خواندن فهرست از Cloud…", phRepair: "تعمیر و آماده‌سازی…", phFree: "آزادسازی فضا…", phRemove: "در حال بازنشانی…",
+        rtN: "✅ {n} فایل دوباره در صف قرار گرفت", rtNone: "خطایی برای تلاش مجدد نبود", syQ: "✅ {n} فایل در صف دریافت قرار گرفت", syNone: "چیزی برای دریافت نبود؛ همه‌ی فایل‌های قابل‌دریافت روی این دستگاه هستند",
+        offDone: "✅ بکاپ رسانه غیرفعال شد", onDone: "✅ بکاپ رسانه فعال شد", lockDone: "🔒 قفل شد؛ برای ادامه رمز را وارد کن"
+    });
+    Object.assign(D.en, {
+        intro: "Photos and voice notes are encrypted and stored in the private chat of your own bot. There is no storage server; by default the bot requests only pass through a simple proxy to api.telegram.org (changeable under “Advanced”).",
+        pwnote: "The password itself is never stored. By default a non-extractable key stays on this device so it does not ask again (“Lock” erases it). If you forget the password the media cannot be recovered.",
+        pgUp: "Upload", pgDn: "Download", pgOf: "of", pgDone: "✅ Finished (ok / total)", working: "Working…", queueL: "Queue",
+        stEnc: "Encrypting file…", stSend: "Sending to Telegram… (about 3 s between files)", stGet: "Downloading from Telegram…", stDec: "Decrypting & saving…",
+        phMan: "Saving the list to Cloud…", phConn: "Connecting to Telegram…", phScan: "Checking this device’s files…", phRetry: "Preparing retry…", phPull: "Reading the list from Cloud…", phRepair: "Repairing & preparing…", phFree: "Freeing space…", phRemove: "Resetting…",
+        rtN: "✅ {n} file(s) queued again", rtNone: "There were no failed files to retry", syQ: "✅ {n} file(s) queued for download", syNone: "Nothing to download; every available file is already on this device",
+        offDone: "✅ Media backup disabled", onDone: "✅ Media backup enabled", lockDone: "🔒 Locked; enter the password to continue"
+    });
+    Object.assign(D.fa, {
+        chbot: "تغییر ربات", chbotT: "تغییر ربات رسانه", chbotTok: "توکن ربات جدید",
+        chbotNote: "رمز و کلید عوض نمی‌شود. چون file_id هر فایل فقط برای همان ربات کار می‌کند، فایل‌های ربات قبلی برای ربات جدید قابل دریافت نیستند و همه‌ی عکس/ویس‌های موجود روی این دستگاه با ربات جدید دوباره آپلود می‌شوند. فایلی که فقط در چت ربات قدیمی مانده و روی هیچ دستگاهی نیست از دست می‌رود؛ پس اگر لازم است، اول «همگام‌سازی همه» را بزن. ربات جدید را از @BotFather بساز و یک بار به آن /start بده. روی دستگاه‌های دیگر هم باید یک بار رمز را وارد کنی.",
+        botChanged: "✅ ربات تغییر کرد {b}؛ فایل‌ها با ربات جدید دوباره آپلود می‌شوند", errSameBot: "این همان ربات فعلی است."
+    });
+    Object.assign(D.en, {
+        chbot: "Change bot", chbotT: "Change media bot", chbotTok: "New bot token",
+        chbotNote: "The password and key do not change. A file_id only works for the bot that stored it, so files held by the old bot cannot be fetched by the new one and every photo/voice note on this device is uploaded again with the new bot. A file that only exists in the old bot's chat and on no device is lost, so tap “Sync all” first if needed. Create the new bot with @BotFather and send it /start once. On your other devices you will need to enter the password once.",
+        botChanged: "✅ Bot changed {b}; files are being re-uploaded with the new bot", errSameBot: "This is already the current bot."
+    });
+    Object.assign(D.fa, {
+        reset: "🔄 بازنشانی کامل",
+        confirmReset: "⚠️ بازنشانی کامل بکاپ رسانه\n\nتنظیمات (توکن، رمز، کلید) و فهرست رسانه‌ی همه‌ی دستگاه‌ها از Cloud و از این دستگاه پاک می‌شود و همه‌چیز از اول است: باید دوباره توکن ربات بدهی و رمز بگذاری.\n\nعکس و ویس‌های روی دستگاه‌ها و فایل‌های داخل چت ربات پاک نمی‌شوند؛ اما فایل‌های آپلودشده با کلید قبلی دیگر باز نمی‌شوند و باید دوباره آپلود شوند. روی دستگاه‌های دیگر هم باید رمز جدید را وارد کنی.\n\nبرای تأیید، کلمه‌ی ok را تایپ کن:",
+        resetDone: "✅ بازنشانی شد؛ توکن ربات و یک رمز جدید وارد کن", errReset: "پاک‌کردن تنظیمات از Cloud ممکن نشد؛ اینترنت را بررسی کن و دوباره امتحان کن."
+    });
+    Object.assign(D.en, {
+        reset: "🔄 Full reset",
+        confirmReset: "⚠️ Full reset of the media backup\n\nThe settings (token, password, key) and the media list of ALL devices are removed from Cloud and from this device, and everything starts from scratch: you enter a bot token and set a new password again.\n\nPhotos/voice notes on the devices and files inside the bot chat are not deleted, but files uploaded with the old key can no longer be opened and must be uploaded again. On your other devices you must enter the new password too.\n\nType ok to confirm:",
+        resetDone: "✅ Reset; enter a bot token and a new password", errReset: "Could not remove the settings from Cloud; check your connection and try again."
+    });
     try { for (const l of ["fa", "en"]) if (typeof i18n === "object" && i18n[l]) for (const k in D[l]) i18n[l]["mkmed_" + k] = D[l][k]; } catch { }
     const lang = () => { try { return currentLang === "en" ? "en" : "fa"; } catch { return "fa"; } };
     const T = k => { const l = lang(); try { const v = i18n[l]["mkmed_" + k]; if (v) return v; } catch { } return D[l][k] || k; };
@@ -59894,13 +59940,15 @@ var CONT = [["AS", "آسیا", "Asia"], ["EU", "اروپا", "Europe"], ["NA", "
 
     /* ---------- state ---------- */
     const S = {
-        token: null, key: null, base: DEF_BASE, recs: {}, remote: {}, fail: {}, la: {}, usage: 0, usageKnown: !1, localKeys: new Set(), busy: !1, cur: null,
-        qUp: [], qDown: [], waiters: new Map(), nextSend: 0, manifestDirty: !1, manifestFull: !1, mkeys: 0, lastInfo: "", paused: !1, visible: new Set(), loaded: !1, msg: "", warn: "", draft: {}, devCache: {}, lastPull: 0, remember: lsGet("mkmed_remember_v1") !== "0"
+        token: null, key: null, base: DEF_BASE, recs: {}, remote: {}, fail: {}, bad: {}, kid: "", kidSaved: "", la: {}, usage: 0, usageKnown: !1, localKeys: new Set(), busy: !1, cur: null,
+        qUp: [], qDown: [], waiters: new Map(), nextSend: 0, manifestDirty: !1, manifestFull: !1, mkeys: 0, lastInfo: "", paused: !1, visible: new Set(), loaded: !1, msg: "", warn: "", draft: {}, devCache: {}, lastPull: 0, remember: lsGet("mkmed_remember_v1") !== "0",
+        acts: new Set(), pg: { active: !1, done: 0, ok: 0, err: 0, t0: 0, fin: 0 }, stage: "", phase: "", curKind: ""
     };
     let persistT = 0;
-    const persist = () => { clearTimeout(persistT); persistT = setTimeout(() => { kvSet(KV_STATE, { v: 1, recs: S.recs, remote: S.remote, fail: S.fail, la: S.la }); }, 1200); };
-    const known = id => S.recs[id] || S.remote[id] || null;
-    const findBySha = sha => { for (const k in S.recs) if (S.recs[k].sha === sha && S.recs[k].fid) return S.recs[k]; for (const k in S.remote) if (S.remote[k].sha === sha && S.remote[k].fid) return S.remote[k]; return null; };
+    const persist = () => { clearTimeout(persistT); persistT = setTimeout(() => { kvSet(KV_STATE, { v: 1, recs: S.recs, remote: S.remote, fail: S.fail, bad: S.bad, kid: S.kid || S.kidSaved || "", la: S.la }); }, 1200); };
+    const known = id => { const a = S.recs[id], b = S.remote[id], k = S.kid; if (!k) return a || b || null; const oa = a && (!a.k || a.k === k), ob = b && (!b.k || b.k === k); if (oa && ob) return (a.k === k || b.k !== k) ? a : b; return oa ? a : ob ? b : null; };
+    const isBad = r => !!(r && S.bad && S.bad[r.fid]);
+    const findBySha = sha => { const ok = r => r && r.sha === sha && r.fid && !isBad(r) && (!S.kid || r.k === S.kid); for (const k in S.recs) if (ok(S.recs[k])) return S.recs[k]; for (const k in S.remote) if (ok(S.remote[k])) return S.remote[k]; return null; };
     const mimeShort = m => String(m || "").split(";")[0].replace(/^image\//, "i:").replace(/^audio\//, "a:") || "o";
     const mimeLong = s => /^i:/.test(s) ? "image/" + s.slice(2) : /^a:/.test(s) ? "audio/" + s.slice(2) : "application/octet-stream";
     const idTime = id => { const m = /^m_([a-z0-9]+)_/i.exec(id || ""); return m ? parseInt(m[1], 36) || 0 : 0; };
@@ -59955,7 +60003,7 @@ var CONT = [["AS", "آسیا", "Asia"], ["EU", "اروپا", "Europe"], ["NA", "
     async function keyRestore() {
         if (S.key && S.token) return; const cfg = readCfg(); if (!cfg || !S.remember) return;
         const rec = await KEYDB.get(); if (!rec || !rec.key || rec.s !== cfg.s) return;
-        try { const tok = dec.decode(await aesDec(rec.key, unb64u(cfg.t), AAD_TOK)); S.key = rec.key; S.token = tok; S.base = cfg.base || lsGet("mkmed_base_v1") || DEF_BASE; S.paused = !1; } catch { KEYDB.del(); }
+        try { const tok = dec.decode(await aesDec(rec.key, unb64u(cfg.t), AAD_TOK)); S.key = rec.key; S.token = tok; S.base = cfg.base || lsGet("mkmed_base_v1") || DEF_BASE; S.paused = !1; await syncKid(); } catch { KEYDB.del(); }
     }
 
     /* ---------- config / unlock ---------- */
@@ -59963,7 +60011,7 @@ var CONT = [["AS", "آسیا", "Asia"], ["EU", "اروپا", "Europe"], ["NA", "
         cfg = cfg || readCfg(); if (!cfg) throw new Error("nocfg");
         let key = await derive(pw, unb64u(cfg.s), cfg.i || 250000);
         let tok; try { if (cfg.dk) key = await crypto.subtle.importKey("raw", await aesDec(key, unb64u(cfg.dk), AAD_DK), "AES-GCM", !1, ["encrypt", "decrypt"]); tok = dec.decode(await aesDec(key, unb64u(cfg.t), AAD_TOK)); } catch { const e = new Error("wrong"); e.wrong = !0; throw e; }
-        S.key = key; S.token = tok; S.base = cfg.base || lsGet("mkmed_base_v1") || DEF_BASE; keyRemember(key, cfg); return !0;
+        S.key = key; S.token = tok; S.base = cfg.base || lsGet("mkmed_base_v1") || DEF_BASE; keyRemember(key, cfg); await syncKid(); return !0;
     }
     function lockNow() { S.key = null; S.token = null; S.paused = !0; KEYDB.del(); render(); }
     function askPassword() {
@@ -60011,7 +60059,7 @@ var CONT = [["AS", "آسیا", "Asia"], ["EU", "اروپا", "Europe"], ["NA", "
             if (tgw() && tgw().CloudStorage) { const ok = await serial(() => cloudSetItem(CFG_KEY, cloudVal)); if (!ok) throw new Error("Cloud write failed"); }
             if (!lsSet(LS_CFG, JSON.stringify(cfg))) throw new Error("localStorage write failed");
             lsSet("mkmed_base_v1", base === DEF_BASE ? null : base); lsSet(LS_ON, "1"); lsSet(LS_SEEN, "1");
-            S.key = key; keyRemember(key, cfg); S.paused = !1; S.draft = {}; S.msg = ""; kickBackup(); applyBudget(); await loadState(); await pullManifest(); startObservers(); scheduleScan();
+            S.key = key; keyRemember(key, cfg); resetState(); await syncKid(); S.paused = !1; S.draft = {}; S.msg = ""; kickBackup(); applyBudget(); await loadState(); await pullManifest(); startObservers(); scheduleScan();
             return me;
         } catch (e) { S.token = null; S.key = null; const m = (e && e.code !== void 0 ? errText(e) : e && e.message || String(e)); const er = new Error("[" + stage + "] " + m); er.stage = stage; throw er; }
     }
@@ -60049,15 +60097,57 @@ var CONT = [["AS", "آسیا", "Asia"], ["EU", "اروپا", "Europe"], ["NA", "
         const tok = dec.decode(await aesDec(dataKey, unb64u(cfg.t), AAD_TOK));
         const salt = crypto.getRandomValues(new Uint8Array(16)), iter = typeof NOTE_KDF_ITERATIONS === "number" ? NOTE_KDF_ITERATIONS : 250000, wrap = await derive(newPw, salt, iter);
         const nc = Object.assign({}, cfg, { s: b64u(salt), i: iter, dk: b64u(await aesEnc(wrap, raw, AAD_DK)), ts: Date.now() });
-        if (tgw() && tgw().CloudStorage) { const ok = await serial(() => cloudSetItem(CFG_KEY, JSON.stringify({ v: 1, s: nc.s, i: nc.i, t: nc.t, dk: nc.dk, b: nc.b || "", ts: nc.ts }))); if (!ok) throw new Error("Cloud write failed"); }
+        if (tgw() && tgw().CloudStorage) { const ok = await serial(() => cloudSetItem(CFG_KEY, JSON.stringify({ v: 1, s: nc.s, i: nc.i, t: nc.t, dk: nc.dk, b: nc.b || "", bts: nc.bts || 0, ts: nc.ts }))); if (!ok) throw new Error("Cloud write failed"); }
         if (!lsSet(LS_CFG, JSON.stringify(nc))) throw new Error("localStorage write failed");
-        S.key = dataKey; S.token = tok; S.paused = !1; keyRemember(dataKey, nc); return !0;
+        S.key = dataKey; S.token = tok; S.paused = !1; keyRemember(dataKey, nc); await syncKid(); return !0;
+    }
+    /* ---------- change bot (keeps password/key; old file_ids are bot-specific so records older than bts are dropped) ---------- */
+    const bts = () => +(readCfg() || {}).bts || 0;
+    function dropOldBot(b) {
+        for (const k in S.recs) (S.recs[k].ts || 0) < b && delete S.recs[k];
+        for (const k in S.remote) (S.remote[k].ts || 0) < b && delete S.remote[k];
+        S.fail = {}; S.qDown.length = 0; S.manifestDirty = !0; persist();
+    }
+    async function changeBot(token) {
+        token = String(token || "").trim();
+        if (!/^\d{5,14}:[A-Za-z0-9_-]{20,}$/.test(token)) throw new Error(T("errToken"));
+        const cfg = readCfg(); if (!cfg || !S.key || !S.token) throw new Error("nocfg");
+        if (token === S.token) throw new Error(T("errSameBot"));
+        const cid = chatId(); if (!cid) throw new Error(T("errChat"));
+        const oldTok = S.token; S.token = token; let me;
+        try {
+            me = await api("getMe", form({}));
+            const sent = await api("sendMessage", form({ chat_id: String(cid), text: "✅ Markhin media backup: bot changed", disable_notification: "true" }), { send: !0 });
+            try { await api("deleteMessage", form({ chat_id: String(cid), message_id: String(sent.message_id) })); } catch { }
+        } catch (e) { S.token = oldTok; throw new Error(errText(e)); }
+        try {
+            const b = Date.now(), name = me && me.username ? "@" + me.username : "";
+            const nc = Object.assign({}, cfg, { t: b64u(await aesEnc(S.key, enc.encode(token), AAD_TOK)), b: name, bts: b, ts: b });
+            if (tgw() && tgw().CloudStorage) { const ok = await serial(() => cloudSetItem(CFG_KEY, JSON.stringify({ v: 1, s: nc.s, i: nc.i, t: nc.t, dk: nc.dk, b: name, bts: b, ts: b }))); if (!ok) throw new Error("Cloud write failed"); }
+            if (!lsSet(LS_CFG, JSON.stringify(nc))) throw new Error("localStorage write failed");
+            dropOldBot(b); S.paused = !1; S.netErr = !1; return !0;
+        } catch (e) { S.token = oldTok; throw e; }
+    }
+    function chbotModal() {
+        return new Promise(res => {
+            const m = document.createElement("div"); m.className = "mkmed-modal";
+            m.innerHTML = `<div class="mkmed-card" dir="auto"><div class="mkmed-h">${esc(T("chbotT"))}</div><div class="mkmed-note" style="margin:4px 0">${esc(T("chbotNote"))}</div><input class="mkmed-in" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="${esc(T("chbotTok"))}"><div class="mkmed-row"><button type="button" class="btn-main" data-x="ok">${esc(T("ok"))}</button><button type="button" class="btn-main" data-x="no">${esc(T("cancel"))}</button></div><div class="mkmed-msg" data-m></div></div>`;
+            document.body.appendChild(m); const inp = m.querySelector("input"), mm = m.querySelector("[data-m]"); setTimeout(() => { try { inp.focus(); } catch { } }, 50);
+            const done = v => { m.remove(); res(v); }; let busy = !1;
+            m.addEventListener("click", async e => {
+                const x = e.target.closest("[data-x]"); if (!x || busy) return;
+                if (x.dataset.x === "no") return done(null);
+                busy = !0; x.disabled = !0; mm.textContent = "⏳ " + T("phConn");
+                try { await changeBot(inp.value); done(!0); return; } catch (er) { mm.textContent = String(er && er.message || er); x.disabled = !1; }
+                busy = !1;
+            });
+        });
     }
     const applyBudget = () => { try { cloudApplyManualLimit(MAX_MANUAL_BACKUPS); } catch { } };
 
     /* ---------- manifest (CloudStorage) ---------- */
-    const encRec = r => [r.id, r.sha, r.fid, r.size, r.t, (r.ts || 0).toString(36)].join("|");
-    function decRec(line) { const p = line.split("|"); if (p.length < 6 || !p[0] || !p[2]) return null; return { id: p[0], sha: p[1], fid: p[2], size: +p[3] || 0, t: p[4], ts: parseInt(p[5], 36) || 0 }; }
+    const encRec = r => [r.id, r.sha, r.fid, r.size, r.t, (r.ts || 0).toString(36), r.k || ""].join("|");
+    function decRec(line) { const p = line.split("|"); if (p.length < 6 || !p[0] || !p[2]) return null; return { id: p[0], sha: p[1], fid: p[2], size: +p[3] || 0, t: p[4], ts: parseInt(p[5], 36) || 0, k: p[6] || "" }; }
     const cloudOk = () => { const w = tgw(); return !!(w && w.CloudStorage && typeof cloudGetItem === "function"); };
     function packChunks(recs) {
         const chunks = []; let cur = "";
@@ -60101,7 +60191,7 @@ var CONT = [["AS", "آسیا", "Asia"], ["EU", "اروپا", "Europe"], ["NA", "
                 S.mkeys = keys.filter(k => /^mk_med_[a-z0-9]+_\d+$/.test(k) || k.indexOf(IDX_PFX) === 0).length;
                 if (!devs.length) return !0;
                 const idxVals = await cloudGetItems(idxKeys); if (!idxVals) return !1;
-                let complete = !0; const fresh = {};
+                let complete = !0; const fresh = {}, BT = bts();
                 for (const d of devs) {
                     let ix = null; try { ix = JSON.parse(idxVals[IDX_PFX + d] || "null"); } catch { } if (!ix || !(ix.n >= 0)) { complete = !1; continue; }
                     let list; const c = S.devCache[d];
@@ -60113,11 +60203,11 @@ var CONT = [["AS", "آسیا", "Asia"], ["EU", "اروپا", "Europe"], ["NA", "
                         for (const nm of names) { const v = vals[nm]; if (!v) { full = !1; continue; } v.split("\n").forEach(ln => { const r = ln && decRec(ln); r && list.push(r); }); }
                         full ? (S.devCache[d] = { h: ix.h, n: ix.n, list }) : (complete = !1);
                     }
-                    list.forEach(r => { fresh[r.id] || (fresh[r.id] = r); });
+                    list.forEach(r => { if (isBad(r) || BT && (r.ts || 0) < BT) return; const kk = S.kid; if (kk && r.k && r.k !== kk) return; const c = fresh[r.id]; if (!c || (kk && r.k === kk && c.k !== kk)) fresh[r.id] = r; });
                 }
-                const next = complete ? fresh : Object.assign({}, S.remote, fresh);
+                const next = complete ? fresh : Object.assign({}, S.remote, fresh); for (const id in next) isBad(next[id]) && delete next[id];
                 const grew = Object.keys(next).some(id => !S.remote[id]);
-                S.remote = next; persist();
+                S.remote = next; for (const id in next) { const o = S.recs[id]; o && S.kid && o.k !== S.kid && next[id].k === S.kid && delete S.recs[id]; } persist();
                 grew && scheduleScan(!0);
                 return !0;
             });
@@ -60130,9 +60220,9 @@ var CONT = [["AS", "آسیا", "Asia"], ["EU", "اروپا", "Europe"], ["NA", "
             let c = null; try { c = JSON.parse(raw); } catch { } if (!c || !c.s || !c.t) return;
             lsSet(LS_SEEN, "1"); applyBudget();
             const cur = readCfg();
-            if (!cur) { lsSet(LS_CFG, JSON.stringify({ v: 1, s: c.s, i: c.i, t: c.t, dk: c.dk, b: c.b || "", since: 0, ts: c.ts })); isOn() || toast(T("found"), 5000); }
-            else if (cur.s !== c.s && (c.ts || 0) >= (cur.ts || 0)) {
-                lsSet(LS_CFG, JSON.stringify(Object.assign({}, cur, { s: c.s, i: c.i, t: c.t, dk: c.dk, b: c.b || cur.b, ts: c.ts }))); S.key = null; S.token = null; KEYDB.del(); toast(T("cfgChanged"), 5000);
+            if (!cur) { lsSet(LS_CFG, JSON.stringify({ v: 1, s: c.s, i: c.i, t: c.t, dk: c.dk, b: c.b || "", bts: c.bts || 0, since: 0, ts: c.ts })); isOn() || toast(T("found"), 5000); }
+            else if ((cur.s !== c.s || cur.t !== c.t) && (c.ts || 0) >= (cur.ts || 0)) {
+                lsSet(LS_CFG, JSON.stringify(Object.assign({}, cur, { s: c.s, i: c.i, t: c.t, dk: c.dk, b: c.b || cur.b, bts: c.bts || cur.bts || 0, ts: c.ts }))); c.bts && dropOldBot(c.bts); S.key = null; S.token = null; KEYDB.del(); toast(T("cfgChanged"), 5000);
             }
             render(); markDormant();
         } catch { }
@@ -60170,6 +60260,29 @@ var CONT = [["AS", "آسیا", "Asia"], ["EU", "اروپا", "Europe"], ["NA", "
         return ids;
     }
 
+    /* ---------- key id: tells apart files encrypted with different keys ---------- */
+    const KIDM = new WeakMap;
+    async function kidOf(key) {
+        if (!key) return ""; let v = KIDM.get(key); if (v) return v;
+        try { v = b64u(new Uint8Array(await crypto.subtle.encrypt({ name: "AES-GCM", iv: new Uint8Array(12), additionalData: enc.encode("mkmed-kid") }, key, enc.encode("mkmed-kid-v1"))).subarray(0, 6)); } catch { v = ""; }
+        KIDM.set(key, v); return v;
+    }
+    function purgeStale() {
+        const k = S.kid; if (!k) return; let ch = !1;
+        for (const id in S.recs) { const r = S.recs[id]; if (r && r.k && r.k !== k) { delete S.recs[id]; ch = !0; } }
+        for (const id in S.remote) { const r = S.remote[id]; if (r && r.k && r.k !== k) { delete S.remote[id]; ch = !0; } }
+        ch && (S.manifestDirty = !0);
+    }
+    async function syncKid() {
+        S.kid = await kidOf(S.key); if (!S.kid || !S.loaded) return;
+        if (S.kidSaved && S.kidSaved !== S.kid) { S.recs = {}; S.remote = {}; S.fail = {}; S.devCache = {}; S.qUp = []; S.qDown = []; S.manifestDirty = !0; }
+        S.kidSaved = S.kid; purgeStale(); persist();
+    }
+    function resetState() {
+        S.recs = {}; S.remote = {}; S.fail = {}; S.bad = {}; S.la = {}; S.devCache = {}; S.qUp = []; S.qDown = []; S.kid = ""; S.kidSaved = "";
+        kvSet(KV_STATE, { v: 1, recs: {}, remote: {}, fail: {}, bad: {}, kid: "", la: {} });
+    }
+
     /* ---------- tasks ---------- */
     const fail = (id, msg, kind) => { S.fail[id] = { m: String(msg || "error"), k: kind || "e", ts: Date.now() }; persist(); };
     const clearFail = id => { delete S.fail[id]; };
@@ -60186,14 +60299,14 @@ var CONT = [["AS", "آسیا", "Asia"], ["EU", "اروپا", "Europe"], ["NA", "
     async function downloadOne(id) {
         const r = known(id); if (!r) throw new ApiErr(0, "unknown");
         if ((r.size || 0) + OVH > MAX_DL) { fail(id, T("big"), "big"); return !1; }
-        const f = await api("getFile", form({ file_id: r.fid }));
+        S.stage = T("stGet"); updateProg(); const f = await api("getFile", form({ file_id: r.fid }));
         if (!f || !f.file_path) throw new ApiErr(0, "no file_path");
         let resp;
         try { resp = await fetch(`${S.base}/file/bot${S.token}/${f.file_path}`); } catch { throw new ApiErr(0, "network", { net: !0 }); }
         if (!resp.ok) throw new ApiErr(resp.status, "HTTP " + resp.status);
         const packed = new Uint8Array(await resp.arrayBuffer());
         if (packed.length < OVH || MAGIC.some((b, i) => packed[i] !== b)) throw new ApiErr(0, "bad-format");
-        let plain; try { plain = await aesDec(S.key, packed.subarray(4), AAD_BLOB); } catch { throw new ApiErr(0, "decrypt-failed"); }
+        S.stage = T("stDec"); updateProg(); let plain; try { plain = await aesDec(S.key, packed.subarray(4), AAD_BLOB); } catch { throw new ApiErr(0, "decrypt-failed"); }
         if (r.sha && await sha256(plain) !== r.sha) throw new ApiErr(0, "sha-mismatch");
         if (!await ensureRoom(plain.length, id)) { fail(id, T("capFull"), "cap"); return !1; }
         const blob = new Blob([plain], { type: mimeLong(r.t) });
@@ -60202,25 +60315,80 @@ var CONT = [["AS", "آسیا", "Asia"], ["EU", "اروپا", "Europe"], ["NA", "
         return !0;
     }
     async function uploadOne(id) {
-        const blob = await MU_MEDIA.get(id); if (!blob) return !1;
+        S.kid || await syncKid(); const blob = await MU_MEDIA.get(id); if (!blob) return !1;
         if (blob.size + OVH > MAX_UP) { fail(id, T("big"), "big"); return !1; }
         const buf = new Uint8Array(await blob.arrayBuffer()), sha = await sha256(buf), mime = mimeShort(blob.type), dup = findBySha(sha);
-        if (dup) { S.recs[id] = { id, sha, fid: dup.fid, size: buf.length, t: mime, ts: Date.now() }; clearFail(id); S.manifestDirty = !0; persist(); return !0; }
-        const ct = await aesEnc(S.key, buf, AAD_BLOB), packed = new Uint8Array(4 + ct.length); packed.set(MAGIC), packed.set(ct, 4);
+        if (dup) { S.recs[id] = { id, sha, fid: dup.fid, size: buf.length, t: mime, ts: Date.now(), k: S.kid }; clearFail(id); S.manifestDirty = !0; persist(); return !0; }
+        S.stage = T("stEnc"); updateProg(); const ct = await aesEnc(S.key, buf, AAD_BLOB), packed = new Uint8Array(4 + ct.length); packed.set(MAGIC), packed.set(ct, 4);
         const cid = chatId(); if (!cid) throw new ApiErr(0, T("errChat"), { fatal: !0 });
+        S.stage = T("stSend"); updateProg();
         const res = await api("sendDocument", form({ chat_id: String(cid), disable_notification: "true", caption: id + "|" + sha, document: new File([packed], id + ".bin", { type: "application/octet-stream" }) }), { send: !0, timeout: 240000 });
         const fid = res && res.document && res.document.file_id; if (!fid) throw new ApiErr(0, "no file_id");
-        S.recs[id] = { id, sha, fid, size: buf.length, t: mime, ts: Date.now() }; clearFail(id); S.manifestDirty = !0; persist(); return !0;
+        S.recs[id] = { id, sha, fid, size: buf.length, t: mime, ts: Date.now(), k: S.kid }; clearFail(id); S.manifestDirty = !0; persist(); return !0;
     }
+    /* ---------- auto-repair: files encrypted with a different/old key ---------- */
+    const BAD_RX = /decrypt-failed|sha-mismatch|bad-format/;
+    function hasBad() { try { return Object.keys(S.fail).some(id => BAD_RX.test((S.fail[id] || {}).m || "")); } catch { return !1; } }
+    async function repairBad(all, quiet) {
+        S.bad = S.bad || {};
+        await refreshLocal(!0);
+        const refs = referenced(), ids = new Set(Object.keys(S.fail).filter(id => BAD_RX.test((S.fail[id] || {}).m || "")));
+        all && S.localKeys.forEach(id => { refs.has(id) && ids.add(id); });
+        const fids = new Set();
+        ids.forEach(id => { const r = known(id); r && r.fid && fids.add(r.fid); });
+        // every record that points at a bad file (also duplicates under other ids) is dropped
+        for (const k in S.recs) S.recs[k] && fids.has(S.recs[k].fid) && ids.add(k);
+        for (const k in S.remote) S.remote[k] && fids.has(S.remote[k].fid) && ids.add(k);
+        ids.forEach(id => { const r = known(id); r && r.fid && (S.bad[r.fid] = 1); });
+        let redo = 0, lost = 0;
+        ids.forEach(id => {
+            delete S.recs[id]; delete S.remote[id]; delete S.fail[id];
+            S.qDown = S.qDown.filter(x => x !== id); S.qUp = S.qUp.filter(x => x !== id);
+            if (S.localKeys.has(id)) { enqueueUp(id, !0); redo++; } else lost++;
+        });
+        S.manifestDirty = !0; persist(); S.paused = !1;
+        const m = T("repaired") + ": " + redo + " " + T("redoN") + (lost ? " · " + lost + " " + T("lostN") : "");
+        quiet || (msg(m), toast(m, 4000));
+        pump(); render();
+        return { redo, lost };
+    }
+    function forgetBad() {
+        S.bad = S.bad || {};
+        const ids = new Set(Object.keys(S.fail).filter(id => BAD_RX.test((S.fail[id] || {}).m || ""))), fids = new Set();
+        ids.forEach(id => { const r = known(id); r && r.fid && fids.add(r.fid); });
+        for (const k in S.recs) S.recs[k] && fids.has(S.recs[k].fid) && ids.add(k);
+        for (const k in S.remote) S.remote[k] && fids.has(S.remote[k].fid) && ids.add(k);
+        fids.forEach(f => { S.bad[f] = 1; });
+        ids.forEach(id => { delete S.recs[id]; delete S.remote[id]; delete S.fail[id]; S.qDown = S.qDown.filter(x => x !== id); });
+        S.manifestDirty = !0; persist();
+        const m = T("forgotN") + ": " + ids.size; msg(m); toast(m, 3000); S.manifestDirty && pushManifest(); render();
+    }
+    /* ---------- progress box + busy buttons ---------- */
+    const pgTotal = () => S.pg.done + S.qUp.length + S.qDown.length + (S.cur ? 1 : 0);
+    function pgHtml() {
+        const g = S.pg, tot = pgTotal(), fa = lang() === "fa", n = x => fa ? String(x).replace(/\d/g, d => "۰۱۲۳۴۵۶۷۸۹"[d]) : String(x);
+        const working = S.busy || S.acts.size > 0 || !!S.phase, fin = !working && g.done > 0 && g.fin && Date.now() - g.fin < 12000;
+        if (!working && !fin) return '<div class="mkmed-prog" id="mkmedProg" hidden></div>';
+        if (fin) return `<div class="mkmed-prog" id="mkmedProg" role="status"><div class="pr"><span>${T("pgDone")}</span><span>${n(g.ok)} / ${n(g.done)}</span></div><div class="bar"><i style="width:100%"></i></div>${g.err ? `<div class="sub">⚠️ ${T("errors")}: ${n(g.err)}</div>` : ""}</div>`;
+        if (S.busy && tot > 0) {
+            const pct = Math.min(100, Math.round(g.done / tot * 100)), cur = Math.min(tot, g.done + (S.cur ? 1 : 0)), kind = S.curKind === "d" ? T("pgDn") : T("pgUp"), sub = S.stage || S.phase || "";
+            return `<div class="mkmed-prog live" id="mkmedProg" role="status"><div class="pr"><span>⏳ ${kind} ${n(cur)} ${T("pgOf")} ${n(tot)}</span><span>${n(pct)}%</span></div><div class="bar"><i style="width:${pct}%"></i></div>${sub ? `<div class="sub">${esc(sub)}</div>` : ""}${g.err ? `<div class="sub">⚠️ ${T("errors")}: ${n(g.err)}</div>` : ""}</div>`;
+        }
+        return `<div class="mkmed-prog live ind" id="mkmedProg" role="status"><div class="pr"><span>⏳ ${esc(S.phase || S.stage || T("working"))}</span></div><div class="bar"><i></i></div></div>`;
+    }
+    function updateProg() { try { const el = document.getElementById("mkmedProg"); if (!el) return; const w = document.createElement("div"); w.innerHTML = pgHtml(); w.firstChild && el.replaceWith(w.firstChild); } catch { } }
+    function markBusy() { try { const sec = document.getElementById("mkmedSec"); if (!sec) return; S.acts.forEach(a => sec.querySelectorAll('[data-mkact="' + a + '"]').forEach(b => { if (b.classList.contains("mkmed-busy")) return; b.disabled = !0; b.classList.add("mkmed-busy"); b.insertAdjacentHTML("afterbegin", '<span class="mkmed-spin"></span> '); })); } catch { } }
+
     async function pump() {
-        if (S.busy) return; S.busy = !0; render();
+        if (S.busy) return; S.busy = !0; S.pg.active || (S.pg = { active: !0, done: 0, ok: 0, err: 0, t0: Date.now(), fin: 0 }); render();
         try {
+            S.kid || await syncKid();
             let upDone = 0;
             while (S.token && S.key && !S.paused) {
                 let id = S.qDown.shift(), kind = "d";
                 if (!id) { id = S.qUp.shift(); kind = "u"; }
                 if (!id) break;
-                S.cur = id; render();
+                S.cur = id; S.curKind = kind; S.stage = ""; render();
                 let ok = !1;
                 try {
                     ok = kind === "d" ? await downloadOne(id) : await uploadOne(id);
@@ -60229,12 +60397,12 @@ var CONT = [["AS", "آسیا", "Asia"], ["EU", "اروپا", "Europe"], ["NA", "
                     fail(id, errText(e) || e.message, "e");
                     if (e && e.fatal) { S.paused = !0; S.qDown.length = 0; S.qUp.length = 0; toast(errText(e), 4000); }
                 }
-                S.cur = null;
+                S.cur = null; S.pg.done++; ok ? S.pg.ok++ : S.pg.err++; S.stage = ""; updateProg();
                 if (kind === "d") { const w = S.waiters.get(id); S.waiters.delete(id); w && w.list.forEach(f => f(ok)); ok && afterDownload(id); !ok && w && markEl(id, "er"); }
                 await sleep(kind === "d" ? 120 : 40);
             }
-            S.manifestDirty && await pushManifest(); S.manifestDirty && !S.manifestFull && pushRetry();
-        } finally { S.busy = !1; S.cur = null; S.qDown.length || S.qUp.length || S.waiters.forEach((w, id) => { w.list.forEach(f => f(!1)); }); render(); }
+            if (S.manifestDirty) { S.phase = T("phMan"); updateProg(); try { await pushManifest(); } finally { S.phase = ""; } } S.manifestDirty && !S.manifestFull && pushRetry();
+        } finally { S.busy = !1; S.cur = null; S.stage = ""; S.pg.active = !1; S.pg.fin = Date.now(); setTimeout(() => { !S.busy && Date.now() - S.pg.fin >= 12000 && render(); }, 12500); S.qDown.length || S.qUp.length || S.waiters.forEach((w, id) => { w.list.forEach(f => f(!1)); }); render(); hasBad() && setTimeout(() => { hasBad() && repairBad(!1, !0); }, 300); }
     }
 
     /* ---------- DOM integration ---------- */
@@ -60300,10 +60468,17 @@ var CONT = [["AS", "آسیا", "Asia"], ["EU", "اروپا", "Europe"], ["NA", "
     function stopObservers() { io && io.disconnect(), mo && mo.disconnect(); io = mo = null; clearInterval(upT); upT = 0; stopPoll(); }
     let upT = 0;
     async function scanUploads(all) {
-        if (!isOn()) return; await refreshLocal(!1);
-        const refs = referenced(), since = +(readCfg() || {}).since || 0;
-        for (const id of S.localKeys) { if (!refs.has(id) || S.recs[id] && S.recs[id].fid || known(id)) continue; if (S.fail[id] && !all) continue; if (!all && since && idTime(id) && idTime(id) < since) continue; enqueueUp(id); }
-        (S.qUp.length) && pump(); render();
+        if (!isOn()) return 0; S.kid || await syncKid(); await refreshLocal(!1);
+        const refs = referenced(), since = +(readCfg() || {}).since || 0, okR = r => !!(r && r.fid && !isBad(r) && (all ? (!S.kid || r.k === S.kid) : (!r.k || !S.kid || r.k === S.kid)));
+        let n = 0, dropped = !1;
+        for (const id of S.localKeys) {
+            if (!refs.has(id) || okR(S.recs[id]) || okR(S.remote[id])) continue;
+            if (S.fail[id] && !all) continue; if (!all && since && idTime(id) && idTime(id) < since) continue;
+            S.recs[id] && (delete S.recs[id], dropped = !0); all && delete S.fail[id];
+            S.qUp.includes(id) || (enqueueUp(id), n++);
+        }
+        dropped && (S.manifestDirty = !0, persist());
+        (S.qUp.length) && pump(); render(); return n;
     }
     function startUploadScan() { if (upT) return; upT = setInterval(() => { S.token && S.key && !S.paused && scanUploads(!1); }, 25000); setTimeout(() => S.token && S.key && scanUploads(!1), 1500); }
 
@@ -60318,6 +60493,20 @@ var CONT = [["AS", "آسیا", "Asia"], ["EU", "اروپا", "Europe"], ["NA", "
 .mkmed-in{width:100%;box-sizing:border-box;margin:3px 0;padding:7px 9px;border-radius:8px;border:1px solid rgba(128,128,128,.5);background:transparent;color:inherit;font:inherit;direction:ltr}
 .mkmed-bar{height:6px;border-radius:4px;background:rgba(128,128,128,.25);overflow:hidden;margin:4px 0}.mkmed-bar i{display:block;height:100%;background:currentColor;opacity:.7}
 .mkmed-msg{font-size:12px;min-height:16px}.mkmed-note{font-size:12px;opacity:.85}
+.mkmed-msg:not(:empty){padding:6px 10px;margin:6px 0;border-radius:8px;border:1px solid rgba(128,128,128,.4);background:rgba(128,128,128,.12);font-weight:600;line-height:1.7}
+.mkmed-prog{margin:8px 0;padding:8px 10px;border-radius:10px;border:1px solid rgba(128,128,128,.4);background:rgba(128,128,128,.10);font-size:12.5px;line-height:1.7}
+.mkmed-prog[hidden]{display:none}
+.mkmed-prog .pr{display:flex;justify-content:space-between;gap:8px;font-weight:600}
+.mkmed-prog .sub{font-size:11.5px;opacity:.85}
+.mkmed-prog .bar{height:8px;border-radius:5px;background:rgba(128,128,128,.28);overflow:hidden;margin:6px 0}
+.mkmed-prog .bar i{display:block;height:100%;width:0;background:currentColor;opacity:.75;border-radius:5px;transition:width .3s}
+.mkmed-prog.live .bar i{background-image:linear-gradient(90deg,transparent,rgba(255,255,255,.5),transparent);background-size:70px 100%;background-repeat:no-repeat;animation:mkmedSh 1.1s linear infinite}
+.mkmed-prog.ind .bar i{width:35%!important;background-image:none;animation:mkmedInd 1.1s ease-in-out infinite alternate}
+@keyframes mkmedSh{from{background-position:-70px 0}to{background-position:calc(100% + 70px) 0}}
+@keyframes mkmedInd{from{margin-inline-start:0}to{margin-inline-start:65%}}
+.mkmed-spin{display:inline-block;width:11px;height:11px;border:2px solid currentColor;border-top-color:transparent;border-radius:50%;animation:mkmedSp .7s linear infinite;vertical-align:-1px}
+@keyframes mkmedSp{to{transform:rotate(360deg)}}
+.btn-main.mkmed-busy{opacity:.6;pointer-events:none}
 .mkmed-modal{position:fixed;inset:0;z-index:100000;background:rgba(0,0,0,.5);display:flex;align-items:center;justify-content:center;padding:16px}
 .mkmed-card{background:var(--bg-color,#fff);color:var(--text-color,#111);max-width:340px;width:100%;border-radius:14px;padding:14px}.mkmed-h{font-weight:bold;margin-bottom:6px}
 [data-mkmed]{position:relative;min-height:44px;border:1px dashed rgba(128,128,128,.6);border-radius:8px;padding:8px;opacity:.9}
@@ -60337,6 +60526,7 @@ var CONT = [["AS", "آسیا", "Asia"], ["EU", "اروپا", "Europe"], ["NA", "
         const open = S.netErr || S.advOpen || S.base !== DEF_BASE, val = S.draft.mkmedBase !== void 0 ? S.draft.mkmedBase : (S.base !== DEF_BASE ? S.base : "");
         return `<details id="mkmedAdv" ${open ? "open" : ""}><summary class="mkmed-note" style="cursor:pointer;font-weight:bold">⚙️ ${T("adv")}</summary><div class="mkmed-note" style="margin:4px 0">${T("advHint")}</div><div class="mkmed-note" dir="ltr" style="margin:2px 0">${T("advNow")}: <b>${esc(S.base)}</b></div><input class="mkmed-in" id="mkmedBase" inputmode="url" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="${DEF_BASE}" value="${esc(val)}"><div class="mkmed-row"><button type="button" class="btn-main" data-mkact="saveBase">${T("advSave")}</button><button type="button" class="btn-main" data-mkact="testBase">${T("advTest")}</button><button type="button" class="btn-main" data-mkact="resetBase">${T("advReset")}</button></div></details>`;
     }
+    const pgBox = () => pgHtml();
     function bodyHtml() {
         const cfg = readCfg(), on = isOn(), unl = !!(S.token && S.key), st = stats(), fa = lang() === "fa";
         const chip = !cfg ? `<span class="mkmed-chip">${T("notset")}</span>` : on ? `<span class="mkmed-chip">${T("on")} · ${unl ? T("unlocked") : T("locked")}</span>` : `<span class="mkmed-chip">${T("off")}</span>`;
@@ -60354,15 +60544,16 @@ var CONT = [["AS", "آسیا", "Asia"], ["EU", "اروپا", "Europe"], ["NA", "
         h += `<div class="mkmed-note">${T("usage")}: ${S.usageKnown ? mb(S.usage) : "…"} / ${mb(cap)} MB</div><div class="mkmed-bar"><i style="width:${pct}%"></i></div><div class="mkmed-note" id="mkmedEst"></div><div class="mkmed-note">${T("keys")}: ${S.mkeys} / ${BUDGET}</div>`;
         S.manifestFull && (h += `<div class="mkmed-note">${T("fullM")}</div>`);
         { const fe = Object.keys(S.fail).sort((x, y) => (S.fail[y].ts || 0) - (S.fail[x].ts || 0)).slice(0, 4); fe.length && (h += `<div class="mkmed-note" dir="ltr" style="margin:4px 0">${fe.map(id => "⚠️ " + esc(id) + ": " + esc(S.fail[id].m)).join("<br>")}</div>`); }
-        h += `<div class="mkmed-note">${T("queue")}: ${S.busy ? (S.qUp.length + S.qDown.length + (S.cur ? 1 : 0)) : T("idle")}</div>`;
-        h += `<div class="mkmed-row"><button type="button" class="btn-main" data-mkact="sendAll">${T("sendAll")}</button><button type="button" class="btn-main" data-mkact="retry">${T("retry")}</button><button type="button" class="btn-main" data-mkact="syncAll">${T("syncAll")}</button><button type="button" class="btn-main" data-mkact="free">${T("free")}</button></div>`;
-        h += `<div class="mkmed-row"><label class="mkmed-note">${T("cap")} <input class="mkmed-in" id="mkmedCap" type="number" min="20" step="10" value="${Math.round(cap / 1048576)}" style="width:90px;display:inline-block"></label><button type="button" class="btn-main" data-mkact="${on ? "disable" : "enable"}">${on ? T("disable") : T("enable")}</button>${unl ? `<button type="button" class="btn-main" data-mkact="test">${T("test")}</button><button type="button" class="btn-main" data-mkact="lock">${T("lock")}</button>` : ""}<button type="button" class="btn-main" data-mkact="chpw">${T("chpw")}</button><button type="button" class="btn-main" data-mkact="remove">${T("remove")}</button></div><div class="mkmed-msg" id="mkmedMsg">${esc(S.msg || "")}</div>`;
+        hasBad() && (h += `<div class="mkmed-note" style="margin:6px 0;font-weight:bold">⚠️ ${T("badNote")}</div>`);
+        h += pgBox() + `<div class="mkmed-msg"${unl ? ' id="mkmedMsg"' : ""}>${unl ? esc(S.msg || "") : ""}</div>`;
+        h += `<div class="mkmed-row"><button type="button" class="btn-main" data-mkact="sendAll">${T("sendAll")}</button><button type="button" class="btn-main" data-mkact="retry">${T("retry")}</button>${hasBad() ? `<button type="button" class="btn-main" data-mkact="repair" style="font-weight:bold">${T("repair")}</button><button type="button" class="btn-main" data-mkact="forget">${T("forget")}</button>` : ""}<button type="button" class="btn-main" data-mkact="syncAll">${T("syncAll")}</button><button type="button" class="btn-main" data-mkact="free">${T("free")}</button></div>`;
+        h += `<div class="mkmed-row"><label class="mkmed-note">${T("cap")} <input class="mkmed-in" id="mkmedCap" type="number" min="20" step="10" value="${Math.round(cap / 1048576)}" style="width:90px;display:inline-block"></label><button type="button" class="btn-main" data-mkact="${on ? "disable" : "enable"}">${on ? T("disable") : T("enable")}</button>${unl ? `<button type="button" class="btn-main" data-mkact="test">${T("test")}</button><button type="button" class="btn-main" data-mkact="lock">${T("lock")}</button>` : ""}<button type="button" class="btn-main" data-mkact="redoAll">${T("redoAll")}</button><button type="button" class="btn-main" data-mkact="chpw">${T("chpw")}</button><button type="button" class="btn-main" data-mkact="changeBot">${T("chbot")}</button><button type="button" class="btn-main" data-mkact="reset">${T("reset")}</button></div>`;
         return h;
     }
     function render() {
         const sec = document.getElementById("mkmedSec"); if (!sec) return;
-        const act = document.activeElement; if (act && sec.contains(act) && act.tagName === "INPUT" && !act.id.startsWith("mkmedCap")) { return; }
-        sec.innerHTML = bodyHtml(); sec.setAttribute("dir", lang() === "fa" ? "rtl" : "ltr");
+        const act = document.activeElement; if (act && sec.contains(act) && act.tagName === "INPUT" && !act.id.startsWith("mkmedCap")) { updateProg(); return; }
+        sec.innerHTML = bodyHtml(); sec.setAttribute("dir", lang() === "fa" ? "rtl" : "ltr"); markBusy();
         try { navigator.storage && navigator.storage.estimate && navigator.storage.estimate().then(e => { const el = document.getElementById("mkmedEst"); el && e && (el.textContent = T("browser") + ": " + ((e.usage || 0) / 1048576).toFixed(0) + " / " + ((e.quota || 0) / 1048576).toFixed(0) + " MB"); }); } catch { }
     }
     function injectSection() {
@@ -60372,8 +60563,26 @@ var CONT = [["AS", "آسیا", "Asia"], ["EU", "اروپا", "Europe"], ["NA", "
         refreshLocal(!0).then(render); pullManifest().then(render);
     }
     const msg = (t, bad) => { S.msg = t || ""; const m = document.getElementById("mkmedMsg"); m && (m.textContent = t || ""); };
+    const ACT_PH = { setup: "phConn", unlock: "phConn", test: "phConn", saveBase: "phConn", testBase: "phConn", enable: "phConn", sendAll: "phScan", retry: "phRetry", syncAll: "phPull", repair: "phRepair", redoAll: "phRepair", free: "phFree", reset: "phRemove" };
     async function onAct(a) {
+        if (S.acts.has(a)) return;
+        S.acts.add(a); const ph = ACT_PH[a] ? T(ACT_PH[a]) : ""; ph && (S.phase = ph); S.msg = ""; render(); markBusy(); updateProg();
+        try { await onActRun(a); }
+        finally {
+            S.acts.delete(a); S.phase === ph && (S.phase = ""); render();
+            try { const sec = document.getElementById("mkmedSec"); sec && !S.acts.has(a) && sec.querySelectorAll('[data-mkact="' + a + '"].mkmed-busy').forEach(b => { b.disabled = !1; b.classList.remove("mkmed-busy"); const sp = b.querySelector(".mkmed-spin"); sp && sp.remove(); }); } catch { }
+            updateProg();
+        }
+    }
+    async function onActRun(a) {
         try {
+            if (a === "forget") { if (confirm(T("confirmForget"))) forgetBad(); return; }
+            if (a === "repair" || a === "redoAll") { if (!await ensureUnlocked(!0)) return; if (a === "redoAll" && !confirm(T("confirmRedo"))) return; await repairBad(a === "redoAll"); return; }
+            if (a === "changeBot") {
+                if (!await ensureUnlocked(!0)) return; if (!await chbotModal()) return;
+                const m = T("botChanged").replace("{b}", (readCfg() || {}).b || ""); msg(m); toast(m, 4000); render();
+                await refreshLocal(!1); const n = await scanUploads(!0); n || pushManifest(); return;
+            }
             if (a === "chpw") { if (await chpwModal()) { msg(T("pwChanged")); toast(T("pwChanged"), 3000); render(); S.token && S.key && (scheduleScan(), pump()); } return; }
             if (a === "saveBase" || a === "testBase" || a === "resetBase") {
                 const inp = document.getElementById("mkmedBase"); try { document.activeElement && document.activeElement.blur(); } catch { }
@@ -60400,23 +60609,30 @@ var CONT = [["AS", "آسیا", "Asia"], ["EU", "اروپا", "Europe"], ["NA", "
                 const pw = (document.getElementById("mkmedPw") || {}).value || ""; msg("…");
                 try { const cb = document.getElementById("mkmedRem"); S.remember = !cb || cb.checked; lsSet("mkmed_remember_v1", S.remember ? "1" : "0"); await unlockWith(pw); await activate(); }
                 catch (e) { msg(e.wrong ? T("errWrong") : e.message); }
-            } else if (a === "sendAll") { if (!await ensureUnlocked(!0)) return; await scanUploads(!0); }
-            else if (a === "retry") { if (!await ensureUnlocked(!0)) return; const ids = Object.keys(S.fail); ids.forEach(id => { delete S.fail[id]; if (S.localKeys.has(id) && !known(id)) enqueueUp(id, !0); else if (known(id) && !S.localKeys.has(id)) ensure(id); }); persist(); S.paused = !1; pump(); render(); }
+            } else if (a === "sendAll") { if (!await ensureUnlocked(!0)) return; if (!isOn()) await activate(); S.paused = !1; const n = await scanUploads(!0), fa0 = lang() === "fa", m = fa0 ? (n ? n + " فایل در صف ارسال قرار گرفت" : "همه‌ی فایل‌ها قبلاً با کلید فعلی ارسال شده‌اند") : (n ? n + " file(s) queued for upload" : "Everything is already uploaded with the current key"); msg(m); toast(m, 3000); }
+            else if (a === "retry") { if (!await ensureUnlocked(!0)) return; hasBad() && await repairBad(!1, !0); const ids = Object.keys(S.fail); ids.forEach(id => { delete S.fail[id]; if (S.localKeys.has(id) && !known(id)) enqueueUp(id, !0); else if (known(id) && !S.localKeys.has(id)) ensure(id); }); persist(); S.paused = !1; { const m = ids.length ? T("rtN").replace("{n}", ids.length) : T("rtNone"); msg(m); toast(m, 2500); } pump(); render(); }
             else if (a === "syncAll") {
-                if (!await ensureUnlocked(!0)) return; await refreshLocal(!0); S.paused = !1; await pullManifest();
-                const ids = Object.keys(S.remote).concat(Object.keys(S.recs)).filter((id, i, ar) => ar.indexOf(id) === i && !S.localKeys.has(id)).sort((a, b) => idTime(b) - idTime(a)); let room = capBytes() - S.usage, capped = !1;
-                for (const id of ids) { const r = known(id); if (!r) continue; if (room - r.size < 0) { capped = !0; break; } room -= r.size; ensure(id); }
-                capped && toast(T("capFull"), 3000); render();
+                if (!await ensureUnlocked(!0)) return; await refreshLocal(!0); S.paused = !1; await pullManifest(); hasBad() && await repairBad(!1, !0);
+                const ids = Object.keys(S.remote).concat(Object.keys(S.recs)).filter((id, i, ar) => ar.indexOf(id) === i && !S.localKeys.has(id)).sort((a, b) => idTime(b) - idTime(a)); let room = capBytes() - S.usage, capped = !1, q = 0;
+                for (const id of ids) { const r = known(id); if (!r) continue; if (room - r.size < 0) { capped = !0; break; } room -= r.size; ensure(id); q++; }
+                capped && toast(T("capFull"), 3000); { const m = (q ? T("syQ").replace("{n}", q) : T("syNone")) + (capped ? " — " + T("capFull") : ""); msg(m); } render();
             }
-            else if (a === "free") { if (!confirm(T("confirmFree"))) return; await refreshLocal(!0); const n = await freeSpace(!0); toast(T("done") + ": " + n, 2500); }
-            else if (a === "disable") { lsSet(LS_ON, "0"); stopObservers(); S.qUp.length = S.qDown.length = 0; applyBudget(); render(); }
-            else if (a === "enable") { await activate(); }
-            else if (a === "lock") lockNow();
-            else if (a === "remove") {
-                if (!confirm(T("confirmRm"))) return; stopObservers();
-                if (cloudOk()) { const dev = devId(); await serial(async () => { const ks = await cloudGetKeys() || []; await cloudRemoveItems(ks.filter(k => k === CFG_KEY || k === IDX_PFX + dev || k.indexOf(CH_PFX + dev + "_") === 0)); }); }
-                [LS_CFG, LS_ON, LS_SEEN, "mkmed_base_v1"].forEach(k => lsSet(k, null)); S.token = S.key = null; applyBudget(); render();
+            else if (a === "free") { if (!confirm(T("confirmFree"))) return; await refreshLocal(!0); const n = await freeSpace(!0); toast(T("done") + ": " + n, 2500); msg("✅ " + T("done") + ": " + n); }
+            else if (a === "disable") { lsSet(LS_ON, "0"); stopObservers(); S.qUp.length = S.qDown.length = 0; applyBudget(); msg(T("offDone")); render(); }
+            else if (a === "enable") { await activate(); msg(T("onDone")); }
+            else if (a === "lock") { lockNow(); S.msg = T("lockDone"); render(); }
+            else if (a === "reset") {
+                if (String(prompt(T("confirmReset"), "") || "").trim().toLowerCase() !== "ok") return;
+                if (cloudOk()) {
+                    let ok = !0;
+                    try { const r = await serial(async () => { const ks = await cloudGetKeys() || []; return await cloudRemoveItems(ks.filter(k => k === CFG_KEY || k.indexOf(IDX_PFX) === 0 || /^mk_med_[a-z0-9]+_\d+$/.test(k))); }); r === !1 && (ok = !1); } catch { ok = !1; }
+                    if (!ok) { msg(T("errReset")); return; }
+                }
+                stopObservers(); [LS_CFG, LS_ON, LS_SEEN, "mkmed_base_v1", "mkmed_remember_v1"].forEach(k => lsSet(k, null));
+                resetState(); KEYDB.del(); S.token = S.key = null; S.base = DEF_BASE; S.remember = !0; S.draft = {}; S.warn = ""; S.netErr = !1; S.advOpen = !1; S.manifestFull = !1; S.manifestDirty = !1; S.mkeys = 0; S.paused = !1;
+                applyBudget(); msg(T("resetDone")); render();
             }
+
         } catch (e) { msg(e && e.message || String(e)); try { render(); } catch { } }
     }
     document.addEventListener("click", e => {
@@ -60461,8 +60677,8 @@ var CONT = [["AS", "آسیا", "Asia"], ["EU", "اروپا", "Europe"], ["NA", "
     }
     async function loadState() {
         if (S.loaded) return; const st = await kvGet(KV_STATE); S.loaded = !0;
-        if (st && typeof st === "object") { S.recs = st.recs || {}; S.remote = st.remote || {}; S.fail = st.fail || {}; S.la = st.la || {}; }
-        await refreshLocal(!1);
+        if (st && typeof st === "object") { S.recs = st.recs || {}; S.remote = st.remote || {}; S.fail = st.fail || {}; S.bad = st.bad || {}; S.kidSaved = st.kid || ""; S.la = st.la || {}; }
+        await refreshLocal(!1); S.key && await syncKid();
     }
     async function init() {
         const st = document.createElement("style"); st.id = "mkmedCss"; st.textContent = CSS; document.head.appendChild(st);
