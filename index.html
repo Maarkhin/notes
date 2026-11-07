@@ -31316,6 +31316,19 @@ window.__mkFixAutoSyncBusy = !0, window.__mkFixProgHold = !0; const btn = docume
                 return;
             }
             const pulledN = (pull.added || 0) + (pull.updated || 0) + (pull.retired || 0);
+            // Media backup (when on): sync it too BEFORE the notes backup, the same way the notes were pulled first
+            let mediaMsg = "";
+            try {
+                if (window.MKMED && window.MKMED.fullSync) {
+                    const mr = await window.MKMED.fullSync(t => HX().mkBackupBarShow(t));
+                    if (mr && mr.locked) mediaMsg = fa ? " ⚠️ بکاپ رسانه قفل است؛ در تب رسانه رمز را وارد کن." : " ⚠️ Media backup is locked; enter the password in the Media tab.";
+                    else if (mr && mr.failed) mediaMsg = fa ? " ⚠️ همگام‌سازی رسانه ناموفق بود." : " ⚠️ Media sync failed.";
+                    else if (mr && !mr.skipped) {
+                        const nn = x => fa ? String(x).replace(/\d/g, d => "۰۱۲۳۴۵۶۷۸۹"[d]) : String(x);
+                        mediaMsg = fa ? ` 📦 رسانه: ${nn(mr.up)} آپلود، ${nn(mr.down)} دریافت${mr.err ? `، ${nn(mr.err)} خطا` : ""}${mr.capped ? " (سقف حجم پر شد)" : ""}${mr.timedOut ? " (بقیه در پس‌زمینه ادامه دارد)" : ""}.` : ` 📦 Media: ${mr.up} uploaded, ${mr.down} downloaded${mr.err ? `, ${mr.err} error(s)` : ""}${mr.capped ? " (size limit reached)" : ""}${mr.timedOut ? " (the rest continues in the background)" : ""}.`;
+                    }
+                }
+            } catch (e) { console.warn("media sync in fix auto sync", e); }
             HX().mkBackupBarShow(fa ? "⏳ در حال بکاپ‌گیری از همه‌ی یادداشت‌ها..." : "⏳ Backing up all notes now...");
             let res = await HX().cloudBackupNow("auto");
             // One automatic retry for a transient Cloud failure (write-failed / unavailable /
@@ -31326,6 +31339,7 @@ window.__mkFixAutoSyncBusy = !0, window.__mkFixProgHold = !0; const btn = docume
             }
             else
                 ok = !1, msg = (fa ? "سینک فعال شد اما بکاپ ناموفق بود — " : "Sync is on but the backup failed — ") + mu_cloudReasonMsg(res.reason, fa);
+            msg += mediaMsg;
         }
         catch (e) {
             console.warn("Fix auto sync failed", e), ok = !1, msg = fa ? "⚠️ فعال‌سازی ناموفق بود. دوباره امتحان کن." : "⚠️ Could not enable auto sync. Please try again.";
@@ -59825,10 +59839,14 @@ var CONT = [["AS", "آسیا", "Asia"], ["EU", "اروپا", "Europe"], ["NA", "
     if (window.MKMED) return;
     const BUDGET = typeof CLOUD_MEDIA_KEY_BUDGET === "number" ? CLOUD_MEDIA_KEY_BUDGET : 120;
     const LS_CFG = "mkmed_cfg_v1", LS_ON = "mkmed_on_v1", LS_SEEN = "mkmed_seen_v1", LS_DEV = "mkmed_dev_v1", KV_STATE = "mkmed_state_v1";
+    const LS_AUTO = "mkmed_auto_v1", LS_CLEAN = "mkmed_autoclean_v1";   // auto sync switch (default ON; only "0" turns it off)
     const CFG_KEY = "mk_media_cfg", IDX_PFX = "mk_medx_", CH_PFX = "mk_med_";
     const TG_BASE = "https://api.telegram.org", DEF_BASE = "https://weathered-moon-f167.madebymarkhin.workers.dev", MAX_UP = 49 * 1024 * 1024, MAX_DL = 20 * 1024 * 1024, OVH = 32;
     const SEND_GAP = 3100, MAGIC = [77, 75, 77, 49], AAD_BLOB = new TextEncoder().encode("mkmed-blob"), AAD_TOK = new TextEncoder().encode("mkmed-token"), AAD_DK = new TextEncoder().encode("mkmed-datakey");
     const enc = new TextEncoder(), dec = new TextDecoder();
+    /* Default media bot, kept out of the UI: people only choose a password. TOK_OBF is the token scrambled by MKMED.encodeToken("<token>")
+       (obfuscation only - anyone who reads this file or watches the network can still recover it). Empty = no default bot, the old flow. */
+    const TOK_OBF = "Dxk_FD96ai58MwVMJypRPSaGrJ3P1_CZ5aDv_NWl0L_I3tddWgRKSHY1YGIFXA", DEF_BOT_USER = "intosavebot", TOK_KEY = "mkmed-def-bot-v1";
 
     /* ---------- i18n (fa/en), merged into the app's i18n object ---------- */
     const D = {
@@ -59915,6 +59933,42 @@ var CONT = [["AS", "آسیا", "Asia"], ["EU", "اروپا", "Europe"], ["NA", "
         confirmReset: "⚠️ Full reset of the media backup\n\nThe settings (token, password, key) and the media list of ALL devices are removed from Cloud and from this device, and everything starts from scratch: you enter a bot token and set a new password again.\n\nPhotos/voice notes on the devices and files inside the bot chat are not deleted, but files uploaded with the old key can no longer be opened and must be uploaded again. On your other devices you must enter the new password too.\n\nType ok to confirm:",
         resetDone: "✅ Reset; enter a bot token and a new password", errReset: "Could not remove the settings from Cloud; check your connection and try again."
     });
+    Object.assign(D.fa, {
+        autoT: "همگام‌سازی خودکار",
+        autoH: "وقتی روشن است، عکس و ویس‌های جدید خودکار آپلود می‌شوند و رسانه‌هایی که یادداشت‌هایت به آن‌ها اشاره دارد ولی روی این دستگاه نیستند (مثلاً از دستگاه دیگر) خودکار دریافت می‌شوند؛ دیگر لازم نیست «ارسال همه» یا «همگام‌سازی همه» را بزنی. دریافت خودکار از سقف حجم محلی رد نمی‌شود و هیچ فایلی را پاک نمی‌کند. خطاهای شبکه بعد از ۱۰ دقیقه خودکار دوباره امتحان می‌شوند. فقط روی همین دستگاه اثر دارد.",
+        autoOnT: "✅ همگام‌سازی خودکار رسانه روشن شد", autoOffT: "⏸ همگام‌سازی خودکار رسانه خاموش شد"
+    });
+    Object.assign(D.en, {
+        autoT: "Auto sync",
+        autoH: "When on, new photos/voice notes are uploaded automatically, and media that your notes use but that are not on this device (e.g. from another device) are downloaded automatically; you no longer have to tap “Upload all” or “Sync all”. Auto download never goes over the local size limit and never deletes any file. Network errors are retried automatically after 10 minutes. Affects this device only.",
+        autoOnT: "✅ Media auto sync is on", autoOffT: "⏸ Media auto sync is off"
+    });
+    Object.assign(D.fa, {
+        orphans: "بی‌صاحب (هیچ یادداشتی به آن‌ها اشاره نمی‌کند)", purge: "حذف رسانه‌های بی‌صاحب", phPurge: "حذف رسانه‌های بی‌صاحب…",
+        orphNone: "رسانه‌ی بی‌صاحبی پیدا نشد", orphDone: "✅ {n} رسانه‌ی بی‌صاحب از فهرست و این دستگاه حذف شد",
+        orphUnsafe: "الان حذف امن نیست: یادداشتی بارگذاری نشده، یا یادداشت قفل‌شده/گاوصندوقی هست که نمی‌شود از رویش فهمید به کدام رسانه اشاره دارد. بعداً دوباره امتحان کن.",
+        orphConfirm: "{n} رسانه هست که هیچ یادداشتی به آن اشاره نمی‌کند. از فهرست رسانه (شمارنده‌ها و Cloud) و از حافظه‌ی این دستگاه حذف شوند؟\n\nفایل رمزشده‌ی داخل چت ربات پاک نمی‌شود، ولی از برنامه دیگر قابل بازیابی نیست. اگر یادداشت‌های دستگاه دیگر هنوز اینجا همگام نشده‌اند، اول «فعال‌سازی / تعمیر سینک خودکار» را بزن.",
+        cleanT: "حذف خودکار رسانه‌های بی‌صاحب",
+        cleanH: "وقتی روشن است، رسانه‌ای که بیش از ۳۰ دقیقه هیچ یادداشتی به آن اشاره نکند خودکار از فهرست و حافظه‌ی این دستگاه حذف می‌شود. پیش‌فرض خاموش است. فایل داخل چت ربات پاک نمی‌شود. اگر یادداشت قفل‌شده‌ی قدیمی یا گاوصندوق قدیمی داشته باشی، حذف انجام نمی‌شود.",
+        cleanAsk: "حذف خودکار روشن شود؟ رسانه‌ای که بیش از ۳۰ دقیقه به هیچ یادداشتی وصل نباشد خودکار حذف می‌شود.", cleanOnT: "✅ حذف خودکار رسانه‌های بی‌صاحب روشن شد", cleanOffT: "⏸ حذف خودکار رسانه‌های بی‌صاحب خاموش شد"
+    });
+    Object.assign(D.en, {
+        orphans: "Orphans (no note points at them)", purge: "Remove orphan media", phPurge: "Removing orphan media…",
+        orphNone: "No orphan media found", orphDone: "✅ {n} orphan media removed from the list and this device",
+        orphUnsafe: "Removing is not safe right now: a note is not loaded, or a locked/vault note exists whose media cannot be read. Try again later.",
+        orphConfirm: "{n} media file(s) are not pointed at by any note. Remove them from the media list (counters and Cloud) and from this device?\n\nThe encrypted file in the bot chat is not deleted, but the app can no longer restore it. If notes from your other device are not synced here yet, tap “Enable / fix auto sync” first.",
+        cleanT: "Auto-remove orphan media",
+        cleanH: "When on, media that no note has pointed at for more than 30 minutes is removed automatically from the list and this device. Off by default. The file in the bot chat is not deleted. Nothing is removed if you have an old-style locked note or an old vault.",
+        cleanAsk: "Turn on auto-remove? Media that no note points at for over 30 minutes will be removed automatically.", cleanOnT: "✅ Auto-remove of orphan media is on", cleanOffT: "⏸ Auto-remove of orphan media is off"
+    });
+    Object.assign(D.fa, {
+        defSteps: "ربات رسانه آماده است. ۱) یک بار در تلگرام به ربات /start بده. ۲) فقط یک رمز (حداقل ۶ نویسه؛ روی همه‌ی دستگاه‌ها همان) بگذار.",
+        useOwn: "استفاده از ربات خودم (توکن دلخواه)", useDef: "برگشت به ربات پیش‌فرض", botIsDef: "ربات فعلی: پیش‌فرض", botIsCustom: "ربات فعلی: سفارشی"
+    });
+    Object.assign(D.en, {
+        defSteps: "The media bot is ready. 1) Send /start to the bot once in Telegram. 2) Just choose a password (at least 6 characters, the same on every device).",
+        useOwn: "Use my own bot (custom token)", useDef: "Back to the default bot", botIsDef: "Current bot: default", botIsCustom: "Current bot: custom"
+    });
     try { for (const l of ["fa", "en"]) if (typeof i18n === "object" && i18n[l]) for (const k in D[l]) i18n[l]["mkmed_" + k] = D[l][k]; } catch { }
     const lang = () => { try { return currentLang === "en" ? "en" : "fa"; } catch { return "fa"; } };
     const T = k => { const l = lang(); try { const v = i18n[l]["mkmed_" + k]; if (v) return v; } catch { } return D[l][k] || k; };
@@ -59926,10 +59980,14 @@ var CONT = [["AS", "آسیا", "Asia"], ["EU", "اروپا", "Europe"], ["NA", "
     const b64u = u8 => { let s = ""; for (let i = 0; i < u8.length; i += 8192) s += String.fromCharCode.apply(null, u8.subarray(i, i + 8192)); return btoa(s).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, ""); };
     const unb64u = s => { s = String(s).replace(/-/g, "+").replace(/_/g, "/"); while (s.length % 4) s += "="; const b = atob(s), u = new Uint8Array(b.length); for (let i = 0; i < b.length; i++) u[i] = b.charCodeAt(i); return u; };
 
+    const tokMask = i => TOK_KEY.charCodeAt(i % TOK_KEY.length) ^ ((i * 7 + 13) & 255);
+    const encodeToken = t => { t = String(t || "").trim().split("").reverse().join(""); const u = new Uint8Array(t.length); for (let i = 0; i < t.length; i++) u[i] = t.charCodeAt(i) ^ tokMask(i); return b64u(u); };
+    const defTok = () => { try { if (!TOK_OBF) return ""; const u = unb64u(TOK_OBF); let o = ""; for (let i = 0; i < u.length; i++) o += String.fromCharCode(u[i] ^ tokMask(i)); return o.split("").reverse().join(""); } catch { return ""; } };
     /* ---------- storage helpers ---------- */
     const lsGet = k => { try { return localStorage.getItem(k); } catch { return null; } };
     const lsSet = (k, v) => { try { v == null ? localStorage.removeItem(k) : localStorage.setItem(k, v); return !0; } catch { return !1; } };
     const isOn = () => lsGet(LS_ON) === "1";
+    const autoOn = () => lsGet(LS_AUTO) !== "0", cleanOn = () => lsGet(LS_CLEAN) === "1";   // auto clean of orphan media: default OFF
     const readCfg = () => { try { return JSON.parse(lsGet(LS_CFG) || "null"); } catch { return null; } };
     const kvGet = async k => { try { const v = await MU_IDB.getItem(k); if (v != null) return v; } catch { } try { return JSON.parse(lsGet(k) || "null"); } catch { return null; } };
     const kvSet = async (k, v) => { let ok = !1; try { ok = await MU_IDB.setItem(k, v); } catch { } if (!ok) try { lsSet(k, JSON.stringify(v)); } catch { } };
@@ -59944,8 +60002,9 @@ var CONT = [["AS", "آسیا", "Asia"], ["EU", "اروپا", "Europe"], ["NA", "
         qUp: [], qDown: [], waiters: new Map(), nextSend: 0, manifestDirty: !1, manifestFull: !1, mkeys: 0, lastInfo: "", paused: !1, visible: new Set(), loaded: !1, msg: "", warn: "", draft: {}, devCache: {}, lastPull: 0, remember: lsGet("mkmed_remember_v1") !== "0",
         acts: new Set(), pg: { active: !1, done: 0, ok: 0, err: 0, t0: 0, fin: 0 }, stage: "", phase: "", curKind: ""
     };
+    S.gone = {}; S.orph = {};   // gone: ids purged as orphans (hidden from other devices' lists); orph: first time an id was seen with no note pointing at it
     let persistT = 0;
-    const persist = () => { clearTimeout(persistT); persistT = setTimeout(() => { kvSet(KV_STATE, { v: 1, recs: S.recs, remote: S.remote, fail: S.fail, bad: S.bad, kid: S.kid || S.kidSaved || "", la: S.la }); }, 1200); };
+    const persist = () => { clearTimeout(persistT); persistT = setTimeout(() => { kvSet(KV_STATE, { v: 1, recs: S.recs, remote: S.remote, fail: S.fail, bad: S.bad, kid: S.kid || S.kidSaved || "", la: S.la, gone: S.gone, orph: S.orph }); }, 1200); };
     const known = id => { const a = S.recs[id], b = S.remote[id], k = S.kid; if (!k) return a || b || null; const oa = a && (!a.k || a.k === k), ob = b && (!b.k || b.k === k); if (oa && ob) return (a.k === k || b.k !== k) ? a : b; return oa ? a : ob ? b : null; };
     const isBad = r => !!(r && S.bad && S.bad[r.fid]);
     const findBySha = sha => { const ok = r => r && r.sha === sha && r.fid && !isBad(r) && (!S.kid || r.k === S.kid); for (const k in S.recs) if (ok(S.recs[k])) return S.recs[k]; for (const k in S.remote) if (ok(S.remote[k])) return S.remote[k]; return null; };
@@ -60217,7 +60276,7 @@ var CONT = [["AS", "آسیا", "Asia"], ["EU", "اروپا", "Europe"], ["NA", "
                 S.mkeys = keys.filter(k => /^mk_med_[a-z0-9]+_\d+$/.test(k) || k.indexOf(IDX_PFX) === 0).length;
                 if (!devs.length) return !0;
                 const idxVals = await cloudGetItems(idxKeys); if (!idxVals) return !1;
-                let complete = !0; const fresh = {}, BT = bts();
+                let complete = !0; const fresh = {}, BT = bts(), refsG = Object.keys(S.gone).length ? refsAll() : null; for (const gid in S.gone) Date.now() - S.gone[gid] > 5184e6 && delete S.gone[gid];
                 for (const d of devs) {
                     let ix = null; try { ix = JSON.parse(idxVals[IDX_PFX + d] || "null"); } catch { } if (!ix || !(ix.n >= 0)) { complete = !1; continue; }
                     let list; const c = S.devCache[d];
@@ -60229,12 +60288,13 @@ var CONT = [["AS", "آسیا", "Asia"], ["EU", "اروپا", "Europe"], ["NA", "
                         for (const nm of names) { const v = vals[nm]; if (!v) { full = !1; continue; } v.split("\n").forEach(ln => { const r = ln && decRec(ln); r && list.push(r); }); }
                         full ? (S.devCache[d] = { h: ix.h, n: ix.n, list }) : (complete = !1);
                     }
-                    list.forEach(r => { if (isBad(r) || BT && (r.ts || 0) < BT) return; const kk = S.kid; if (kk && r.k && r.k !== kk) return; const c = fresh[r.id]; if (!c || (kk && r.k === kk && c.k !== kk)) fresh[r.id] = r; });
+                    list.forEach(r => { if (isBad(r) || BT && (r.ts || 0) < BT) return; if (S.gone[r.id]) { if (refsG && refsG.has(r.id)) delete S.gone[r.id]; else return; } const kk = S.kid; if (kk && r.k && r.k !== kk) return; const c = fresh[r.id]; if (!c || (kk && r.k === kk && c.k !== kk)) fresh[r.id] = r; });
                 }
                 const next = complete ? fresh : Object.assign({}, S.remote, fresh); for (const id in next) isBad(next[id]) && delete next[id];
                 const grew = Object.keys(next).some(id => !S.remote[id]);
                 S.remote = next; for (const id in next) { const o = S.recs[id]; o && S.kid && o.k !== S.kid && next[id].k === S.kid && delete S.recs[id]; } persist();
                 grew && scheduleScan(!0);
+                autoSyncSoon();
                 return !0;
             });
         } catch { return !1; }
@@ -60305,7 +60365,7 @@ var CONT = [["AS", "آسیا", "Asia"], ["EU", "اروپا", "Europe"], ["NA", "
         S.kidSaved = S.kid; purgeStale(); persist();
     }
     function resetState() {
-        S.recs = {}; S.remote = {}; S.fail = {}; S.bad = {}; S.la = {}; S.devCache = {}; S.qUp = []; S.qDown = []; S.kid = ""; S.kidSaved = "";
+        S.recs = {}; S.remote = {}; S.fail = {}; S.bad = {}; S.la = {}; S.gone = {}; S.orph = {}; S.devCache = {}; S.qUp = []; S.qDown = []; S.kid = ""; S.kidSaved = "";
         kvSet(KV_STATE, { v: 1, recs: {}, remote: {}, fail: {}, bad: {}, kid: "", la: {} });
     }
 
@@ -60511,7 +60571,108 @@ var CONT = [["AS", "آسیا", "Asia"], ["EU", "اروپا", "Europe"], ["NA", "
         dropped && (S.manifestDirty = !0, persist());
         (S.qUp.length) && pump(); render(); return n;
     }
-    function startUploadScan() { if (upT) return; upT = setInterval(() => { S.token && S.key && !S.paused && scanUploads(!1); }, 25000); setTimeout(() => S.token && S.key && scanUploads(!1), 1500); }
+    /* ---------- ORPHANS: media no note points at ---------- */
+    function refsAll() { const ids = referenced(); try { document.querySelectorAll("[data-mu-media],[data-mkmed]").forEach(el => { const a = el.getAttribute("data-mu-media"), b = (el.getAttribute("data-mkmed") || "").split(":")[1]; a && ids.add(a); b && ids.add(b); }); } catch { } return ids; }
+    // same safety rules the app's own media GC uses, plus: some notes must be loaded
+    function orphanSafe() {
+        try {
+            if (typeof mu_idbAvailable !== "undefined" && !mu_idbAvailable) return !1;
+            if (!categories || !categories.length) return !1;
+            if (categories.some(n => isNoteLocked(n) && !(n.encrypted && n.encrypted.mm))) return !1;
+            if (lsGet("mk_vault_has_items") === "1" && lsGet("mk_vault_media_v2") !== "1") return !1;
+            return !0;
+        } catch { return !1; }
+    }
+    function orphanIds() { const refs = refsAll(); return [...new Set([...Object.keys(S.recs), ...Object.keys(S.remote), ...S.localKeys])].filter(id => !refs.has(id)); }
+    let purgeBusy = 0;
+    // auto = true: only ids that stayed orphan for 30+ minutes (undo / a note still arriving from another device get a grace period)
+    async function purgeOrphans(auto) {
+        if (purgeBusy) return { n: 0 }; if (!isOn() || !S.loaded || !orphanSafe()) return { unsafe: !0, n: 0 };
+        purgeBusy = 1;
+        try {
+            await refreshLocal(!1);
+            const now = Date.now(), refs = refsAll(); let list = orphanIds();
+            for (const id in S.orph) refs.has(id) && delete S.orph[id];
+            if (auto) { const keep = []; for (const id of list) { if (!S.orph[id]) S.orph[id] = now; else if (now - S.orph[id] >= 18e5) keep.push(id); } list = keep; }
+            if (!list.length) { persist(); return { n: 0 }; }
+            const drop = new Set(list);
+            for (const id of list) {
+                delete S.recs[id]; delete S.remote[id]; delete S.fail[id]; delete S.la[id]; delete S.orph[id]; S.gone[id] = now;
+                const w = S.waiters.get(id); w && (S.waiters.delete(id), w.list.forEach(f => f(!1)));
+                if (S.localKeys.has(id) && S.cur !== id) await evict(id).catch(() => { });
+            }
+            S.qUp = S.qUp.filter(x => !drop.has(x)); S.qDown = S.qDown.filter(x => !drop.has(x));
+            S.manifestDirty = !0; persist(); auto ? pushManifest() : await pushManifest(!0); render();
+            return { n: list.length };
+        } catch (e) { console.warn("mkmed purgeOrphans", e); return { n: 0, failed: !0 }; } finally { purgeBusy = 0; }
+    }
+    /* ---------- AUTO SYNC: the work of "Upload all" + "Sync all" done by itself while the feature is on ----------
+       up   : new local photos/voice notes are queued by scanUploads(false) (runs from the timer below); failed uploads are retried after 10 min
+       down : media referenced by this device's notes that are not stored here are queued for download (newest first), only while they fit the
+              local size limit (nothing is evicted), skipping files that are too big / broken; failed downloads retry after 10 min */
+    let autoRun = 0, autoSoonT = 0;
+    function autoSyncSoon(ms) { clearTimeout(autoSoonT); autoSoonT = setTimeout(autoSync, ms || 1500); }
+    async function autoSync() {
+        if (autoRun || !isOn() || !autoOn() || !S.token || !S.key || S.paused || !S.loaded) return 0;
+        autoRun = 1;
+        try {
+            await refreshLocal(!S.usageKnown);
+            const refs = referenced(), now = Date.now(), badF = f => !!f && (f.k === "big" || BAD_RX.test(f.m || ""));
+            let room = capBytes() - S.usage, q = 0, up = 0;
+            for (const id of Object.keys(S.fail)) {
+                const f = S.fail[id]; if (!f || badF(f) || f.k === "cap" || now - (f.ts || 0) < 6e5) continue;
+                if (S.localKeys.has(id) && !known(id) && refs.has(id)) { delete S.fail[id]; enqueueUp(id); up++; }
+            }
+            {
+                const ids = [...new Set([...Object.keys(S.remote), ...Object.keys(S.recs)])].filter(id => refs.has(id) && !S.localKeys.has(id) && !S.waiters.has(id)).sort((a, b) => idTime(b) - idTime(a));
+                for (const id of ids) {
+                    const r = known(id); if (!r) continue; const f = S.fail[id];
+                    if (f) { if (badF(f)) continue; if (f.k !== "cap" && now - (f.ts || 0) < 6e5) continue; delete S.fail[id]; }
+                    if ((r.size || 0) + OVH > MAX_DL) { fail(id, T("big"), "big"); continue; }
+                    if (room - (r.size || 0) < 0) break;
+                    room -= r.size || 0; ensure(id); q++;
+                }
+            }
+            persist(); up && pump(); q + up && render();
+            return q + up;
+        } catch (e) { console.warn("mkmed autoSync", e); return 0; } finally { autoRun = 0; }
+    }
+/* One-shot full media sync, used by "Enable / fix auto sync": reads the media list from Cloud, retries old failures, queues
+       uploads of this device's new media and downloads of media the notes use but this device lacks, then waits (max 5 min) for the
+       queue to finish. Respects the local size limit and the "since" point chosen at setup. Never throws. */
+    async function fullSync(report) {
+        report = typeof report === "function" ? report : () => { };
+        const fa = lang() === "fa", L = (x, y) => fa ? x : y, n = x => fa ? String(x).replace(/\d/g, d => "۰۱۲۳۴۵۶۷۸۹"[d]) : String(x);
+        try {
+            if (!isOn() || !readCfg()) return { skipped: !0 };
+            if (!S.token || !S.key) return { locked: !0 };
+            S.paused = !1; await loadState();
+            report(L("⏳ رسانه‌ها: خواندن فهرست از Cloud…", "⏳ Media: reading the list from Cloud…"));
+            await refreshLocal(!0); await pullManifest(); hasBad() && await repairBad(!1, !0);
+            for (const id of Object.keys(S.fail)) { const f = S.fail[id]; f && f.k !== "big" && delete S.fail[id]; }
+            const refs = referenced();
+            report(L("⏳ رسانه‌ها: بررسی فایل‌های این دستگاه…", "⏳ Media: checking this device's files…"));
+            const nUp = await scanUploads(!1);
+            let room = capBytes() - S.usage, nDown = 0, capped = !1;
+            const ids = [...new Set([...Object.keys(S.remote), ...Object.keys(S.recs)])].filter(id => refs.has(id) && !S.localKeys.has(id) && !S.waiters.has(id)).sort((a, b) => idTime(b) - idTime(a));
+            for (const id of ids) {
+                const r = known(id); if (!r || S.fail[id] && S.fail[id].k === "big") continue;
+                if ((r.size || 0) + OVH > MAX_DL) { fail(id, T("big"), "big"); continue; }
+                if (room - (r.size || 0) < 0) { capped = !0; break; }
+                room -= r.size || 0; ensure(id); nDown++;
+            }
+            const t0 = Date.now(); let timedOut = !1;
+            while (S.busy || (S.qUp.length || S.qDown.length) && !S.paused) {
+                if (!S.busy) pump();
+                if (Date.now() - t0 > 3e5) { timedOut = !0; break; }
+                const left = S.qUp.length + S.qDown.length + (S.cur ? 1 : 0);
+                report(L(`⏳ رسانه‌ها: ${n(left)} فایل باقی مانده…`, `⏳ Media: ${left} file(s) left…`));
+                await sleep(500);
+            }
+            return { up: nUp, down: nDown, capped, timedOut, err: Object.keys(S.fail).length };
+        } catch (e) { console.warn("mkmed fullSync", e); return { failed: !0 }; }
+    }
+        function startUploadScan() { if (upT) return; upT = setInterval(() => { if (S.token && S.key && !S.paused) { autoOn() && (scanUploads(!1), autoSync()); cleanOn() && purgeOrphans(!0); } }, 25000); setTimeout(() => { if (S.token && S.key && !S.paused && autoOn()) { scanUploads(!1); autoSyncSoon(500); } }, 1500); }
 
     /* ---------- UI ---------- */
     const CSS = `.mkmed-sec{margin:0 0 12px;padding:10px 12px;border:1px solid rgba(128,128,128,.35);border-radius:12px;line-height:1.8;font-size:13px}
@@ -60580,7 +60741,14 @@ var CONT = [["AS", "آسیا", "Asia"], ["EU", "اروپا", "Europe"], ["NA", "
         const open = S.netErr || S.advOpen || S.base !== DEF_BASE, val = S.draft.mkmedBase !== void 0 ? S.draft.mkmedBase : (S.base !== DEF_BASE ? S.base : "");
         return `<details id="mkmedAdv" ${open ? "open" : ""}><summary class="mkmed-note" style="cursor:pointer;font-weight:bold">⚙️ ${T("adv")}</summary><div class="mkmed-note" style="margin:4px 0">${T("advHint")}</div><div class="mkmed-note" dir="ltr" style="margin:2px 0">${T("advNow")}: <b>${esc(S.base)}</b></div><input class="mkmed-in" id="mkmedBase" inputmode="url" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="${DEF_BASE}" value="${esc(val)}"><div class="mkmed-row"><button type="button" class="btn-main" data-mkact="saveBase">${T("advSave")}</button><button type="button" class="btn-main" data-mkact="testBase">${T("advTest")}</button><button type="button" class="btn-main" data-mkact="resetBase">${T("advReset")}</button></div></details>`;
     }
+    const useDef = () => !!defTok() && !S.draft.useCustom;
+    function botSetupHtml() {
+        const d = !!defTok();
+        if (useDef()) return `<div class="mkmed-note" style="margin:0 0 6px">${T("defSteps")}</div>${DEF_BOT_USER ? `<div class="mkmed-row"><a class="btn-main" style="text-decoration:none;text-align:center" href="https://t.me/${esc(DEF_BOT_USER)}" target="_blank" rel="noopener">🤖 @${esc(DEF_BOT_USER)}</a></div>` : ""}<div class="mkmed-row"><button type="button" class="btn-main" data-mkact="useOwnBot">🤖 ${T("useOwn")}</button></div>`;
+        return `<div class="mkmed-note" style="margin:0 0 6px">${T("steps")}</div><input class="mkmed-in" id="mkmedTok" placeholder="${T("token")}" autocomplete="off" value="${esc(S.draft.mkmedTok || "")}">${d ? `<div class="mkmed-row"><button type="button" class="btn-main" data-mkact="useDefBot">↩️ ${T("useDef")}</button></div>` : ""}`;
+    }
     const pgBox = () => pgHtml();
+    function autoHtml() { return `<label class="mkmed-note" style="display:flex;align-items:center;gap:8px;margin:0 0 4px;font-weight:700"><input type="checkbox" id="mkmedAuto" ${autoOn() ? "checked" : ""}> <span>🤖 ${T("autoT")}</span></label><div class="mkmed-note" style="margin:0 0 8px">${T("autoH")}</div><label class="mkmed-note" style="display:flex;align-items:center;gap:8px;margin:0 0 4px;font-weight:700"><input type="checkbox" id="mkmedClean" ${cleanOn() ? "checked" : ""}> <span>🧹 ${T("cleanT")}</span></label><div class="mkmed-note" style="margin:0 0 8px">${T("cleanH")}</div>`; }
     function bodyHtml() {
         const cfg = readCfg(), on = isOn(), unl = !!(S.token && S.key), st = stats(), fa = lang() === "fa";
         const chip = !cfg ? `<span class="mkmed-chip">${T("notset")}</span>` : on ? `<span class="mkmed-chip ${unl ? "ok" : "warn"}">${T("on")} · ${unl ? T("unlocked") : T("locked")}</span>` : `<span class="mkmed-chip">${T("off")}</span>`;
@@ -60589,7 +60757,7 @@ var CONT = [["AS", "آسیا", "Asia"], ["EU", "اروپا", "Europe"], ["NA", "
         S.warn && (h += `<div class="mkmed-note" style="margin:4px 0">⚠️ ${esc(S.warn)}</div>`);
         h += `</div>`;
         if (!cfg) {
-            h += `<div class="mkmed-card"><div class="mkmed-note" style="margin:0 0 6px">${T("steps")}</div><input class="mkmed-in" id="mkmedTok" placeholder="${T("token")}" autocomplete="off" value="${esc(S.draft.mkmedTok || "")}"><input class="mkmed-in" id="mkmedPw" type="password" placeholder="${T("pw")}" autocomplete="new-password" autocapitalize="off" autocorrect="off" spellcheck="false" value="${esc(S.draft.mkmedPw || "")}"><input class="mkmed-in" id="mkmedPw2" type="password" placeholder="${T("pw2")}" autocomplete="new-password" autocapitalize="off" autocorrect="off" spellcheck="false" value="${esc(S.draft.mkmedPw2 || "")}">${advHtml()}<div class="mkmed-note">${T("pwnote")}</div><div class="mkmed-btns"><button type="button" class="btn-main mkmed-b pri" data-mkact="setup">${T("connect")}</button></div><div class="mkmed-msg" id="mkmedMsg">${esc(S.msg || "")}</div></div>`;
+            h += `<div class="mkmed-card"><div class="mkmed-note" style="margin:0 0 6px">${botSetupHtml()}<input class="mkmed-in" id="mkmedPw" type="password" placeholder="${T("pw")}" autocomplete="new-password" autocapitalize="off" autocorrect="off" spellcheck="false" value="${esc(S.draft.mkmedPw || "")}"><input class="mkmed-in" id="mkmedPw2" type="password" placeholder="${T("pw2")}" autocomplete="new-password" autocapitalize="off" autocorrect="off" spellcheck="false" value="${esc(S.draft.mkmedPw2 || "")}">${advHtml()}<div class="mkmed-note">${T("pwnote")}</div><div class="mkmed-btns"><button type="button" class="btn-main mkmed-b pri" data-mkact="setup">${T("connect")}</button></div><div class="mkmed-msg" id="mkmedMsg">${esc(S.msg || "")}</div></div>`;
             return h;
         }
         if (!unl) h += `<div class="mkmed-card"><div class="mkmed-ct">🔒 ${T("unlock")}</div><div class="mkmed-note" style="margin:0 0 6px">${T("cloudcfg")}</div><input class="mkmed-in" id="mkmedPw" type="password" placeholder="${T("pw")}" autocomplete="current-password" autocapitalize="off" autocorrect="off" spellcheck="false" value="${esc(S.draft.mkmedPw || "")}"><label class="mkmed-note" style="display:block;margin:4px 0"><input type="checkbox" id="mkmedRem" ${S.remember ? "checked" : ""}> ${T("remember")}</label><div class="mkmed-btns"><button type="button" class="btn-main mkmed-b pri" data-mkact="unlock">${T("unlock")}</button></div><div class="mkmed-msg" id="mkmedMsg">${esc(S.msg || "")}</div></div>`;
@@ -60602,6 +60770,7 @@ var CONT = [["AS", "آسیا", "Asia"], ["EU", "اروپا", "Europe"], ["NA", "
         let st1 = `<div class="mkmed-grid">${tile(st.total, T("total"))}${tile(st.up, T("uploaded"), "good")}${tile(st.uns, T("unsynced"), st.uns ? "warn" : "")}${tile(st.here, T("here"))}${tile(st.err, T("errors"), st.err ? "bad" : "")}</div>`;
         st1 += `<div class="mkmed-note">${T("usage")}: ${S.usageKnown ? nf(mb(S.usage)) : "…"} / ${nf(mb(cap))} MB</div><div class="mkmed-bar"><i style="width:${pct}%"></i></div><div class="mkmed-note" id="mkmedEst"></div><div class="mkmed-note">${T("keys")}: ${nf(S.mkeys)} / ${nf(BUDGET)}</div>`;
         S.manifestFull && (st1 += `<div class="mkmed-note">${T("fullM")}</div>`);
+        { const on0 = orphanSafe() ? orphanIds().length : 0; on0 && (st1 += `<div class="mkmed-note">🧹 ${T("orphans")}: ${nf(on0)}</div>`); }
         h += card("📊", L("وضعیت", "Status"), st1);
         // 2) problems (only when there are any)
         { const fe = Object.keys(S.fail).sort((x, y) => (S.fail[y].ts || 0) - (S.fail[x].ts || 0)).slice(0, 4); let pb = "";
@@ -60611,11 +60780,12 @@ var CONT = [["AS", "آسیا", "Asia"], ["EU", "اروپا", "Europe"], ["NA", "
         // 3) progress + message
         h += pgBox() + `<div class="mkmed-msg"${unl ? ' id="mkmedMsg"' : ""}>${unl ? esc(S.msg || "") : ""}</div>`;
         // 4) main actions
-        h += card("🔄", L("همگام‌سازی", "Sync"), `<div class="mkmed-btns">${btn("sendAll", "⬆️ " + T("sendAll"), "pri")}${btn("syncAll", "⬇️ " + T("syncAll"))}${btn("retry", "🔁 " + T("retry"))}</div>`);
+        const orphN = orphanSafe() ? orphanIds().length : 0;
+        h += card("🔄", L("همگام‌سازی", "Sync"), autoHtml() + `<div class="mkmed-btns">${btn("sendAll", "⬆️ " + T("sendAll"), "pri")}${btn("syncAll", "⬇️ " + T("syncAll"))}${btn("retry", "🔁 " + T("retry"))}${btn("purge", "🧹 " + T("purge") + (orphN ? " (" + nf(orphN) + ")" : ""))}</div>`);
         // 5) settings
         h += card("⚙️", L("تنظیمات", "Settings"), `<div class="mkmed-capr"><label class="mkmed-note" for="mkmedCap">${T("cap")}</label><input class="mkmed-in" id="mkmedCap" type="number" min="20" step="10" value="${Math.round(cap / 1048576)}"></div><div class="mkmed-btns">${btn(on ? "disable" : "enable", on ? "⏸ " + T("disable") : "▶️ " + T("enable"))}${unl ? btn("test", "📡 " + T("test")) : ""}${unl ? btn("lock", "🔒 " + T("lock")) : ""}${btn("free", "🧹 " + T("free"))}</div>` + advHtml());
         // 6) security
-        h += card("🔐", L("امنیت و ربات", "Security & bot"), `<div class="mkmed-btns">${btn("chpw", "🔑 " + T("chpw"))}${btn("changeBot", "🤖 " + T("chbot"))}</div>`);
+        h += card("🔐", L("امنیت و ربات", "Security & bot"), `${defTok() ? `<div class="mkmed-note" style="margin:0 0 6px">🤖 ${S.token === defTok() ? T("botIsDef") : T("botIsCustom")}</div>` : ""}<div class="mkmed-btns">${btn("chpw", "🔑 " + T("chpw"))}${btn("changeBot", "🤖 " + T("chbot"))}${defTok() && S.token && S.token !== defTok() ? btn("defaultBot", "↩️ " + T("useDef")) : ""}</div>`);
         // 7) danger zone
         h += card("🧨", L("منطقهٔ خطر", "Danger zone"), `<div class="mkmed-btns">${btn("redoAll", T("redoAll"), "dng")}${btn("reset", T("reset"), "dng")}</div>`, "dng");
         return h;
@@ -60633,7 +60803,7 @@ var CONT = [["AS", "آسیا", "Asia"], ["EU", "اروپا", "Europe"], ["NA", "
         refreshLocal(!0).then(render); pullManifest().then(render);
     }
     const msg = (t, bad) => { S.msg = t || ""; const m = document.getElementById("mkmedMsg"); m && (m.textContent = t || ""); };
-    const ACT_PH = { setup: "phConn", unlock: "phConn", test: "phConn", saveBase: "phConn", testBase: "phConn", enable: "phConn", sendAll: "phScan", retry: "phRetry", syncAll: "phPull", repair: "phRepair", redoAll: "phRepair", free: "phFree", reset: "phRemove" };
+    const ACT_PH = { setup: "phConn", unlock: "phConn", test: "phConn", saveBase: "phConn", testBase: "phConn", enable: "phConn", sendAll: "phScan", retry: "phRetry", purge: "phPurge", defaultBot: "phConn", syncAll: "phPull", repair: "phRepair", redoAll: "phRepair", free: "phFree", reset: "phRemove" };
     async function onAct(a) {
         if (S.acts.has(a)) return;
         if (a === "unlock") { try { const pe = document.getElementById("mkmedPw"), ce = document.getElementById("mkmedRem"); pe && (S.draft.mkmedPw = pe.value); ce && (S.remember = !!ce.checked); } catch { } }
@@ -60649,6 +60819,14 @@ var CONT = [["AS", "آسیا", "Asia"], ["EU", "اروپا", "Europe"], ["NA", "
         try {
             if (a === "forget") { if (confirm(T("confirmForget"))) forgetBad(); return; }
             if (a === "repair" || a === "redoAll") { if (!await ensureUnlocked(!0)) return; if (a === "redoAll" && !confirm(T("confirmRedo"))) return; await repairBad(a === "redoAll"); return; }
+            if (a === "useOwnBot") { S.draft.useCustom = !0; render(); return; }
+            if (a === "useDefBot") { S.draft.useCustom = !1; S.draft.mkmedTok = ""; render(); return; }
+            if (a === "defaultBot") {
+                if (!defTok()) return; if (!await ensureUnlocked(!0)) return; if (!confirm(T("chbotNote"))) return;
+                try { await changeBot(defTok()); } catch (er) { msg(er && er.message || String(er)); return; }
+                const m = T("botChanged").replace("{b}", (readCfg() || {}).b || ""); msg(m); toast(m, 4000); render();
+                await refreshLocal(!1); const n = await scanUploads(!0); n || pushManifest(); return;
+            }
             if (a === "changeBot") {
                 if (!await ensureUnlocked(!0)) return; if (!await chbotModal()) return;
                 const m = T("botChanged").replace("{b}", (readCfg() || {}).b || ""); msg(m); toast(m, 4000); render();
@@ -60669,7 +60847,7 @@ var CONT = [["AS", "آسیا", "Asia"], ["EU", "اروپا", "Europe"], ["NA", "
             }
             if (a === "setup") {
                 const g = i => (document.getElementById(i) || {}).value || "";
-                msg("…"); const me = await setupWith(g("mkmedTok"), g("mkmedPw"), g("mkmedPw2"), g("mkmedBase"));
+                msg("…"); const me = await setupWith(useDef() ? defTok() : g("mkmedTok"), g("mkmedPw"), g("mkmedPw2"), g("mkmedBase"));
                 msg(""); toast(T("okConnected") + " @" + (me && me.username || ""), 3000); render();
                 try { await refreshLocal(!1); const refs0 = referenced(); let nOld = 0; for (const id of S.localKeys) refs0.has(id) && !known(id) && nOld++; if (nOld && confirm(T("uploadOld").replace("{n}", nOld))) { const c0 = readCfg(); c0 && (c0.since = 0, lsSet(LS_CFG, JSON.stringify(c0))); await scanUploads(!0); } } catch { }
             } else if (a === "test") {
@@ -60681,10 +60859,17 @@ var CONT = [["AS", "آسیا", "Asia"], ["EU", "اروپا", "Europe"], ["NA", "
                 try { lsSet("mkmed_remember_v1", S.remember ? "1" : "0"); await unlockWith(pw); delete S.draft.mkmedPw; await activate(); }
                 catch (e) { msg(e.wrong ? T("errWrong") : e.message); }
             } else if (a === "sendAll") { if (!await ensureUnlocked(!0)) return; if (!isOn()) await activate(); S.paused = !1; const n = await scanUploads(!0), fa0 = lang() === "fa", m = fa0 ? (n ? n + " فایل در صف ارسال قرار گرفت" : "همه‌ی فایل‌ها قبلاً با کلید فعلی ارسال شده‌اند") : (n ? n + " file(s) queued for upload" : "Everything is already uploaded with the current key"); msg(m); toast(m, 3000); }
+            else if (a === "purge") {
+                if (!orphanSafe()) { msg(T("orphUnsafe")); return; }
+                if (!await ensureUnlocked(!0)) return; await refreshLocal(!1); const n0 = orphanIds().length;
+                if (!n0) { msg(T("orphNone")); return; }
+                if (!confirm(T("orphConfirm").replace("{n}", n0))) return;
+                const r = await purgeOrphans(!1), m = r.unsafe ? T("orphUnsafe") : r.n ? T("orphDone").replace("{n}", r.n) : T("orphNone"); msg(m); toast(m, 3500);
+            }
             else if (a === "retry") { if (!await ensureUnlocked(!0)) return; hasBad() && await repairBad(!1, !0); const ids = Object.keys(S.fail), refsR = referenced(); ids.forEach(id => { delete S.fail[id]; if (S.localKeys.has(id) && !known(id)) { refsR.has(id) && enqueueUp(id, !0); } else if (known(id) && !S.localKeys.has(id)) ensure(id); }); persist(); S.paused = !1; { const m = ids.length ? T("rtN").replace("{n}", ids.length) : T("rtNone"); msg(m); toast(m, 2500); } pump(); render(); }
             else if (a === "syncAll") {
                 if (!await ensureUnlocked(!0)) return; await refreshLocal(!0); S.paused = !1; await pullManifest(); hasBad() && await repairBad(!1, !0);
-                const ids = Object.keys(S.remote).concat(Object.keys(S.recs)).filter((id, i, ar) => ar.indexOf(id) === i && !S.localKeys.has(id)).sort((a, b) => idTime(b) - idTime(a)); let room = capBytes() - S.usage, capped = !1, q = 0;
+                const refsS = referenced(), ids = Object.keys(S.remote).concat(Object.keys(S.recs)).filter((id, i, ar) => ar.indexOf(id) === i && !S.localKeys.has(id) && refsS.has(id)).sort((a, b) => idTime(b) - idTime(a)); let room = capBytes() - S.usage, capped = !1, q = 0;
                 for (const id of ids) { const r = known(id); if (!r) continue; if (room - r.size < 0) { capped = !0; break; } room -= r.size; ensure(id); q++; }
                 capped && toast(T("capFull"), 3000); { const m = (q ? T("syQ").replace("{n}", q) : T("syNone")) + (capped ? " — " + T("capFull") : ""); msg(m); } render();
             }
@@ -60720,6 +60905,9 @@ var CONT = [["AS", "آسیا", "Asia"], ["EU", "اروپا", "Europe"], ["NA", "
     new MutationObserver(() => { document.getElementById("cloudPaneMedia") && !document.getElementById("mkmedSec") && injectSection(); }).observe(document.body, { childList: !0, subtree: !0 });
     document.addEventListener("visibilitychange", () => { if (!isOn()) return; if (document.visibilityState === "visible") { pullManifest(); readCloudCfg(); } else S.manifestDirty && !S.manifestFull && pushManifest(); });
     window.addEventListener("pagehide", () => { isOn() && S.manifestDirty && !S.manifestFull && pushManifest(); });
+    document.addEventListener("change", e => { if (e.target && e.target.id === "mkmedClean") { let v = !!e.target.checked; if (v && !confirm(T("cleanAsk"))) { v = !1; e.target.checked = !1; } lsSet(LS_CLEAN, v ? "1" : "0"); try { e.target.blur(); } catch { } toast(T(v ? "cleanOnT" : "cleanOffT"), 2500); render(); } });
+    document.addEventListener("change", e => { if (e.target && e.target.id === "mkmedAuto") { const v = !!e.target.checked; lsSet(LS_AUTO, v ? "1" : "0"); try { e.target.blur(); } catch { } toast(T(v ? "autoOnT" : "autoOffT"), 2500); render(); if (v && isOn() && S.token && S.key && !S.paused) { scanUploads(!1); autoSyncSoon(300); } } });
+    window.addEventListener("mk-cloud-merged", () => { isOn() && autoSyncSoon(2500); });
     document.addEventListener("change", e => { if (e.target && e.target.id === "mkmedRem") { S.remember = !!e.target.checked; lsSet("mkmed_remember_v1", S.remember ? "1" : "0"); } });
 
     /* ---------- activation / polling / retry ---------- */
@@ -60730,7 +60918,7 @@ var CONT = [["AS", "آسیا", "Asia"], ["EU", "اروپا", "Europe"], ["NA", "
         await loadState(); await pullManifest(); startObservers(); S.manifestDirty = !0; pushManifest(!0); kickBackup(); scheduleScan(!0); render();
     }
     function maybePull() { if (!cloudOk() || pullBusy || Date.now() - S.lastPull < 12000) return; pullBusy = pullManifest().finally(() => { pullBusy = null; }); }
-    function startPoll() { if (pollT) return; pollT = setInterval(() => { document.visibilityState === "visible" && isOn() && Date.now() - S.lastPull > 40000 && pullManifest(); }, 20000); }
+    function startPoll() { if (pollT) return; pollT = setInterval(() => { (document.visibilityState === "visible" || autoOn()) && isOn() && Date.now() - S.lastPull > 40000 && pullManifest(); }, 20000); }
     function stopPoll() { clearInterval(pollT); pollT = 0; }
     function pushRetry() { clearTimeout(retryT); retryT = setTimeout(async () => { if (S.manifestDirty && !S.manifestFull && !await pushManifest()) pushRetry(); }, 30000); }
     // Placeholders on a device that has the account's media config but has not been unlocked yet: show "tap and enter password"
@@ -60748,7 +60936,7 @@ var CONT = [["AS", "آسیا", "Asia"], ["EU", "اروپا", "Europe"], ["NA", "
     }
     async function loadState() {
         if (S.loaded) return; const st = await kvGet(KV_STATE); S.loaded = !0;
-        if (st && typeof st === "object") { S.recs = st.recs || {}; S.remote = st.remote || {}; S.fail = st.fail || {}; S.bad = st.bad || {}; S.kidSaved = st.kid || ""; S.la = st.la || {}; }
+        if (st && typeof st === "object") { S.recs = st.recs || {}; S.remote = st.remote || {}; S.fail = st.fail || {}; S.bad = st.bad || {}; S.kidSaved = st.kid || ""; S.la = st.la || {}; S.gone = st.gone || {}; S.orph = st.orph || {}; }
         await refreshLocal(!1); S.key && await syncKid();
     }
     async function init() {
@@ -60760,7 +60948,7 @@ var CONT = [["AS", "آسیا", "Asia"], ["EU", "اروپا", "Europe"], ["NA", "
         if (isOn()) { await loadState(); await keyRestore(); startObservers(); await pullManifest(); S.manifestDirty = !0; pushManifest(); render(); scheduleScan(!0); pump(); }
         else markDormant();
     }
-    window.MKMED = { S, activate, api, setupWith, unlockWith, pushManifest, pullManifest, ensure, scanUploads, freeSpace, refreshLocal, known, onAct, render, patchModel, afterDownload, referenced, loadState, startObservers, readCloudCfg, sha256, _cfg: readCfg };
+    window.MKMED = { S, encodeToken, autoSync, fullSync, purgeOrphans, orphanIds, activate, api, setupWith, unlockWith, pushManifest, pullManifest, ensure, scanUploads, freeSpace, refreshLocal, known, onAct, render, patchModel, afterDownload, referenced, loadState, startObservers, readCloudCfg, sha256, _cfg: readCfg };
     init();
 })();
 
