@@ -61607,7 +61607,7 @@ var CONT = [["AS", "آسیا", "Asia"], ["EU", "اروپا", "Europe"], ["NA", "
        ===================================================================================== */
     var CSS = '\
 :host{all:initial}*{box-sizing:border-box;font-family:inherit}\
-.wrap{position:fixed;inset:0;z-index:2147483600;background:rgba(8,8,16,.72);backdrop-filter:blur(6px);display:flex;align-items:stretch;justify-content:center;direction:rtl;color:#ecebf7;font:14px/1.6 system-ui,-apple-system,"Segoe UI",Tahoma,sans-serif}\
+.wrap{position:fixed;inset:0;z-index:2147483600;background:rgba(8,8,16,.72);display:flex;align-items:stretch;justify-content:center;direction:rtl;color:#ecebf7;font:14px/1.6 system-ui,-apple-system,"Segoe UI",Tahoma,sans-serif}\
 .panel{width:min(760px,100%);height:100%;background:linear-gradient(180deg,#171527,#0f0e1b);display:flex;flex-direction:column;box-shadow:0 0 60px rgba(0,0,0,.5);padding:var(--mu-sat,env(safe-area-inset-top,0px)) var(--mu-sar,env(safe-area-inset-right,0px)) 0 var(--mu-sal,env(safe-area-inset-left,0px))}\
 .top{display:flex;align-items:center;gap:10px;padding:14px 16px;border-bottom:1px solid #2a2744}\
 .top h2{margin:0;font-size:16px;flex:1;font-weight:700;letter-spacing:.2px}\
@@ -61638,8 +61638,25 @@ details summary{cursor:pointer;color:#cfc9ff;font-weight:600;padding:4px 0}\
 .dlg{position:absolute;inset:0;background:rgba(5,5,12,.7);display:flex;align-items:center;justify-content:center;padding:16px;z-index:5}\
 .dlg>div{background:#1c1a33;border:1px solid #3a3670;border-radius:16px;padding:16px;width:min(420px,100%)}\
 .dlg h3{margin:0 0 8px}.dlg p{margin:0 0 12px;color:#c9c5ee;white-space:pre-wrap}.shake{animation:sh .35s}@keyframes sh{20%{transform:translateX(-8px)}40%{transform:translateX(8px)}60%{transform:translateX(-5px)}80%{transform:translateX(5px)}}\
-.empty{text-align:center;color:#8f8bb5;padding:22px 0}.chk{display:flex;gap:8px;align-items:center;font-size:13px;margin:6px 0 12px;color:#d6d2fa}.chk input{width:auto}\
+.empty{text-align:center;color:#8f8bb5;padding:22px 0}.chk{display:flex;gap:8px;align-items:center;font-size:13px;margin:6px 0 12px;color:#d6d2fa}.chk input{width:18px;height:18px;padding:0;margin:0;flex:none;accent-color:#7c5cff;border-radius:4px}\
 .pk{background:#14132a;border:1px solid #2a2750;border-radius:10px;padding:8px 10px;margin:0 0 6px;justify-content:space-between}.pk .t{flex:1;word-break:break-word}.pk small{color:#9a96c0;white-space:nowrap}\
+.wrap{overscroll-behavior:contain;color-scheme:dark;-webkit-tap-highlight-color:transparent;-webkit-text-size-adjust:100%}\
+@media(min-width:761px){.wrap{-webkit-backdrop-filter:blur(6px);backdrop-filter:blur(6px)}}\
+*{scrollbar-width:thin;scrollbar-color:#3a3670 transparent}\
+.panel{position:relative;min-height:0;overflow:hidden}\
+.top{flex:none;min-width:0}.top h2{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}\
+.chip{flex:0 1 auto;max-width:38%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.bk,.x{flex:none}\
+.body{min-height:0;overflow-x:hidden;overscroll-behavior:contain;scrollbar-gutter:stable}.body.pkv{padding-bottom:0}\
+.stat b,.stat span,.item .meta span{overflow-wrap:anywhere}\
+#msg,#apiMsg{min-height:30px}\
+.dock{position:absolute;z-index:4;left:calc(12px + var(--mu-sal,env(safe-area-inset-left,0px)));right:calc(12px + var(--mu-sar,env(safe-area-inset-right,0px)));bottom:calc(12px + var(--mu-sab,env(safe-area-inset-bottom,0px)));pointer-events:none}.dock:empty{display:none}\
+.dock .prog{margin:0;pointer-events:auto;background:#1c1a33;box-shadow:0 12px 32px rgba(0,0,0,.6)}.dock .ok,.dock .err{margin-top:0}.dock .prog .btn{margin-top:10px}\
+.panel.hasdock .body{padding-bottom:calc(var(--dockh,0px) + 28px + var(--mu-sab,env(safe-area-inset-bottom,0px)))}\
+.stkb{position:sticky;bottom:0;z-index:3;margin:0 -16px;border-radius:14px 14px 0 0;border-width:1px 0 0;padding:14px 16px calc(14px + var(--mu-sab,env(safe-area-inset-bottom,0px)));box-shadow:0 -16px 24px -8px rgba(10,9,24,.95)}\
+.dlg{align-items:flex-start;overflow:auto;overscroll-behavior:contain}.dlg>div{margin:auto}\
+@media(pointer:coarse){input,select,textarea{font-size:16px}}\
+@keyframes mkFade{from{opacity:0}to{opacity:1}}.wrap.in{animation:mkFade .16s ease-out}\
+@media(prefers-reduced-motion:reduce){.wrap.in,.shake{animation:none}.bar i{transition:none}}\
 ';
 
     function ensureRoot() {
@@ -61654,9 +61671,13 @@ details summary{cursor:pointer;color:#cfc9ff;font-weight:600;padding:4px 0}\
         sh.addEventListener("change", function (e) { var t = e.target, P = S.pick; if (t && P && t.dataset && t.dataset.nid != null) { t.checked ? P.sel.add(t.dataset.nid) : P.sel.delete(t.dataset.nid); var bx = $("#pkSum"); bx && (bx.innerHTML = pickSumHtml()); } });
         sh.addEventListener("input", function (e) { var t = e.target, P = S.pick; if (t && P && t.id === "pq") { P.q = t.value; var l = $("#pkList"); l && (l.innerHTML = pickRows()); } });
         sh.addEventListener("keydown", function (e) { if (e.key === "Enter" && S.view === "auth" && e.target && /^(u|p|p2)$/.test(e.target.id)) doAuth(); });
+        /* nothing behind the panel may scroll or bounce while it is open (iOS ignores overscroll-behavior on non-scrollers) */
+        var canScroll = function (t) { var n = t && t.closest && t.closest(".body, .dlg"); return !!n && n.scrollHeight > n.clientHeight + 1; };
+        sh.addEventListener("touchmove", function (e) { if (!canScroll(e.target)) e.preventDefault(); }, { passive: false });
+        sh.addEventListener("wheel", function (e) { if (!canScroll(e.target)) e.preventDefault(); }, { passive: false });
     }
     var $ = function (sel) { return S.root.querySelector(sel); };
-    function mount(html) { ensureRoot(); S.host.style.pointerEvents = html ? "auto" : "none"; $("#mount").innerHTML = html || ""; try { setTimeout(function () { window.muBackNav && window.muBackNav.sync(); }, 0); } catch (e) { } }
+    function mount(html) { ensureRoot(); if (!html) { S.lastView = null; S.dockH = 0; } S.host.style.pointerEvents = html ? "auto" : "none"; $("#mount").innerHTML = html || ""; try { setTimeout(function () { window.muBackNav && window.muBackNav.sync(); }, 0); } catch (e) { } }
     window.__mkSvBack = function () {
         if (!S.open || !S.root) return false;
         var gn = S.root.querySelector("#gn"); if (gn) { gn.click(); return true; }
@@ -61664,8 +61685,12 @@ details summary{cursor:pointer;color:#cfc9ff;font-weight:600;padding:4px 0}\
         A.back(); return true;
     };
 
-    function shell(inner) {
-        return '<div class="wrap" id="wrap"><div class="panel"><div class="top"><button class="bk" data-a="back" aria-label="بازگشت">→ بازگشت</button><h2>🗄️ پنل بکاپ خصوصی</h2>' + (S.user && S.view === "main" ? '<span class="chip">👤 ' + esc(S.user) + '</span>' : '') + '<button class="x" data-a="close" aria-label="بستن">×</button></div><div class="body" id="body">' + inner + '</div></div></div>';
+    function topInner() {
+        return '<button class="bk" data-a="back" aria-label="بازگشت">→ بازگشت</button><h2>🗄️ پنل بکاپ خصوصی</h2>' + (S.user && S.view === "main" ? '<span class="chip">👤 ' + esc(S.user) + '</span>' : '') + '<button class="x" data-a="close" aria-label="بستن">×</button>';
+    }
+    /* the shell (backdrop + panel + header + progress dock) is built ONCE; render() only swaps what is inside #body */
+    function shell(inner, anim) {
+        return '<div class="wrap' + (anim ? ' in' : '') + '" id="wrap" data-shell="1"><div class="panel" id="panel"><div class="top">' + topInner() + '</div><div class="body' + (S.view === "pick" ? " pkv" : "") + '" id="body">' + inner + '</div><div class="dock" id="progBox"></div></div></div>';
     }
     function authView() {
         var reg = S.tab === "register";
@@ -61701,6 +61726,8 @@ details summary{cursor:pointer;color:#cfc9ff;font-weight:600;padding:4px 0}\
         return h + '</div>';
     }
     function listHtml() {
+        if (!S.loaded) return '<div class="empty">در حال دریافت بکاپ‌ها…</div>';
+        if (S.loadErr && !S.items.length) return '<div class="empty">دریافت بکاپ‌ها انجام نشد؛ اینترنت را بررسی کن و دکمهٔ ↻ را بزن.</div>';
         var a = sortedItems();
         if (!a.length) return '<div class="empty">' + (S.items.length ? "نتیجه‌ای پیدا نشد." : "هنوز بکاپی نداری. اولین بکاپ را بساز.") + '</div>';
         return a.map(itemHtml).join("");
@@ -61727,11 +61754,11 @@ details summary{cursor:pointer;color:#cfc9ff;font-weight:600;padding:4px 0}\
     function pickView() {
         var P = S.pick, info = P.target ? S.items.filter(function (x) { return x.id === P.target; })[0] : null;
         if (!P.notes) return '<div class="card"><div class="empty">در حال خواندن یادداشت‌ها…</div></div>';
-        return '<div id="progBox"></div><div class="card"><h3>' + (info ? "➕ افزودن یادداشت به «" + esc(info.name) + "»" : "🗂 بکاپ جدید — انتخاب یادداشت‌ها") + '</h3>' +
+        return '<div class="card"><h3>' + (info ? "➕ افزودن یادداشت به «" + esc(info.name) + "»" : "🗂 بکاپ جدید — انتخاب یادداشت‌ها") + '</h3>' +
             (info ? "" : '<label>نام</label><input class="fa" id="bn" maxlength="120" value="' + esc(P.name) + '"><label>توضیح (اختیاری)</label><textarea id="bt" rows="2" maxlength="600"></textarea>') +
             '<div class="row" style="margin-top:10px"><input class="fa grow" id="pq" placeholder="جستجوی یادداشت…" value="' + esc(P.q) + '"></div>' +
             '<div class="row" style="margin:10px 0"><button class="btn sm" data-a="pkAll">انتخاب همه (نتایج فعلی)</button><button class="btn sm" data-a="pkNone">هیچ‌کدام</button></div><div id="pkList">' + pickRows() + '</div></div>' +
-            '<div class="card" style="position:sticky;bottom:0"><div id="pkSum">' + pickSumHtml() + '</div><div class="row" style="margin-top:10px"><button class="btn pri grow" data-a="pkGo">شروع بکاپ</button><button class="btn" data-a="pkBack">بازگشت</button></div></div>';
+            '<div class="card stkb"><div id="pkSum">' + pickSumHtml() + '</div><div class="row" style="margin-top:10px"><button class="btn pri grow" data-a="pkGo">شروع بکاپ</button><button class="btn" data-a="pkBack">بازگشت</button></div></div>';
     }
     async function openPick(bid, all) {
         if (S.busy) return toast("یک عملیات در حال انجام است.");
@@ -61745,36 +61772,97 @@ details summary{cursor:pointer;color:#cfc9ff;font-weight:600;padding:4px 0}\
         if (all) S.pick.notes.forEach(function (n) { S.pick.sel.add(n.id); });
         render();
     }
-    function mainView() {
+    function statsHtml() {
         var tot = S.items.reduce(function (n, x) { return n + (x.size || 0); }, 0), big = S.items.reduce(function (n, x) { return Math.max(n, x.size || 0); }, 0), last = S.items.length ? S.items[0].createdAt : 0, L = S.local;
-        var d = new Date(), def = "بکاپ " + stamp(d.getTime());
-        return '<div id="progBox"></div>' +
-            '<div class="card"><h3>📊 وضعیت</h3><div class="grid">' +
-            '<div class="stat"><b>' + fa(S.items.length) + '</b><span>تعداد بکاپ‌ها</span></div><div class="stat"><b>' + bd(fmtSize(tot)) + '</b><span>مجموع حجم (سقف کل ۳.۶GB)</span></div><div class="stat"><b>' + bd(fmtSize(big)) + '</b><span>بزرگ‌ترین بکاپ (سقف هر بکاپ ۳.۵GB)</span></div><div class="stat"><b>' + (last ? bd(esc(fmtDate(last))) : "—") + '</b><span>آخرین بکاپ</span></div>' +
-            '<div class="stat"><b>' + (L ? fa(L.notes) : "…") + '</b><span>یادداشت روی این دستگاه</span></div><div class="stat"><b>' + (L ? fa(L.media) + " · " + bd(fmtSize(L.mediaBytes)) : "…") + '</b><span>مدیا روی این دستگاه</span></div></div></div>' +
+        return '<h3>📊 وضعیت</h3><div class="grid">' +
+            '<div class="stat"><b>' + (S.loaded ? fa(S.items.length) : "…") + '</b><span>تعداد بکاپ‌ها</span></div><div class="stat"><b>' + (S.loaded ? bd(fmtSize(tot)) : "…") + '</b><span>مجموع حجم (سقف کل ۳.۶GB)</span></div><div class="stat"><b>' + (S.loaded ? bd(fmtSize(big)) : "…") + '</b><span>بزرگ‌ترین بکاپ (سقف هر بکاپ ۳.۵GB)</span></div><div class="stat"><b>' + (S.loaded ? (last ? bd(esc(fmtDate(last))) : "—") : "…") + '</b><span>آخرین بکاپ</span></div>' +
+            '<div class="stat"><b>' + (L ? fa(L.notes) : "…") + '</b><span>یادداشت روی این دستگاه</span></div><div class="stat"><b>' + (L ? fa(L.media) + " · " + bd(fmtSize(L.mediaBytes)) : "…") + '</b><span>مدیا روی این دستگاه</span></div></div>';
+    }
+    function mainView() {
+        return '<div class="card" id="stats">' + statsHtml() + '</div>' +
             '<div class="card"><h3>➕ بکاپ جدید</h3><div class="row"><button class="btn pri grow" data-a="newPick">🗂 انتخاب یادداشت‌ها</button><button class="btn grow" data-a="newAll">⚡ همهٔ یادداشت‌ها</button></div><div class="muted" style="margin-top:8px">هر یادداشت جداگانه (همراه عکس و ویس خودش) ذخیره می‌شود. سقف هر بکاپ ۳.۵ گیگابایت و سقف مجموع همهٔ بکاپ‌ها ۳.۶ گیگابایت است و پیش از شروع و هنگام افزودن هر یادداشت، حجم و فضای باقی‌مانده نشان داده می‌شود.</div></div>' +
             '<div class="card"><h3>🗂 بکاپ‌ها</h3><div class="row" style="margin-bottom:10px"><input class="fa grow" id="q" placeholder="جستجو…" value="' + esc(S.q) + '"><select id="so" style="width:auto"><option value="new"' + (S.sort === "new" ? " selected" : "") + '>جدیدترین</option><option value="old"' + (S.sort === "old" ? " selected" : "") + '>قدیمی‌ترین</option><option value="big"' + (S.sort === "big" ? " selected" : "") + '>بزرگ‌ترین</option><option value="name"' + (S.sort === "name" ? " selected" : "") + '>نام</option></select><button class="btn sm" data-a="refresh">↻</button></div><div id="list">' + listHtml() + '</div></div>' +
             '<details class="card"><summary>⚙️ حساب و تنظیمات</summary><div class="row" style="margin:10px 0"><button class="btn sm" data-a="pw">🔑 تغییر رمز</button><button class="btn sm" data-a="logoutAll">🚪 خروج از همهٔ دستگاه‌ها</button><button class="btn sm" data-a="logout">خروج از حساب</button><button class="btn sm dng" data-a="delAcc">حذف حساب و همهٔ بکاپ‌ها</button></div><label>آدرس سرور</label><input id="api" value="' + esc(apiBase()) + '"><div class="row" style="margin-top:10px"><button class="btn sm" data-a="saveApi">ذخیره</button></div><div id="apiMsg" class="muted"></div></details>';
     }
+    /* ---- keep what the user is doing while the body is rebuilt: open <details>, typed values, focus ---- */
+    function uiSnap(body) {
+        var o = { v: {}, d: [], f: null, y: body.scrollTop };
+        body.querySelectorAll("input[id],textarea[id],select[id]").forEach(function (el) { if (el.type !== "checkbox" && el.type !== "radio") o.v[el.id] = el.value; });
+        body.querySelectorAll("details").forEach(function (d) { o.d.push(d.open); });
+        var a = S.root.activeElement;
+        if (a && a.id && body.contains(a)) { o.f = { id: a.id }; try { o.f.s = a.selectionStart; o.f.e = a.selectionEnd; } catch (e) { } }
+        return o;
+    }
+    function uiRestore(body, o) {
+        Object.keys(o.v).forEach(function (id) { var el = body.querySelector("#" + id); if (el && el.value !== o.v[id]) el.value = o.v[id]; });
+        var ds = body.querySelectorAll("details"); if (ds.length === o.d.length) ds.forEach(function (d, i) { d.open = o.d[i]; });
+        body.scrollTop = o.y;
+        if (o.f) { var f = body.querySelector("#" + o.f.id); if (f) { try { f.focus({ preventScroll: true }); } catch (e) { } try { f.setSelectionRange(o.f.s, o.f.e); } catch (e) { } } }
+    }
+    function ensureLocal() {
+        if (S.local || S.localBusy || S.view !== "main") return;
+        S.localBusy = 1;
+        localStats().then(function (l) { S.local = l; }, function () { }).then(function () { S.localBusy = 0; if (S.open && S.view === "main") paintMain(true); });
+    }
     function render() {
         if (!S.open) return;
-        mount(shell(S.view === "main" ? mainView() : S.view === "pick" ? pickView() : authView())); paintProg();
-        if (S.view === "main" && !S.local) localStats().then(function (l) { S.local = l; if (S.open && S.view === "main" && !S.busy) render(); });
+        var inner = S.view === "main" ? mainView() : S.view === "pick" ? pickView() : authView();
+        var wrap = S.root && $("#wrap"), body = wrap && wrap.dataset.shell === "1" ? $("#body") : null;
+        if (!body) {
+            mount(shell(inner, !wrap));   /* first paint of the panel; if the PIN gate is on screen there is no dimming flash */
+            var tp = $(".top"); tp && (tp._h = topInner());
+        } else {
+            var same = S.lastView === S.view, snap = same ? uiSnap(body) : null;
+            if (S.lastView === "main" && S.view === "pick") (S.scr = S.scr || {}).main = body.scrollTop;
+            var top = $(".top"), th = topInner(); if (top && top._h !== th) { top._h = th; top.innerHTML = th; }
+            body.className = "body" + (S.view === "pick" ? " pkv" : "");
+            body.innerHTML = inner;
+            if (snap) uiRestore(body, snap); else body.scrollTop = (S.lastView === "pick" && S.view === "main" && S.scr && S.scr.main) || 0;
+            try { setTimeout(function () { window.muBackNav && window.muBackNav.sync(); }, 0); } catch (e) { }
+        }
+        S.lastView = S.view;
+        paintProgNow();
+        if (S.view === "main") ensureLocal();
     }
-    function paintProg() {
+    /* data changed (list / stats): patch only those two blocks - no re-mount, so scroll, focus, typed text and open sections stay put */
+    function paintMain(noLocal) {
+        if (!S.open || !S.root || S.view !== "main") return;
+        var st = $("#stats"), l = $("#list");
+        if (!st || !l) return render();
+        st.innerHTML = statsHtml(); l.innerHTML = listHtml();
+        if (!noLocal) ensureLocal();
+    }
+    /* progress / report lives in a dock that floats above the content: it never pushes the page, and it is patched in place (no rebuild while a tap is in flight) */
+    var progRaf = 0;
+    function paintProg() { if (progRaf) return; progRaf = requestAnimationFrame(function () { progRaf = 0; paintProgNow(); }); }
+    function paintProgNow() {
         var box = S.root && $("#progBox"); if (!box) return;
-        var b = S.busy, r = S.report;
-        if (!b) { box.innerHTML = r ? '<div class="prog"><div class="' + (r.err ? "err" : "ok") + '">' + esc(r.text).replace(/\n/g, "<br>") + '</div></div>' : ""; return; }
-        box.innerHTML = '<div class="prog"><div>' + esc(b.text).replace(/\n/g, "<br>") + '</div><div class="bar"><i style="width:' + Math.max(2, Math.min(100, b.pct || 0)) + '%"></i></div>' +
-            (b.used != null ? '<div class="muted">' + esc(usageLine(b.used)) + '</div><div class="bar"><i style="width:' + Math.max(1, Math.min(100, b.used / MAX * 100)) + '%;background:linear-gradient(90deg,#3ddc97,#ffb84d)"></i></div>' : '') +
-            (b.cancelable ? '<button class="btn sm dng" data-a="cancel">لغو</button>' : '') + '</div>';
+        var panel = $("#panel"), b = S.busy, r = S.report;
+        var key = b ? "b" + (b.cancelable ? "c" : "") + (b.used != null ? "u" : "") : r ? "r" + (r.err ? "e" : "o") : "";
+        if (box._k !== key) {
+            box._k = key; box._t = box._u = null;
+            box.innerHTML = !key ? "" : b
+                ? '<div class="prog"><div id="pgT"></div><div class="bar"><i id="pgB"></i></div>' + (b.used != null ? '<div class="muted" id="pgU"></div><div class="bar"><i id="pgUB" style="background:linear-gradient(90deg,#3ddc97,#ffb84d)"></i></div>' : '') + (b.cancelable ? '<button class="btn sm dng" data-a="cancel">لغو</button>' : '') + '</div>'
+                : '<div class="prog"><div id="pgT" class="' + (r.err ? "err" : "ok") + '"></div><button class="btn sm" data-a="dismiss">بستن</button></div>';
+        }
+        if (key) {
+            var th = esc(b ? b.text : r.text).replace(/\n/g, "<br>"), te = $("#pgT");
+            if (te && box._t !== th) { box._t = th; te.innerHTML = th; }
+            if (b) {
+                var pb = $("#pgB"); pb && (pb.style.width = Math.max(2, Math.min(100, b.pct || 0)) + "%");
+                if (b.used != null) { var ul = esc(usageLine(b.used)), ue = $("#pgU"); if (ue && box._u !== ul) { box._u = ul; ue.innerHTML = ul; } var ub = $("#pgUB"); ub && (ub.style.width = Math.max(1, Math.min(100, b.used / MAX * 100)) + "%"); }
+            }
+        }
+        panel && panel.classList.toggle("hasdock", !!key);
+        if (key) { var h = box.offsetHeight; if (panel && h > (S.dockH || 0)) { S.dockH = h; panel.style.setProperty("--dockh", h + "px"); } }   /* only ever grows while visible, so the page never shifts back and forth */
+        else if (S.dockH) { S.dockH = 0; panel && panel.style.removeProperty("--dockh"); }
     }
     function say(sel, text, ok) { var el = S.root && $(sel); if (el) el.innerHTML = '<div class="' + (ok ? "ok" : "err") + '">' + esc(text) + '</div>'; }
     function ask(o) {
         return new Promise(function (resolve) {
             var d = document.createElement("div"); d.className = "dlg";
             d.innerHTML = '<div><h3>' + esc(o.title) + '</h3><p>' + esc(o.text || "") + '</p>' + (o.input ? '<input id="di" ' + (o.password ? 'type="password"' : "") + ' placeholder="' + esc(o.input) + '" class="fa">' : '') + (o.check ? '<label class="chk"><input type="checkbox" id="dc" ' + (o.check.on ? "checked" : "") + '> ' + esc(o.check.label) + '</label>' : '') + '<div class="row" style="margin-top:10px"><button class="btn ' + (o.danger ? "dng" : "pri") + ' grow" id="dy">' + esc(o.ok || "تأیید") + '</button><button class="btn grow" id="dn">انصراف</button></div></div>';
-            S.root.querySelector(".wrap").appendChild(d); var inp = d.querySelector("#di"); inp && setTimeout(function () { inp.focus(); }, 30);
+            S.root.querySelector(".wrap").appendChild(d); var inp = d.querySelector("#di"); inp && setTimeout(function () { try { inp.focus({ preventScroll: true }); } catch (e) { inp.focus(); } }, 30);
             var fin = function (v) { d.remove(); resolve(v); };
             d.querySelector("#dy").onclick = function () { fin({ ok: 1, value: inp ? inp.value : "", check: d.querySelector("#dc") ? d.querySelector("#dc").checked : false }); };
             d.querySelector("#dn").onclick = function () { fin(null); };
@@ -61784,8 +61872,8 @@ details summary{cursor:pointer;color:#cfc9ff;font-weight:600;padding:4px 0}\
 
     /* ---------- actions ---------- */
     async function refresh(quiet) {
-        try { var r = await api("/backups"); S.items = r.items || []; S.info = r; if (S.open && S.view === "main") keepScroll(render); if ((r.deleting | 0) > 0 && !S.purging && !S.busy) bgPurge(); }
-        catch (e) { if (e.status === 401) return toLogin(e.message); if (!quiet) toast(e.message); throw e; }
+        try { var r = await api("/backups"); S.items = r.items || []; S.info = r; S.loaded = true; S.loadErr = false; if (S.open && S.view === "main") paintMain(); if ((r.deleting | 0) > 0 && !S.purging && !S.busy) bgPurge(); }
+        catch (e) { if (e.status === 401) return toLogin(e.message); S.loaded = true; S.loadErr = true; if (S.open && S.view === "main") paintMain(); if (!quiet) toast(e.message); throw e; }
     }
     function toLogin(msg) { s(LS_TOK, null); S.view = "auth"; S.tab = "login"; render(); msg && say("#msg", msg); }
     async function doAuth() {
@@ -61796,7 +61884,7 @@ details summary{cursor:pointer;color:#cfc9ff;font-weight:600;padding:4px 0}\
         btn.disabled = true; say("#msg", "در حال اتصال…", true);
         try {
             var r = await api(reg ? "/auth/register" : "/auth/login", { method: "POST", auth: false, body: reg ? { username: u, password: p, code: S.gate } : { username: u, password: p } });
-            s(LS_TOK, r.token); s(LS_USER, r.user); S.user = r.user; S.view = "main"; S.local = null; render(); await refresh(true);
+            s(LS_TOK, r.token); s(LS_USER, r.user); S.user = r.user; S.view = "main"; S.local = null; S.items = []; S.loaded = false; S.loadErr = false; render(); await refresh(true);
         } catch (e) { btn.disabled = false; say("#msg", e.message); }
     }
     /* smart deletion: the server only flags data as "deleting" (instant), then we ask it to purge a few MB at a time */
@@ -61866,7 +61954,8 @@ details summary{cursor:pointer;color:#cfc9ff;font-weight:600;padding:4px 0}\
         ping: async function () { A.saveApi(); try { var r = await api("/", { auth: false }); say("#apiMsg", "اتصال برقرار است ✓ (سقف هر بکاپ " + fmtSize(r.maxBackupBytes) + " · سقف کل " + fmtSize(r.maxTotalBytes || MAX_TOTAL) + ")", true); } catch (e) { say("#apiMsg", e.message); } },
         refresh: function () { refresh(false).catch(function () { }); },
         cancel: function () { S.cancel = true; S.abortXhr && S.abortXhr(); },
-        logout: function () { s(LS_TOK, null); forgetPass(); S.items = []; S.view = "auth"; S.tab = "login"; render(); },
+        dismiss: function () { S.report = null; paintProgNow(); },
+        logout: function () { s(LS_TOK, null); forgetPass(); S.items = []; S.loaded = false; S.view = "auth"; S.tab = "login"; render(); },
         upfile: function () {
             var inp = document.createElement("input"); inp.type = "file"; inp.accept = ".mksv,application/octet-stream";
             inp.onchange = function () {
@@ -61874,7 +61963,7 @@ details summary{cursor:pointer;color:#cfc9ff;font-weight:600;padding:4px 0}\
                 withBusy(async function () {
                     setProg("بررسی فایل…", 0); var sn = await parseSnapshot(f), c = sn.header.counts || {};
                     var it = await uploadBlob(f, { notes: c.notes, media: c.media, folders: c.folders, mediaBytes: c.mediaBytes }, f.name.replace(/\.mksv$/i, "") || "Imported", "فایل واردشده");
-                    await refresh(true); render(); toast("✅ فایل به عنوان بکاپ جدید ذخیره شد (" + fmtSize(it.size) + ")");
+                    await refresh(true); toast("✅ فایل به عنوان بکاپ جدید ذخیره شد (" + fmtSize(it.size) + ")");
                 });
             }; inp.click();
         },
@@ -61933,12 +62022,12 @@ details summary{cursor:pointer;color:#cfc9ff;font-weight:600;padding:4px 0}\
             var o = await ask({ title: "حذف بکاپ", text: "«" + it.name + "» (" + fmtSize(it.size) + ") برای همیشه از سرور پاک می‌شود (بکاپ‌های بزرگ تکه‌تکه و با نوار پیشرفت پاک می‌شوند؛ تا پایان کار صفحه را نبند).", danger: 1, ok: "حذف" }); if (!o) return;
             withBusy(function () { return delThenPurge(function () { return api("/backups/" + it.id, { method: "DELETE" }); }).then(function () { toast("🗑 بکاپ حذف شد."); }); });
         },
-        dl: function (it) { withBusy(async function () { var b = await downloadBlob(it); await saveFile(b, "markhin-" + stamp(it.createdAt) + ".mksv"); render(); toast("⬇️ فایل آماده شد."); }); },
+        dl: function (it) { withBusy(async function () { var b = await downloadBlob(it); await saveFile(b, "markhin-" + stamp(it.createdAt) + ".mksv"); paintMain(); toast("⬇️ فایل آماده شد."); }); },
         add: async function (it) {
             var o = await ask({ title: "افزودن به برنامه", text: "یادداشت‌های این بکاپ به یادداشت‌های فعلی اضافه می‌شوند؛ چیزی حذف یا بازنویسی نمی‌شود. یادداشتِ کاملاً یکسان دوباره اضافه نمی‌شود و اگر شناسه‌ای تکراری با محتوای متفاوت باشد، به‌صورت نسخهٔ جدید اضافه می‌شود.", ok: "افزودن" }); if (!o) return;
             withBusy(async function () {
                 var blob = await downloadBlob(it); setProg("خواندن بکاپ…", 100); var sn = await parseSnapshot(blob);
-                setProg("افزودن یادداشت‌ها و مدیاها…", 100); var r = await restoreAdd(sn); S.local = null; render();
+                setProg("افزودن یادداشت‌ها و مدیاها…", 100); var r = await restoreAdd(sn); S.local = null; paintMain();
                 toast("✅ " + fa(r.added) + " یادداشت اضافه شد" + (r.dup ? "، " + fa(r.dup) + " تکراری رد شد" : "") + (r.media ? "، " + fa(r.media) + " مدیا" : "") + (r.folders ? "، " + fa(r.folders) + " پوشه" : ""));
             });
         },
@@ -61963,12 +62052,12 @@ details summary{cursor:pointer;color:#cfc9ff;font-weight:600;padding:4px 0}\
     /* ---------- open flow ---------- */
     async function openPanel() {
         S.open = true; ensureRoot();
-        if (token() && apiBase()) { S.view = "main"; S.local = null; render(); try { await refresh(true); } catch (e) { } }
+        if (token() && apiBase()) { S.view = "main"; S.local = null; S.loaded = S.items.length > 0; S.loadErr = false; render(); try { await refresh(true); } catch (e) { } }
         else { S.view = "auth"; S.tab = "login"; render(); }
     }
     async function gatePrompt() {
-        ensureRoot(); S.open = true; mount('<div class="wrap" id="wrap" style="align-items:center"><div class="dlg" style="position:static;background:none"><div id="gbox"><h3>🔐</h3><input id="gi" type="password" autocomplete="off" placeholder="••••••" style="text-align:center"><div class="row" style="margin-top:10px"><button class="btn pri grow" id="gy">ورود</button><button class="btn grow" id="gn">بستن</button></div></div></div></div>');
-        var inp = $("#gi"), box = $("#gbox"); setTimeout(function () { inp.focus(); }, 40);
+        ensureRoot(); S.open = true; mount('<div class="wrap in" id="wrap" style="align-items:center"><div class="dlg" style="position:static;background:none"><div id="gbox"><h3>🔐</h3><input id="gi" type="password" autocomplete="off" placeholder="••••••" style="text-align:center"><div class="row" style="margin-top:10px"><button class="btn pri grow" id="gy">ورود</button><button class="btn grow" id="gn">بستن</button></div></div></div></div>');
+        var inp = $("#gi"), box = $("#gbox"); setTimeout(function () { try { inp.focus({ preventScroll: true }); } catch (e) { inp.focus(); } }, 40);
         var close = function () { S.open = false; mount(""); };
         var go = async function () {
             var v = inp.value; inp.value = "";
@@ -62003,8 +62092,8 @@ details summary{cursor:pointer;color:#cfc9ff;font-weight:600;padding:4px 0}\
     var pend = 0;
     function schedule() { if (pend) return; pend = requestAnimationFrame(function () { pend = 0; placeWord(); }); }
     function init() {
-        new MutationObserver(schedule).observe(document.body, { childList: true, subtree: true });
-        armWord(); schedule();
+        new MutationObserver(function () { placeWord(); }).observe(document.body, { childList: true, subtree: true });
+        armWord(); placeWord();
     }
     if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", init); else init();
 })();
