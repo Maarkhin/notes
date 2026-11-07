@@ -104,7 +104,7 @@
     function section(fa) {
         var items = !list.length ? '<div class="mkerr-none" dir="auto">' + (fa ? "هیچ اروری ثبت نشده است." : "No errors recorded.") + '</div>' : list.slice().reverse().map(function (e) {
             var tm = new Date(e.t).toLocaleTimeString(fa ? "fa-IR" : "en-US");
-            return '<details class="mkerr-it" data-i="' + e.id + '"><summary><span class="mkerr-tag">' + esc(TL[e.type][fa ? 0 : 1]) + '</span><span class="mkerr-msg" dir="auto">' + esc(e.msg.slice(0, 160)) + '</span><span class="mkerr-n">' + (e.n > 1 ? "×" + e.n + " " : "") + esc(tm) + '</span></summary><pre dir="ltr">' + esc(detail(e, fa)) + '</pre></details>';
+            return '<details class="mkerr-it" data-i="' + e.id + '"><summary><span class="mkerr-tag">' + esc(TL[e.type][fa ? 0 : 1]) + '</span><span class="mkerr-msg" dir="auto">' + esc(e.msg.slice(0, 160)) + '</span><span class="mkerr-n">' + (e.n > 1 ? "×" + e.n + " " : "") + esc(tm) + '</span></summary><div class="mkerr-acts mkerr-item-acts"><button type="button" class="btn-main" onclick="mkErrLog.copy(' + e.id + ')">📋 ' + (fa ? "کپی این ارور" : "Copy this") + '</button><button type="button" class="btn-main" onclick="mkErrLog.remove(' + e.id + ')">🗑 ' + (fa ? "پاک کردن" : "Delete") + '</button></div><pre dir="ltr">' + esc(detail(e, fa)) + '</pre></details>';
         }).join("");
         return '<details class="mdb-sec' + (list.length ? "" : " mkerr-ok") + '" id="mkErrSec"><summary><span>🐞 ' + (fa ? "ارورها" : "Errors") + '</span><em>' + list.length + '</em></summary><div class="mdb-body">' + (list.length ? '<div class="mkerr-acts"><button type="button" class="btn-main" onclick="mkErrLog.copy()">📋 ' + (fa ? "کپی همه" : "Copy all") + '</button>' : "") + '</div>' + items + '</div></details>';
     }
@@ -120,9 +120,10 @@
             old ? old.replaceWith(n) : secs.appendChild(n);
         } catch (x) { }
     }
-    function copy() {
-        var fa = isFa(), txt = list.map(function (e) { return detail(e, fa); }).join("\n\n----------------------------------------\n\n"), done = function (ok) {
-            try { typeof showToast === "function" && showToast(ok ? (fa ? "ارورها کپی شد" : "Errors copied") : (fa ? "کپی نشد" : "Copy failed")); } catch (e) { }
+    function remove(id) { for (var i = 0; i < list.length; i++) if (list[i].id === id) { list.splice(i, 1); break; } refresh(); }
+    function copy(id) {
+        var fa = isFa(), src = typeof id === "number" ? list.filter(function (e) { return e.id === id; }) : list, txt = src.map(function (e) { return detail(e, fa); }).join("\n\n----------------------------------------\n\n"), done = function (ok) {
+            try { typeof showToast === "function" && showToast(ok ? (typeof id === "number" ? (fa ? "ارور کپی شد" : "Error copied") : (fa ? "ارورها کپی شد" : "Errors copied")) : (fa ? "کپی نشد" : "Copy failed")); } catch (e) { }
         };
         try { if (navigator.clipboard && window.isSecureContext) { navigator.clipboard.writeText(txt).then(function () { done(1); }, function () { fb(); }); return; } } catch (e) { }
         fb();
@@ -134,7 +135,7 @@
         for (var i = list.length - 1; i >= 0; i--) if ((list[i].type === "handled" || list[i].type === "console.error") && re.test(list[i].msg)) { list.splice(i, 1); ch = 1; }
         ch && refresh();
     }
-    window.mkErrLog = { resolve: resolve, resolveCloud: function () { resolve(CLOUD_RE); }, list: list, add: add, section: section, refresh: refresh, copy: copy, clear: function () { list.length = 0; refresh(); } };
+    window.mkErrLog = { resolve: resolve, resolveCloud: function () { resolve(CLOUD_RE); }, list: list, add: add, section: section, refresh: refresh, copy: copy, remove: remove, clear: function () { list.length = 0; refresh(); } };
     try {
         var st = document.createElement("style"); st.id = "mkErrCss";
         st.textContent = "html:not(#_a):not(#_b) body #advancedCard #mkErrSec>summary em{background:#e5484d!important;color:#fff!important;border:0!important}html:not(#_a):not(#_b) body #advancedCard #mkErrSec.mkerr-ok>summary em{background:#2ea043!important}.mkerr-none{font-size:12.5px;opacity:.75;padding:4px 2px}.mkerr-acts{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:8px}.mkerr-it{border:1px solid rgba(255,255,255,.14);border-radius:10px;margin:6px 0;background:rgba(229,72,77,.09)}.mkerr-it>summary{cursor:pointer;padding:8px 10px;font-size:12.5px;line-height:1.7;list-style:none;display:flex;gap:8px;align-items:flex-start}.mkerr-it>summary::-webkit-details-marker{display:none}.mkerr-tag{flex:none;font-size:10.5px;padding:0 8px;border-radius:999px;background:rgba(229,72,77,.45);color:#fff}.mkerr-msg{min-width:0;flex:1;overflow-wrap:anywhere}.mkerr-n{flex:none;font-size:11px;opacity:.75}.mkerr-it pre{margin:0;padding:8px 10px 10px;border-top:1px solid rgba(255,255,255,.1);font:11.5px/1.6 ui-monospace,Menlo,Consolas,monospace;white-space:pre-wrap;overflow-wrap:anywhere;text-align:left;user-select:text;-webkit-user-select:text;max-height:320px;overflow:auto}";
@@ -44374,7 +44375,7 @@ html.mu-tg-fs .mklk .mklk-col {
     function closeBtnIn(el) { for (var bs = el.querySelectorAll('button,[role="button"],a'), i = 0; i < bs.length; i++)
         if (/^\s*(✕|×|✖|x|close|cancel|بستن|انصراف|لغو)\s*$/i.test(bs[i].textContent || ""))
             return bs[i]; return null; }
-    var LAYERS = [{ name: "fileViewer", find: function () { var e = document.getElementById("muFvOv"); return e && e.classList.contains("on") ? e : null; }, close: function () { try {
+    var LAYERS = [{ name: "backupPanel", find: function () { var h = document.getElementById("mkSvHost"); return h && h.style.pointerEvents === "auto" ? h : null; }, close: function () { try { window.__mkSvBack && window.__mkSvBack(); } catch { } } }, { name: "fileViewer", find: function () { var e = document.getElementById("muFvOv"); return e && e.classList.contains("on") ? e : null; }, close: function () { try {
                 MK.fileViewer.back();
             }
             catch { } } }, { name: "hostDlg", find: function () { var e = $("muHostDlg"); return e || null; }, close: function (el) { el.remove(); } }, { name: "scriptOverlay", find: function () { for (var c = document.body.children, i = c.length - 1; i >= 0; i--)
@@ -61466,12 +61467,13 @@ var CONT = [["AS", "آسیا", "Asia"], ["EU", "اروپا", "Europe"], ["NA", "
     var CSS = '\
 :host{all:initial}*{box-sizing:border-box;font-family:inherit}\
 .wrap{position:fixed;inset:0;z-index:2147483600;background:rgba(8,8,16,.72);backdrop-filter:blur(6px);display:flex;align-items:stretch;justify-content:center;direction:rtl;color:#ecebf7;font:14px/1.6 system-ui,-apple-system,"Segoe UI",Tahoma,sans-serif}\
-.panel{width:min(760px,100%);height:100%;background:linear-gradient(180deg,#171527,#0f0e1b);display:flex;flex-direction:column;box-shadow:0 0 60px rgba(0,0,0,.5);padding-top:env(safe-area-inset-top)}\
+.panel{width:min(760px,100%);height:100%;background:linear-gradient(180deg,#171527,#0f0e1b);display:flex;flex-direction:column;box-shadow:0 0 60px rgba(0,0,0,.5);padding:var(--mu-sat,env(safe-area-inset-top,0px)) var(--mu-sar,env(safe-area-inset-right,0px)) 0 var(--mu-sal,env(safe-area-inset-left,0px))}\
 .top{display:flex;align-items:center;gap:10px;padding:14px 16px;border-bottom:1px solid #2a2744}\
 .top h2{margin:0;font-size:16px;flex:1;font-weight:700;letter-spacing:.2px}\
 .chip{background:#26234a;border:1px solid #3a3670;color:#cfc9ff;border-radius:999px;padding:3px 10px;font-size:12px}\
+.bk{background:#26234a;border:1px solid #3a3670;color:#cfc9ff;border-radius:999px;padding:5px 13px;font:inherit;font-size:13px;font-weight:600;cursor:pointer;white-space:nowrap}.bk:hover{background:#2f2b5c}\
 .x{background:none;border:0;color:#a9a5c9;font-size:22px;cursor:pointer;padding:2px 8px;line-height:1}\
-.body{flex:1;overflow:auto;padding:16px;padding-bottom:calc(16px + env(safe-area-inset-bottom));-webkit-overflow-scrolling:touch}\
+.body{flex:1;overflow:auto;padding:16px;padding-bottom:calc(16px + var(--mu-sab,env(safe-area-inset-bottom,0px)));-webkit-overflow-scrolling:touch}\
 .card{background:#1c1a33;border:1px solid #2d2a52;border-radius:14px;padding:14px;margin-bottom:14px}\
 .card h3{margin:0 0 10px;font-size:14px;color:#cfc9ff}\
 .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:10px}\
@@ -61512,10 +61514,16 @@ details summary{cursor:pointer;color:#cfc9ff;font-weight:600;padding:4px 0}\
         sh.addEventListener("keydown", function (e) { if (e.key === "Enter" && S.view === "auth" && e.target && /^(u|p|p2)$/.test(e.target.id)) doAuth(); });
     }
     var $ = function (sel) { return S.root.querySelector(sel); };
-    function mount(html) { ensureRoot(); S.host.style.pointerEvents = html ? "auto" : "none"; $("#mount").innerHTML = html || ""; }
+    function mount(html) { ensureRoot(); S.host.style.pointerEvents = html ? "auto" : "none"; $("#mount").innerHTML = html || ""; try { setTimeout(function () { window.muBackNav && window.muBackNav.sync(); }, 0); } catch (e) { } }
+    window.__mkSvBack = function () {
+        if (!S.open || !S.root) return false;
+        var gn = S.root.querySelector("#gn"); if (gn) { gn.click(); return true; }
+        var dn = S.root.querySelector(".dlg #dn"); if (dn) { dn.click(); return true; }
+        A.back(); return true;
+    };
 
     function shell(inner) {
-        return '<div class="wrap" id="wrap"><div class="panel"><div class="top"><h2>🗄️ پنل بکاپ خصوصی</h2>' + (S.user && S.view === "main" ? '<span class="chip">👤 ' + esc(S.user) + '</span>' : '') + '<button class="x" data-a="close" aria-label="بستن">×</button></div><div class="body" id="body">' + inner + '</div></div></div>';
+        return '<div class="wrap" id="wrap"><div class="panel"><div class="top"><button class="bk" data-a="back" aria-label="بازگشت">→ بازگشت</button><h2>🗄️ پنل بکاپ خصوصی</h2>' + (S.user && S.view === "main" ? '<span class="chip">👤 ' + esc(S.user) + '</span>' : '') + '<button class="x" data-a="close" aria-label="بستن">×</button></div><div class="body" id="body">' + inner + '</div></div></div>';
     }
     function authView() {
         var reg = S.tab === "register";
@@ -61681,6 +61689,7 @@ details summary{cursor:pointer;color:#cfc9ff;font-weight:600;padding:4px 0}\
         return item;
     }
     var A = {
+        back: function () { if (S.view === "pick") return A.pkBack(); A.close(); },
         close: function () { if (S.busy) return toast("اول عملیات جاری تمام شود یا لغو شود."); S.open = false; mount(""); },
         tab: function (el) { S.tab = el.dataset.v; render(); },
         auth: doAuth,
@@ -61729,6 +61738,8 @@ details summary{cursor:pointer;color:#cfc9ff;font-weight:600;padding:4px 0}\
         },
         logoutAll: async function () { var o = await ask({ title: "خروج از همهٔ دستگاه‌ها", text: "همهٔ نشست‌های فعال (از جمله همین دستگاه) بسته می‌شوند.", danger: 1, ok: "خروج" }); if (!o) return; try { await api("/auth/logout-all", { method: "POST" }); } catch (e) { } A.logout(); },
         delAcc: async function () {
+            var c = await ask({ title: "تأیید حذف حساب", text: "با این کار حساب و همهٔ بکاپ‌ها برای همیشه پاک می‌شوند. برای ادامه، کلمهٔ ok را تایپ کن:", input: "ok", danger: 1, ok: "ادامه" }); if (!c) return;
+            if (String(c.value || "").trim().toLowerCase() !== "ok") return toast("کلمهٔ ok درست تایپ نشد؛ حذف انجام نشد.");
             var o = await ask({ title: "حذف حساب", text: "حساب و تمام بکاپ‌هایش برای همیشه پاک می‌شود و قابل بازگشت نیست. رمز را وارد کن:", input: "رمز عبور", password: 1, danger: 1, ok: "حذف دائمی" }); if (!o || !o.value) return;
             try { await api("/me", { method: "DELETE", body: { password: o.value } }); s(LS_USER, null); S.user = ""; A.logout(); toast("حساب حذف شد."); } catch (e) { toast(e.message); }
         },
