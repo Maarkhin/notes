@@ -37643,7 +37643,7 @@ catch { } };
     (function () { var H = window.__mkHl; if (H.init) return; H.init = !0;
         function boxOf(n) { var el = n && (n.nodeType === 1 ? n : n.parentElement); return el && el.closest ? el.closest('.text-box[contenteditable="true"]') : null; }
         function snap() { var s = window.getSelection(); if (!s.rangeCount) return; var t = boxOf(s.anchorNode); if (!t) return; var r = s.getRangeAt(0).cloneRange(); r.collapse(!0); H.start = { t: t, r: r }; }
-        function fix(t) { var s = window.getSelection(); if (!s.rangeCount) return; var end = s.getRangeAt(0); if (!t.contains(end.startContainer)) return; var cn = end.startContainer, co = end.startOffset; H.busy = !0; try { if (H.mode !== null && H.start && H.start.t === t && H.start.r.startContainer.isConnected) { var rg = D2.createRange(); rg.setStart(H.start.r.startContainer, H.start.r.startOffset); rg.setEnd(cn, co); if (!rg.collapsed && hlApply(t, rg, H.mode ? "on" : "off")) { var s2 = window.getSelection(); s2.rangeCount && s2.collapseToEnd(); } } mkHlNormalize(t); } catch (_e) { } var s3 = window.getSelection(); if (s3.rangeCount) { var c = s3.getRangeAt(0); H.last = { n: c.startContainer, o: c.startOffset }; } H.busy = !1; }
+        function fix(t) { var s = window.getSelection(); if (!s.rangeCount) return; var end = s.getRangeAt(0); if (!t.contains(end.startContainer)) return; var cn = end.startContainer, co = end.startOffset; H.busy = !0; try { if (H.mode !== null && H.start && H.start.t === t && H.start.r.startContainer.isConnected) { var rg = D2.createRange(); rg.setStart(H.start.r.startContainer, H.start.r.startOffset); rg.setEnd(cn, co); if (!rg.collapsed && !(function () { try { var ha = hlOf(rg.startContainer, t), hb = hlOf(rg.endContainer, t); if (H.mode) return !!ha && ha === hb; if (ha || hb) return !1; var fr = rg.cloneContents(); return !(fr.querySelector && fr.querySelector(".mk-hl")); } catch (_x) { return !1; } })() && hlApply(t, rg, H.mode ? "on" : "off")) { var s2 = window.getSelection(); s2.rangeCount && s2.collapseToEnd(); } } mkHlNormalize(t); } catch (_e) { } var s3 = window.getSelection(); if (s3.rangeCount) { var c = s3.getRangeAt(0); H.last = { n: c.startContainer, o: c.startOffset }; } H.busy = !1; }
         D2.addEventListener("compositionstart", function () { if (H.mode === null) return; H.comp = !0; snap(); }, !0);
         D2.addEventListener("compositionend", function (e) { var was = H.comp; H.comp = !1; if (!was || H.mode === null) return; var t = boxOf(e.target); setTimeout(function () { t && H.start && (fix(t), H.start = null); }, 0); }, !0);
         D2.addEventListener("beforeinput", function (e) { if (H.mode === null || H.comp || !/^insert/.test(e.inputType || "")) return; snap(); }, !0);
@@ -37802,7 +37802,7 @@ catch { } };
     D2.addEventListener("click", function (e) { var c = e.target && e.target.closest ? e.target.closest("code") : null; if (!(!c || c.closest("pre")) && c.closest('.text-box[contenteditable="true"], .mu-viewer-body, .mu-note-body')) {
         var sel = window.getSelection();
         if (!(sel && sel.rangeCount && !sel.isCollapsed && c.contains(sel.anchorNode) && c.contains(sel.focusNode))) {
-            var txt = (c.textContent || "").replace(/\u200b/g, "");
+            var txt = (c.querySelector("br") ? (function () { var o = ""; (function w(n) { for (var k = n.firstChild; k; k = k.nextSibling) k.nodeType === 3 ? o += k.nodeValue : k.nodeName === "BR" ? o += "\n" : k.nodeType === 1 && w(k); })(c); return o; })() : (c.textContent || "")).replace(/\u200b/g, "");
             txt && copyPlain(txt, function (ok) { msg(ok ? "✅ کپی شد" : "⚠️ کپی نشد", ok ? "✅ Copied" : "⚠️ Could not copy"); });
         }
     } });
@@ -53926,6 +53926,7 @@ html[data-mxe-theme=light] #mkSelBars{--sb-bg:#ffffff}
 #mkSelBars .sb-main button span{font-weight:600}
 #mkSelBars.narrow .sb-main svg{display:none}
 #mkSelBars.tmode .sb-fmt{display:none}
+#mkSelBars .sb-fmt{display:none!important}
 .text-box[contenteditable=true]{-webkit-touch-callout:none}
 /* legibility safety-net (dark editor / drag overlay): the app-wide "span,div,button,label,p{color:var(--text-color)}" rule used the page theme's DARK --text-color inside dark modals and overlays */
 html.mxe-open:not([data-mxe-theme=light]) #advancedModal,html.mxe-open:not([data-mxe-theme=light]) #muFolderPickerOverlay{--text-color:var(--nfs-text,#e6e6e6)}
@@ -62683,6 +62684,164 @@ html body .audio-wrapper.video-wrapper>button.img-btn.img-btn.img-btn.img-btn.im
         try { typeof mu_removeMediaWrapper === "function" ? mu_removeMediaWrapper(w) : w.remove(); } catch (x) { try { w.remove(); } catch (y) { } }
         try { id && saveCategory(id); } catch (x) { }
     }, !0);
+})();
+</script>
+
+<script id="mkBigPasteJs">
+/* ===== Big paste: pasting a very large text used to freeze the app. The browser's execCommand("insertText") is
+   very slow on thousands of lines, and the table detectors parse the whole clipboard on top of it. For large plain
+   text we insert the lines straight into the DOM in ONE pass (same <div>-per-line structure the editor makes) and
+   fire a single "input" event so autosave / bidi / history run once. Smaller pastes keep the normal path. ===== */
+(function () {
+    var MIN_CHARS = 20000, MIN_LINES = 800;
+    function boxOf(n) { var el = n && (n.nodeType === 1 ? n : n.parentElement); return el && el.closest ? el.closest('.text-box[contenteditable="true"]') : null; }
+    function fixSpaces(box, t) {
+        var ws = ""; try { ws = getComputedStyle(box).whiteSpace || ""; } catch (e) { }
+        if (/^pre/.test(ws)) return t;
+        return t.replace(/^ +| +$| {2,}/gm, function (m) { return m.length === 1 ? "\u00a0" : " " + new Array(m.length).join("\u00a0"); });
+    }
+    function onPaste(e) {
+        try {
+            var cd = e.clipboardData; if (!cd || (cd.files && cd.files.length)) return;
+            var box = boxOf(e.target); if (!box) return;
+            var text = cd.getData("text/plain"); if (!text) return;
+            var big = text.length >= MIN_CHARS; if (!big) { var n = 0, p = -1; while ((p = text.indexOf("\n", p + 1)) >= 0 && ++n < MIN_LINES); big = n >= MIN_LINES; }
+            if (!big) return;
+            var sel = window.getSelection(); if (!sel || !sel.rangeCount) return;
+            var range = sel.getRangeAt(0); if (!box.contains(range.commonAncestorContainer)) return;
+            e.preventDefault(); e.stopImmediatePropagation();
+            text = text.replace(/\u0000/g, "").replace(/\r\n?/g, "\n"); text = fixSpaces(box, text);
+            try { box.spellcheck = false; box.setAttribute("spellcheck", "false"); } catch (x) { }
+            var lines = text.split("\n"), last = null, lastLen = 0, d = document;
+            range.collapsed || range.deleteContents();
+            // the line that holds the caret: a direct child <div>/<p> of the box
+            var block = range.startContainer; while (block && block.parentNode !== box) block = block.parentNode;
+            if (block === range.startContainer && block === box) block = null;
+            var simple = block && block.nodeType === 1 && /^(DIV|P)$/.test(block.nodeName) && !block.querySelector(".img-drag-wrapper,.audio-wrapper,table") && !block.closest("blockquote");
+            if (lines.length === 1) {
+                var tn = d.createTextNode(lines[0]); range.insertNode(tn); last = tn; lastLen = tn.nodeValue.length;
+            } else if (simple) {
+                var tail = null, tr = d.createRange(); tr.setStart(range.startContainer, range.startOffset);
+                block.lastChild ? tr.setEndAfter(block.lastChild) : tr.setEnd(block, 0);
+                tail = tr.extractContents();
+                if (lines[0]) { var t0 = d.createTextNode(lines[0]); range.insertNode(t0); }
+                var frag = d.createDocumentFragment(), lastDiv = null;
+                for (var i = 1; i < lines.length; i++) {
+                    var dv = d.createElement("div"), ln = lines[i];
+                    if (ln) { var tx = d.createTextNode(ln); dv.appendChild(tx); if (i === lines.length - 1) { last = tx; lastLen = ln.length; } } else if (i < lines.length - 1) dv.appendChild(d.createElement("br"));
+                    frag.appendChild(dv); lastDiv = dv;
+                }
+                if (tail && tail.firstChild) lastDiv.appendChild(tail);
+                else if (!lastDiv.firstChild) lastDiv.appendChild(d.createElement("br"));
+                block.parentNode.insertBefore(frag, block.nextSibling);
+                if (!last) { last = lastDiv; lastLen = 0; }
+            } else {
+                // caret directly in the box / inside a list or quote: lines are separated with <br>
+                var f2 = d.createDocumentFragment();
+                lines.forEach(function (l, i) { if (i) f2.appendChild(d.createElement("br")); if (l) { var t = d.createTextNode(l); f2.appendChild(t); last = t; lastLen = l.length; } });
+                range.insertNode(f2);
+            }
+            try { var r2 = d.createRange(); if (last && last.nodeType === 3) r2.setStart(last, lastLen); else if (last) r2.setStart(last, 0); else r2.setStartAfter(box.lastChild || box); r2.collapse(true); sel.removeAllRanges(); sel.addRange(r2); } catch (x) { }
+            box.dispatchEvent(new InputEvent("input", { bubbles: true, inputType: "insertFromPaste" }));
+            try { var el = last && (last.nodeType === 1 ? last : last.parentElement); el && el.scrollIntoView && el.scrollIntoView({ block: "nearest" }); } catch (x) { }
+        } catch (err) { console.warn("big paste fast path failed, falling back", err); }
+    }
+    // window capture runs before every document-level paste listener
+    window.addEventListener("paste", onPaste, true);
+    // a huge note: the browser's own spell-checker alone makes typing lag, so it is turned off for it
+    document.addEventListener("focusin", function (e) { var b = boxOf(e.target); if (b && b.spellcheck !== false && b.textContent.length > 100000) { try { b.spellcheck = false; b.setAttribute("spellcheck", "false"); } catch (x) { } } }, true);
+})();
+</script>
+
+<style id="mkFenceCopyCss">
+html body .text-box code.mk-ml,html body .mu-viewer-body code.mk-ml,html body .mu-note-body code.mk-ml{display:block;white-space:pre-wrap;padding:8px 10px;margin:4px 0;text-align:start;unicode-bidi:plaintext;word-break:break-word}
+</style>
+<script id="mkFenceCopyJs">
+/* ===== `text` / ```text``` : typing the closing backtick(s) turns the text between into ONE copyable chip, even when it
+   spans many lines (the old rule only worked inside a single line). Tap the chip = copy the whole text, line breaks included.
+   - single backtick across lines: the opening ` must be at the start of its line and the closing ` at the end of its line
+     (so stray backticks in pasted code never swallow text);  - ``` ... ``` works anywhere. ===== */
+(function () {
+    var ZW = "\u200b", busy = false, SKIP = "code,pre,a,.mk-cb,.img-toolbar,button,[contenteditable=\"false\"]";
+    function boxOf(n) { var el = n && (n.nodeType === 1 ? n : n.parentElement); return el && el.closest ? el.closest('.text-box[contenteditable="true"]') : null; }
+    function skipped(n) { var p = n.parentElement; return !!(p && p.closest && p.closest(SKIP)); }
+    function blockOf(box, n) { while (n && n.parentNode !== box) n = n.parentNode; return n && n !== box ? n : null; }
+    var BLK = /^(DIV|P|LI|UL|OL|H[1-6]|BLOCKQUOTE|PRE|TR|TABLE)$/;
+    function textOf(frag) {
+        // own walker (works on detached nodes): <br> and block boundaries become line breaks
+        var out = "", cur = false;
+        function nl() { out += "\n"; cur = false; }
+        function walk(node) {
+            for (var c = node.firstChild; c; c = c.nextSibling) {
+                if (c.nodeType === 3) { var v = c.nodeValue.replace(/\u200b/g, ""); if (v) { out += v; cur = true; } }
+                else if (c.nodeType === 1) {
+                    if (c.nodeName === "BR") { nl(); continue; }
+                    var blk = BLK.test(c.nodeName); blk && cur && nl(); walk(c); blk && cur && nl();
+                }
+            }
+        }
+        walk(frag);
+        return out.replace(/\u00a0/g, " ");
+    }
+    function lineStartOnly(block, node, off, box) {
+        // nothing but blanks between the start of the line and (node, off)
+        var r = document.createRange(); r.setStart(block || box, 0); r.setEnd(node, off);
+        return !/\S/.test(r.toString().replace(/\u200b/g, ""));
+    }
+    function lineEndOnly(block, node, off, box) {
+        var r = document.createRange(); r.setStart(node, off); r.setEnd(block || box, (block || box).childNodes.length);
+        return !/\S/.test(r.toString().replace(/\u200b/g, ""));
+    }
+    function onInput(e) {
+        if (busy || typeof e.inputType !== "string" || e.inputType.indexOf("insert") !== 0) return;
+        var box = boxOf(e.target); if (!box) return;
+        var sel = window.getSelection(); if (!sel.rangeCount || !sel.isCollapsed) return;
+        var tn = sel.anchorNode, c2 = sel.anchorOffset;
+        if (!tn || tn.nodeType !== 3 || !box.contains(tn) || skipped(tn)) return;
+        var v = tn.nodeValue; if (c2 < 1 || v.charAt(c2 - 1) !== "`") return;
+        var run = 0; while (c2 - 1 - run >= 0 && v.charAt(c2 - 1 - run) === "`") run++;
+        if (run === 2) return;                       // might still become ```
+        var k = run >= 3 ? 3 : 1, F = k === 3 ? "```" : "`", closeStart = c2 - k;
+        if (k === 3 && run > 3) return;
+        // find the opening fence: same text node first, then earlier text nodes (bounded scan)
+        var on = null, op = -1, p = closeStart - k >= 0 ? v.lastIndexOf(F, closeStart - k) : -1;
+        if (p >= 0) { on = tn; op = p; }
+        else {
+            var w = document.createTreeWalker(box, NodeFilter.SHOW_TEXT, null), n, prev = [], found = false;
+            while ((n = w.nextNode())) { if (n === tn) break; if (!skipped(n)) prev.push(n); }
+            var scanned = 0;
+            for (var j = prev.length - 1; j >= 0 && scanned < 400000; j--) { var s = prev[j].nodeValue; scanned += s.length; var q = s.lastIndexOf(F); if (q >= 0) { on = prev[j]; op = q; break; } }
+        }
+        if (!on) return;
+        var inner = document.createRange(); inner.setStart(on, op + k); inner.setEnd(tn, closeStart);
+        var sameNodeNoNL = on === tn && !/[\n\r]/.test(inner.toString());
+        if (sameNodeNoNL && k === 1) return;         // the existing single-line rule handles it
+        if (k === 1) {
+            // across lines/nodes: opening ` first on its line, closing ` last on its line
+            if (!lineStartOnly(blockOf(box, on), on, op, box) || !lineEndOnly(blockOf(box, tn), tn, c2, box)) return;
+        }
+        var raw = textOf(inner.cloneContents());
+        if (k === 3 && on !== tn && /^[A-Za-z][A-Za-z0-9+#.-]{0,14}$/.test(on.nodeValue.slice(op + 3).trim()) && raw.indexOf("\n") > 0) raw = raw.replace(/^[^\n]*\n/, "");
+        raw = raw.replace(/^\n+|\n+$/g, "");
+        if (!/\S/.test(raw)) return;
+        busy = true;
+        try {
+            var r = document.createRange(); r.setStart(on, op); r.setEnd(tn, c2);
+            var startBlock = blockOf(box, on), endBlock = blockOf(box, tn);
+            r.deleteContents();
+            var code = document.createElement("code"), lines = raw.split("\n");
+            lines.forEach(function (l, i) { if (i) code.appendChild(document.createElement("br")); if (l) code.appendChild(document.createTextNode(l)); });
+            if (lines.length > 1) code.className = "mk-ml";
+            r.insertNode(code);
+            var zw = document.createTextNode(ZW); code.parentNode.insertBefore(zw, code.nextSibling);
+            if (endBlock && endBlock !== startBlock && endBlock.parentNode === box && !endBlock.textContent.replace(/\u200b/g, "") && !endBlock.querySelector("img,table,audio,video,canvas,.mk-cb")) endBlock.remove();
+            var r2 = document.createRange(); r2.setStart(zw, 1); r2.collapse(true); sel.removeAllRanges(); sel.addRange(r2);
+            box.dispatchEvent(new InputEvent("input", { bubbles: true, inputType: "insertReplacementText" }));
+        } catch (err) { console.warn("fence chip failed", err); }
+        busy = false;
+    }
+    // registered after the app's own handlers, so the single-line rule always runs first
+    document.addEventListener("input", onInput, true);
 })();
 </script>
 
