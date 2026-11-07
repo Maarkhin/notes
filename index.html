@@ -31319,7 +31319,9 @@ window.__mkFixAutoSyncBusy = !0, window.__mkFixProgHold = !0; const btn = docume
             // Media backup (when on): sync it too BEFORE the notes backup, the same way the notes were pulled first
             let mediaMsg = "";
             try {
-                if (window.MKMED && window.MKMED.fullSync) {
+                // Fix auto sync syncs the NOTES only: the initial media download/upload pass (fullSync) is skipped because it takes very long;
+                // media keeps syncing by itself in the background through the normal auto sync
+                if (!1 && window.MKMED && window.MKMED.fullSync) {
                     const mr = await window.MKMED.fullSync(t => HX().mkBackupBarShow(t));
                     if (mr && mr.locked) mediaMsg = fa ? " ⚠️ بکاپ رسانه قفل است؛ در تب رسانه رمز را وارد کن." : " ⚠️ Media backup is locked; enter the password in the Media tab.";
                     else if (mr && mr.failed) mediaMsg = fa ? " ⚠️ همگام‌سازی رسانه ناموفق بود." : " ⚠️ Media sync failed.";
@@ -39679,7 +39681,7 @@ body.mu-nfsbk-on #mkBackupBar { display:none!important; }
     // page.
     var KEY_VIEW = "mu_notesfs_view_v1", KEY_FVIEW = "mu_notesfs_fview_v1", KEY_THEME = "mu_notesfs_theme_v1", KEY_SORT = "mu_notesfs_sort_v1", KEY_LINES = "mu_notesfs_lines_v1", BATCH = 40, RETseen = !1, RET = null, RETst = null, S2 = { fsel: null, fopen: !1, sel: null, pick: null, view: "grid", fview: "list", theme: "light", page: "notes", sort: "created_desc", lines: 9, list: [], shown: 0, q: "", groups: [], collapsed: {}, limit: {} }, SORTS = [{ v: "edited_desc", fa: "آخرین ویرایش (جدیدترین اول)", en: "Last edited (newest first)" }, { v: "edited_asc", fa: "آخرین ویرایش (قدیمی‌ترین اول)", en: "Last edited (oldest first)" }, { v: "created_desc", fa: "تاریخ ساخت (جدیدترین اول)", en: "Date created (newest first)" }, { v: "created_asc", fa: "تاریخ ساخت (قدیمی‌ترین اول)", en: "Date created (oldest first)" }, { v: "alpha_asc", fa: "الفبا (آ ← ی)", en: "Name (A → Z)" }, { v: "alpha_desc", fa: "الفبا (ی ← آ)", en: "Name (Z → A)" }, { v: "manual", fa: "دلخواه (نگه دار و جابه‌جا کن)", en: "Custom (hold & drag)" }];
     function svg(inner, sw) { return '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="' + (sw || 2) + '" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' + inner + "</svg>"; }
-    var ICONS = { tags: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9.5 4L8 20M16 4l-1.5 16M5 9h15M4 15h15"/></svg>', search: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="M20.5 20.5 16 16"/></svg>', rows: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" aria-hidden="true"><rect x="4" y="4" width="16" height="6.5" rx="2"/><rect x="4" y="13.5" width="16" height="6.5" rx="2"/></svg>', grid: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" aria-hidden="true"><rect x="4" y="4" width="6.5" height="6.5" rx="1.6"/><rect x="13.5" y="4" width="6.5" height="6.5" rx="1.6"/><rect x="4" y="13.5" width="6.5" height="6.5" rx="1.6"/><rect x="13.5" y="13.5" width="6.5" height="6.5" rx="1.6"/></svg>', sun: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2.5v2.5M12 19v2.5M2.5 12H5M19 12h2.5M5.3 5.3l1.8 1.8M16.9 16.9l1.8 1.8M5.3 18.7l1.8-1.8M16.9 7.1l1.8-1.8"/></svg>', moon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 14.5A8 8 0 0 1 9.5 4a8 8 0 1 0 10.5 10.5z"/></svg>', menu: svg('<path d="M4 6.5h16M4 12h16M4 17.5h16"/>'), sort: svg('<path d="M8 20V5M8 5L4.5 8.5M8 5l3.5 3.5"/><path d="M16 4v15M16 19l-3.5-3.5M16 19l3.5-3.5"/>'), prev: svg('<rect x="3.5" y="4.5" width="17" height="15" rx="2.6"/><path d="M7.5 9h9M7.5 12.5h9M7.5 16h5.5"/>'), tick: svg('<path d="M5 12.5l4.5 4.5L19 7.5"/>', 2.4), plus: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>', minus: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M5 12h14"/></svg>', chev: '<svg class="mu-nfs-chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg>', bulb: svg('<path d="M9 18h6M10 21h4M12 3a6 6 0 0 0-3.6 10.8c.6.5.9 1.1.9 1.8V16h5.4v-.6c0-.7.3-1.3.9-1.8A6 6 0 0 0 12 3z"/>'), folder: svg('<path d="M3.5 7.5a2 2 0 0 1 2-2h4l2 2.2h7a2 2 0 0 1 2 2v7.8a2 2 0 0 1-2 2h-13a2 2 0 0 1-2-2z"/>'), archive: svg('<rect x="3.5" y="4.5" width="17" height="4.5" rx="1.2"/><path d="M5 9v9.5A1.5 1.5 0 0 0 6.5 20h11a1.5 1.5 0 0 0 1.5-1.5V9M12 11.5v5M9.8 14.5l2.2 2.2 2.2-2.2"/>'), star: svg('<path d="M12 3.8l2.5 5.2 5.7.8-4.1 4 1 5.7L12 16.8 6.9 19.5l1-5.7-4.1-4 5.7-.8z"/>'), exit: svg('<path d="M15 5l-7 7 7 7"/>'), close: svg('<path d="M6 6l12 12M18 6L6 18"/>', 2.2), pin: svg('<path d="M9 4h6l-1 5 3 3v1.5H7V12l3-3z"/><path d="M12 13.5V20"/>'), lock: svg('<rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/>'), unlock: svg('<rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V8a4 4 0 0 1 7.4-2"/>'), vault: svg('<rect x="4.5" y="10.5" width="15" height="10" rx="2.2"/><path d="M8 10.5V8a4 4 0 018 0v2.5"/><circle cx="12" cy="15.5" r="1.2"/>'), trash: svg('<path d="M4 7h16M9 7V4.5h6V7M6.5 7l1 13h9l1-13M10 11v6M14 11v6"/>'), dup: svg('<rect x="8.5" y="8.5" width="11.5" height="11.5" rx="3"/><path d="M15.5 8.5V6.8A2.8 2.8 0 0 0 12.7 4H6.8A2.8 2.8 0 0 0 4 6.8v5.9a2.8 2.8 0 0 0 2.8 2.8h1.7"/><path d="M14.25 11.9v4.7M11.9 14.25h4.7"/>'), mic: svg('<rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5.5 11.5a6.5 6.5 0 0 0 13 0M12 18v3"/>'), list: svg('<rect x="3.5" y="3.5" width="17" height="17" rx="5"/><path d="M8 12.4l2.9 2.9L16.2 9.4"/>'), graph: svg('<circle cx="6" cy="7" r="2.3"/><circle cx="18" cy="6" r="2.3"/><circle cx="12" cy="17.5" r="2.6"/><path d="M8 8l2.7 7.2M16.2 7.7l-2.6 7.6M8.3 7l7.4-.6"/>'), fview: svg('<path d="M14 3.5H7.5a2 2 0 0 0-2 2v13a2 2 0 0 0 2 2h9a2 2 0 0 0 2-2V8z"/><path d="M14 3.5V8h4.5"/><circle cx="10.8" cy="13.4" r="1.5"/><path d="M12.3 13.4h3M14.6 13.4v1.6"/>'), portal: svg('<circle cx="12" cy="12" r="8.5"/><circle cx="12" cy="12" r="4.8"/><circle cx="12" cy="12" r="1.2"/>'), morse: svg('<circle cx="5.5" cy="12" r="1.5"/><path d="M10 12h4.5M18.5 12h.01"/><path d="M3.5 5.5h17M3.5 18.5h17" opacity=".45"/>'), binary: svg('<ellipse cx="7.5" cy="8" rx="3" ry="4"/><path d="M16 4.5V12M14 6l2-1.5"/><path d="M14 19.5h6M7.5 15.5v5M5.5 17l2-1.5"/>'), globe: svg('<circle cx="12" cy="12" r="8.5"/><path d="M3.5 12h17M12 3.5c2.4 2.4 3.6 5.2 3.6 8.5s-1.2 6.1-3.6 8.5c-2.4-2.4-3.6-5.2-3.6-8.5S9.6 5.9 12 3.5z"/>'), imp: svg('<path d="M12 4v11M7.8 11l4.2 4.2 4.2-4.2"/><path d="M4.5 16.5v1.8a1.7 1.7 0 0 0 1.7 1.7h11.6a1.7 1.7 0 0 0 1.7-1.7v-1.8"/>'), exp: svg('<path d="M12 15V4M7.8 8l4.2-4.2L16.2 8"/><path d="M4.5 16.5v1.8a1.7 1.7 0 0 0 1.7 1.7h11.6a1.7 1.7 0 0 0 1.7-1.7v-1.8"/>'), dash: svg('<rect x="3.5" y="3.5" width="7" height="8.5" rx="2"/><rect x="13.5" y="3.5" width="7" height="5" rx="2"/><rect x="13.5" y="11.5" width="7" height="9" rx="2"/><rect x="3.5" y="15" width="7" height="5.5" rx="2"/>'), gear: svg('<path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/>'), cloud: svg('<path d="M7 18.5a4.2 4.2 0 0 1-.6-8.4 5.6 5.6 0 0 1 10.8 1.2A3.6 3.6 0 0 1 17 18.5z"/><path d="M12 15.5V10M9.8 12l2.2-2.2 2.2 2.2"/>') };
+    var ICONS = { tags: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9.5 4L8 20M16 4l-1.5 16M5 9h15M4 15h15"/></svg>', search: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="M20.5 20.5 16 16"/></svg>', rows: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" aria-hidden="true"><rect x="4" y="4" width="16" height="6.5" rx="2"/><rect x="4" y="13.5" width="16" height="6.5" rx="2"/></svg>', grid: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" aria-hidden="true"><rect x="4" y="4" width="6.5" height="6.5" rx="1.6"/><rect x="13.5" y="4" width="6.5" height="6.5" rx="1.6"/><rect x="4" y="13.5" width="6.5" height="6.5" rx="1.6"/><rect x="13.5" y="13.5" width="6.5" height="6.5" rx="1.6"/></svg>', sun: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2.5v2.5M12 19v2.5M2.5 12H5M19 12h2.5M5.3 5.3l1.8 1.8M16.9 16.9l1.8 1.8M5.3 18.7l1.8-1.8M16.9 7.1l1.8-1.8"/></svg>', moon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 14.5A8 8 0 0 1 9.5 4a8 8 0 1 0 10.5 10.5z"/></svg>', menu: svg('<path d="M4 6.5h16M4 12h16M4 17.5h16"/>'), sort: svg('<path d="M8 20V5M8 5L4.5 8.5M8 5l3.5 3.5"/><path d="M16 4v15M16 19l-3.5-3.5M16 19l3.5-3.5"/>'), prev: svg('<rect x="3.5" y="4.5" width="17" height="15" rx="2.6"/><path d="M7.5 9h9M7.5 12.5h9M7.5 16h5.5"/>'), tick: svg('<path d="M5 12.5l4.5 4.5L19 7.5"/>', 2.4), plus: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>', minus: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M5 12h14"/></svg>', chev: '<svg class="mu-nfs-chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg>', bulb: svg('<path d="M9 18h6M10 21h4M12 3a6 6 0 0 0-3.6 10.8c.6.5.9 1.1.9 1.8V16h5.4v-.6c0-.7.3-1.3.9-1.8A6 6 0 0 0 12 3z"/>'), folder: svg('<path d="M3.5 7.5a2 2 0 0 1 2-2h4l2 2.2h7a2 2 0 0 1 2 2v7.8a2 2 0 0 1-2 2h-13a2 2 0 0 1-2-2z"/>'), archive: svg('<rect x="3.5" y="4.5" width="17" height="4.5" rx="1.2"/><path d="M5 9v9.5A1.5 1.5 0 0 0 6.5 20h11a1.5 1.5 0 0 0 1.5-1.5V9M12 11.5v5M9.8 14.5l2.2 2.2 2.2-2.2"/>'), star: svg('<path d="M12 3.8l2.5 5.2 5.7.8-4.1 4 1 5.7L12 16.8 6.9 19.5l1-5.7-4.1-4 5.7-.8z"/>'), exit: svg('<path d="M15 5l-7 7 7 7"/>'), close: svg('<path d="M6 6l12 12M18 6L6 18"/>', 2.2), pin: svg('<path d="M9 4h6l-1 5 3 3v1.5H7V12l3-3z"/><path d="M12 13.5V20"/>'), lock: svg('<rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/>'), unlock: svg('<rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V8a4 4 0 0 1 7.4-2"/>'), vault: svg('<rect x="4.5" y="10.5" width="15" height="10" rx="2.2"/><path d="M8 10.5V8a4 4 0 018 0v2.5"/><circle cx="12" cy="15.5" r="1.2"/>'), trash: svg('<path d="M4 7h16M9 7V4.5h6V7M6.5 7l1 13h9l1-13M10 11v6M14 11v6"/>'), dup: svg('<rect x="8.5" y="8.5" width="11.5" height="11.5" rx="3"/><path d="M15.5 8.5V6.8A2.8 2.8 0 0 0 12.7 4H6.8A2.8 2.8 0 0 0 4 6.8v5.9a2.8 2.8 0 0 0 2.8 2.8h1.7"/><path d="M14.25 11.9v4.7M11.9 14.25h4.7"/>'), mic: svg('<rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5.5 11.5a6.5 6.5 0 0 0 13 0M12 18v3"/>'), list: svg('<rect x="3.5" y="3.5" width="17" height="17" rx="5"/><path d="M8 12.4l2.9 2.9L16.2 9.4"/>'), graph: svg('<circle cx="6" cy="7" r="2.3"/><circle cx="18" cy="6" r="2.3"/><circle cx="12" cy="17.5" r="2.6"/><path d="M8 8l2.7 7.2M16.2 7.7l-2.6 7.6M8.3 7l7.4-.6"/>'), fview: svg('<path d="M14 3.5H7.5a2 2 0 0 0-2 2v13a2 2 0 0 0 2 2h9a2 2 0 0 0 2-2V8z"/><path d="M14 3.5V8h4.5"/><circle cx="10.8" cy="13.4" r="1.5"/><path d="M12.3 13.4h3M14.6 13.4v1.6"/>'), portal: svg('<circle cx="12" cy="12" r="8.5"/><circle cx="12" cy="12" r="4.8"/><circle cx="12" cy="12" r="1.2"/>'), morse: svg('<circle cx="5.5" cy="12" r="1.5"/><path d="M10 12h4.5M18.5 12h.01"/><path d="M3.5 5.5h17M3.5 18.5h17" opacity=".45"/>'), binary: svg('<ellipse cx="7.5" cy="8" rx="3" ry="4"/><path d="M16 4.5V12M14 6l2-1.5"/><path d="M14 19.5h6M7.5 15.5v5M5.5 17l2-1.5"/>'), globe: svg('<circle cx="12" cy="12" r="8.5"/><path d="M3.5 12h17M12 3.5c2.4 2.4 3.6 5.2 3.6 8.5s-1.2 6.1-3.6 8.5c-2.4-2.4-3.6-5.2-3.6-8.5S9.6 5.9 12 3.5z"/>'), imp: svg('<path d="M12 4v11M7.8 11l4.2 4.2 4.2-4.2"/><path d="M4.5 16.5v1.8a1.7 1.7 0 0 0 1.7 1.7h11.6a1.7 1.7 0 0 0 1.7-1.7v-1.8"/>'), exp: svg('<path d="M12 15V4M7.8 8l4.2-4.2L16.2 8"/><path d="M4.5 16.5v1.8a1.7 1.7 0 0 0 1.7 1.7h11.6a1.7 1.7 0 0 0 1.7-1.7v-1.8"/>'), dash: svg('<rect x="3.5" y="3.5" width="7" height="8.5" rx="2"/><rect x="13.5" y="3.5" width="7" height="5" rx="2"/><rect x="13.5" y="11.5" width="7" height="9" rx="2"/><rect x="3.5" y="15" width="7" height="5.5" rx="2"/>'), gear: svg('<path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/>'), cloud: svg('<path d="M7 18.5a4.2 4.2 0 0 1-.6-8.4 5.6 5.6 0 0 1 10.8 1.2A3.6 3.6 0 0 1 17 18.5z"/><path d="M12 15.5V10M9.8 12l2.2-2.2 2.2 2.2"/>'), cloudmedia: svg('<g transform="translate(-.6 -1.4) scale(.86)"><path d="M7 18.5a4.2 4.2 0 0 1-.6-8.4 5.6 5.6 0 0 1 10.8 1.2A3.6 3.6 0 0 1 17 18.5z"/><path d="M12 9.5V15M9.8 13l2.2 2.2 2.2-2.2"/></g><rect x="13.6" y="13.6" width="8.8" height="8" rx="1.8"/><circle cx="19.6" cy="16.6" r=".9"/><path d="M14.4 20.8l2.5-2.6 1.8 1.8 1.4-1.3 1.6 2"/>') };
     function $2(id) { return document.getElementById(id); }
     function fa2() { try {
         return !!H.isFa();
@@ -40426,7 +40428,7 @@ body.mu-nfsbk-on #mkBackupBar { display:none!important; }
     function navToggleGrp(sec) { var grp = sec.closest(".mu-nav-grp"); if (!grp) return; var k = sec.getAttribute("data-navtoggle"), c = grp.classList.toggle("mu-collapsed"); sec.setAttribute("aria-expanded", c ? "false" : "true"); navColl()[k] = c ? 1 : 0; clearTimeout(window.__mkNavSaveT), window.__mkNavSaveT = setTimeout(function () { try { localStorage.setItem("mkNavCollapsed", JSON.stringify(navColl())); } catch (e) { console.warn("silent catch -> setItem @muNotesFsJs:787", e); } }, 400); }
     document.addEventListener("click", function (e) { var t = e.target && e.target.closest && e.target.closest("#muNavPanel .mu-nav-sec[data-navtoggle]"); if (t) { e.preventDefault(), e.stopPropagation(), navToggleGrp(t); } }, !0);
     document.addEventListener("keydown", function (e) { if (e.key !== "Enter" && e.key !== " ") return; var t = e.target && e.target.closest && e.target.closest("#muNavPanel .mu-nav-sec[data-navtoggle]"); if (t) { e.preventDefault(), navToggleGrp(t); } }, !0);
-    var NAV_GROUPS = [{ fa: "مدیریت یادداشت‌ها", en: "Notes Management", items: [{ k: "notes", ic: "bulb", fa: "یادداشت‌ها", en: "Notes", pr: "a" }, { k: "folders", ic: "folder", fa: "پوشه‌ها", en: "Folders", pr: "a" }, { k: "list", ic: "list", fa: "لیست", en: "List", pr: "b" }, { k: "vault", ic: "vault", fa: "گاوصندوق", en: "Vault", pr: "b" }, { k: "search", ic: "search", fa: "جستجوی هوشمند", en: "Smart Search", pr: "b" }, { k: "delete", ic: "trash", fa: "حذف", en: "Delete", pr: "b" }] }, { fa: "مجموعه‌ها", en: "Collections", items: [{ k: "archive", ic: "archive", fa: "بایگانی", en: "Archive" }, { k: "favorites", ic: "star", fa: "علاقه‌مندی‌ها", en: "Favorites", pr: "d" }, { k: "locked", ic: "lock", fa: "قفل‌شده‌ها", en: "Locked", pr: "d" }, { k: "pinned", ic: "pin", fa: "پین‌شده‌ها", en: "Pinned", pr: "h" }, { k: "tags", ic: "tags", fa: "برچسب‌ها", en: "Tags", pr: "h" }] }, { fa: "پشتیبان‌گیری داده‌ها", en: "Data backup", items: [{ k: "cloud", ic: "cloud", fa: "بکاپ ابری تلگرام", en: "Telegram Cloud Backup" }, { k: "imp", ic: "imp", fa: "ورودی‌ها", en: "Import", pr: "c" }, { k: "exp", ic: "exp", fa: "خروجی‌ها", en: "Export", pr: "c" }] }, { fa: "ابزارها", en: "Tools", items: [{ k: "fileviewer", ic: "fview", fa: "نمایشگر و رمزگشایی فایل‌ها", en: "File Viewer & Decryptor" }, { k: "morse", ic: "morse", fa: "مبدل کد مورس", en: "Morse Code Converter", pr: "e" }, { k: "binary", ic: "binary", fa: "مبدل کد باینری", en: "Binary Code Converter", pr: "e" }, { k: "kg", ic: "graph", fa: "شبکه دانش", en: "Knowledge Graph", pr: "g" }, { k: "portal", ic: "portal", fa: "پورتال رندوم", en: "Random Portal", pr: "g" }] }], navTimer = 0, navIsOpen = !1;
+    var NAV_GROUPS = [{ fa: "مدیریت یادداشت‌ها", en: "Notes Management", items: [{ k: "notes", ic: "bulb", fa: "یادداشت‌ها", en: "Notes", pr: "a" }, { k: "folders", ic: "folder", fa: "پوشه‌ها", en: "Folders", pr: "a" }, { k: "list", ic: "list", fa: "لیست", en: "List", pr: "b" }, { k: "vault", ic: "vault", fa: "گاوصندوق", en: "Vault", pr: "b" }, { k: "search", ic: "search", fa: "جستجوی هوشمند", en: "Smart Search", pr: "b" }, { k: "delete", ic: "trash", fa: "حذف", en: "Delete", pr: "b" }] }, { fa: "مجموعه‌ها", en: "Collections", items: [{ k: "archive", ic: "archive", fa: "بایگانی", en: "Archive" }, { k: "favorites", ic: "star", fa: "علاقه‌مندی‌ها", en: "Favorites", pr: "d" }, { k: "locked", ic: "lock", fa: "قفل‌شده‌ها", en: "Locked", pr: "d" }, { k: "pinned", ic: "pin", fa: "پین‌شده‌ها", en: "Pinned", pr: "h" }, { k: "tags", ic: "tags", fa: "برچسب‌ها", en: "Tags", pr: "h" }] }, { fa: "پشتیبان‌گیری داده‌ها", en: "Data backup", items: [{ k: "cloud", ic: "cloud", fa: "بکاپ ابری تلگرام", en: "Telegram Cloud Backup" }, { k: "cloudmedia", ic: "cloudmedia", fa: "دریافت بکاپ رسانه‌ای", en: "Receive media backup" }, { k: "imp", ic: "imp", fa: "ورودی‌ها", en: "Import", pr: "c" }, { k: "exp", ic: "exp", fa: "خروجی‌ها", en: "Export", pr: "c" }] }, { fa: "ابزارها", en: "Tools", items: [{ k: "fileviewer", ic: "fview", fa: "نمایشگر و رمزگشایی فایل‌ها", en: "File Viewer & Decryptor" }, { k: "morse", ic: "morse", fa: "مبدل کد مورس", en: "Morse Code Converter", pr: "e" }, { k: "binary", ic: "binary", fa: "مبدل کد باینری", en: "Binary Code Converter", pr: "e" }, { k: "kg", ic: "graph", fa: "شبکه دانش", en: "Knowledge Graph", pr: "g" }, { k: "portal", ic: "portal", fa: "پورتال رندوم", en: "Random Portal", pr: "g" }] }], navTimer = 0, navIsOpen = !1;
     function modalEl() { return $2("advancedModal"); }
     function modalVisible() { var m = modalEl(); return !!(m && m.style.display === "flex"); }
     function fsOpen() { var r = $2("muNotesFs"); return !!(r && r.classList.contains("mu-open")); }
@@ -40674,6 +40676,15 @@ body.mu-nfsbk-on #mkBackupBar { display:none!important; }
             }
             catch { }
         }
+        return;
+    } if (k === "cloudmedia") {
+        navClose();
+        try {
+            if (H.get("__muTgOk") !== !0) { H.toast(fa2() ? "بکاپ رسانه‌ای فقط داخل تلگرام قابل استفاده است." : "Media backup is only available when the app is opened inside Telegram."); return; }
+            var fm = H.get("mkMediaReceive");
+            typeof fm == "function" && fm();
+        }
+        catch (e) { try { console.warn("Notes menu: receive media failed", e); } catch { } }
         return;
     } var TOOLS = { search: "runSmartSearch", vault: "mkVaultOpen", delete: "mu_openDeleteChooser", kg: "openKnowledgeGraph", morse: "openMorseTool", binary: "openBinaryTool", cloud: "markhinDash_showCloudPanel", dash: "openMarkhinDashboard", settings: "openMarkhinSettings" }; if (TOOLS[k]) {
         if (k === "cloud" && (H.get("__muTgOk") !== !0 || !H.has("markhinDash_showCloudPanel"))) {
@@ -54512,6 +54523,7 @@ html body #contentsContainer .mxe .mxe-body {
   // ---- 3) keep that line inside the REAL visible window of the note ----
   // visible window = scroll area, minus the keyboard (visual viewport), minus the writing-tools pill that floats over it
   function fit() {
+    if (typeof muImgLightboxCtx !== "undefined" && muImgLightboxCtx) return;   // an image is selected (floating image bar): never follow the caret, it may sit at the start of the note and yank the view there
     if (hasSel()) { fitSel(); return; }                              // selection: its own rules (2b)
     if (nowMs() > allowUntil || nowMs() - scrolledAt < 900 || (window.__mkScrollRecent && window.__mkScrollRecent(2500))) return;   // nothing moved the caret: never snap the note back to it (this fought the person's own scrolling)
     var mxe = document.querySelector("#contentsContainer .mxe.show"); if (!mxe) return;
@@ -59987,7 +59999,7 @@ var CONT = [["AS", "آسیا", "Asia"], ["EU", "اروپا", "Europe"], ["NA", "
     const lsGet = k => { try { return localStorage.getItem(k); } catch { return null; } };
     const lsSet = (k, v) => { try { v == null ? localStorage.removeItem(k) : localStorage.setItem(k, v); return !0; } catch { return !1; } };
     const isOn = () => lsGet(LS_ON) === "1";
-    const autoOn = () => lsGet(LS_AUTO) !== "0", cleanOn = () => lsGet(LS_CLEAN) === "1";   // auto clean of orphan media: default OFF
+    const autoOn = () => lsGet(LS_AUTO) !== "0", cleanOn = () => lsGet(LS_CLEAN) !== "0";   // auto clean of orphan media: default ON (only "0" turns it off)
     const readCfg = () => { try { return JSON.parse(lsGet(LS_CFG) || "null"); } catch { return null; } };
     const kvGet = async k => { try { const v = await MU_IDB.getItem(k); if (v != null) return v; } catch { } try { return JSON.parse(lsGet(k) || "null"); } catch { return null; } };
     const kvSet = async (k, v) => { let ok = !1; try { ok = await MU_IDB.setItem(k, v); } catch { } if (!ok) try { lsSet(k, JSON.stringify(v)); } catch { } };
@@ -60370,7 +60382,33 @@ var CONT = [["AS", "آسیا", "Asia"], ["EU", "اروپا", "Europe"], ["NA", "
     }
 
     /* ---------- tasks ---------- */
-    const fail = (id, msg, kind) => { S.fail[id] = { m: String(msg || "error"), k: kind || "e", ts: Date.now() }; persist(); };
+    // retries back off (15s, 30s, 1m ... max 10 min) instead of a flat 10 min wait; clearFail() resets the counter
+    const retryDelay = n => Math.min(6e5, 15000 * Math.pow(2, Math.max(0, (n || 1) - 1)));
+    const fail = (id, msg, kind) => { const p = S.fail[id]; S.fail[id] = { m: String(msg || "error"), k: kind || "e", ts: Date.now(), n: ((p && p.n) || 0) + 1 }; persist(); };
+    // network down: the queue is paused (files are NOT marked failed) and resumes by itself with a growing delay, on "online", or when the app is shown again
+    let netN = 0, netT = 0, netHold = 0, kickAt = 0, saveKickT = 0;
+    function netRetry() { clearTimeout(netT); const d = Math.min(120000, 5000 * Math.pow(2, Math.min(netN++, 5))); netHold = Date.now() + d; netT = setTimeout(() => { netHold = 0; (S.qUp.length || S.qDown.length) ? pump() : autoSyncSoon(200); }, d); }
+    function kickSync(force) {
+        try {
+            if (!isOn() || !S.token || !S.key || S.paused) return; const t = Date.now(); if (!force && t - kickAt < 3000) return; kickAt = t;
+            S.netErr = !1; netN = 0; netHold = 0; clearTimeout(netT);
+            if (autoOn()) { scanUploads(!1); autoSyncSoon(400); }
+            (S.qUp.length || S.qDown.length) && pump();
+            S.manifestDirty && !S.manifestFull && Promise.resolve(pushManifest()).catch(() => { });
+        } catch { }
+    }
+    window.addEventListener("online", () => kickSync(!0));
+    window.addEventListener("pageshow", () => kickSync());
+    window.addEventListener("focus", () => kickSync());
+    document.addEventListener("visibilitychange", () => { document.visibilityState === "visible" && kickSync(); });
+    // a note was saved (new photo/voice added): look for new media a couple of seconds later instead of waiting for the timer
+    function hookSave() {
+        try {
+            if (typeof saveToLocalStorage !== "function" || saveToLocalStorage.__mkmed) return;
+            const orig = saveToLocalStorage, w = function () { const r = orig.apply(this, arguments); try { if (isOn() && autoOn() && S.token && S.key && !S.paused) { clearTimeout(saveKickT); saveKickT = setTimeout(() => { scanUploads(!1); autoSyncSoon(500); }, 2500); } } catch { } return r; };
+            w.__mkmed = 1; saveToLocalStorage = w;
+        } catch { }
+    }
     const clearFail = id => { delete S.fail[id]; };
     function enqueueUp(id, front) { if (S.qUp.includes(id) || S.recs[id] && S.recs[id].fid) return; front ? S.qUp.unshift(id) : S.qUp.push(id); }
     function ensure(id, o) {
@@ -60483,10 +60521,11 @@ var CONT = [["AS", "آسیا", "Asia"], ["EU", "اروپا", "Europe"], ["NA", "
                     ok = kind === "d" ? await downloadOne(id) : await uploadOne(id);
                     kind === "u" && ok && ++upDone && S.manifestDirty && upDone % 8 === 0 && await pushManifest();
                 } catch (e) {
+                    if (e && e.net && !e.fatal) { (kind === "d" ? S.qDown : S.qUp).unshift(id); S.cur = null; netRetry(); break; }
                     fail(id, errText(e) || e.message, "e");
                     if (e && e.fatal) { S.paused = !0; S.qDown.length = 0; S.qUp.length = 0; toast(errText(e), 4000); }
                 }
-                S.cur = null; S.pg.done++; ok ? S.pg.ok++ : S.pg.err++; S.stage = ""; updateProg();
+                S.cur = null; ok && (netN = 0); S.pg.done++; ok ? S.pg.ok++ : S.pg.err++; S.stage = ""; updateProg();
                 if (kind === "d") { const w = S.waiters.get(id); S.waiters.delete(id); w && w.list.forEach(f => f(ok)); ok && afterDownload(id); !ok && w && markEl(id, "er"); }
                 await sleep(kind === "d" ? 120 : 40);
             }
@@ -60620,14 +60659,14 @@ var CONT = [["AS", "آسیا", "Asia"], ["EU", "اروپا", "Europe"], ["NA", "
             const refs = referenced(), now = Date.now(), badF = f => !!f && (f.k === "big" || BAD_RX.test(f.m || ""));
             let room = capBytes() - S.usage, q = 0, up = 0;
             for (const id of Object.keys(S.fail)) {
-                const f = S.fail[id]; if (!f || badF(f) || f.k === "cap" || now - (f.ts || 0) < 6e5) continue;
+                const f = S.fail[id]; if (!f || badF(f) || f.k === "cap" || now - (f.ts || 0) < retryDelay(f.n)) continue;
                 if (S.localKeys.has(id) && !known(id) && refs.has(id)) { delete S.fail[id]; enqueueUp(id); up++; }
             }
             {
                 const ids = [...new Set([...Object.keys(S.remote), ...Object.keys(S.recs)])].filter(id => refs.has(id) && !S.localKeys.has(id) && !S.waiters.has(id)).sort((a, b) => idTime(b) - idTime(a));
                 for (const id of ids) {
                     const r = known(id); if (!r) continue; const f = S.fail[id];
-                    if (f) { if (badF(f)) continue; if (f.k !== "cap" && now - (f.ts || 0) < 6e5) continue; delete S.fail[id]; }
+                    if (f) { if (badF(f)) continue; if (f.k !== "cap" && now - (f.ts || 0) < retryDelay(f.n)) continue; delete S.fail[id]; }
                     if ((r.size || 0) + OVH > MAX_DL) { fail(id, T("big"), "big"); continue; }
                     if (room - (r.size || 0) < 0) break;
                     room -= r.size || 0; ensure(id); q++;
@@ -60640,8 +60679,8 @@ var CONT = [["AS", "آسیا", "Asia"], ["EU", "اروپا", "Europe"], ["NA", "
 /* One-shot full media sync, used by "Enable / fix auto sync": reads the media list from Cloud, retries old failures, queues
        uploads of this device's new media and downloads of media the notes use but this device lacks, then waits (max 5 min) for the
        queue to finish. Respects the local size limit and the "since" point chosen at setup. Never throws. */
-    async function fullSync(report) {
-        report = typeof report === "function" ? report : () => { };
+    async function fullSync(report, opts) {
+        opts = opts || {}; report = typeof report === "function" ? report : () => { };
         const fa = lang() === "fa", L = (x, y) => fa ? x : y, n = x => fa ? String(x).replace(/\d/g, d => "۰۱۲۳۴۵۶۷۸۹"[d]) : String(x);
         try {
             if (!isOn() || !readCfg()) return { skipped: !0 };
@@ -60652,7 +60691,7 @@ var CONT = [["AS", "آسیا", "Asia"], ["EU", "اروپا", "Europe"], ["NA", "
             for (const id of Object.keys(S.fail)) { const f = S.fail[id]; f && f.k !== "big" && delete S.fail[id]; }
             const refs = referenced();
             report(L("⏳ رسانه‌ها: بررسی فایل‌های این دستگاه…", "⏳ Media: checking this device's files…"));
-            const nUp = await scanUploads(!1);
+            const nUp = opts.downloadOnly ? 0 : await scanUploads(!1);   // downloadOnly: "Receive media backup" never uploads
             let room = capBytes() - S.usage, nDown = 0, capped = !1;
             const ids = [...new Set([...Object.keys(S.remote), ...Object.keys(S.recs)])].filter(id => refs.has(id) && !S.localKeys.has(id) && !S.waiters.has(id)).sort((a, b) => idTime(b) - idTime(a));
             for (const id of ids) {
@@ -60672,7 +60711,7 @@ var CONT = [["AS", "آسیا", "Asia"], ["EU", "اروپا", "Europe"], ["NA", "
             return { up: nUp, down: nDown, capped, timedOut, err: Object.keys(S.fail).length };
         } catch (e) { console.warn("mkmed fullSync", e); return { failed: !0 }; }
     }
-        function startUploadScan() { if (upT) return; upT = setInterval(() => { if (S.token && S.key && !S.paused) { autoOn() && (scanUploads(!1), autoSync()); cleanOn() && purgeOrphans(!0); } }, 25000); setTimeout(() => { if (S.token && S.key && !S.paused && autoOn()) { scanUploads(!1); autoSyncSoon(500); } }, 1500); }
+        function startUploadScan() { if (upT) return; upT = setInterval(() => { if (S.token && S.key && !S.paused) { autoOn() && (scanUploads(!1), autoSync()); cleanOn() && purgeOrphans(!0); if (!S.busy && (S.qUp.length || S.qDown.length) && Date.now() >= netHold) pump(); } }, 12000); hookSave(); setTimeout(() => { if (S.token && S.key && !S.paused && autoOn()) { scanUploads(!1); autoSyncSoon(500); } }, 1500); }
 
     /* ---------- UI ---------- */
     const CSS = `.mkmed-sec{margin:0 0 12px;padding:10px 12px;border:1px solid rgba(128,128,128,.35);border-radius:12px;line-height:1.8;font-size:13px}
@@ -60948,6 +60987,24 @@ var CONT = [["AS", "آسیا", "Asia"], ["EU", "اروپا", "Europe"], ["NA", "
         if (isOn()) { await loadState(); await keyRestore(); startObservers(); await pullManifest(); S.manifestDirty = !0; pushManifest(); render(); scheduleScan(!0); pump(); }
         else markDormant();
     }
+    /* "Receive media backup": its own menu entry (cloud icon + media symbol). Downloads the media the notes use but this device lacks. */
+    window.mkMediaReceive = async function () {
+        if (window.__mkMediaRecvBusy) return;
+        const fa = lang() === "fa", L = (x, y) => fa ? x : y;
+        const bar = t => { try { mkBackupBarShow(t); } catch { } }, done = (t, ok, ms) => { try { mkBackupBarDone(t, ok, ms); } catch { } };
+        const openTab = () => { try { window.__mkCloudTab = "media"; typeof window.markhinDash_showCloudPanel == "function" && Promise.resolve(window.markhinDash_showCloudPanel(!0)).catch(() => { }).then(() => setTimeout(() => { try { typeof window.markhinDash_cloudSwitchTab == "function" && window.markhinDash_cloudSwitchTab("media"); } catch { } }, 350)); } catch { } };   // opens Telegram Cloud Backup straight on its Media tab
+        if (!isOn() || !readCfg()) { toast(L("بکاپ رسانه‌ای هنوز فعال نیست؛ از همین تب «رسانه» فعالش کن.", "Media backup is not active yet; turn it on here in the Media tab."), 3500); openTab(); return; }
+        window.__mkMediaRecvBusy = !0;
+        try {
+            bar(L("⏳ دریافت بکاپ رسانه‌ای…", "⏳ Receiving media backup…"));
+            const r = await fullSync(t => bar(t), { downloadOnly: !0 });
+            if (r && r.locked) { done(L("بکاپ رسانه‌ای قفل است؛ رمز را در تب «رسانه» وارد کن.", "Media backup is locked; enter the password in the Media tab."), !1, 4500); openTab(); }
+            else if (!r || r.failed) done(L("دریافت بکاپ رسانه‌ای ناموفق بود. دوباره امتحان کن.", "Receiving the media backup failed. Please try again."), !1, 4500);
+            else if (r.skipped) { done(L("بکاپ رسانه‌ای هنوز فعال نیست؛ از تب «رسانه» فعالش کن.", "Media backup is not active yet; turn it on in the Media tab."), !1, 4000); openTab(); }
+            else done(r.down ? L(`✅ دریافت رسانه‌ها: ${r.down} فایل` + (r.err ? ` (${r.err} خطا)` : "") + (r.capped ? " (سقف حجم پر شد)" : "") + (r.timedOut ? " (بقیه در پس‌زمینه ادامه دارد)" : "") + ".", `✅ Media received: ${r.down} file(s)` + (r.err ? ` (${r.err} error(s))` : "") + (r.capped ? " (size limit reached)" : "") + (r.timedOut ? " (the rest continues in the background)" : "") + ".") : L("✅ همه‌ی رسانه‌ها از قبل روی این دستگاه هست.", "✅ Every media file is already on this device."), !r.err || !!r.down, 4000);
+        } catch (e) { console.warn("mkMediaReceive", e); done(L("دریافت بکاپ رسانه‌ای ناموفق بود.", "Receiving the media backup failed."), !1, 4500); }
+        finally { window.__mkMediaRecvBusy = !1; }
+    };
     window.MKMED = { S, encodeToken, autoSync, fullSync, purgeOrphans, orphanIds, activate, api, setupWith, unlockWith, pushManifest, pullManifest, ensure, scanUploads, freeSpace, refreshLocal, known, onAct, render, patchModel, afterDownload, referenced, loadState, startObservers, readCloudCfg, sha256, _cfg: readCfg };
     init();
 })();
