@@ -66,7 +66,7 @@
             add("error", e !== undefined && e !== null ? str(e) : (m || "Unknown error"), {
                 src: ev.filename ? ev.filename + ":" + ev.lineno + ":" + ev.colno : "",
                 stack: stackOf(e),
-                extra: e === undefined || e === null ? (isFa() ? "ارور بدون شیء Error (مثلاً «Script error» از اسکریپت بیرونی)؛ stack در دسترس نیست." : "Error without an Error object (e.g. \"Script error\" from a cross-origin script); no stack available.") : ""
+                extra: e === undefined || e === null ? (isFa() ? "ارور بدون شیء Error (مثلاً «Script error» از اسکریپت بیرونی)؛ stack در دسترس نیست. اسکریپت‌های بیرونی بارگذاری‌شده: " + Array.prototype.map.call(document.scripts, function (x) { return x.src; }).filter(Boolean).join(" , ") : "Error without an Error object (e.g. \"Script error\" from a cross-origin script); no stack available.") : ""
             });
         } catch (x) { }
     }, true);
@@ -4548,7 +4548,7 @@ button:focus-visible,input:focus-visible,select:focus-visible {
 }
 catch { } } function loadScript(url) { return new Promise(function (resolve) { try {
     var scriptElement = document.createElement("script");
-    scriptElement.src = url, scriptElement.async = !0, scriptElement.onload = scriptElement.onerror = function () { resolve(); }, document.head.appendChild(scriptElement);
+    scriptElement.crossOrigin = "anonymous", scriptElement.src = url, scriptElement.async = !0, scriptElement.onload = scriptElement.onerror = function () { resolve(); }, document.head.appendChild(scriptElement);
 }
 catch {
     resolve();
@@ -26772,7 +26772,7 @@ catch { }
 const printable = document.createElement("div"); printable.dir = currentLang === "fa" ? "rtl" : "ltr", printable.className = "mu-print-root", printable.style.cssText = "position:fixed;inset:0;background:#fff;color:#111;padding:40px;z-index:2147483647;overflow:auto;font-family:Tahoma,Vazirmatn,Arial,sans-serif;"; const bodyHtml = item => !isNoteLocked(item) && item.html ? mu_bidiHtml(sanitizeHtml(item.html)) : mu_bidiHtml(escapeHtml(getTxtContent(item.id, item))); printable.innerHTML = '<style>.mu-print-root,.mu-print-root *{color:#111!important;-webkit-text-fill-color:#111!important;text-shadow:none!important}.mu-print-body{white-space:pre-wrap;line-height:1.9;unicode-bidi:plaintext;text-align:start;overflow-wrap:anywhere}.mu-print-body div,.mu-print-body p,.mu-print-body li,.mu-print-body blockquote{unicode-bidi:plaintext}.mu-print-body img{max-width:100%;height:auto}.mu-print-body .img-toolbar,.mu-print-body button,.mu-print-body audio{display:none!important}' + mu_fixedTableCss('.mu-print-body') + '</style><h1 style="margin-top:0">Markhin Note</h1>' + list.map((item, i) => `<section style="page-break-after:always;margin-bottom:40px"><h2 dir="auto">${escapeHtml(`${i + 1}. ${item.name}`)}</h2><div class="mu-print-body">${bodyHtml(item)}</div></section>`).join(""), document.body.appendChild(printable), printable.querySelectorAll(".mu-print-body").forEach(function (b) { b.style.maxWidth = "640px"; }), mu_fitTableFonts(printable); const oldTitle = document.title; document.title = chosenName || (list.length === 1 ? sanitizeFilename(list[0].name) : "Markhin_Note_All_Notes"), await Promise.all(Array.from(printable.querySelectorAll("img")).map(img => img.complete ? 0 : new Promise(r => { img.onload = img.onerror = r, setTimeout(r, 2500); }))), setTimeout(() => { window.print(), setTimeout(() => { printable.remove(), document.title = oldTitle; }, 700); }, 80); }
 let __docxEnginePromise = null;
 function loadScriptOnce(src) { return new Promise((resolve, reject) => { if (Array.from(document.scripts).find(x => x.src === src) && window.docx)
-    return resolve(window.docx); const script = document.createElement("script"); script.src = src, script.async = !0, script.onload = () => window.docx ? resolve(window.docx) : reject(new Error("DOCX script loaded but global engine was not created")), script.onerror = () => { try { script.remove(); } catch (_) { } reject(new Error("Could not load " + src)); }, document.head.appendChild(script); }); }
+    return resolve(window.docx); const script = document.createElement("script"); script.crossOrigin = "anonymous", script.src = src, script.async = !0, script.onload = () => window.docx ? resolve(window.docx) : reject(new Error("DOCX script loaded but global engine was not created")), script.onerror = () => { try { script.remove(); } catch (_) { } reject(new Error("Could not load " + src)); }, document.head.appendChild(script); }); }
 async function ensureDOCXEngine() { if (window.docx && window.docx.Document && window.docx.Packer)
     return window.docx; if (__docxEnginePromise)
     return __docxEnginePromise; const urls = ["https://cdn.jsdelivr.net/npm/docx@8.5.0/build/index.umd.js", "https://unpkg.com/docx@8.5.0/build/index.umd.js", "https://fastly.jsdelivr.net/npm/docx@8.5.0/build/index.umd.js", "https://gcore.jsdelivr.net/npm/docx@8.5.0/build/index.umd.js"]; __docxEnginePromise = (async () => { let lastError = null; for (const url of urls)
@@ -27435,7 +27435,7 @@ async function showManualDownloadFallback(blob, filename, mime) {
 async function triggerDownload(content, filename, contentType) { const blob = content instanceof Blob ? content : new Blob([content], { type: contentType }), name = sanitizeFilename(filename || "download") || "download"; return robustDownload(blob, name, contentType || blob.type); }
 let __zipEnginePromise = null;
 function loadExternalScript(src, test) { return new Promise((resolve, reject) => { if (Array.from(document.scripts).find(x => x.src === src) && (!test || test()))
-    return resolve(!0); const script = document.createElement("script"); script.src = src, script.async = !0, script.onload = () => test && !test() ? reject(new Error("Loaded but engine missing: " + src)) : resolve(!0), script.onerror = () => reject(new Error("Failed: " + src)), document.head.appendChild(script); }); }
+    return resolve(!0); const script = document.createElement("script"); script.crossOrigin = "anonymous", script.src = src, script.async = !0, script.onload = () => test && !test() ? reject(new Error("Loaded but engine missing: " + src)) : resolve(!0), script.onerror = () => reject(new Error("Failed: " + src)), document.head.appendChild(script); }); }
 async function ensureZipEngine() { if (window.JSZip)
     return window.JSZip; if (__zipEnginePromise)
     return __zipEnginePromise; const urls = ["https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js", "https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js", "https://unpkg.com/jszip@3.10.1/dist/jszip.min.js"]; __zipEnginePromise = (async () => { let last; for (const u of urls)
@@ -33307,7 +33307,7 @@ HX().scheduleCloudBackup(!1, !0), HX().showToast(fa ? `✅ ذخیره شد — �
             }
             catch { }
             return `<div class="markhin-smart-item" data-id="${HX().escapeHtml(item.id)}">
-            <div class="ms-meta"><b>${HX().isNoteLocked(item) ? "🔒 " : ""}${mu_highlightPlain(item.name, textTerms)}</b>${badge}${fold ? '<span class="ms-folder">📁 ' + HX().escapeHtml(fold) + "</span>" : ""}</div>
+            <div class="ms-meta"><b>${HX().isNoteLocked(item) ? "🔒 " : ""}${mu_highlightPlain(item.name, textTerms)}</b>${badge}${fold ? '<span class="ms-folder">?? ' + HX().escapeHtml(fold) + "</span>" : ""}</div>
             <div class="snippet">${mu_highlightPlain(snip, textTerms)}</div>
         </div>`;
         }).join(""), box.innerHTML = html2;
@@ -59558,6 +59558,7 @@ html.mu-clk-open #muTgClockBd{animation:mkmBd .16s ease-out}
         if (document.hidden) return; // visibilitychange restarts it
         var fs = isOn() && R.classList.contains("mu-tg-fs");
         if (fs) { place(); paint(); }
+        if (lastTg !== null && inTg() !== lastTg) ensureWc();
         if (menuOpen) paintMenu(); if (wcVis) paintWc();
         if (!synced || performance.now() - lastSync > 6e5) sync(false);
         // nothing on screen shows the time: check rarely; opening the menu / entering fullscreen wakes it at once
@@ -59773,8 +59774,18 @@ var CONT = [["AS", "آسیا", "Asia"], ["EU", "اروپا", "Europe"], ["NA", "
         if (wcLast !== city + off) { wcLast = city + off; wcB.textContent = city; wcO.textContent = off; }
         wcBtn.classList.toggle("mkc-ok", synced);
     }
+    // side-menu clock is for use OUTSIDE Telegram only; inside Telegram the header clock is the only one
+    function inTg() {
+        try {
+            var W = window.Telegram && Telegram.WebApp;
+            return !!(W && (W.initData && String(W.initData).length || W.platform && W.platform !== "unknown")) || /Telegram/i.test(navigator.userAgent || "");
+        } catch (e) { return false; }
+    }
+    var lastTg = null;
     function ensureWc() {
         var pn = document.getElementById("muNavPanel"); if (!pn) return;
+        lastTg = inTg();
+        if (lastTg) { try { wcIO && wcIO.disconnect(); } catch (e) { } if (wcEl && wcEl.parentNode) wcEl.parentNode.removeChild(wcEl); wcVis = false; return; }
         if (wcEl && wcEl.parentNode === pn && pn.lastElementChild === wcEl) return;
         if (!wcEl) {
             wcEl = document.createElement("div"); wcEl.id = "mkWcSec";
@@ -59873,7 +59884,7 @@ var CONT = [["AS", "آسیا", "Asia"], ["EU", "اروپا", "Europe"], ["NA", "
     const enc = new TextEncoder(), dec = new TextDecoder();
     /* Default media bot, kept out of the UI: people only choose a password. TOK_OBF is the token scrambled by MKMED.encodeToken("<token>")
        (obfuscation only - anyone who reads this file or watches the network can still recover it). Empty = no default bot, the old flow. */
-    const TOK_OBF = "Dxk_FD96ai58MwVMJypRPSaGrJ3P1_CZ5aDv_NWl0L_I3tddWgRKSHY1YGIFXA", DEF_BOT_USER = "intosavebot", TOK_KEY = "mkmed-def-bot-v1";
+    const TOK_OBF = "", DEF_BOT_USER = "", TOK_KEY = "mkmed-def-bot-v1";
 
     /* ---------- i18n (fa/en), merged into the app's i18n object ---------- */
     const D = {
