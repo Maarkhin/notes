@@ -60007,17 +60007,43 @@ var CONT = [["AS", "آسیا", "Asia"], ["EU", "اروپا", "Europe"], ["NA", "
     }
 
     /* ---------- config / unlock ---------- */
+    // Keyboards sometimes add a trailing space / invisible bidi marks, or type Persian vs English digits and Arabic vs Persian ي/ك.
+    // Several equivalent spellings of the typed password are tried; only the right key can decrypt (AES-GCM), so nothing is weakened.
+    function pwVariants(pw) {
+        pw = String(pw == null ? "" : pw); const out = [pw], add = v => { v && out.indexOf(v) < 0 && out.push(v); };
+        const inv = /[\u200B-\u200F\u202A-\u202E\u2066-\u2069\uFEFF]/g, clean = pw.replace(inv, "").trim();
+        const toEn = t => t.replace(/[\u06F0-\u06F9]/g, c => String.fromCharCode(c.charCodeAt(0) - 0x6F0 + 48)).replace(/[\u0660-\u0669]/g, c => String.fromCharCode(c.charCodeAt(0) - 0x660 + 48));
+        const toFa = t => t.replace(/\u064A/g, "\u06CC").replace(/\u0643/g, "\u06A9");
+        add(pw.trim()); add(clean); try { add(pw.normalize("NFC")); add(clean.normalize("NFKC")); } catch { }
+        add(toEn(clean)); add(toFa(clean)); add(toFa(toEn(clean)));
+        return out.slice(0, 7);
+    }
+    async function tryUnlockCfg(pw, cfg) {
+        try {
+            let key = await derive(pw, unb64u(cfg.s), cfg.i || 250000);
+            if (cfg.dk) key = await crypto.subtle.importKey("raw", await aesDec(key, unb64u(cfg.dk), AAD_DK), "AES-GCM", !1, ["encrypt", "decrypt"]);
+            return { key, tok: dec.decode(await aesDec(key, unb64u(cfg.t), AAD_TOK)) };
+        } catch { return null; }
+    }
     async function unlockWith(pw, cfg) {
         cfg = cfg || readCfg(); if (!cfg) throw new Error("nocfg");
-        let key = await derive(pw, unb64u(cfg.s), cfg.i || 250000);
-        let tok; try { if (cfg.dk) key = await crypto.subtle.importKey("raw", await aesDec(key, unb64u(cfg.dk), AAD_DK), "AES-GCM", !1, ["encrypt", "decrypt"]); tok = dec.decode(await aesDec(key, unb64u(cfg.t), AAD_TOK)); } catch { const e = new Error("wrong"); e.wrong = !0; throw e; }
-        S.key = key; S.token = tok; S.base = cfg.base || lsGet("mkmed_base_v1") || DEF_BASE; keyRemember(key, cfg); await syncKid(); return !0;
+        const vars = pwVariants(pw); let hit = null, used = cfg;
+        const run = async c => { for (const v of vars) { const r = await tryUnlockCfg(v, c); if (r) return r; } return null; };
+        hit = await run(cfg);
+        if (!hit && cloudOk()) {
+            // This device's copy of the config may be older than the one in Cloud (password changed / set up again on another device).
+            const before = JSON.stringify([cfg.s, cfg.t, cfg.dk || ""]);
+            try { await readCloudCfg(!0); } catch { }
+            const c2 = readCfg(); if (c2 && JSON.stringify([c2.s, c2.t, c2.dk || ""]) !== before) { hit = await run(c2); used = c2; }
+        }
+        if (!hit) { const e = new Error("wrong"); e.wrong = !0; throw e; }
+        S.key = hit.key; S.token = hit.tok; S.base = used.base || lsGet("mkmed_base_v1") || DEF_BASE; keyRemember(hit.key, used); await syncKid(); return !0;
     }
     function lockNow() { S.key = null; S.token = null; S.paused = !0; KEYDB.del(); render(); }
     function askPassword() {
         return new Promise(res => {
             const m = document.createElement("div"); m.className = "mkmed-modal";
-            m.innerHTML = `<div class="mkmed-card" dir="auto"><div class="mkmed-h">${esc(T("enterPw"))}</div><input type="password" class="mkmed-in" autocomplete="off"><label class="mkmed-note" style="display:block;margin:4px 0"><input type="checkbox" data-rem ${S.remember ? "checked" : ""}> ${esc(T("remember"))}</label><div class="mkmed-row"><button type="button" class="btn-main" data-x="ok">${esc(T("ok"))}</button><button type="button" class="btn-main" data-x="no">${esc(T("cancel"))}</button></div><div class="mkmed-msg" data-m></div></div>`;
+            m.innerHTML = `<div class="mkmed-card" dir="auto"><div class="mkmed-h">${esc(T("enterPw"))}</div><input type="password" class="mkmed-in" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false"><label class="mkmed-note" style="display:block;margin:4px 0"><input type="checkbox" data-rem ${S.remember ? "checked" : ""}> ${esc(T("remember"))}</label><div class="mkmed-row"><button type="button" class="btn-main" data-x="ok">${esc(T("ok"))}</button><button type="button" class="btn-main" data-x="no">${esc(T("cancel"))}</button></div><div class="mkmed-msg" data-m></div></div>`;
             document.body.appendChild(m); const inp = m.querySelector("input"); setTimeout(() => { try { inp.focus(); } catch { } }, 50);
             const done = v => { m.remove(); res(v); };
             m.addEventListener("click", async e => {
@@ -60213,7 +60239,7 @@ var CONT = [["AS", "آسیا", "Asia"], ["EU", "اروپا", "Europe"], ["NA", "
             });
         } catch { return !1; }
     }
-    async function readCloudCfg() {
+    async function readCloudCfg(force) {
         if (!cloudOk()) return;
         try {
             const raw = await serial(() => cloudGetItem(CFG_KEY)); if (!raw) return;
@@ -60221,7 +60247,7 @@ var CONT = [["AS", "آسیا", "Asia"], ["EU", "اروپا", "Europe"], ["NA", "
             lsSet(LS_SEEN, "1"); applyBudget();
             const cur = readCfg();
             if (!cur) { lsSet(LS_CFG, JSON.stringify({ v: 1, s: c.s, i: c.i, t: c.t, dk: c.dk, b: c.b || "", bts: c.bts || 0, since: 0, ts: c.ts })); isOn() || toast(T("found"), 5000); }
-            else if ((cur.s !== c.s || cur.t !== c.t) && (c.ts || 0) >= (cur.ts || 0)) {
+            else if ((cur.s !== c.s || cur.t !== c.t || (cur.dk || "") !== (c.dk || "")) && (force || (c.ts || 0) >= (cur.ts || 0))) {
                 lsSet(LS_CFG, JSON.stringify(Object.assign({}, cur, { s: c.s, i: c.i, t: c.t, dk: c.dk, b: c.b || cur.b, bts: c.bts || cur.bts || 0, ts: c.ts }))); c.bts && dropOldBot(c.bts); S.key = null; S.token = null; KEYDB.del(); toast(T("cfgChanged"), 5000);
             }
             render(); markDormant();
@@ -60379,8 +60405,10 @@ var CONT = [["AS", "آسیا", "Asia"], ["EU", "اروپا", "Europe"], ["NA", "
     function updateProg() { try { const el = document.getElementById("mkmedProg"); if (!el) return; const w = document.createElement("div"); w.innerHTML = pgHtml(); w.firstChild && el.replaceWith(w.firstChild); } catch { } }
     function markBusy() { try { const sec = document.getElementById("mkmedSec"); if (!sec) return; S.acts.forEach(a => sec.querySelectorAll('[data-mkact="' + a + '"]').forEach(b => { if (b.classList.contains("mkmed-busy")) return; b.disabled = !0; b.classList.add("mkmed-busy"); b.insertAdjacentHTML("afterbegin", '<span class="mkmed-spin"></span> '); })); } catch { } }
 
+    let refsC = null, refsT = 0;
+    const stillRef = id => { const n = Date.now(); if (!refsC || n - refsT > 1500) { refsC = referenced(); refsT = n; } return refsC.has(id); };
     async function pump() {
-        if (S.busy) return; S.busy = !0; S.pg.active || (S.pg = { active: !0, done: 0, ok: 0, err: 0, t0: Date.now(), fin: 0 }); render();
+        if (S.busy) return; refsC = null; S.busy = !0; S.pg.active || (S.pg = { active: !0, done: 0, ok: 0, err: 0, t0: Date.now(), fin: 0 }); render();
         try {
             S.kid || await syncKid();
             let upDone = 0;
@@ -60388,6 +60416,7 @@ var CONT = [["AS", "آسیا", "Asia"], ["EU", "اروپا", "Europe"], ["NA", "
                 let id = S.qDown.shift(), kind = "d";
                 if (!id) { id = S.qUp.shift(); kind = "u"; }
                 if (!id) break;
+                if (kind === "u" && !stillRef(id)) { delete S.fail[id]; continue; }   // deleted from the notes after it was queued: do not send
                 S.cur = id; S.curKind = kind; S.stage = ""; render();
                 let ok = !1;
                 try {
@@ -60471,6 +60500,8 @@ var CONT = [["AS", "آسیا", "Asia"], ["EU", "اروپا", "Europe"], ["NA", "
         if (!isOn()) return 0; S.kid || await syncKid(); await refreshLocal(!1);
         const refs = referenced(), since = +(readCfg() || {}).since || 0, okR = r => !!(r && r.fid && !isBad(r) && (all ? (!S.kid || r.k === S.kid) : (!r.k || !S.kid || r.k === S.kid)));
         let n = 0, dropped = !1;
+        if (S.qUp.length) S.qUp = S.qUp.filter(id => refs.has(id));
+        { let fch = !1; for (const id in S.fail) if (!refs.has(id)) { delete S.fail[id]; fch = !0; } fch && persist(); }
         for (const id of S.localKeys) {
             if (!refs.has(id) || okR(S.recs[id]) || okR(S.remote[id])) continue;
             if (S.fail[id] && !all) continue; if (!all && since && idTime(id) && idTime(id) < since) continue;
@@ -60512,7 +60543,30 @@ var CONT = [["AS", "آسیا", "Asia"], ["EU", "اروپا", "Europe"], ["NA", "
 [data-mkmed]{position:relative;min-height:44px;border:1px dashed rgba(128,128,128,.6);border-radius:8px;padding:8px;opacity:.9}
 [data-mkst]{position:relative}
 [data-mkst]::after{content:attr(data-mkmsg);position:absolute;inset-inline-start:6px;bottom:6px;font-size:11px;padding:1px 8px;border-radius:99px;background:rgba(0,0,0,.65);color:#fff;pointer-events:none}
-[data-mkst="er"],[data-mkst="lk"]{cursor:pointer}`;
+[data-mkst="er"],[data-mkst="lk"]{cursor:pointer}
+.mkmed-sec{padding:0!important;border:0!important;background:none!important}
+.mkmed-hd{display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap;margin:0 0 8px;font-size:15px;font-weight:700}
+.mkmed-chip{display:inline-flex;align-items:center;gap:6px;padding:2px 10px;font-size:11.5px;font-weight:600}
+.mkmed-chip::before{content:"";width:8px;height:8px;border-radius:50%;background:#8a8f98}
+.mkmed-chip.ok{border-color:rgba(46,160,67,.6);color:#2ea043}.mkmed-chip.ok::before{background:#2ea043}
+.mkmed-chip.warn{border-color:rgba(219,156,0,.6);color:#c98a00}.mkmed-chip.warn::before{background:#e0a100}
+.mkmed-card{margin:0 0 10px;padding:10px 12px;border:1px solid rgba(128,128,128,.28);border-radius:14px;background:rgba(128,128,128,.07);font-size:13px;line-height:1.8}
+.mkmed-card.bad{border-color:rgba(229,72,77,.45);background:rgba(229,72,77,.07)}
+.mkmed-card.dng{border-color:rgba(229,72,77,.35)}
+.mkmed-ct{display:flex;align-items:center;gap:6px;margin:0 0 6px;font-size:13px;font-weight:700;opacity:.95}
+.mkmed-bot{display:flex;flex-wrap:wrap;gap:4px 10px;align-items:center;font-size:12px;opacity:.9;margin:0 0 8px}
+.mkmed-grid{grid-template-columns:repeat(5,minmax(0,1fr));gap:6px;margin:4px 0 8px}
+.mkmed-grid div{background:rgba(128,128,128,.08);padding:6px 2px}
+.mkmed-grid div.warn b{color:#c98a00}.mkmed-grid div.bad b{color:#e5484d}.mkmed-grid div.good b{color:#2ea043}
+.mkmed-btns{display:flex;flex-wrap:wrap;gap:6px;margin:6px 0 0}
+.mkmed-b{flex:1 1 calc(50% - 6px);min-width:0;display:inline-flex;align-items:center;justify-content:center;gap:4px;padding:9px 8px!important;border-radius:10px!important;font-size:12.5px!important;line-height:1.4;text-align:center}
+.mkmed-b.pri{flex-basis:100%;background:#3390ec!important;color:#fff!important;border-color:transparent!important;font-weight:700}
+.mkmed-b.dng{color:#e5484d!important;border-color:rgba(229,72,77,.5)!important;background:transparent!important}
+.mkmed-capr{display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap}
+.mkmed-capr .mkmed-in{width:96px;margin:0;text-align:center}
+.mkmed-card details>summary{list-style:none}.mkmed-card details>summary::-webkit-details-marker{display:none}
+.mkmed-card details{margin:0}
+.mkmed-fail{font-size:11.5px;opacity:.9;word-break:break-all}`;
     let renderT = 0; const scheduleRender = () => { clearTimeout(renderT); renderT = setTimeout(render, 250); };
     function stats() {
         const refs = referenced(), all = new Set([...refs, ...Object.keys(S.remote), ...Object.keys(S.recs)]);
@@ -60529,25 +60583,41 @@ var CONT = [["AS", "آسیا", "Asia"], ["EU", "اروپا", "Europe"], ["NA", "
     const pgBox = () => pgHtml();
     function bodyHtml() {
         const cfg = readCfg(), on = isOn(), unl = !!(S.token && S.key), st = stats(), fa = lang() === "fa";
-        const chip = !cfg ? `<span class="mkmed-chip">${T("notset")}</span>` : on ? `<span class="mkmed-chip">${T("on")} · ${unl ? T("unlocked") : T("locked")}</span>` : `<span class="mkmed-chip">${T("off")}</span>`;
-        let h = `<h4><span>${T("title")}</span>${chip}</h4><div class="mkmed-note">${T("intro")}</div>`;
-        cfg && (h += `<div class="mkmed-note" dir="ltr" style="margin:4px 0">🤖 ${T("bot")}: <b>${esc(cfg.b || "?")}</b> · chat ${esc(String(chatId() || "?"))}${S.base !== DEF_BASE ? " · " + esc(S.base) : ""}</div>`);
+        const chip = !cfg ? `<span class="mkmed-chip">${T("notset")}</span>` : on ? `<span class="mkmed-chip ${unl ? "ok" : "warn"}">${T("on")} · ${unl ? T("unlocked") : T("locked")}</span>` : `<span class="mkmed-chip">${T("off")}</span>`;
+        let h = `<div class="mkmed-hd"><span>${T("title")}</span>${chip}</div><div class="mkmed-card"><div class="mkmed-note">${T("intro")}</div>`;
+        cfg && (h += `<div class="mkmed-bot" dir="ltr" style="margin-top:6px"><span>🤖 ${esc(cfg.b || "?")}</span><span>chat ${esc(String(chatId() || "?"))}</span>${S.base !== DEF_BASE ? "<span>" + esc(S.base) + "</span>" : ""}</div>`);
         S.warn && (h += `<div class="mkmed-note" style="margin:4px 0">⚠️ ${esc(S.warn)}</div>`);
+        h += `</div>`;
         if (!cfg) {
-            h += `<div class="mkmed-note" style="margin:6px 0">${T("steps")}</div><input class="mkmed-in" id="mkmedTok" placeholder="${T("token")}" autocomplete="off" value="${esc(S.draft.mkmedTok || "")}"><input class="mkmed-in" id="mkmedPw" type="password" placeholder="${T("pw")}" autocomplete="new-password" value="${esc(S.draft.mkmedPw || "")}"><input class="mkmed-in" id="mkmedPw2" type="password" placeholder="${T("pw2")}" autocomplete="new-password" value="${esc(S.draft.mkmedPw2 || "")}">${advHtml()}<div class="mkmed-note">${T("pwnote")}</div><div class="mkmed-row"><button type="button" class="btn-main" data-mkact="setup">${T("connect")}</button></div><div class="mkmed-msg" id="mkmedMsg">${esc(S.msg || "")}</div>`;
+            h += `<div class="mkmed-card"><div class="mkmed-note" style="margin:0 0 6px">${T("steps")}</div><input class="mkmed-in" id="mkmedTok" placeholder="${T("token")}" autocomplete="off" value="${esc(S.draft.mkmedTok || "")}"><input class="mkmed-in" id="mkmedPw" type="password" placeholder="${T("pw")}" autocomplete="new-password" autocapitalize="off" autocorrect="off" spellcheck="false" value="${esc(S.draft.mkmedPw || "")}"><input class="mkmed-in" id="mkmedPw2" type="password" placeholder="${T("pw2")}" autocomplete="new-password" autocapitalize="off" autocorrect="off" spellcheck="false" value="${esc(S.draft.mkmedPw2 || "")}">${advHtml()}<div class="mkmed-note">${T("pwnote")}</div><div class="mkmed-btns"><button type="button" class="btn-main mkmed-b pri" data-mkact="setup">${T("connect")}</button></div><div class="mkmed-msg" id="mkmedMsg">${esc(S.msg || "")}</div></div>`;
             return h;
         }
-        if (!unl) h += `<div class="mkmed-note" style="margin:6px 0">${T("cloudcfg")}</div><input class="mkmed-in" id="mkmedPw" type="password" placeholder="${T("pw")}" autocomplete="current-password"><label class="mkmed-note" style="display:block;margin:4px 0"><input type="checkbox" id="mkmedRem" ${S.remember ? "checked" : ""}> ${T("remember")}</label><div class="mkmed-row"><button type="button" class="btn-main" data-mkact="unlock">${T("unlock")}</button></div><div class="mkmed-msg" id="mkmedMsg">${esc(S.msg || "")}</div>`;
-        h += advHtml();
-        h += `<div class="mkmed-grid"><div><b>${st.total}</b><span>${T("total")}</span></div><div><b>${st.up}</b><span>${T("uploaded")}</span></div><div><b>${st.uns}</b><span>${T("unsynced")}</span></div><div><b>${st.here}</b><span>${T("here")}</span></div><div><b>${st.err}</b><span>${T("errors")}</span></div></div>`;
+        if (!unl) h += `<div class="mkmed-card"><div class="mkmed-ct">🔒 ${T("unlock")}</div><div class="mkmed-note" style="margin:0 0 6px">${T("cloudcfg")}</div><input class="mkmed-in" id="mkmedPw" type="password" placeholder="${T("pw")}" autocomplete="current-password" autocapitalize="off" autocorrect="off" spellcheck="false" value="${esc(S.draft.mkmedPw || "")}"><label class="mkmed-note" style="display:block;margin:4px 0"><input type="checkbox" id="mkmedRem" ${S.remember ? "checked" : ""}> ${T("remember")}</label><div class="mkmed-btns"><button type="button" class="btn-main mkmed-b pri" data-mkact="unlock">${T("unlock")}</button></div><div class="mkmed-msg" id="mkmedMsg">${esc(S.msg || "")}</div></div>`;
+        const L = (x, y) => fa ? x : y, nf = x => fa ? String(x).replace(/\d/g, d => "۰۱۲۳۴۵۶۷۸۹"[d]) : String(x);
+        const card = (ic, t, body, cls) => `<div class="mkmed-card ${cls || ""}"><div class="mkmed-ct"><span>${ic}</span><span>${t}</span></div>${body}</div>`;
+        const btn = (act, label, cls) => `<button type="button" class="btn-main mkmed-b ${cls || ""}" data-mkact="${act}">${label}</button>`;
         const cap = capBytes(), pct = Math.min(100, S.usage / cap * 100), mb = n => (n / 1048576).toFixed(1);
-        h += `<div class="mkmed-note">${T("usage")}: ${S.usageKnown ? mb(S.usage) : "…"} / ${mb(cap)} MB</div><div class="mkmed-bar"><i style="width:${pct}%"></i></div><div class="mkmed-note" id="mkmedEst"></div><div class="mkmed-note">${T("keys")}: ${S.mkeys} / ${BUDGET}</div>`;
-        S.manifestFull && (h += `<div class="mkmed-note">${T("fullM")}</div>`);
-        { const fe = Object.keys(S.fail).sort((x, y) => (S.fail[y].ts || 0) - (S.fail[x].ts || 0)).slice(0, 4); fe.length && (h += `<div class="mkmed-note" dir="ltr" style="margin:4px 0">${fe.map(id => "⚠️ " + esc(id) + ": " + esc(S.fail[id].m)).join("<br>")}</div>`); }
-        hasBad() && (h += `<div class="mkmed-note" style="margin:6px 0;font-weight:bold">⚠️ ${T("badNote")}</div>`);
+        // 1) status
+        const tile = (n, lbl, c) => `<div class="${c || ""}"><b>${nf(n)}</b><span>${lbl}</span></div>`;
+        let st1 = `<div class="mkmed-grid">${tile(st.total, T("total"))}${tile(st.up, T("uploaded"), "good")}${tile(st.uns, T("unsynced"), st.uns ? "warn" : "")}${tile(st.here, T("here"))}${tile(st.err, T("errors"), st.err ? "bad" : "")}</div>`;
+        st1 += `<div class="mkmed-note">${T("usage")}: ${S.usageKnown ? nf(mb(S.usage)) : "…"} / ${nf(mb(cap))} MB</div><div class="mkmed-bar"><i style="width:${pct}%"></i></div><div class="mkmed-note" id="mkmedEst"></div><div class="mkmed-note">${T("keys")}: ${nf(S.mkeys)} / ${nf(BUDGET)}</div>`;
+        S.manifestFull && (st1 += `<div class="mkmed-note">${T("fullM")}</div>`);
+        h += card("📊", L("وضعیت", "Status"), st1);
+        // 2) problems (only when there are any)
+        { const fe = Object.keys(S.fail).sort((x, y) => (S.fail[y].ts || 0) - (S.fail[x].ts || 0)).slice(0, 4); let pb = "";
+          fe.length && (pb += `<div class="mkmed-fail" dir="ltr">${fe.map(id => "⚠️ " + esc(id) + ": " + esc(S.fail[id].m)).join("<br>")}</div>`);
+          hasBad() && (pb += `<div class="mkmed-note" style="margin:6px 0;font-weight:bold">${T("badNote")}</div><div class="mkmed-btns">${btn("repair", T("repair"), "pri")}${btn("forget", T("forget"))}</div>`);
+          pb && (h += card("⚠️", L("مشکلات", "Problems"), pb, "bad")); }
+        // 3) progress + message
         h += pgBox() + `<div class="mkmed-msg"${unl ? ' id="mkmedMsg"' : ""}>${unl ? esc(S.msg || "") : ""}</div>`;
-        h += `<div class="mkmed-row"><button type="button" class="btn-main" data-mkact="sendAll">${T("sendAll")}</button><button type="button" class="btn-main" data-mkact="retry">${T("retry")}</button>${hasBad() ? `<button type="button" class="btn-main" data-mkact="repair" style="font-weight:bold">${T("repair")}</button><button type="button" class="btn-main" data-mkact="forget">${T("forget")}</button>` : ""}<button type="button" class="btn-main" data-mkact="syncAll">${T("syncAll")}</button><button type="button" class="btn-main" data-mkact="free">${T("free")}</button></div>`;
-        h += `<div class="mkmed-row"><label class="mkmed-note">${T("cap")} <input class="mkmed-in" id="mkmedCap" type="number" min="20" step="10" value="${Math.round(cap / 1048576)}" style="width:90px;display:inline-block"></label><button type="button" class="btn-main" data-mkact="${on ? "disable" : "enable"}">${on ? T("disable") : T("enable")}</button>${unl ? `<button type="button" class="btn-main" data-mkact="test">${T("test")}</button><button type="button" class="btn-main" data-mkact="lock">${T("lock")}</button>` : ""}<button type="button" class="btn-main" data-mkact="redoAll">${T("redoAll")}</button><button type="button" class="btn-main" data-mkact="chpw">${T("chpw")}</button><button type="button" class="btn-main" data-mkact="changeBot">${T("chbot")}</button><button type="button" class="btn-main" data-mkact="reset">${T("reset")}</button></div>`;
+        // 4) main actions
+        h += card("🔄", L("همگام‌سازی", "Sync"), `<div class="mkmed-btns">${btn("sendAll", "⬆️ " + T("sendAll"), "pri")}${btn("syncAll", "⬇️ " + T("syncAll"))}${btn("retry", "🔁 " + T("retry"))}</div>`);
+        // 5) settings
+        h += card("⚙️", L("تنظیمات", "Settings"), `<div class="mkmed-capr"><label class="mkmed-note" for="mkmedCap">${T("cap")}</label><input class="mkmed-in" id="mkmedCap" type="number" min="20" step="10" value="${Math.round(cap / 1048576)}"></div><div class="mkmed-btns">${btn(on ? "disable" : "enable", on ? "⏸ " + T("disable") : "▶️ " + T("enable"))}${unl ? btn("test", "📡 " + T("test")) : ""}${unl ? btn("lock", "🔒 " + T("lock")) : ""}${btn("free", "🧹 " + T("free"))}</div>` + advHtml());
+        // 6) security
+        h += card("🔐", L("امنیت و ربات", "Security & bot"), `<div class="mkmed-btns">${btn("chpw", "🔑 " + T("chpw"))}${btn("changeBot", "🤖 " + T("chbot"))}</div>`);
+        // 7) danger zone
+        h += card("🧨", L("منطقهٔ خطر", "Danger zone"), `<div class="mkmed-btns">${btn("redoAll", T("redoAll"), "dng")}${btn("reset", T("reset"), "dng")}</div>`, "dng");
         return h;
     }
     function render() {
@@ -60566,6 +60636,7 @@ var CONT = [["AS", "آسیا", "Asia"], ["EU", "اروپا", "Europe"], ["NA", "
     const ACT_PH = { setup: "phConn", unlock: "phConn", test: "phConn", saveBase: "phConn", testBase: "phConn", enable: "phConn", sendAll: "phScan", retry: "phRetry", syncAll: "phPull", repair: "phRepair", redoAll: "phRepair", free: "phFree", reset: "phRemove" };
     async function onAct(a) {
         if (S.acts.has(a)) return;
+        if (a === "unlock") { try { const pe = document.getElementById("mkmedPw"), ce = document.getElementById("mkmedRem"); pe && (S.draft.mkmedPw = pe.value); ce && (S.remember = !!ce.checked); } catch { } }
         S.acts.add(a); const ph = ACT_PH[a] ? T(ACT_PH[a]) : ""; ph && (S.phase = ph); S.msg = ""; render(); markBusy(); updateProg();
         try { await onActRun(a); }
         finally {
@@ -60606,11 +60677,11 @@ var CONT = [["AS", "آسیا", "Asia"], ["EU", "اروپا", "Europe"], ["NA", "
                 try { const me = await api("getMe", form({})); st = "sendMessage"; const sent = await api("sendMessage", form({ chat_id: String(chatId()), text: "✅ test", disable_notification: "true" }), { send: !0 }); try { await api("deleteMessage", form({ chat_id: String(chatId()), message_id: String(sent.message_id) })); } catch { } S.warn = ""; msg(T("okConnected") + " @" + me.username); render(); }
                 catch (e) { msg("[" + st + "] " + errText(e)); }
             } else if (a === "unlock") {
-                const pw = (document.getElementById("mkmedPw") || {}).value || ""; msg("…");
-                try { const cb = document.getElementById("mkmedRem"); S.remember = !cb || cb.checked; lsSet("mkmed_remember_v1", S.remember ? "1" : "0"); await unlockWith(pw); await activate(); }
+                const pw = (document.getElementById("mkmedPw") || {}).value || S.draft.mkmedPw || ""; msg("…");
+                try { lsSet("mkmed_remember_v1", S.remember ? "1" : "0"); await unlockWith(pw); delete S.draft.mkmedPw; await activate(); }
                 catch (e) { msg(e.wrong ? T("errWrong") : e.message); }
             } else if (a === "sendAll") { if (!await ensureUnlocked(!0)) return; if (!isOn()) await activate(); S.paused = !1; const n = await scanUploads(!0), fa0 = lang() === "fa", m = fa0 ? (n ? n + " فایل در صف ارسال قرار گرفت" : "همه‌ی فایل‌ها قبلاً با کلید فعلی ارسال شده‌اند") : (n ? n + " file(s) queued for upload" : "Everything is already uploaded with the current key"); msg(m); toast(m, 3000); }
-            else if (a === "retry") { if (!await ensureUnlocked(!0)) return; hasBad() && await repairBad(!1, !0); const ids = Object.keys(S.fail); ids.forEach(id => { delete S.fail[id]; if (S.localKeys.has(id) && !known(id)) enqueueUp(id, !0); else if (known(id) && !S.localKeys.has(id)) ensure(id); }); persist(); S.paused = !1; { const m = ids.length ? T("rtN").replace("{n}", ids.length) : T("rtNone"); msg(m); toast(m, 2500); } pump(); render(); }
+            else if (a === "retry") { if (!await ensureUnlocked(!0)) return; hasBad() && await repairBad(!1, !0); const ids = Object.keys(S.fail), refsR = referenced(); ids.forEach(id => { delete S.fail[id]; if (S.localKeys.has(id) && !known(id)) { refsR.has(id) && enqueueUp(id, !0); } else if (known(id) && !S.localKeys.has(id)) ensure(id); }); persist(); S.paused = !1; { const m = ids.length ? T("rtN").replace("{n}", ids.length) : T("rtNone"); msg(m); toast(m, 2500); } pump(); render(); }
             else if (a === "syncAll") {
                 if (!await ensureUnlocked(!0)) return; await refreshLocal(!0); S.paused = !1; await pullManifest(); hasBad() && await repairBad(!1, !0);
                 const ids = Object.keys(S.remote).concat(Object.keys(S.recs)).filter((id, i, ar) => ar.indexOf(id) === i && !S.localKeys.has(id)).sort((a, b) => idTime(b) - idTime(a)); let room = capBytes() - S.usage, capped = !1, q = 0;
