@@ -61086,7 +61086,7 @@ var CONT = [["AS", "آسیا", "Asia"], ["EU", "اروپا", "Europe"], ["NA", "
     var GATE_SALT = "mksv1|", GATE_HASH = "e826187223a4772aa1deee468d1a630909296703976a009be8bcf15d3e200e1e";
     var MAX = Math.floor(3.5 * 1024 * 1024 * 1024), MAX_TOTAL = Math.floor(3.6 * 1024 * 1024 * 1024), PART = 1024 * 1024, HOLD_MS = 5000, PAR = 3;
     var LS_TOK = "mksv_tok", LS_API = "mksv_api", LS_USER = "mksv_user";
-    var MAGIC_GZ = "MKSV1\n", MAGIC_RAW = "MKSV0\n";
+    var MAGIC_GZ = "MKSV1\n", MAGIC_RAW = "MKSV0\n", MAGIC_ENC = "MKSV2\n", ENC_HDR = 38, ENC_CHUNK = 1024 * 1024, ENC_ITER = 600000;
     var LS_SKIP = /^(mksv_|mkmed_|mk_cloud|mu_mirror_ts_v1$|app_categories_v13$)|cloud|linked|device|token|session|__/i;
     var DB_SKIP = /cache|^mkmed/i;
 
@@ -61105,7 +61105,7 @@ var CONT = [["AS", "آسیا", "Asia"], ["EU", "اروپا", "Europe"], ["NA", "
     var SET = function (name, v) { try { (0, eval)(name + "=" + JSON.stringify(v)); } catch (e) { } };
 
     /* ---------- state ---------- */
-    var S = { gate: "", view: "auth", tab: "login", user: g(LS_USER) || "", items: [], info: null, sort: "new", q: "", busy: null, report: null, pick: null, exp: {}, cancel: false, local: null, host: null, root: null, open: false };
+    var S = { pass: null, encSalt: null, keys: {}, gate: "", view: "auth", tab: "login", user: g(LS_USER) || "", items: [], info: null, sort: "new", q: "", busy: null, report: null, pick: null, exp: {}, cancel: false, local: null, host: null, root: null, open: false };
 
     /* =====================================================================================
        NETWORK
@@ -61192,6 +61192,82 @@ var CONT = [["AS", "آسیا", "Asia"], ["EU", "اروپا", "Europe"], ["NA", "
         var ds = new DecompressionStream("gzip"), w = ds.writable.getWriter(); w.write(u8).catch(function () { }); w.close().catch(function () { });
         return new Uint8Array(await new Response(ds.readable).arrayBuffer());
     }
+    /* =====================================================================================
+       CLIENT-SIDE ENCRYPTION  (AES-256-GCM; the key comes from a passphrase that never leaves this device)
+       File = "MKSV2\n" | salt(16) | iv-prefix(8) | PBKDF2 iterations u32 | chunk size u32 | N x [AES-GCM(chunk) + tag(16)]
+       Each chunk has its own IV (prefix + counter) and authenticates the header and a "last chunk" flag,
+       so editing, re-ordering or truncating the file is detected. The server only ever stores ciphertext.
+       ===================================================================================== */
+    async function isEnc(blob) { if (blob.size < ENC_HDR) return false; return new TextDecoder().decode(new Uint8Array(await blob.slice(0, 6).arrayBuffer())) === MAGIC_ENC; }
+    function hex(u8) { return Array.from(u8).map(function (x) { return x.toString(16).padStart(2, "0"); }).join(""); }
+    function forgetPass() { S.pass = null; S.encSalt = null; S.keys = {}; }
+    function cancelledErr() { return Object.assign(new Error("لغو شد."), { cancelled: 1 }); }
+    async function deriveKey(pass, salt, iter) {
+        var id = hex(salt) + ":" + iter; if (S.keys[id]) return S.keys[id];
+        var base = await crypto.subtle.importKey("raw", new TextEncoder().encode(pass), "PBKDF2", false, ["deriveKey"]);
+        var key = await crypto.subtle.deriveKey({ name: "PBKDF2", salt: salt, iterations: iter, hash: "SHA-256" }, base, { name: "AES-GCM", length: 256 }, false, ["encrypt", "decrypt"]);
+        return (S.keys[id] = key);
+    }
+    function chunkIv(ivp, i) { var iv = new Uint8Array(12); iv.set(ivp, 0); new DataView(iv.buffer).setUint32(8, i, false); return iv; }
+    function chunkAad(hdr, last) { var a = new Uint8Array(hdr.length + 1); a.set(hdr, 0); a[hdr.length] = last; return a; }
+    /* asks for the encryption passphrase once per panel session (kept only in memory, wiped when the panel closes) */
+    async function getPass(creating) {
+        if (S.pass) return S.pass;
+        if (creating) {
+            var a = await ask({ title: "رمز رمزنگاری بکاپ", text: "بکاپ قبل از ارسال روی همین دستگاه با AES-256-GCM رمزنگاری می‌شود. این رمز هرگز به سرور فرستاده نمی‌شود و جایی ذخیره نمی‌شود؛ اگر فراموشش کنی هیچ‌کس نمی‌تواند بکاپ را باز کند. (حداقل ۸ نویسه)", input: "رمز رمزنگاری بکاپ", password: 1, ok: "ادامه" });
+            if (!a) throw cancelledErr();
+            if (!a.value || a.value.length < 8) throw new Error("رمز رمزنگاری حداقل ۸ نویسه باشد؛ بکاپ ارسال نشد.");
+            var b = await ask({ title: "تکرار رمز رمزنگاری", text: "رمز را دوباره وارد کن تا مطمئن شویم اشتباه تایپ نشده است.", input: "تکرار رمز", password: 1, ok: "تأیید" });
+            if (!b) throw cancelledErr();
+            if (b.value !== a.value) throw new Error("تکرار رمز با رمز یکی نیست؛ بکاپ ارسال نشد.");
+            S.pass = a.value;
+        } else {
+            var o = await ask({ title: "رمز رمزنگاری بکاپ", text: "این بکاپ رمزنگاری شده است. رمزی را که هنگام ساخت بکاپ انتخاب کرده بودی وارد کن.", input: "رمز رمزنگاری بکاپ", password: 1, ok: "باز کردن" });
+            if (!o || !o.value) throw cancelledErr();
+            S.pass = o.value;
+        }
+        S.keys = {}; return S.pass;
+    }
+    async function encryptBlob(blob) {
+        if (await isEnc(blob)) return blob;
+        var pass = await getPass(true); S.encSalt = S.encSalt || crypto.getRandomValues(new Uint8Array(16));
+        var key = await deriveKey(pass, S.encSalt, ENC_ITER), ivp = crypto.getRandomValues(new Uint8Array(8));
+        var hdr = new Uint8Array(ENC_HDR), dv = new DataView(hdr.buffer);
+        hdr.set(new TextEncoder().encode(MAGIC_ENC), 0); hdr.set(S.encSalt, 6); hdr.set(ivp, 22); dv.setUint32(30, ENC_ITER, false); dv.setUint32(34, ENC_CHUNK, false);
+        var total = Math.max(1, Math.ceil(blob.size / ENC_CHUNK)), parts = [hdr];
+        for (var i = 0; i < total; i++) {
+            if (S.cancel) throw cancelledErr();
+            var pt = new Uint8Array(await blob.slice(i * ENC_CHUNK, Math.min(blob.size, (i + 1) * ENC_CHUNK)).arrayBuffer());
+            var ct = await crypto.subtle.encrypt({ name: "AES-GCM", iv: chunkIv(ivp, i), additionalData: chunkAad(hdr, i === total - 1 ? 1 : 0), tagLength: 128 }, key, pt);
+            parts.push(new Blob([ct]));
+            if (i % 8 === 0) { try { setProg("رمزنگاری بکاپ… " + fmtSize(Math.min(blob.size, (i + 1) * ENC_CHUNK)) + " از " + fmtSize(blob.size), (i + 1) / total * 100, true); } catch (e) { } }
+        }
+        return new Blob(parts, { type: "application/octet-stream" });
+    }
+    async function decryptBlob(blob) {
+        var hdr = new Uint8Array(await blob.slice(0, ENC_HDR).arrayBuffer()), dv = new DataView(hdr.buffer);
+        var salt = hdr.slice(6, 22), ivp = hdr.slice(22, 30), iter = dv.getUint32(30, false), csz = dv.getUint32(34, false);
+        if (iter < 100000 || iter > 5000000 || csz < 1024 || csz > 64 * 1024 * 1024) throw new Error("هدر بکاپ رمزنگاری‌شده خراب است.");
+        var body = blob.size - ENC_HDR, es = csz + 16; if (body < 16) throw new Error("فایل بکاپ رمزنگاری‌شده ناقص است.");
+        var total = Math.ceil(body / es);
+        var dec = async function (i, key) {
+            var c = new Uint8Array(await blob.slice(ENC_HDR + i * es, ENC_HDR + Math.min(body, (i + 1) * es)).arrayBuffer());
+            return new Uint8Array(await crypto.subtle.decrypt({ name: "AES-GCM", iv: chunkIv(ivp, i), additionalData: chunkAad(hdr, i === total - 1 ? 1 : 0), tagLength: 128 }, key, c));
+        };
+        var key, first;
+        for (var attempt = 0; ; attempt++) {
+            await getPass(false);
+            try { key = await deriveKey(S.pass, salt, iter); first = await dec(0, key); break; }
+            catch (e) { forgetPass(); if (attempt >= 2) throw new Error("رمز اشتباه است یا فایل بکاپ خراب شده است."); toast("رمز اشتباه بود؛ دوباره امتحان کن."); }
+        }
+        var parts = [new Blob([first])];
+        for (var i = 1; i < total; i++) {
+            if (S.cancel) throw cancelledErr();
+            try { parts.push(new Blob([await dec(i, key)])); } catch (e) { throw new Error("بکاپ خراب یا دست‌کاری شده است؛ صحت داده‌ها تأیید نشد."); }
+            if (i % 8 === 0) { try { setProg("باز کردن رمزنگاری… " + fa(i) + " از " + fa(total), i / total * 100, true); } catch (e) { } }
+        }
+        return new Blob(parts, { type: "application/octet-stream" });
+    }
     async function localStats() {
         var notes = G("categories"), nCount = Array.isArray(notes) ? notes.length : 0, mCount = 0, mBytes = 0;
         try {
@@ -61227,6 +61303,7 @@ var CONT = [["AS", "آسیا", "Asia"], ["EU", "اروپا", "Europe"], ["NA", "
         return { blob: blob, counts: header.counts };
     }
     async function parseSnapshot(blob) {
+        if (await isEnc(blob)) blob = await decryptBlob(blob);
         var head = new Uint8Array(await blob.slice(0, 10).arrayBuffer()), magic = new TextDecoder().decode(head.subarray(0, 6));
         if (magic !== MAGIC_GZ && magic !== MAGIC_RAW) throw new Error("این فایل بکاپ مرکین نیست یا خراب است.");
         var hl = new DataView(head.buffer).getUint32(6, true);
@@ -61286,6 +61363,7 @@ var CONT = [["AS", "آسیا", "Asia"], ["EU", "اروپا", "Europe"], ["NA", "
     }
 
     async function upl(blob, path, body, onBytes) {
+        blob = await encryptBlob(blob);   /* nothing is ever uploaded in plain form */
         if (blob.size > MAX) throw new Error("حجم این بخش " + fmtSize(blob.size) + " است و از سقف ۳.۵ گیگابایتِ هر بکاپ بیشتر است.");
         S.cancel = false; body.size = blob.size;
         var init = await api(path, { method: "POST", body: body });
@@ -61423,42 +61501,93 @@ var CONT = [["AS", "آسیا", "Asia"], ["EU", "اروپا", "Europe"], ["NA", "
         try { var rf = G("mu_refreshNotesPage"); typeof rf === "function" && rf(); } catch (e) { }
         return { added: added, dup: dup, folders: addedFolders, media: copied };
     }
-    async function restoreReplace(snap) {
-        window.__mkSvRestoring = 1; SET("mu_savePending", false);
-        var existing = await listDbs();
-        for (var d = 0; d < snap.header.dbs.length; d++) {
-            var dd = snap.header.dbs[d], target = existing.indexOf(dd.name) >= 0 ? dd.name : (isMainDb(dd.name) ? curDbName() : null);
-            if (!target || existing.indexOf(target) < 0) continue;
-            var db; try { db = await idbOpen(target); } catch (e) { continue; }
+    /* Checks, BEFORE anything is changed, that this device can take every part of the backup. */
+    async function planRestore(snap) {
+        var existing = await listDbs(), mains = existing.filter(isMainDb), problems = [], skipped = [], dbsIn = snap.header.dbs;
+        var main = existing.indexOf(curDbName()) >= 0 ? curDbName() : (mains[0] || null), used = {}, map = new Array(dbsIn.length).fill(null);
+        var bl = snap.header.blobs || [], lastBl = bl[bl.length - 1];
+        if (lastBl && lastBl.o + lastBl.n > snap.area.size) problems.push("فایل بکاپ ناقص است (بخشی از داده‌ها کم است).");
+        if (!main) problems.push("پایگاه دادهٔ اصلی برنامه روی این دستگاه پیدا نشد.");
+        dbsIn.forEach(function (dd, i) { if (existing.indexOf(dd.name) >= 0 && !used[dd.name]) { map[i] = dd.name; used[dd.name] = 1; } });
+        dbsIn.forEach(function (dd, i) { if (map[i] === null && isMainDb(dd.name) && main && !used[main]) { map[i] = main; used[main] = 1; } });
+        var keyPath = function (k) { return JSON.stringify(k == null ? null : k); };
+        for (var i = 0; i < dbsIn.length; i++) {
+            var dd = dbsIn[i], target = map[i];
+            if (!target) { skipped.push(dd.name); continue; }
+            var db; try { db = await idbOpen(target); } catch (e) { problems.push("باز کردن پایگاه دادهٔ «" + target + "» ناموفق بود."); continue; }
             try {
-                for (var si = 0; si < dd.stores.length; si++) {
-                    var st = dd.stores[si]; if (!db.objectStoreNames.contains(st.name)) continue;
-                    setProg("بازنویسی " + st.name + "…", 0);
-                    await new Promise(function (res) { var tx = db.transaction(st.name, "readwrite"); tx.objectStore(st.name).clear(); tx.oncomplete = tx.onerror = tx.onabort = function () { res(); }; });
-                    for (var i = 0; i < st.recs.length; i += 25) {
-                        var batch = [];
-                        for (var j = i; j < Math.min(st.recs.length, i + 25); j++) batch.push([await decVal(st.recs[j][0], snap), await decVal(st.recs[j][1], snap)]);
-                        await new Promise(function (res, rej) {
-                            var tx = db.transaction(st.name, "readwrite"), os = tx.objectStore(st.name), inline = os.keyPath != null;
-                            batch.forEach(function (r) { try { inline ? os.put(r[1]) : os.put(r[1], r[0]); } catch (e) { console.warn("mksv put", e); } });
-                            tx.oncomplete = function () { res(); }; tx.onerror = tx.onabort = function () { rej(tx.error || new Error("نوشتن در پایگاه داده ناموفق بود")); };
-                        });
-                        setProg("بازنویسی " + st.name + "… " + fa(Math.min(st.recs.length, i + 25)) + " از " + fa(st.recs.length), Math.min(100, (i + 25) / st.recs.length * 100));
-                    }
-                }
+                dd.stores.forEach(function (st) {
+                    if (!db.objectStoreNames.contains(st.name)) { problems.push("پایگاه دادهٔ «" + target + "» بخش «" + st.name + "» را ندارد."); return; }
+                    var os = db.transaction(st.name, "readonly").objectStore(st.name);
+                    if (keyPath(os.keyPath) !== keyPath(st.keyPath)) problems.push("ساختار بخش «" + st.name + "» در «" + target + "» با بکاپ فرق دارد.");
+                });
             } finally { db.close(); }
         }
-        /* notes: always written as the plain legacy record; the app's gz record is removed so it can't win on next load */
-        var mdb = existing.filter(isMainDb).indexOf(curDbName()) >= 0 ? curDbName() : existing.filter(isMainDb)[0];
-        if (mdb) {
-            var kdb = await idbOpen(mdb);
-            try {
-                await new Promise(function (res) { var tx = kdb.transaction("kv", "readwrite"), os = tx.objectStore("kv"); os.put(snap.header.notes || "[]", "app_categories_v13"); os.delete("app_categories_v13_gz"); tx.oncomplete = tx.onerror = tx.onabort = function () { res(); }; });
-            } finally { kdb.close(); }
+        if (main) {
+            var mdb = await idbOpen(main);
+            try { if (!mdb.objectStoreNames.contains("kv")) problems.push("بخش «kv» (محل ذخیرهٔ یادداشت‌ها) در پایگاه دادهٔ اصلی نیست."); } finally { mdb.close(); }
         }
-        s("app_categories_v13", null); s("mu_mirror_ts_v1", null);
-        var ls = snap.header.ls || {}; Object.keys(ls).forEach(function (k) { if (!LS_SKIP.test(k) && typeof ls[k] === "string") s(k, ls[k]); });
-        if (!("app_folders_v13" in ls)) s("app_folders_v13", null);
+        if (problems.length) { var er = new Error("بازیابی انجام نشد و هیچ چیزی در این دستگاه تغییر نکرد؛ بکاپ با ساختار این دستگاه سازگار نیست:\n• " + problems.join("\n• ")); er.nothingChanged = 1; throw er; }
+        return { main: main, map: map, skipped: skipped };
+    }
+    /* one database = ONE transaction over all its stores: either everything is replaced or nothing is */
+    async function writeDb(snap, dd, target, isMain) {
+        var work = [];
+        for (var si = 0; si < dd.stores.length; si++) {      /* decode first: a damaged backup fails here, before this database is touched */
+            var st = dd.stores[si], recs = [];
+            setProg("خواندن «" + st.name + "» از بکاپ…", 0);
+            for (var j = 0; j < st.recs.length; j++) recs.push([await decVal(st.recs[j][0], snap), await decVal(st.recs[j][1], snap)]);
+            work.push({ name: st.name, recs: recs });
+        }
+        var names = work.map(function (w) { return w.name; }); if (isMain && names.indexOf("kv") < 0) names.push("kv");
+        if (!names.length) return;
+        setProg("بازنویسی «" + target + "»…", 50);
+        var db = await idbOpen(target);
+        try {
+            await new Promise(function (res, rej) {
+                var tx = db.transaction(names, "readwrite"), failed = null;
+                tx.oncomplete = function () { res(); };
+                tx.onabort = function () { rej(failed || tx.error || new Error("نوشتن در پایگاه داده ناموفق بود؛ در این پایگاه هیچ تغییری ذخیره نشد.")); };
+                try {
+                    work.forEach(function (w) {
+                        var os = tx.objectStore(w.name), inline = os.keyPath != null; os.clear();
+                        w.recs.forEach(function (r) { inline ? os.put(r[1]) : os.put(r[1], r[0]); });
+                    });
+                    /* notes: always written as the plain legacy record; the app's gz record is removed so it can't win on next load */
+                    if (isMain) { var kv = tx.objectStore("kv"); kv.put(snap.header.notes || "[]", "app_categories_v13"); kv.delete("app_categories_v13_gz"); }
+                } catch (e) { failed = e; try { tx.abort(); } catch (x) { } }
+            });
+        } finally { db.close(); }
+    }
+    function applyLs(snap) {
+        var ls = snap.header.ls || {}, keys = Object.keys(ls).filter(function (k) { return !LS_SKIP.test(k) && typeof ls[k] === "string"; }), all = keys.concat(["app_categories_v13", "mu_mirror_ts_v1", "app_folders_v13"]), prev = {};
+        all.forEach(function (k) { prev[k] = g(k); });
+        try {
+            s("app_categories_v13", null); s("mu_mirror_ts_v1", null);
+            keys.forEach(function (k) { s(k, ls[k]); });
+            if (!("app_folders_v13" in ls)) s("app_folders_v13", null);
+            keys.forEach(function (k) { if (g(k) !== ls[k]) throw new Error("نوشتن تنظیمات در حافظهٔ دستگاه ناموفق بود (شاید حافظه پر است)."); });
+        } catch (e) { all.forEach(function (k) { s(k, prev[k]); }); throw e; }
+    }
+    async function applyReplace(snap, plan) {
+        var done = {};
+        for (var d = 0; d < snap.header.dbs.length; d++) { var target = plan.map[d]; if (!target) continue; done[target] = 1; await writeDb(snap, snap.header.dbs[d], target, target === plan.main); }
+        if (!done[plan.main]) await writeDb(snap, { name: plan.main, stores: [] }, plan.main, true);
+        applyLs(snap);
+    }
+    /* rb = a snapshot of the device taken just before; if anything fails half-way it is written back automatically */
+    async function restoreReplace(snap, rb) {
+        var plan = await planRestore(snap);          /* throws before any change if the structure doesn't match */
+        window.__mkSvRestoring = 1; SET("mu_savePending", false);
+        try { await applyReplace(snap, plan); }
+        catch (e) {
+            var rolled = false;
+            if (rb) { try { setProg("خطا؛ برگرداندن وضعیت قبلی…", 0); var old = await parseSnapshot(rb.blob); await applyReplace(old, await planRestore(old)); rolled = true; } catch (e2) { console.warn("mksv rollback", e2); } }
+            window.__mkSvRestoring = 0;
+            var er = new Error(((e && e.message) || String(e)) + (rolled ? "\nوضعیت قبلی این دستگاه به‌طور کامل برگردانده شد." : "\nبرگرداندن خودکار هم ناموفق بود؛ اگر نسخهٔ ایمنی روی سرور گرفته‌ای از همان استفاده کن."));
+            er.rolledBack = rolled; throw er;
+        }
+        return plan;
     }
 
     /* =====================================================================================
@@ -61690,7 +61819,7 @@ details summary{cursor:pointer;color:#cfc9ff;font-weight:600;padding:4px 0}\
     }
     var A = {
         back: function () { if (S.view === "pick") return A.pkBack(); A.close(); },
-        close: function () { if (S.busy) return toast("اول عملیات جاری تمام شود یا لغو شود."); S.open = false; mount(""); },
+        close: function () { if (S.busy) return toast("اول عملیات جاری تمام شود یا لغو شود."); S.open = false; forgetPass(); mount(""); },
         tab: function (el) { S.tab = el.dataset.v; render(); },
         auth: doAuth,
         newPick: function () { openPick(null, false); },
@@ -61719,7 +61848,7 @@ details summary{cursor:pointer;color:#cfc9ff;font-weight:600;padding:4px 0}\
         ping: async function () { A.saveApi(); try { var r = await api("/", { auth: false }); say("#apiMsg", "اتصال برقرار است ✓ (سقف هر بکاپ " + fmtSize(r.maxBackupBytes) + " · سقف کل " + fmtSize(r.maxTotalBytes || MAX_TOTAL) + ")", true); } catch (e) { say("#apiMsg", e.message); } },
         refresh: function () { refresh(false).catch(function () { }); },
         cancel: function () { S.cancel = true; S.abortXhr && S.abortXhr(); },
-        logout: function () { s(LS_TOK, null); S.items = []; S.view = "auth"; S.tab = "login"; render(); },
+        logout: function () { s(LS_TOK, null); forgetPass(); S.items = []; S.view = "auth"; S.tab = "login"; render(); },
         upfile: function () {
             var inp = document.createElement("input"); inp.type = "file"; inp.accept = ".mksv,application/octet-stream";
             inp.onchange = function () {
@@ -61786,8 +61915,10 @@ details summary{cursor:pointer;color:#cfc9ff;font-weight:600;padding:4px 0}\
             var o = await ask({ title: "جایگزینی کامل", text: "همهٔ یادداشت‌ها، مدیاها و تنظیمات فعلی این دستگاه با این بکاپ عوض می‌شوند و برنامه دوباره بارگذاری می‌شود.", danger: 1, ok: "جایگزین کن", check: { on: true, label: "قبل از جایگزینی، از وضعیت فعلی یک نسخهٔ ایمنی روی سرور بگیر" } }); if (!o) return;
             withBusy(async function () {
                 var blob = await downloadBlob(it); setProg("بررسی بکاپ…", 100); var sn = await parseSnapshot(blob);
-                if (o.check) { var sb = await buildSnapshot(setProg); await uploadBlob(sb.blob, sb.counts, "🛟 نسخهٔ ایمنی " + stamp(), "خودکار، قبل از جایگزینی با «" + it.name + "»", "safety"); }
-                setProg("جایگزینی داده‌ها…", 0); await restoreReplace(sn); setProg("انجام شد؛ بارگذاری مجدد…", 100); toast("✅ جایگزینی انجام شد."); await sleep(900); location.reload();
+                await planRestore(sn);   /* structure check first: if it fails nothing on the device is touched */
+                setProg("ساخت نسخهٔ بازگشت روی همین دستگاه…", 0); var rb = await buildSnapshot(setProg);   /* always taken, used for automatic rollback */
+                if (o.check) { await uploadBlob(rb.blob, rb.counts, "🛟 نسخهٔ ایمنی " + stamp(), "خودکار، قبل از جایگزینی با «" + it.name + "»", "safety"); }
+                setProg("جایگزینی داده‌ها…", 0); var plan = await restoreReplace(sn, rb); setProg("انجام شد؛ بارگذاری مجدد…", 100); toast("✅ جایگزینی انجام شد." + (plan.skipped.length ? " (" + fa(plan.skipped.length) + " پایگاه داده که روی این دستگاه نبود رد شد)" : "")); await sleep(900); location.reload();
             });
         },
     };
@@ -61844,7 +61975,6 @@ details summary{cursor:pointer;color:#cfc9ff;font-weight:600;padding:4px 0}\
         new MutationObserver(schedule).observe(document.body, { childList: true, subtree: true });
         armWord(); schedule();
     }
-    window.__mkSvTest = { gate: function (v) { S.gate = v; return openPanel(); }, S: S, parse: parseSnapshot, build: buildSnapshot, restoreAdd: restoreAdd, restoreReplace: restoreReplace, openGate: gatePrompt };
     if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", init); else init();
 })();
 </script>
