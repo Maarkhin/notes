@@ -39227,6 +39227,7 @@ var now = Date.now(); if (!(window.__muNfsSbAt && now - window.__muNfsSbAt < 500
       <button type="button" id="muNfsListBtn" onclick="muNotesFs.openList()"></button>
       <button type="button" id="muNfsFolderBtn"></button>
       </div>
+      <button type="button" id="muNfsMediaBtn" class="mu-nfs-themeout" aria-label="همگام‌سازی رسانه" title="همگام‌سازی رسانه" onclick="window.mkMediaTap&&window.mkMediaTap()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path transform="translate(12 12) scale(1.63) translate(-12.51 -11.43)" d="M16.2 15.4H9.1a2.7 2.7 0 0 1-.4-5.3 3.6 3.6 0 0 1 6.8-.4 2.9 2.9 0 0 1 .7 5.7z" stroke-width="1.05"/><rect x="12.6" y="13" width="10" height="9" rx="2" style="fill:var(--nfs-bar,#fff)" stroke-width="1.5"/><circle cx="19.6" cy="16.2" r="1" stroke-width="1.2"/><path d="M13.8 20.6l2.8-2.8 2 2 1.4-1.4 2 2" stroke-width="1.3"/></svg></button>
       <button type="button" id="muNfsBackupBtn" class="mu-nfs-themeout"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><g class="mu-bk-arr"><path transform="translate(12 12) scale(1.63) translate(-12.51 -11.43)" d="M16.2 15.4H9.1a2.7 2.7 0 0 1-.4-5.3 3.6 3.6 0 0 1 6.8-.4 2.9 2.9 0 0 1 .7 5.7z" stroke-width="1.05"/></g></svg></button>
       <button type="button" id="muNfsThemeBtn" class="mu-nfs-themeout" onclick="muNotesFs.toggleTheme()"></button>
     </div>
@@ -39276,12 +39277,12 @@ var now = Date.now(); if (!(window.__muNfsSbAt && now - window.__muNfsSbAt < 500
    Stored in localStorage "mu_nfs_toolbar_v1" (removed by Settings -> Reset settings). */
 (function () {
     "use strict";
-    var KEY = "mu_nfs_toolbar_v1", MAXSEP = 7, IDS = ["sort", "prev", "view", "list", "folder", "backup", "theme"];
-    var BTN = { sort: "muNfsSortBtn", prev: "muNfsPrevBtn", view: "muNfsViewBtn", list: "muNfsListBtn", folder: "muNfsFolderBtn", backup: "muNfsBackupBtn", theme: "muNfsThemeBtn" };
-    var LBL = { sort: ["ترتیب نمایش", "Sort order"], prev: ["پیش‌نمایش یادداشت‌ها", "Note preview"], view: ["نمای شبکه‌ای / لیستی", "Grid / list view"], list: ["لیست", "List"], folder: ["پوشه‌ها", "Folders"], backup: ["بکاپ ابری", "Cloud backup"], theme: ["تم شب و روز", "Day / night theme"] };
+    var KEY = "mu_nfs_toolbar_v1", MAXSEP = 7, IDS = ["sort", "prev", "view", "list", "folder", "backup", "media", "theme"];
+    var BTN = { sort: "muNfsSortBtn", prev: "muNfsPrevBtn", view: "muNfsViewBtn", list: "muNfsListBtn", folder: "muNfsFolderBtn", backup: "muNfsBackupBtn", media: "muNfsMediaBtn", theme: "muNfsThemeBtn" };
+    var LBL = { sort: ["ترتیب نمایش", "Sort order"], prev: ["پیش‌نمایش یادداشت‌ها", "Note preview"], view: ["نمای شبکه‌ای / لیستی", "Grid / list view"], list: ["لیست", "List"], folder: ["پوشه‌ها", "Folders"], backup: ["بکاپ ابری", "Cloud backup"], media: ["همگام‌سازی رسانه", "Media sync"], theme: ["تم شب و روز", "Day / night theme"] };
     function fa() { try { return MK.liteHost.isFa(); } catch (e) { return true; } }
     function T(f, e) { return fa() ? f : e; }
-    function def() { return { pills: [["sort", "prev", "view"], ["list", "folder"], ["backup", "theme"]] }; }
+    function def() { return { pills: [["sort", "prev", "view"], ["list", "folder"], ["media", "backup"], ["theme"]] }; }
     function norm(c) {
         if (!c || !Array.isArray(c.pills)) return def();
         var seen = {}, pills = [];
@@ -39291,10 +39292,23 @@ var now = Date.now(); if (!(window.__muNfsSbAt && now - window.__muNfsSbAt < 500
             pills.push(out);
         });
         if (!pills.length) pills.push([]);
-        IDS.forEach(function (id) { if (seen[id]) return; if ((id === "backup" || id === "theme") && pills.length < MAXSEP + 1) pills.push([id]); else pills[0].push(id); });
+        IDS.forEach(function (id) { if (seen[id]) return; if (id === "media") { var bp = pills.filter(function (p) { return p.indexOf("backup") >= 0; })[0]; if (bp) { bp.splice(bp.indexOf("backup"), 0, id); return; } } if ((id === "backup" || id === "theme") && pills.length < MAXSEP + 1) pills.push([id]); else pills[0].push(id); });
         return { pills: pills };
     }
-    function load() { try { var v = localStorage.getItem(KEY); return v ? norm(JSON.parse(v)) : def(); } catch (e) { return def(); } }
+    function splitTheme(c) {
+        var p = c.pills.filter(function (x) { return x.indexOf("theme") >= 0 && x.length > 1; })[0];
+        if (p && c.pills.length < MAXSEP + 1) { p.splice(p.indexOf("theme"), 1); c.pills.push(["theme"]); }
+        return c;
+    }
+    function load() {
+        try {
+            var v = localStorage.getItem(KEY); if (!v) return def();
+            var c = norm(JSON.parse(v));
+            // one-time migration: the day/night button used to share a pill with the cloud button; give it its own pill
+            if (!localStorage.getItem(KEY + "_sep")) { localStorage.setItem(KEY + "_sep", "1"); c = splitTheme(c); save(c); }
+            return c;
+        } catch (e) { return def(); }
+    }
     function save(c) {
         try { localStorage.setItem(KEY, JSON.stringify(c)); } catch (e) { console.warn("silent catch -> setItem @muNfsToolbarJs:27", e); }
         try { typeof mu_flushStorage === "function" && mu_flushStorage(); } catch (e) { console.warn("silent catch -> mu_flushStorage @muNfsToolbarJs:28", e); }
@@ -39315,6 +39329,7 @@ var now = Date.now(); if (!(window.__muNfsSbAt && now - window.__muNfsSbAt < 500
         var solo = !c.pills[0].length;
         bar.classList.toggle("mu-nfs-solo", solo); solo || bar.classList.remove("mu-nfs-sopen");
         ensureIcon(bar); fitSearch(); observe();
+        try { var mb = document.getElementById("muNfsMediaBtn"); if (mb) { var lb = T("همگام‌سازی رسانه", "Media sync"); mb.title = lb; mb.setAttribute("aria-label", lb); } } catch (e) { }
     }
     // Search box alone: it grows into any free space on the row; only when less than ~84px is left does it shrink to the magnifier circle
     var ro = null;
@@ -39405,11 +39420,11 @@ var now = Date.now(); if (!(window.__muNfsSbAt && now - window.__muNfsSbAt < 500
 @media (max-width:440px) { .mu-nfs-row .mu-nfs-bar > button:not(.mu-nfs-sback) { width:27px; } .mu-nfs-row { gap:4px; } .mu-nfs-row > .mu-nfs-themeout { width:38px; height:38px; } .mu-nfs-row > .mu-nfs-themeout svg { width:19px; height:19px; } }
 .mu-nfs-row:has(.mu-nfs-bar.mu-sfocus) > .mu-nfs-themeout,
 .mu-nfs-row:has(.mu-nfs-bar.mu-bkmode) > .mu-nfs-themeout:not(#muNfsBackupBtn) { display:none; }
-#muNfsBackupBtn.mu-nfs-themeout svg { width:24px; height:24px; }
-@media (max-width:440px) { #muNfsBackupBtn.mu-nfs-themeout svg { width:21px; height:21px; } }
+#muNfsBackupBtn.mu-nfs-themeout svg, #muNfsMediaBtn.mu-nfs-themeout svg { width:24px; height:24px; }
+@media (max-width:440px) { #muNfsBackupBtn.mu-nfs-themeout svg, #muNfsMediaBtn.mu-nfs-themeout svg { width:21px; height:21px; } }
 #muNotesFs.mu-selecting .mu-nfs-row { display:none; }
 /* Cloud button + the search box that turns into the auto-backup action bar */
-#muNfsBackupBtn svg { width:26px; height:26px; overflow:visible; }
+#muNfsBackupBtn svg, #muNfsMediaBtn svg { width:26px; height:26px; overflow:visible; }
 #muNfsBackupBtn.mu-on { background:#7f7f7f33; }
 #muNfsBackupBtn[aria-busy=true] { cursor:progress; }
 #muNfsBackupBtn .mu-bk-arr { transform-box:view-box; transform-origin:50% 50%; }
@@ -39433,7 +39448,7 @@ body.mu-nfsbk-on #mkBackupBar { display:none!important; }
 @media (max-width:440px) {
     .mu-nfs-bar > button:not(.mu-nfs-sback) { width:32px; }
     .mu-nfs-bar > button svg { width:20px; height:20px; }
-    #muNfsBackupBtn svg { width:24px; height:24px; }
+    #muNfsBackupBtn svg, #muNfsMediaBtn svg { width:24px; height:24px; }
 }
 @media (prefers-reduced-motion:reduce) {
     .mu-nfs-bar.mu-bkmode > .mu-nfs-bk, #muNfsBackupBtn.mu-run .mu-bk-arr { animation:none; }
@@ -40428,7 +40443,7 @@ body.mu-nfsbk-on #mkBackupBar { display:none!important; }
     function navToggleGrp(sec) { var grp = sec.closest(".mu-nav-grp"); if (!grp) return; var k = sec.getAttribute("data-navtoggle"), c = grp.classList.toggle("mu-collapsed"); sec.setAttribute("aria-expanded", c ? "false" : "true"); navColl()[k] = c ? 1 : 0; clearTimeout(window.__mkNavSaveT), window.__mkNavSaveT = setTimeout(function () { try { localStorage.setItem("mkNavCollapsed", JSON.stringify(navColl())); } catch (e) { console.warn("silent catch -> setItem @muNotesFsJs:787", e); } }, 400); }
     document.addEventListener("click", function (e) { var t = e.target && e.target.closest && e.target.closest("#muNavPanel .mu-nav-sec[data-navtoggle]"); if (t) { e.preventDefault(), e.stopPropagation(), navToggleGrp(t); } }, !0);
     document.addEventListener("keydown", function (e) { if (e.key !== "Enter" && e.key !== " ") return; var t = e.target && e.target.closest && e.target.closest("#muNavPanel .mu-nav-sec[data-navtoggle]"); if (t) { e.preventDefault(), navToggleGrp(t); } }, !0);
-    var NAV_GROUPS = [{ fa: "مدیریت یادداشت‌ها", en: "Notes Management", items: [{ k: "notes", ic: "bulb", fa: "یادداشت‌ها", en: "Notes", pr: "a" }, { k: "folders", ic: "folder", fa: "پوشه‌ها", en: "Folders", pr: "a" }, { k: "list", ic: "list", fa: "لیست", en: "List", pr: "b" }, { k: "vault", ic: "vault", fa: "گاوصندوق", en: "Vault", pr: "b" }, { k: "search", ic: "search", fa: "جستجوی هوشمند", en: "Smart Search", pr: "b" }, { k: "delete", ic: "trash", fa: "حذف", en: "Delete", pr: "b" }] }, { fa: "مجموعه‌ها", en: "Collections", items: [{ k: "archive", ic: "archive", fa: "بایگانی", en: "Archive" }, { k: "favorites", ic: "star", fa: "علاقه‌مندی‌ها", en: "Favorites", pr: "d" }, { k: "locked", ic: "lock", fa: "قفل‌شده‌ها", en: "Locked", pr: "d" }, { k: "pinned", ic: "pin", fa: "پین‌شده‌ها", en: "Pinned", pr: "h" }, { k: "tags", ic: "tags", fa: "برچسب‌ها", en: "Tags", pr: "h" }] }, { fa: "پشتیبان‌گیری داده‌ها", en: "Data backup", items: [{ k: "cloud", ic: "cloud", fa: "بکاپ ابری تلگرام", en: "Telegram Cloud Backup" }, { k: "cloudmedia", ic: "cloudmedia", fa: "دریافت بکاپ رسانه‌ای", en: "Receive media backup" }, { k: "imp", ic: "imp", fa: "ورودی‌ها", en: "Import", pr: "c" }, { k: "exp", ic: "exp", fa: "خروجی‌ها", en: "Export", pr: "c" }] }, { fa: "ابزارها", en: "Tools", items: [{ k: "fileviewer", ic: "fview", fa: "نمایشگر و رمزگشایی فایل‌ها", en: "File Viewer & Decryptor" }, { k: "morse", ic: "morse", fa: "مبدل کد مورس", en: "Morse Code Converter", pr: "e" }, { k: "binary", ic: "binary", fa: "مبدل کد باینری", en: "Binary Code Converter", pr: "e" }, { k: "kg", ic: "graph", fa: "شبکه دانش", en: "Knowledge Graph", pr: "g" }, { k: "portal", ic: "portal", fa: "پورتال رندوم", en: "Random Portal", pr: "g" }] }], navTimer = 0, navIsOpen = !1;
+    var NAV_GROUPS = [{ fa: "مدیریت یادداشت‌ها", en: "Notes Management", items: [{ k: "notes", ic: "bulb", fa: "یادداشت‌ها", en: "Notes", pr: "a" }, { k: "folders", ic: "folder", fa: "پوشه‌ها", en: "Folders", pr: "a" }, { k: "list", ic: "list", fa: "لیست", en: "List", pr: "b" }, { k: "vault", ic: "vault", fa: "گاوصندوق", en: "Vault", pr: "b" }, { k: "search", ic: "search", fa: "جستجوی هوشمند", en: "Smart Search", pr: "b" }, { k: "delete", ic: "trash", fa: "حذف", en: "Delete", pr: "b" }] }, { fa: "مجموعه‌ها", en: "Collections", items: [{ k: "archive", ic: "archive", fa: "بایگانی", en: "Archive" }, { k: "favorites", ic: "star", fa: "علاقه‌مندی‌ها", en: "Favorites", pr: "d" }, { k: "locked", ic: "lock", fa: "قفل‌شده‌ها", en: "Locked", pr: "d" }, { k: "pinned", ic: "pin", fa: "پین‌شده‌ها", en: "Pinned", pr: "h" }, { k: "tags", ic: "tags", fa: "برچسب‌ها", en: "Tags", pr: "h" }] }, { fa: "پشتیبان‌گیری داده‌ها", en: "Data backup", items: [{ k: "cloud", ic: "cloud", fa: "بکاپ ابری تلگرام", en: "Telegram Cloud Backup", pr: "m" }, { k: "cloudmedia", ic: "cloudmedia", fa: "همگام‌سازی رسانه", en: "Sync media", pr: "m" }, { k: "imp", ic: "imp", fa: "ورودی‌ها", en: "Import", pr: "c" }, { k: "exp", ic: "exp", fa: "خروجی‌ها", en: "Export", pr: "c" }] }, { fa: "ابزارها", en: "Tools", items: [{ k: "fileviewer", ic: "fview", fa: "نمایشگر و رمزگشایی فایل‌ها", en: "File Viewer & Decryptor" }, { k: "morse", ic: "morse", fa: "مبدل کد مورس", en: "Morse Code Converter", pr: "e" }, { k: "binary", ic: "binary", fa: "مبدل کد باینری", en: "Binary Code Converter", pr: "e" }, { k: "kg", ic: "graph", fa: "شبکه دانش", en: "Knowledge Graph", pr: "g" }, { k: "portal", ic: "portal", fa: "پورتال رندوم", en: "Random Portal", pr: "g" }] }], navTimer = 0, navIsOpen = !1;
     function modalEl() { return $2("advancedModal"); }
     function modalVisible() { var m = modalEl(); return !!(m && m.style.display === "flex"); }
     function fsOpen() { var r = $2("muNotesFs"); return !!(r && r.classList.contains("mu-open")); }
@@ -60996,14 +61011,20 @@ var CONT = [["AS", "آسیا", "Asia"], ["EU", "اروپا", "Europe"], ["NA", "
         if (!isOn() || !readCfg()) { toast(L("بکاپ رسانه‌ای هنوز فعال نیست؛ از همین تب «رسانه» فعالش کن.", "Media backup is not active yet; turn it on here in the Media tab."), 3500); openTab(); return; }
         window.__mkMediaRecvBusy = !0;
         try {
-            bar(L("⏳ دریافت بکاپ رسانه‌ای…", "⏳ Receiving media backup…"));
-            const r = await fullSync(t => bar(t), { downloadOnly: !0 });
+            bar(L("⏳ دریافت و همگام‌سازی رسانه…", "⏳ Receiving & syncing media…"));
+            const r = await fullSync(t => bar(t));
             if (r && r.locked) { done(L("بکاپ رسانه‌ای قفل است؛ رمز را در تب «رسانه» وارد کن.", "Media backup is locked; enter the password in the Media tab."), !1, 4500); openTab(); }
             else if (!r || r.failed) done(L("دریافت بکاپ رسانه‌ای ناموفق بود. دوباره امتحان کن.", "Receiving the media backup failed. Please try again."), !1, 4500);
             else if (r.skipped) { done(L("بکاپ رسانه‌ای هنوز فعال نیست؛ از تب «رسانه» فعالش کن.", "Media backup is not active yet; turn it on in the Media tab."), !1, 4000); openTab(); }
-            else done(r.down ? L(`✅ دریافت رسانه‌ها: ${r.down} فایل` + (r.err ? ` (${r.err} خطا)` : "") + (r.capped ? " (سقف حجم پر شد)" : "") + (r.timedOut ? " (بقیه در پس‌زمینه ادامه دارد)" : "") + ".", `✅ Media received: ${r.down} file(s)` + (r.err ? ` (${r.err} error(s))` : "") + (r.capped ? " (size limit reached)" : "") + (r.timedOut ? " (the rest continues in the background)" : "") + ".") : L("✅ همه‌ی رسانه‌ها از قبل روی این دستگاه هست.", "✅ Every media file is already on this device."), !r.err || !!r.down, 4000);
+            else done((r.up || r.down) ? L(`✅ همگام‌سازی رسانه: ${r.up || 0} ارسال، ${r.down || 0} دریافت` + (r.err ? ` (${r.err} خطا)` : "") + (r.capped ? " (سقف حجم پر شد)" : "") + (r.timedOut ? " (بقیه در پس‌زمینه ادامه دارد)" : "") + ".", `✅ Media synced: ${r.up || 0} sent, ${r.down || 0} received` + (r.err ? ` (${r.err} error(s))` : "") + (r.capped ? " (size limit reached)" : "") + (r.timedOut ? " (the rest continues in the background)" : "") + ".") : L("✅ رسانه‌ها از قبل همگام است.", "✅ Media is already in sync."), !r.err || !!(r.up || r.down), 4000);
         } catch (e) { console.warn("mkMediaReceive", e); done(L("دریافت بکاپ رسانه‌ای ناموفق بود.", "Receiving the media backup failed."), !1, 4500); }
         finally { window.__mkMediaRecvBusy = !1; }
+    };
+    // Home-bar media button (next to the cloud button): outside Telegram it only explains; inside it runs the media sync
+    window.mkMediaTap = function () {
+        const fa = lang() === "fa";
+        if (window.__muTgOk !== !0) { toast(fa ? "بکاپ رسانه‌ای فقط داخل تلگرام قابل استفاده است." : "Media backup is only available when the app is opened inside Telegram.", 3500); return; }
+        window.mkMediaReceive();
     };
     window.MKMED = { S, encodeToken, autoSync, fullSync, purgeOrphans, orphanIds, activate, api, setupWith, unlockWith, pushManifest, pullManifest, ensure, scanUploads, freeSpace, refreshLocal, known, onAct, render, patchModel, afterDownload, referenced, loadState, startObservers, readCloudCfg, sha256, _cfg: readCfg };
     init();
