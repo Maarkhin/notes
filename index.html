@@ -62841,6 +62841,31 @@ html body .text-box code.mk-ml,html body .mu-viewer-body code.mk-ml,html body .m
         busy = false;
     }
     // registered after the app's own handlers, so the single-line rule always runs first
+    // OPENING backtick typed last: the closing ` was typed first (text`), then ` is typed in front of the text
+    // -> same result as typing them in the other order (one copyable chip). Same text node, same line only.
+    function onOpen(e) {
+        if (busy || typeof e.inputType !== "string" || e.inputType.indexOf("insert") !== 0) return;
+        var box = boxOf(e.target); if (!box) return;
+        var sel = window.getSelection(); if (!sel.rangeCount || !sel.isCollapsed) return;
+        var tn = sel.anchorNode, c2 = sel.anchorOffset;
+        if (!tn || tn.nodeType !== 3 || !box.contains(tn) || skipped(tn)) return;
+        var v = tn.nodeValue; if (c2 < 1 || v.charAt(c2 - 1) !== "`") return;
+        if (v.charAt(c2 - 2) === "`" || v.charAt(c2) === "`") return;
+        if (c2 >= 2 && v.lastIndexOf("`", c2 - 2) >= 0) return;   // it closes an earlier ` instead
+        var q = v.indexOf("`", c2); if (q < 0 || v.charAt(q + 1) === "`") return;
+        var inner = v.slice(c2, q).replace(/\u200b/g, ""); if (!/\S/.test(inner) || /[\n\r]/.test(inner)) return;
+        busy = true;
+        try {
+            var code = document.createElement("code"); code.textContent = inner;
+            var zw = document.createTextNode(ZW + v.slice(q + 1));
+            tn.nodeValue = v.slice(0, c2 - 1);
+            tn.parentNode.insertBefore(code, tn.nextSibling); code.parentNode.insertBefore(zw, code.nextSibling);
+            var r3 = document.createRange(); r3.setStart(zw, 1); r3.collapse(true); sel.removeAllRanges(); sel.addRange(r3);
+            box.dispatchEvent(new InputEvent("input", { bubbles: true, inputType: "insertReplacementText" }));
+        } catch (err) { console.warn("backtick chip failed", err); }
+        busy = false;
+    }
+    document.addEventListener("input", onOpen, true);
     document.addEventListener("input", onInput, true);
 })();
 </script>
