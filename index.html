@@ -61072,5 +61072,771 @@ var CONT = [["AS", "آسیا", "Asia"], ["EU", "اروپا", "Europe"], ["NA", "
 
 </script>
 
+<script id="mkSecretBackup">
+/* ===== MKSV — private manual backup panel (hidden entry, own account on a Cloudflare Worker + R2) =====
+   Entry: the word MARKHIN at the bottom of the dashboard -> hold 5 s -> secret code -> login / register / panel.
+   Nothing here touches the app's own Cloud backup; it only reads data and, on restore, writes it back. */
+(function () {
+    "use strict";
+    if (window.__mkSv) return; window.__mkSv = 1;
+
+    /* ---------- config ---------- */
+    var DEFAULT_API = "";   /* <- paste your Worker URL here (https://markhin-backup.<you>.workers.dev), or set it inside the panel */
+    var GATE_SALT = "mksv1|", GATE_HASH = "e826187223a4772aa1deee468d1a630909296703976a009be8bcf15d3e200e1e";
+    var MAX = Math.floor(3.5 * 1024 * 1024 * 1024), MAX_TOTAL = Math.floor(3.6 * 1024 * 1024 * 1024), PART = 1024 * 1024, HOLD_MS = 5000, PAR = 3;
+    var LS_TOK = "mksv_tok", LS_API = "mksv_api", LS_USER = "mksv_user";
+    var MAGIC_GZ = "MKSV1\n", MAGIC_RAW = "MKSV0\n";
+    var LS_SKIP = /^(mksv_|mkmed_|mk_cloud|mu_mirror_ts_v1$|app_categories_v13$)|cloud|linked|device|token|session|__/i;
+    var DB_SKIP = /cache|^mkmed/i;
+
+    /* ---------- tiny utils ---------- */
+    var g = function (k) { try { return localStorage.getItem(k); } catch (e) { return null; } };
+    var s = function (k, v) { try { v == null ? localStorage.removeItem(k) : localStorage.setItem(k, v); } catch (e) { } };
+    var esc = function (t) { return String(t == null ? "" : t).replace(/[&<>"']/g, function (c) { return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]; }); };
+    var sleep = function (ms) { return new Promise(function (r) { setTimeout(r, ms); }); };
+    var bd = function (x) { return '<bdi dir="ltr">' + x + '</bdi>'; };
+    function fmtSize(n) { n = +n || 0; if (n < 1024) return n + " B"; if (n < 1048576) return (n / 1024).toFixed(1) + " KB"; if (n < 1073741824) return (n / 1048576).toFixed(n < 10485760 ? 2 : 1) + " MB"; return (n / 1073741824).toFixed(2) + " GB"; }
+    var fa = function (n) { try { return new Intl.NumberFormat("fa-IR").format(n); } catch (e) { return String(n); } };
+    function fmtDate(ts) { try { return new Intl.DateTimeFormat("fa-IR-u-ca-persian", { dateStyle: "medium", timeStyle: "short" }).format(new Date(ts)); } catch (e) { return new Date(ts).toLocaleString(); } }
+    function stamp(ts) { var d = new Date(ts || Date.now()), p = function (x) { return String(x).padStart(2, "0"); }; return d.getFullYear() + p(d.getMonth() + 1) + p(d.getDate()) + "-" + p(d.getHours()) + p(d.getMinutes()); }
+    async function sha256hex(str) { var b = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(str)); return Array.from(new Uint8Array(b)).map(function (x) { return x.toString(16).padStart(2, "0"); }).join(""); }
+    var G = function (name) { try { return (0, eval)("typeof " + name + "!=='undefined'?" + name + ":undefined"); } catch (e) { return undefined; } };
+    var SET = function (name, v) { try { (0, eval)(name + "=" + JSON.stringify(v)); } catch (e) { } };
+
+    /* ---------- state ---------- */
+    var S = { gate: "", view: "auth", tab: "login", user: g(LS_USER) || "", items: [], info: null, sort: "new", q: "", busy: null, report: null, pick: null, exp: {}, cancel: false, local: null, host: null, root: null, open: false };
+
+    /* =====================================================================================
+       NETWORK
+       ===================================================================================== */
+    function apiBase() { return String(g(LS_API) || DEFAULT_API || "").replace(/\/+$/, ""); }
+    function token() { return g(LS_TOK) || ""; }
+    async function api(path, o) {
+        o = o || {}; var base = apiBase();
+        if (!base) throw new Error("آدرس سرور (Worker) تنظیم نشده است.");
+        var headers = Object.assign({}, o.headers || {});
+        if (o.auth !== false && token()) headers.Authorization = "Bearer " + token();
+        var body = o.raw;
+        if (o.body !== undefined) { body = JSON.stringify(o.body); headers["Content-Type"] = "application/json"; }
+        var res;
+        try { res = await fetch(base + path, { method: o.method || "GET", headers: headers, body: body }); }
+        catch (e) { throw new Error("ارتباط با سرور برقرار نشد. اینترنت یا آدرس Worker را بررسی کن."); }
+        if (o.stream) { if (!res.ok) throw await httpError(res); return res; }
+        var data = null; try { data = await res.json(); } catch (e) { }
+        if (!res.ok || !data || data.ok === false) throw await httpError(res, data);
+        return data;
+    }
+    async function httpError(res, data) {
+        if (!data) { try { data = await res.json(); } catch (e) { data = null; } }
+        var msg = (data && (data.message && data.message !== data.error ? data.message : data.error)) || ("خطای سرور (" + res.status + ")");
+        var map = { unauthorized: "نشست منقضی شده؛ دوباره وارد شو.", forbidden: "کد ثبت‌نام نادرست است.", too_big: "حجم این بکاپ از ۳.۵ گیگابایت بیشتر است.", total_full: "ظرفیت کل بکاپ‌ها (۳.۶ گیگابایت) پر است.", bad_credentials: "نام کاربری یا رمز اشتباه است.", exists: "این نام کاربری قبلاً ثبت شده.", locked: "تلاش‌های ناموفق زیاد؛ چند دقیقه بعد دوباره امتحان کن.", not_configured: "Worker کامل تنظیم نشده (BUCKET / JWT_SECRET / REGISTER_CODE)." };
+        var e = new Error(map[data && data.error] || msg); e.status = res.status; e.code = data && data.error; return e;
+    }
+    function blobToB64(blob) { return new Promise(function (res, rej) { var r = new FileReader(); r.onload = function () { var s = String(r.result); res(s.slice(s.indexOf(",") + 1)); }; r.onerror = function () { rej(new Error("خواندن بخش ناموفق بود")); }; r.readAsDataURL(blob); }); }
+    function putPart(url, blob, onProg, reg) {
+        return blobToB64(blob).then(function (b64) { return new Promise(function (resolve, reject) {
+            var x = new XMLHttpRequest(); reg(x);
+            x.open("PUT", url); x.setRequestHeader("Authorization", "Bearer " + token());
+            x.upload.onprogress = function (e) { onProg(Math.min(blob.size, Math.floor(e.loaded * 3 / 4))); };
+            x.onload = function () { var d = null; try { d = JSON.parse(x.responseText); } catch (e) { } if (x.status >= 200 && x.status < 300 && d && d.ok) resolve(d); else { var er = new Error((d && (d.message || d.error)) || ("خطای آپلود " + x.status)); er.status = x.status; reject(er); } };
+            x.onerror = function () { var er = new Error("قطع شدن ارتباط حین آپلود"); er.net = 1; reject(er); };
+            x.onabort = function () { var er = new Error("لغو شد"); er.aborted = 1; reject(er); };
+            x.send(b64);
+        }); });
+    }
+
+    /* =====================================================================================
+       SNAPSHOT  (container: magic + gz header length + gz JSON header + concatenated blobs)
+       ===================================================================================== */
+    function curDbName() { var id = window.__MU_ACCT_ID; return id ? "markhinStorage_acct_" + id : "markhinStorage"; }
+    function idbOpen(name) { return new Promise(function (res, rej) { var r = indexedDB.open(name); r.onsuccess = function () { res(r.result); }; r.onerror = function () { rej(r.error); }; r.onupgradeneeded = function () { try { r.transaction.abort(); } catch (e) { } rej(new Error("db-missing")); }; }); }
+    async function listDbs() { try { if (indexedDB.databases) return (await indexedDB.databases()).map(function (d) { return d.name; }).filter(Boolean); } catch (e) { } return [curDbName()]; }
+    function isMainDb(n) { return /^markhinStorage/.test(n); }
+
+    function makeEnc(blobs) {
+        var enc = function (v) {
+            if (v === undefined) return { $u: 1 };
+            if (v === null || typeof v !== "object") return typeof v === "function" || typeof v === "symbol" ? null : v;
+            if (typeof Blob !== "undefined" && v instanceof Blob) { blobs.push(v); return { $b: blobs.length - 1, t: v.type || "" }; }
+            if (v instanceof ArrayBuffer) { blobs.push(new Blob([v])); return { $a: blobs.length - 1, c: "ArrayBuffer" }; }
+            if (ArrayBuffer.isView(v)) { blobs.push(new Blob([v])); return { $a: blobs.length - 1, c: v.constructor.name }; }
+            if (v instanceof Date) return { $d: v.getTime() };
+            if (Array.isArray(v)) return v.map(enc);
+            if (Object.getPrototypeOf(v) !== Object.prototype && Object.getPrototypeOf(v) !== null) return null;
+            var o = {}; for (var k in v) o[k] = enc(v[k]); return o;
+        };
+        return enc;
+    }
+    async function dumpDb(name, enc) {
+        var db = await idbOpen(name), out = { name: name, stores: [] };
+        try {
+            for (var i = 0; i < db.objectStoreNames.length; i++) {
+                var sn = db.objectStoreNames[i];
+                var recs = await new Promise(function (res, rej) {
+                    var arr = [], os = db.transaction(sn, "readonly").objectStore(sn), cur = os.openCursor();
+                    cur.onsuccess = function () { var c = cur.result; if (!c) return res({ arr: arr, kp: os.keyPath, ai: os.autoIncrement }); if (!(isMainDb(name) && sn === "kv" && /^app_categories_v13(_gz)?$/.test(c.key))) arr.push([enc(c.key), enc(c.value)]); c.continue(); };
+                    cur.onerror = function () { rej(cur.error); };
+                });
+                out.stores.push({ name: sn, keyPath: recs.kp, ai: recs.ai, recs: recs.arr });
+            }
+        } finally { db.close(); }
+        return out;
+    }
+    async function gzip(u8) {
+        if (typeof CompressionStream === "undefined") return null;
+        var cs = new CompressionStream("gzip"), w = cs.writable.getWriter(); w.write(u8).catch(function () { }); w.close().catch(function () { });
+        return new Uint8Array(await new Response(cs.readable).arrayBuffer());
+    }
+    async function gunzip(u8) {
+        var ds = new DecompressionStream("gzip"), w = ds.writable.getWriter(); w.write(u8).catch(function () { }); w.close().catch(function () { });
+        return new Uint8Array(await new Response(ds.readable).arrayBuffer());
+    }
+    async function localStats() {
+        var notes = G("categories"), nCount = Array.isArray(notes) ? notes.length : 0, mCount = 0, mBytes = 0;
+        try {
+            var db = await idbOpen(curDbName());
+            try {
+                if (db.objectStoreNames.contains("media")) {
+                    await new Promise(function (res) {
+                        var cur = db.transaction("media", "readonly").objectStore("media").openCursor();
+                        cur.onsuccess = function () { var c = cur.result; if (!c) return res(); mCount++; mBytes += (c.value && c.value.size) || 0; c.continue(); };
+                        cur.onerror = function () { res(); };
+                    });
+                }
+            } finally { db.close(); }
+        } catch (e) { }
+        var folders = G("folders"); return { notes: nCount, media: mCount, mediaBytes: mBytes, folders: Array.isArray(folders) ? folders.length : 0 };
+    }
+    async function buildSnapshot(prog) {
+        prog("آماده‌سازی داده‌ها…", 0);
+        try { var f = G("mu_flushStorage"); if (typeof f === "function") await f(); } catch (e) { }
+        var ser = G("mu_serializeCategoriesFast"), notesStr;
+        try { notesStr = typeof ser === "function" ? ser() : (g("app_categories_v13") || "[]"); } catch (e) { notesStr = g("app_categories_v13") || "[]"; }
+        var blobs = [], enc = makeEnc(blobs), ls = {};
+        try { for (var i = 0; i < localStorage.length; i++) { var k = localStorage.key(i); if (k && !LS_SKIP.test(k)) ls[k] = localStorage.getItem(k); } } catch (e) { }
+        var dbs = [], names = await listDbs();
+        for (var j = 0; j < names.length; j++) { if (DB_SKIP.test(names[j])) continue; try { dbs.push(await dumpDb(names[j], enc)); } catch (e) { console.warn("mksv dump skipped", names[j], e); } }
+        var st = await localStats(), off = 0;
+        var header = { v: 1, app: "markhin", createdAt: Date.now(), notes: notesStr, ls: ls, dbs: dbs, counts: { notes: st.notes, media: st.media, folders: st.folders, mediaBytes: st.mediaBytes } };
+        header.blobs = blobs.map(function (b) { var o = { o: off, n: b.size }; off += b.size; return o; });
+        prog("فشرده‌سازی…", 0);
+        var raw = new TextEncoder().encode(JSON.stringify(header)), z = await gzip(raw), magic = z ? MAGIC_GZ : MAGIC_RAW, hdr = z || raw, len = new Uint8Array(4);
+        new DataView(len.buffer).setUint32(0, hdr.length, true);
+        var blob = new Blob([new TextEncoder().encode(magic), len, hdr].concat(blobs), { type: "application/octet-stream" });
+        return { blob: blob, counts: header.counts };
+    }
+    async function parseSnapshot(blob) {
+        var head = new Uint8Array(await blob.slice(0, 10).arrayBuffer()), magic = new TextDecoder().decode(head.subarray(0, 6));
+        if (magic !== MAGIC_GZ && magic !== MAGIC_RAW) throw new Error("این فایل بکاپ مرکین نیست یا خراب است.");
+        var hl = new DataView(head.buffer).getUint32(6, true);
+        if (hl <= 0 || 10 + hl > blob.size) throw new Error("هدر بکاپ خراب است.");
+        var hb = new Uint8Array(await blob.slice(10, 10 + hl).arrayBuffer());
+        if (magic === MAGIC_GZ) hb = await gunzip(hb);
+        var header = JSON.parse(new TextDecoder().decode(hb));
+        if (!header || header.v !== 1 || !Array.isArray(header.dbs)) throw new Error("نسخهٔ بکاپ پشتیبانی نمی‌شود.");
+        return { header: header, area: blob.slice(10 + hl) };
+    }
+    async function decVal(v, snap) {
+        if (v === null || typeof v !== "object") return v;
+        if (v.$u) return undefined;
+        if (v.$d != null) return new Date(v.$d);
+        var bl = snap.header.blobs;
+        if (v.$b != null) { var r = bl[v.$b]; return snap.area.slice(r.o, r.o + r.n, v.t || ""); }
+        if (v.$a != null) { var q = bl[v.$a], buf = await snap.area.slice(q.o, q.o + q.n).arrayBuffer(); return v.c === "ArrayBuffer" ? buf : new (window[v.c] || Uint8Array)(buf); }
+        if (Array.isArray(v)) { var a = []; for (var i = 0; i < v.length; i++) a.push(await decVal(v[i], snap)); return a; }
+        var o = {}; for (var k in v) o[k] = await decVal(v[k], snap); return o;
+    }
+
+    /* =====================================================================================
+       UPLOAD / DOWNLOAD
+       ===================================================================================== */
+    function setProg(text, pct, cancelable, used) { S.busy = { text: text, pct: pct, cancelable: !!cancelable, used: used }; paintProg(); }
+    function othersTotal(bid) { return S.items.reduce(function (n, x) { return n + (x.id === bid ? 0 : (x.size || 0)); }, 0); }
+    function usageLine(used) { return "💾 مصرف بکاپ: " + fmtSize(used) + " از " + fmtSize(MAX) + " (" + (used / MAX * 100).toFixed(1) + "٪) · مانده " + fmtSize(Math.max(0, MAX - used)); }
+    function keepScroll(fn) { var b = S.root && $("#body"), y = b ? b.scrollTop : 0; fn(); var nb = S.root && $("#body"); nb && (nb.scrollTop = y); }
+    function endProg() { S.busy = null; paintProg(); }
+
+    var mediaKeys = function (html) { var set = new Set(), m; MEDIA_RE.lastIndex = 0; html = String(html || ""); while ((m = MEDIA_RE.exec(html))) set.add(m[1] || m[2]); return set; };
+    async function readNotes() {
+        try { var f = G("mu_flushStorage"); if (typeof f === "function") await f(); } catch (e) { }
+        var ser = G("mu_serializeCategoriesFast"), arr = null;
+        try { arr = JSON.parse(typeof ser === "function" ? ser() : (g("app_categories_v13") || "[]")); } catch (e) { }
+        if (!Array.isArray(arr)) { var c = G("categories"); arr = Array.isArray(c) ? c : []; }
+        return arr.filter(function (n) { return n && typeof n === "object" && n.id != null; });
+    }
+    async function mediaSizes() {
+        var map = {};
+        try { var db = await idbOpen(curDbName()); try { if (db.objectStoreNames.contains("media")) await new Promise(function (res) { var cur = db.transaction("media", "readonly").objectStore("media").openCursor(); cur.onsuccess = function () { var c = cur.result; if (!c) return res(); map[c.key] = (c.value && c.value.size) || 0; c.continue(); }; cur.onerror = function () { res(); }; }); } finally { db.close(); } } catch (e) { }
+        return map;
+    }
+    /* one note + its own media = a mini snapshot in the SAME container format, so parseSnapshot/restoreAdd work on it unchanged */
+    async function buildNotePack(note) {
+        var keys = Array.from(mediaKeys(note.html)), blobs = [], enc = makeEnc(blobs), recs = [], off = 0, mname = curDbName();
+        if (keys.length) {
+            var db = await idbOpen(mname);
+            try { if (db.objectStoreNames.contains("media")) for (var i = 0; i < keys.length; i++) { var v = await new Promise(function (res) { var r = db.transaction("media", "readonly").objectStore("media").get(keys[i]); r.onsuccess = function () { res(r.result); }; r.onerror = function () { res(undefined); }; }); if (v !== undefined) recs.push([keys[i], enc(v)]); } } finally { db.close(); }
+        }
+        var folders = []; try { var nf = G("mu_noteFolders"); folders = typeof nf === "function" ? nf(note) : (note.folder ? [note.folder] : []); } catch (e) { }
+        var header = { v: 1, app: "markhin", kind: "note", createdAt: Date.now(), notes: JSON.stringify([note]), ls: { app_folders_v13: JSON.stringify(folders) }, dbs: [{ name: mname, stores: [{ name: "media", keyPath: null, ai: false, recs: recs }] }], counts: { notes: 1, media: recs.length, folders: folders.length, mediaBytes: 0 } };
+        header.blobs = blobs.map(function (b) { var o = { o: off, n: b.size }; off += b.size; return o; });
+        var raw = new TextEncoder().encode(JSON.stringify(header)), z = await gzip(raw), hdr = z || raw, len = new Uint8Array(4);
+        new DataView(len.buffer).setUint32(0, hdr.length, true);
+        return { blob: new Blob([new TextEncoder().encode(z ? MAGIC_GZ : MAGIC_RAW), len, hdr].concat(blobs), { type: "application/octet-stream" }), media: recs.length, folders: folders };
+    }
+
+    async function upl(blob, path, body, onBytes) {
+        if (blob.size > MAX) throw new Error("حجم این بخش " + fmtSize(blob.size) + " است و از سقف ۳.۵ گیگابایتِ هر بکاپ بیشتر است.");
+        S.cancel = false; body.size = blob.size;
+        var init = await api(path, { method: "POST", body: body });
+        var id = init.id, partSize = init.partSize || PART, total = init.parts, done = new Array(total).fill(0), parts = new Array(total), next = 0, xhrs = new Set(), failed = null;
+        var report = function () { var sum = done.reduce(function (a, b) { return a + b; }, 0); onBytes ? onBytes(sum) : setProg("آپلود… " + fmtSize(sum) + " از " + fmtSize(blob.size), sum / blob.size * 100, true); };
+        report();
+        async function worker() {
+            while (!failed && !S.cancel) {
+                var i = next++; if (i >= total) return;
+                var chunk = blob.slice(i * partSize, Math.min(blob.size, (i + 1) * partSize)), tries = 0;
+                for (; ;) {
+                    try {
+                        parts[i] = await putPart(apiBase() + path + "/" + id + "/part/" + (i + 1), chunk, function (l) { done[i] = l; report(); }, function (x) { xhrs.add(x); });
+                        done[i] = chunk.size; report(); break;
+                    } catch (e) {
+                        if (S.cancel || e.aborted) return;
+                        if (e.status === 401 || e.status === 400 || e.status === 404 || ++tries > 4) { failed = e; return; }
+                        done[i] = 0; await sleep(800 * tries * tries);
+                    }
+                }
+            }
+        }
+        S.abortXhr = function () { xhrs.forEach(function (x) { try { x.abort(); } catch (e) { } }); };
+        try { await Promise.all(new Array(Math.min(PAR, total)).fill(0).map(worker)); } finally { S.abortXhr = null; }
+        if (S.cancel || failed) { try { await api(path + "/" + id + "/abort", { method: "POST" }); } catch (e) { } if (S.cancel) throw Object.assign(new Error("آپلود لغو شد."), { cancelled: 1 }); throw failed; }
+        return await api(path + "/" + id + "/complete", { method: "POST", body: { parts: parts.map(function (p) { return { partNumber: p.partNumber, etag: p.etag }; }) } });
+    }
+    async function uploadBlob(blob, meta, name, note, kind) {
+        var r = await upl(blob, "/backups", { name: name, note: note, meta: { notes: meta.notes, media: meta.media, folders: meta.folders, mediaBytes: meta.mediaBytes, device: navigator.userAgent.slice(0, 100) }, kind: kind || "manual" });
+        return r.item;
+    }
+    /* add the chosen notes to backup `bid`, one by one, showing every note's size and the running usage */
+    async function addNotes(bid, list) {
+        var info = S.items.filter(function (x) { return x.id === bid; })[0], used = info ? info.size : 0, ok = 0, skipped = [], total = list.length;
+        for (var i = 0; i < total; i++) {
+            if (S.cancel) throw Object.assign(new Error("لغو شد."), { cancelled: 1 });
+            var n = list[i], head = "📝 " + fa(i + 1) + " از " + fa(total) + " — «" + n.title + "»";
+            setProg(head + "\nبسته‌بندی…", i / total * 100, true, used);
+            var pk = await buildNotePack(n.note), old = ((info && info.items) || []).filter(function (x) { return x.noteId === n.id; })[0], base = used - (old ? old.size : 0);
+            if (base + pk.blob.size > MAX || othersTotal(bid) + base + pk.blob.size > MAX_TOTAL) { skipped.push(n.title + " (" + fmtSize(pk.blob.size) + ")"); continue; }
+            try {
+                var res = await upl(pk.blob, "/backups/" + bid + "/items", { noteId: n.id, title: n.title, media: pk.media, folder: pk.folders[0] || "" }, function (sum) { setProg(head + "\nحجم این یادداشت: " + fmtSize(pk.blob.size) + " · آپلود " + fmtSize(sum), (i + sum / pk.blob.size) / total * 100, true, base + sum); });
+            } catch (e) { if (e.status === 413) { skipped.push(n.title + " (" + fmtSize(pk.blob.size) + ")"); continue; } throw e; }
+            info = res.backup; used = info.size; ok++;
+            S.items = S.items.map(function (x) { return x.id === bid ? info : x; });
+        }
+        return { ok: ok, skipped: skipped, used: used };
+    }
+    async function restoreItems(it, list) {
+        var tot = { added: 0, dup: 0, media: 0, folders: 0 };
+        for (var i = 0; i < list.length; i++) {
+            if (S.cancel) throw Object.assign(new Error("لغو شد."), { cancelled: 1 });
+            var x = list[i]; setProg("بازیابی " + fa(i + 1) + " از " + fa(list.length) + " — «" + x.title + "» (" + fmtSize(x.size) + ")", i / list.length * 100, true);
+            var sn = await parseSnapshot(await downloadBlob({ size: x.size }, "/backups/" + it.id + "/items/" + x.id)), r = await restoreAdd(sn);
+            tot.added += r.added; tot.dup += r.dup; tot.media += r.media; tot.folders += r.folders;
+        }
+        return tot;
+    }
+    /* base64 text -> Blob. The browser decodes it natively (no giant JS string / Uint8Array on the heap); atob is only the fallback. */
+    async function b64ToBlob(text) {
+        try { var r = await fetch("data:application/octet-stream;base64," + text); if (r.ok) return await r.blob(); } catch (e) { }
+        var bin = atob(text), u8 = new Uint8Array(bin.length);
+        for (var k = 0; k < bin.length; k++) u8[k] = bin.charCodeAt(k);
+        return new Blob([u8]);
+    }
+    /* Memory-light download: every 1 MB piece is turned into a Blob right away (the browser can keep Blobs on disk) and the
+       raw bytes are dropped, so even a multi-GB note never sits in JS memory. Each piece is checked and retried on its own. */
+    async function downloadBlob(item, path) {
+        var ps = item.partSize || PART, total = Math.max(1, Math.ceil(item.size / ps)), chunks = [], got = 0;
+        for (var n = 1; n <= total; n++) {
+            if (S.cancel) throw Object.assign(new Error("لغو شد."), { cancelled: 1 });
+            var want = n < total ? ps : item.size - ps * (total - 1), piece = null;
+            for (var tries = 0; !piece; tries++) {
+                try {
+                    var res = await api(path + "/part/" + n, { stream: true }), bl = await b64ToBlob(await res.text());
+                    if (bl.size !== want) throw new Error("بخش " + n + " ناقص دریافت شد.");
+                    piece = bl;
+                } catch (e) {
+                    if (S.cancel) throw Object.assign(new Error("لغو شد."), { cancelled: 1 });
+                    if (e.status === 401 || e.status === 404 || tries >= 4) throw e;
+                    await sleep(800 * (tries + 1) * (tries + 1));
+                }
+            }
+            chunks.push(piece); got += piece.size; setProg("دانلود… " + fmtSize(got) + " از " + fmtSize(item.size), got / item.size * 100, true);
+        }
+        if (got !== item.size) throw new Error("دانلود ناقص بود (" + fmtSize(got) + " از " + fmtSize(item.size) + "). دوباره امتحان کن.");
+        return new Blob(chunks, { type: "application/octet-stream" });
+    }
+    async function saveFile(blob, name) {
+        try { var rd = G("robustDownload"); if (typeof rd === "function") { await rd(blob, name, "application/octet-stream"); return; } } catch (e) { }
+        var a = document.createElement("a"), u = URL.createObjectURL(blob); a.href = u; a.download = name; document.body.appendChild(a); a.click(); setTimeout(function () { a.remove(); URL.revokeObjectURL(u); }, 4000);
+    }
+
+    /* =====================================================================================
+       RESTORE  (add = merge notes in, replace = overwrite everything on this device)
+       ===================================================================================== */
+    var MEDIA_RE = /data-mu-media="([^"]+)"|data-mkmed="(?:img|audio):([^"]+)"/g;
+    async function restoreAdd(snap) {
+        var cats = G("categories"); if (!Array.isArray(cats)) throw new Error("لیست یادداشت‌های برنامه در دسترس نیست.");
+        var incoming; try { incoming = JSON.parse(snap.header.notes || "[]"); } catch (e) { throw new Error("یادداشت‌های داخل بکاپ خوانده نشد."); }
+        if (!Array.isArray(incoming)) throw new Error("ساختار یادداشت‌های بکاپ نامعتبر است.");
+        var norm = G("normalizeCategory"), san = G("sanitizeHtml"), locked = G("isNoteLocked"), ids = new Set(cats.map(function (c) { return String(c.id); })), byId = {};
+        cats.forEach(function (c) { byId[String(c.id)] = c; });
+        var added = 0, dup = 0, addedMedia = new Set(), idx = 0;
+        incoming.forEach(function (raw) {
+            if (!raw || typeof raw !== "object") return;
+            var old = byId[String(raw.id)];
+            if (old && old.html === raw.html && old.name === raw.name && JSON.stringify(old.encrypted || null) === JSON.stringify(raw.encrypted || null)) { dup++; return; }
+            var note = typeof norm === "function" ? norm(raw, cats.length + idx++) : Object.assign({}, raw);
+            if (ids.has(String(note.id))) note.id = Date.now() + "_" + (++idx) + "_" + Math.random().toString(36).slice(2, 8);
+            if (typeof locked === "function" && locked(note)) { note.html = ""; note.text = ""; }
+            else if (typeof san === "function") note.html = san(note.html || note.text || "");
+            cats.push(note); ids.add(String(note.id)); added++;
+            var m, h = String(raw.html || ""); MEDIA_RE.lastIndex = 0; while ((m = MEDIA_RE.exec(h))) addedMedia.add(m[1] || m[2]);
+        });
+        var fl = G("folders"), addedFolders = 0, extra = [];
+        try { extra = JSON.parse((snap.header.ls || {}).app_folders_v13 || "[]"); } catch (e) { }
+        if (Array.isArray(fl)) extra.forEach(function (f) { if (typeof f === "string" && f && fl.indexOf(f) < 0) { fl.push(f); addedFolders++; try { var cf = G("clearFolderTombstone"); typeof cf === "function" && cf(f); } catch (e) { } } });
+        var copied = 0, mdb = snap.header.dbs.filter(function (d) { return isMainDb(d.name); })[0], ms = mdb && mdb.stores.filter(function (x) { return x.name === "media"; })[0];
+        if (ms && addedMedia.size) {
+            var db = await idbOpen(curDbName());
+            try {
+                var have = new Set(await new Promise(function (res) { var r = db.transaction("media", "readonly").objectStore("media").getAllKeys(); r.onsuccess = function () { res(r.result || []); }; r.onerror = function () { res([]); }; }));
+                for (var i = 0; i < ms.recs.length; i++) {
+                    var key = ms.recs[i][0]; if (!addedMedia.has(key) || have.has(key)) continue;
+                    var val = await decVal(ms.recs[i][1], snap);
+                    await new Promise(function (res) { var tx = db.transaction("media", "readwrite"); tx.objectStore("media").put(val, key); tx.oncomplete = tx.onerror = tx.onabort = function () { res(); }; });
+                    copied++;
+                }
+            } finally { db.close(); }
+        }
+        (G("saveToLocalStorage") || function () { })(); (G("saveFoldersToLocalStorage") || function () { })();
+        try { await G("mu_flushStorage")(); } catch (e) { }
+        try { G("renderApp")(); } catch (e) { }
+        try { var rf = G("mu_refreshNotesPage"); typeof rf === "function" && rf(); } catch (e) { }
+        return { added: added, dup: dup, folders: addedFolders, media: copied };
+    }
+    async function restoreReplace(snap) {
+        window.__mkSvRestoring = 1; SET("mu_savePending", false);
+        var existing = await listDbs();
+        for (var d = 0; d < snap.header.dbs.length; d++) {
+            var dd = snap.header.dbs[d], target = existing.indexOf(dd.name) >= 0 ? dd.name : (isMainDb(dd.name) ? curDbName() : null);
+            if (!target || existing.indexOf(target) < 0) continue;
+            var db; try { db = await idbOpen(target); } catch (e) { continue; }
+            try {
+                for (var si = 0; si < dd.stores.length; si++) {
+                    var st = dd.stores[si]; if (!db.objectStoreNames.contains(st.name)) continue;
+                    setProg("بازنویسی " + st.name + "…", 0);
+                    await new Promise(function (res) { var tx = db.transaction(st.name, "readwrite"); tx.objectStore(st.name).clear(); tx.oncomplete = tx.onerror = tx.onabort = function () { res(); }; });
+                    for (var i = 0; i < st.recs.length; i += 25) {
+                        var batch = [];
+                        for (var j = i; j < Math.min(st.recs.length, i + 25); j++) batch.push([await decVal(st.recs[j][0], snap), await decVal(st.recs[j][1], snap)]);
+                        await new Promise(function (res, rej) {
+                            var tx = db.transaction(st.name, "readwrite"), os = tx.objectStore(st.name), inline = os.keyPath != null;
+                            batch.forEach(function (r) { try { inline ? os.put(r[1]) : os.put(r[1], r[0]); } catch (e) { console.warn("mksv put", e); } });
+                            tx.oncomplete = function () { res(); }; tx.onerror = tx.onabort = function () { rej(tx.error || new Error("نوشتن در پایگاه داده ناموفق بود")); };
+                        });
+                        setProg("بازنویسی " + st.name + "… " + fa(Math.min(st.recs.length, i + 25)) + " از " + fa(st.recs.length), Math.min(100, (i + 25) / st.recs.length * 100));
+                    }
+                }
+            } finally { db.close(); }
+        }
+        /* notes: always written as the plain legacy record; the app's gz record is removed so it can't win on next load */
+        var mdb = existing.filter(isMainDb).indexOf(curDbName()) >= 0 ? curDbName() : existing.filter(isMainDb)[0];
+        if (mdb) {
+            var kdb = await idbOpen(mdb);
+            try {
+                await new Promise(function (res) { var tx = kdb.transaction("kv", "readwrite"), os = tx.objectStore("kv"); os.put(snap.header.notes || "[]", "app_categories_v13"); os.delete("app_categories_v13_gz"); tx.oncomplete = tx.onerror = tx.onabort = function () { res(); }; });
+            } finally { kdb.close(); }
+        }
+        s("app_categories_v13", null); s("mu_mirror_ts_v1", null);
+        var ls = snap.header.ls || {}; Object.keys(ls).forEach(function (k) { if (!LS_SKIP.test(k) && typeof ls[k] === "string") s(k, ls[k]); });
+        if (!("app_folders_v13" in ls)) s("app_folders_v13", null);
+    }
+
+    /* =====================================================================================
+       UI  (Shadow DOM so the app's CSS can't leak in or out)
+       ===================================================================================== */
+    var CSS = '\
+:host{all:initial}*{box-sizing:border-box;font-family:inherit}\
+.wrap{position:fixed;inset:0;z-index:2147483600;background:rgba(8,8,16,.72);backdrop-filter:blur(6px);display:flex;align-items:stretch;justify-content:center;direction:rtl;color:#ecebf7;font:14px/1.6 system-ui,-apple-system,"Segoe UI",Tahoma,sans-serif}\
+.panel{width:min(760px,100%);height:100%;background:linear-gradient(180deg,#171527,#0f0e1b);display:flex;flex-direction:column;box-shadow:0 0 60px rgba(0,0,0,.5);padding-top:env(safe-area-inset-top)}\
+.top{display:flex;align-items:center;gap:10px;padding:14px 16px;border-bottom:1px solid #2a2744}\
+.top h2{margin:0;font-size:16px;flex:1;font-weight:700;letter-spacing:.2px}\
+.chip{background:#26234a;border:1px solid #3a3670;color:#cfc9ff;border-radius:999px;padding:3px 10px;font-size:12px}\
+.x{background:none;border:0;color:#a9a5c9;font-size:22px;cursor:pointer;padding:2px 8px;line-height:1}\
+.body{flex:1;overflow:auto;padding:16px;padding-bottom:calc(16px + env(safe-area-inset-bottom));-webkit-overflow-scrolling:touch}\
+.card{background:#1c1a33;border:1px solid #2d2a52;border-radius:14px;padding:14px;margin-bottom:14px}\
+.card h3{margin:0 0 10px;font-size:14px;color:#cfc9ff}\
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:10px}\
+.stat{background:#14132a;border:1px solid #2a2750;border-radius:12px;padding:10px 12px}.stat b{display:block;font-size:17px}.stat span{font-size:12px;color:#9a96c0}\
+input,select,textarea{width:100%;background:#0f0e1f;border:1px solid #38346a;border-radius:10px;color:#f1f0ff;padding:10px 12px;font:inherit;outline:none;direction:ltr;text-align:right}\
+input.fa,textarea{direction:rtl}input:focus,select:focus,textarea:focus{border-color:#8b7bff;box-shadow:0 0 0 3px rgba(139,123,255,.2)}\
+label{display:block;font-size:12px;color:#9a96c0;margin:10px 0 4px}\
+.btn{border:0;border-radius:10px;padding:9px 14px;font:inherit;font-weight:600;cursor:pointer;background:#2c2958;color:#e6e3ff}\
+.btn:hover{background:#38346f}.btn:disabled{opacity:.5;cursor:default}.pri{background:linear-gradient(135deg,#7c5cff,#5b8cff);color:#fff}.pri:hover{filter:brightness(1.08)}\
+.dng{background:#4a1f33;color:#ffb3c8}.dng:hover{background:#63243f}.sm{padding:6px 10px;font-size:12.5px;border-radius:8px}\
+.row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}.grow{flex:1;min-width:120px}\
+.tabs{display:flex;gap:6px;margin-bottom:12px}.tabs .btn{flex:1}.tabs .on{background:linear-gradient(135deg,#7c5cff,#5b8cff);color:#fff}\
+.item{background:#14132a;border:1px solid #2a2750;border-radius:12px;padding:12px;margin-bottom:10px}\
+.item .nm{font-weight:700;word-break:break-word}.item .nt{color:#b4b0d8;font-size:13px;margin-top:2px;word-break:break-word}\
+.meta{display:flex;gap:6px;flex-wrap:wrap;margin:8px 0;font-size:12px;color:#aaa6cf}.meta span{background:#201e3c;border-radius:8px;padding:2px 8px}\
+.acts{display:flex;gap:6px;flex-wrap:wrap}\
+.prog{background:#1c1a33;border:1px solid #3a3670;border-radius:14px;padding:12px;margin-bottom:14px}\
+.bar{height:8px;background:#0f0e1f;border-radius:99px;overflow:hidden;margin:8px 0}.bar i{display:block;height:100%;width:0;background:linear-gradient(90deg,#7c5cff,#5bd3ff);transition:width .2s}\
+.err{color:#ff9db7;font-size:13px;margin-top:8px;white-space:pre-wrap}.ok{color:#8ff0c0;font-size:13px;margin-top:8px;white-space:pre-wrap}.muted{color:#8f8bb5;font-size:12.5px}\
+details summary{cursor:pointer;color:#cfc9ff;font-weight:600;padding:4px 0}\
+.dlg{position:absolute;inset:0;background:rgba(5,5,12,.7);display:flex;align-items:center;justify-content:center;padding:16px;z-index:5}\
+.dlg>div{background:#1c1a33;border:1px solid #3a3670;border-radius:16px;padding:16px;width:min(420px,100%)}\
+.dlg h3{margin:0 0 8px}.dlg p{margin:0 0 12px;color:#c9c5ee;white-space:pre-wrap}.shake{animation:sh .35s}@keyframes sh{20%{transform:translateX(-8px)}40%{transform:translateX(8px)}60%{transform:translateX(-5px)}80%{transform:translateX(5px)}}\
+.empty{text-align:center;color:#8f8bb5;padding:22px 0}.chk{display:flex;gap:8px;align-items:center;font-size:13px;margin:6px 0 12px;color:#d6d2fa}.chk input{width:auto}\
+.pk{background:#14132a;border:1px solid #2a2750;border-radius:10px;padding:8px 10px;margin:0 0 6px;justify-content:space-between}.pk .t{flex:1;word-break:break-word}.pk small{color:#9a96c0;white-space:nowrap}\
+';
+
+    function ensureRoot() {
+        if (S.host) return;
+        var host = document.createElement("div"); host.id = "mkSvHost"; host.style.cssText = "all:initial;position:fixed;z-index:2147483600;inset:0;pointer-events:none";
+        var sh = host.attachShadow({ mode: "open" }); sh.innerHTML = "<style>" + CSS + "</style><div id=\"mount\"></div>";
+        document.documentElement.appendChild(host); S.host = host; S.root = sh;
+        sh.addEventListener("click", onClick);
+        sh.addEventListener("input", function (e) { var t = e.target; if (t && t.id === "q") { S.q = t.value; var l = $("#list"); l && (l.innerHTML = listHtml()); } });
+        sh.addEventListener("change", function (e) { var t = e.target; if (t && t.id === "so") { S.sort = t.value; var l = $("#list"); l && (l.innerHTML = listHtml()); } });
+        sh.addEventListener("change", function (e) { var t = e.target, P = S.pick; if (t && P && t.dataset && t.dataset.nid != null) { t.checked ? P.sel.add(t.dataset.nid) : P.sel.delete(t.dataset.nid); var bx = $("#pkSum"); bx && (bx.innerHTML = pickSumHtml()); } });
+        sh.addEventListener("input", function (e) { var t = e.target, P = S.pick; if (t && P && t.id === "pq") { P.q = t.value; var l = $("#pkList"); l && (l.innerHTML = pickRows()); } });
+        sh.addEventListener("keydown", function (e) { if (e.key === "Enter" && S.view === "auth" && e.target && /^(u|p|p2)$/.test(e.target.id)) doAuth(); });
+    }
+    var $ = function (sel) { return S.root.querySelector(sel); };
+    function mount(html) { ensureRoot(); S.host.style.pointerEvents = html ? "auto" : "none"; $("#mount").innerHTML = html || ""; }
+
+    function shell(inner) {
+        return '<div class="wrap" id="wrap"><div class="panel"><div class="top"><h2>🗄️ پنل بکاپ خصوصی</h2>' + (S.user && S.view === "main" ? '<span class="chip">👤 ' + esc(S.user) + '</span>' : '') + '<button class="x" data-a="close" aria-label="بستن">×</button></div><div class="body" id="body">' + inner + '</div></div></div>';
+    }
+    function authView() {
+        var reg = S.tab === "register";
+        return '<div class="card"><div class="tabs"><button class="btn' + (!reg ? " on" : "") + '" data-a="tab" data-v="login">ورود</button><button class="btn' + (reg ? " on" : "") + '" data-a="tab" data-v="register">ثبت‌نام</button></div>' +
+            '<label>نام کاربری</label><input id="u" autocomplete="username" autocapitalize="none" spellcheck="false" value="' + esc(S.user) + '">' +
+            '<label>رمز عبور' + (reg ? ' (حداقل ۸ نویسه)' : '') + '</label><input id="p" type="password" autocomplete="' + (reg ? "new-password" : "current-password") + '">' +
+            (reg ? '<label>تکرار رمز عبور</label><input id="p2" type="password" autocomplete="new-password">' : '') +
+            '<div class="row" style="margin-top:14px"><button class="btn pri grow" data-a="auth" id="goBtn">' + (reg ? "ساخت حساب" : "ورود") + '</button></div><div id="msg"></div></div>' +
+            '<details class="card"><summary>⚙️ آدرس سرور (Worker)</summary><label>URL</label><input id="api" placeholder="https://markhin-backup.xxx.workers.dev" value="' + esc(apiBase()) + '"><div class="row" style="margin-top:10px"><button class="btn sm" data-a="saveApi">ذخیره</button><button class="btn sm" data-a="ping">تست اتصال</button></div><div id="apiMsg" class="muted" style="margin-top:6px"></div></details>';
+    }
+    function sortedItems() {
+        var q = S.q.trim().toLowerCase(), a = S.items.filter(function (x) { return !q || (x.name + " " + (x.note || "")).toLowerCase().indexOf(q) >= 0; });
+        var by = { new: function (x, y) { return y.createdAt - x.createdAt; }, old: function (x, y) { return x.createdAt - y.createdAt; }, big: function (x, y) { return y.size - x.size; }, name: function (x, y) { return String(x.name).localeCompare(String(y.name), "fa"); } };
+        return a.sort(by[S.sort] || by.new);
+    }
+    function itemHtml(x) {
+        var nw = Array.isArray(x.items), pct = Math.min(100, (x.size || 0) / MAX * 100);
+        var h = '<div class="item" data-id="' + esc(x.id) + '"><div class="nm">' + (x.kind === "safety" ? "🛟 " : "") + esc(x.name) + (nw ? "" : ' <small class="muted">(فایل کامل قدیمی)</small>') + '</div>' + (x.note ? '<div class="nt">' + esc(x.note) + '</div>' : '') +
+            '<div class="meta"><span>🕒 ' + bd(esc(fmtDate(x.createdAt))) + '</span><span>📝 ' + fa(nw ? x.items.length : (x.notes || 0)) + ' یادداشت</span><span>🖼 ' + fa(x.media || 0) + ' مدیا</span>' + (nw ? "" : '<span>📁 ' + fa(x.folders || 0) + ' پوشه</span>') + '</div>' +
+            '<div class="muted">💾 ' + bd(fmtSize(x.size)) + ' از ' + bd(fmtSize(MAX)) + ' (' + pct.toFixed(1) + '٪) · مانده ' + bd(fmtSize(Math.max(0, MAX - x.size))) + '</div><div class="bar"><i style="width:' + Math.max(1, pct) + '%"></i></div>';
+        h += nw ? '<div class="acts"><button class="btn sm pri" data-a="addN">➕ افزودن یادداشت</button><button class="btn sm" data-a="radd">↩️ بازیابی همه</button><button class="btn sm" data-a="tog">📋 یادداشت‌ها (' + fa(x.items.length) + ')</button><button class="btn sm" data-a="edit">✏️ ویرایش</button><button class="btn sm dng" data-a="clear">🧹 حذف همهٔ یادداشت‌ها</button><button class="btn sm dng" data-a="del">🗑 حذف بکاپ</button></div>'
+            : '<div class="acts"><button class="btn sm pri" data-a="add">➕ افزودن به برنامه</button><button class="btn sm" data-a="replace">♻️ جایگزینی کامل</button><button class="btn sm" data-a="dl">⬇️ فایل</button><button class="btn sm" data-a="edit">✏️ ویرایش</button><button class="btn sm dng" data-a="del">🗑 حذف</button></div>';
+        if (nw && S.exp[x.id]) {
+            h += x.items.length ? x.items.slice().sort(function (p, q) { return q.addedAt - p.addedAt; }).map(function (n) {
+                return '<div class="row it" data-iid="' + esc(n.id) + '" style="justify-content:space-between;background:#0f0e1f;border-radius:8px;padding:6px 8px;margin-top:6px"><span class="grow" style="word-break:break-word">📝 ' + esc(n.title) + ' <small class="muted">· ' + bd(fmtSize(n.size)) + (n.media ? ' · 🖼' + fa(n.media) : '') + '</small></span><button class="btn sm" data-a="iadd">↩️</button><button class="btn sm dng" data-a="idel">🗑</button></div>';
+            }).join("") : '<div class="muted" style="margin-top:8px">این بکاپ خالی است.</div>';
+        }
+        return h + '</div>';
+    }
+    function listHtml() {
+        var a = sortedItems();
+        if (!a.length) return '<div class="empty">' + (S.items.length ? "نتیجه‌ای پیدا نشد." : "هنوز بکاپی نداری. اولین بکاپ را بساز.") + '</div>';
+        return a.map(itemHtml).join("");
+    }
+    function pickSum() {
+        var P = S.pick, info = P.target ? S.items.filter(function (x) { return x.id === P.target; })[0] : null, used = info ? info.size : 0, add = 0, cnt = 0;
+        P.notes.forEach(function (n) { if (!P.sel.has(n.id)) return; cnt++; add += n.size; var old = info && info.items ? info.items.filter(function (x) { return x.noteId === n.id; })[0] : null; if (old) used -= old.size; });
+        return { used: used, add: add, cnt: cnt, total: used + add };
+    }
+    function pickSumHtml() {
+        var r = pickSum(), oth = othersTotal(S.pick.target), pct = r.total / MAX * 100, over = r.total > MAX || oth + r.total > MAX_TOTAL;
+        return '<div class="muted">' + fa(r.cnt) + ' یادداشت انتخاب شده · حجم تقریبی: ' + bd(fmtSize(r.add)) + '</div><div class="bar"><i style="width:' + Math.min(100, pct) + '%' + (over ? ';background:#ff6b8b' : '') + '"></i></div><div class="' + (over ? "err" : "muted") + '">مصرف پس از افزودن: ' + bd(fmtSize(r.total)) + ' از ' + bd(fmtSize(MAX)) + ' (' + pct.toFixed(1) + '٪) · مانده ' + bd(fmtSize(Math.max(0, MAX - r.total))) + (over ? " — از سقف (هر بکاپ ۳.۵GB / کل ۳.۶GB) بیشتر است؛ یادداشت‌هایی که جا نشوند رد می‌شوند." : "") + '</div>';
+    }
+    function pickRows() {
+        var P = S.pick, q = P.q.trim().toLowerCase(), info = P.target ? S.items.filter(function (x) { return x.id === P.target; })[0] : null;
+        var a = P.notes.filter(function (n) { return !q || n.title.toLowerCase().indexOf(q) >= 0; });
+        if (!a.length) return '<div class="empty">' + (P.notes.length ? "نتیجه‌ای پیدا نشد." : "یادداشتی در برنامه نیست.") + '</div>';
+        return a.map(function (n) {
+            var inb = info && info.items ? info.items.filter(function (x) { return x.noteId === n.id; })[0] : null;
+            return '<label class="chk pk"><input type="checkbox" data-nid="' + esc(n.id) + '"' + (P.sel.has(n.id) ? " checked" : "") + '><span class="t">' + esc(n.title) + (inb ? ' <small>(در بکاپ هست؛ نسخهٔ تازه جایگزین می‌شود)</small>' : '') + '</span><small>' + bd(fmtSize(n.size)) + (n.media ? ' · 🖼' + fa(n.media) : '') + '</small></label>';
+        }).join("");
+    }
+    function refreshPick() { var l = $("#pkList"), b = $("#pkSum"); l && (l.innerHTML = pickRows()); b && (b.innerHTML = pickSumHtml()); }
+    function pickView() {
+        var P = S.pick, info = P.target ? S.items.filter(function (x) { return x.id === P.target; })[0] : null;
+        if (!P.notes) return '<div class="card"><div class="empty">در حال خواندن یادداشت‌ها…</div></div>';
+        return '<div id="progBox"></div><div class="card"><h3>' + (info ? "➕ افزودن یادداشت به «" + esc(info.name) + "»" : "🗂 بکاپ جدید — انتخاب یادداشت‌ها") + '</h3>' +
+            (info ? "" : '<label>نام</label><input class="fa" id="bn" maxlength="120" value="' + esc(P.name) + '"><label>توضیح (اختیاری)</label><textarea id="bt" rows="2" maxlength="600"></textarea>') +
+            '<div class="row" style="margin-top:10px"><input class="fa grow" id="pq" placeholder="جستجوی یادداشت…" value="' + esc(P.q) + '"></div>' +
+            '<div class="row" style="margin:10px 0"><button class="btn sm" data-a="pkAll">انتخاب همه (نتایج فعلی)</button><button class="btn sm" data-a="pkNone">هیچ‌کدام</button></div><div id="pkList">' + pickRows() + '</div></div>' +
+            '<div class="card" style="position:sticky;bottom:0"><div id="pkSum">' + pickSumHtml() + '</div><div class="row" style="margin-top:10px"><button class="btn pri grow" data-a="pkGo">شروع بکاپ</button><button class="btn" data-a="pkBack">بازگشت</button></div></div>';
+    }
+    async function openPick(bid, all) {
+        if (S.busy) return toast("یک عملیات در حال انجام است.");
+        S.report = null; S.view = "pick"; S.pick = { target: bid || null, notes: null, sel: new Set(), q: "", name: "بکاپ " + stamp() }; render();
+        var notes = await readNotes(), ms = await mediaSizes();
+        if (!S.pick) return;
+        S.pick.notes = notes.map(function (n) {
+            var mb = 0, mc = 0; mediaKeys(n.html).forEach(function (k) { if (ms[k] != null) { mb += ms[k]; mc++; } });
+            return { id: String(n.id), title: String(n.name || "بدون عنوان"), size: new Blob([JSON.stringify(n)]).size + mb, media: mc, note: n };
+        });
+        if (all) S.pick.notes.forEach(function (n) { S.pick.sel.add(n.id); });
+        render();
+    }
+    function mainView() {
+        var tot = S.items.reduce(function (n, x) { return n + (x.size || 0); }, 0), big = S.items.reduce(function (n, x) { return Math.max(n, x.size || 0); }, 0), last = S.items.length ? S.items[0].createdAt : 0, L = S.local;
+        var d = new Date(), def = "بکاپ " + stamp(d.getTime());
+        return '<div id="progBox"></div>' +
+            '<div class="card"><h3>📊 وضعیت</h3><div class="grid">' +
+            '<div class="stat"><b>' + fa(S.items.length) + '</b><span>تعداد بکاپ‌ها</span></div><div class="stat"><b>' + bd(fmtSize(tot)) + '</b><span>مجموع حجم (سقف کل ۳.۶GB)</span></div><div class="stat"><b>' + bd(fmtSize(big)) + '</b><span>بزرگ‌ترین بکاپ (سقف هر بکاپ ۳.۵GB)</span></div><div class="stat"><b>' + (last ? bd(esc(fmtDate(last))) : "—") + '</b><span>آخرین بکاپ</span></div>' +
+            '<div class="stat"><b>' + (L ? fa(L.notes) : "…") + '</b><span>یادداشت روی این دستگاه</span></div><div class="stat"><b>' + (L ? fa(L.media) + " · " + bd(fmtSize(L.mediaBytes)) : "…") + '</b><span>مدیا روی این دستگاه</span></div></div></div>' +
+            '<div class="card"><h3>➕ بکاپ جدید</h3><div class="row"><button class="btn pri grow" data-a="newPick">🗂 انتخاب یادداشت‌ها</button><button class="btn grow" data-a="newAll">⚡ همهٔ یادداشت‌ها</button></div><div class="muted" style="margin-top:8px">هر یادداشت جداگانه (همراه عکس و ویس خودش) ذخیره می‌شود. سقف هر بکاپ ۳.۵ گیگابایت و سقف مجموع همهٔ بکاپ‌ها ۳.۶ گیگابایت است و پیش از شروع و هنگام افزودن هر یادداشت، حجم و فضای باقی‌مانده نشان داده می‌شود.</div></div>' +
+            '<div class="card"><h3>🗂 بکاپ‌ها</h3><div class="row" style="margin-bottom:10px"><input class="fa grow" id="q" placeholder="جستجو…" value="' + esc(S.q) + '"><select id="so" style="width:auto"><option value="new"' + (S.sort === "new" ? " selected" : "") + '>جدیدترین</option><option value="old"' + (S.sort === "old" ? " selected" : "") + '>قدیمی‌ترین</option><option value="big"' + (S.sort === "big" ? " selected" : "") + '>بزرگ‌ترین</option><option value="name"' + (S.sort === "name" ? " selected" : "") + '>نام</option></select><button class="btn sm" data-a="refresh">↻</button></div><div id="list">' + listHtml() + '</div></div>' +
+            '<details class="card"><summary>⚙️ حساب و تنظیمات</summary><div class="row" style="margin:10px 0"><button class="btn sm" data-a="pw">🔑 تغییر رمز</button><button class="btn sm" data-a="logoutAll">🚪 خروج از همهٔ دستگاه‌ها</button><button class="btn sm" data-a="logout">خروج از حساب</button><button class="btn sm dng" data-a="delAcc">حذف حساب و همهٔ بکاپ‌ها</button></div><label>آدرس سرور</label><input id="api" value="' + esc(apiBase()) + '"><div class="row" style="margin-top:10px"><button class="btn sm" data-a="saveApi">ذخیره</button></div><div id="apiMsg" class="muted"></div></details>';
+    }
+    function render() {
+        if (!S.open) return;
+        mount(shell(S.view === "main" ? mainView() : S.view === "pick" ? pickView() : authView())); paintProg();
+        if (S.view === "main" && !S.local) localStats().then(function (l) { S.local = l; if (S.open && S.view === "main" && !S.busy) render(); });
+    }
+    function paintProg() {
+        var box = S.root && $("#progBox"); if (!box) return;
+        var b = S.busy, r = S.report;
+        if (!b) { box.innerHTML = r ? '<div class="prog"><div class="' + (r.err ? "err" : "ok") + '">' + esc(r.text).replace(/\n/g, "<br>") + '</div></div>' : ""; return; }
+        box.innerHTML = '<div class="prog"><div>' + esc(b.text).replace(/\n/g, "<br>") + '</div><div class="bar"><i style="width:' + Math.max(2, Math.min(100, b.pct || 0)) + '%"></i></div>' +
+            (b.used != null ? '<div class="muted">' + esc(usageLine(b.used)) + '</div><div class="bar"><i style="width:' + Math.max(1, Math.min(100, b.used / MAX * 100)) + '%;background:linear-gradient(90deg,#3ddc97,#ffb84d)"></i></div>' : '') +
+            (b.cancelable ? '<button class="btn sm dng" data-a="cancel">لغو</button>' : '') + '</div>';
+    }
+    function say(sel, text, ok) { var el = S.root && $(sel); if (el) el.innerHTML = '<div class="' + (ok ? "ok" : "err") + '">' + esc(text) + '</div>'; }
+    function ask(o) {
+        return new Promise(function (resolve) {
+            var d = document.createElement("div"); d.className = "dlg";
+            d.innerHTML = '<div><h3>' + esc(o.title) + '</h3><p>' + esc(o.text || "") + '</p>' + (o.input ? '<input id="di" ' + (o.password ? 'type="password"' : "") + ' placeholder="' + esc(o.input) + '" class="fa">' : '') + (o.check ? '<label class="chk"><input type="checkbox" id="dc" ' + (o.check.on ? "checked" : "") + '> ' + esc(o.check.label) + '</label>' : '') + '<div class="row" style="margin-top:10px"><button class="btn ' + (o.danger ? "dng" : "pri") + ' grow" id="dy">' + esc(o.ok || "تأیید") + '</button><button class="btn grow" id="dn">انصراف</button></div></div>';
+            S.root.querySelector(".wrap").appendChild(d); var inp = d.querySelector("#di"); inp && setTimeout(function () { inp.focus(); }, 30);
+            var fin = function (v) { d.remove(); resolve(v); };
+            d.querySelector("#dy").onclick = function () { fin({ ok: 1, value: inp ? inp.value : "", check: d.querySelector("#dc") ? d.querySelector("#dc").checked : false }); };
+            d.querySelector("#dn").onclick = function () { fin(null); };
+        });
+    }
+    function toast(t) { try { var f = G("showToast"); if (typeof f === "function") f(t, 3500); } catch (e) { } }
+
+    /* ---------- actions ---------- */
+    async function refresh(quiet) {
+        try { var r = await api("/backups"); S.items = r.items || []; S.info = r; if (S.open && S.view === "main") keepScroll(render); if ((r.deleting | 0) > 0 && !S.purging && !S.busy) bgPurge(); }
+        catch (e) { if (e.status === 401) return toLogin(e.message); if (!quiet) toast(e.message); throw e; }
+    }
+    function toLogin(msg) { s(LS_TOK, null); S.view = "auth"; S.tab = "login"; render(); msg && say("#msg", msg); }
+    async function doAuth() {
+        var reg = S.tab === "register", u = $("#u").value.trim().toLowerCase(), p = $("#p").value, btn = $("#goBtn");
+        if (!u || !p) return say("#msg", "نام کاربری و رمز را وارد کن.");
+        if (reg && p !== $("#p2").value) return say("#msg", "تکرار رمز با رمز یکی نیست.");
+        if (reg && p.length < 8) return say("#msg", "رمز عبور حداقل ۸ نویسه باشد.");
+        btn.disabled = true; say("#msg", "در حال اتصال…", true);
+        try {
+            var r = await api(reg ? "/auth/register" : "/auth/login", { method: "POST", auth: false, body: reg ? { username: u, password: p, code: S.gate } : { username: u, password: p } });
+            s(LS_TOK, r.token); s(LS_USER, r.user); S.user = r.user; S.view = "main"; S.local = null; render(); await refresh(true);
+        } catch (e) { btn.disabled = false; say("#msg", e.message); }
+    }
+    /* smart deletion: the server only flags data as "deleting" (instant), then we ask it to purge a few MB at a time */
+    async function purgeLoop() {
+        var first = 0;
+        for (; ;) {
+            if (S.cancel) return false;
+            var r = await api("/purge", { method: "POST" }), rem = r.remainingParts || 0;
+            first = first || (r.purged || 0) + rem;
+            if (!r.remainingItems) return true;
+            setProg("در حال پاک‌سازی از سرور… " + fa(rem) + " بخش مانده", first ? Math.min(99, (first - rem) / first * 100) : 0, true);
+        }
+    }
+    async function delThenPurge(call) {
+        S.purging = 1;
+        try {
+            await call(); try { await refresh(true); } catch (e) { }
+            var done = await purgeLoop();
+            if (!done) toast("پاک‌سازی بقیه در پس‌زمینه ادامه پیدا می‌کند.");
+            try { await refresh(true); } catch (e) { }
+        } finally { S.purging = 0; }
+    }
+    function bgPurge() { /* silently finish leftovers (e.g. a delete that was interrupted) */
+        S.purging = 1;
+        (async function () { try { for (var i = 0; i < 20000; i++) { var x = await api("/purge", { method: "POST" }); if (!x.remainingItems) break; } } catch (e) { } finally { S.purging = 0; } })();
+    }
+    async function withBusy(fn) {
+        if (S.busy) return toast("یک عملیات در حال انجام است.");
+        S.cancel = false; S.report = null;
+        try { return await fn(); }
+        catch (e) { S.report = { err: 1, text: e.cancelled ? "لغو شد. هر چه تا اینجا ذخیره شده بود سر جایش مانده." : (e.message || String(e)) }; try { await refresh(true); } catch (x) { } }
+        finally { S.busy = null; paintProg(); }
+    }
+    async function createBackup(name, note, kind) {
+        var snap = await buildSnapshot(setProg);
+        var item = await uploadBlob(snap.blob, snap.counts, name, note, kind);
+        return item;
+    }
+    var A = {
+        close: function () { if (S.busy) return toast("اول عملیات جاری تمام شود یا لغو شود."); S.open = false; mount(""); },
+        tab: function (el) { S.tab = el.dataset.v; render(); },
+        auth: doAuth,
+        newPick: function () { openPick(null, false); },
+        newAll: function () { openPick(null, true); },
+        pkBack: function () { S.view = "main"; S.pick = null; render(); },
+        pkAll: function () { var P = S.pick, q = P.q.trim().toLowerCase(); P.notes.forEach(function (n) { if (!q || n.title.toLowerCase().indexOf(q) >= 0) P.sel.add(n.id); }); refreshPick(); },
+        pkNone: function () { S.pick.sel.clear(); refreshPick(); },
+        pkGo: function () {
+            var P = S.pick; if (!P || !P.sel.size) return toast("حداقل یک یادداشت انتخاب کن.");
+            var list = P.notes.filter(function (n) { return P.sel.has(n.id); }), nm = $("#bn"), nt = $("#bt"), target = P.target;
+            var name = nm ? (nm.value || "").trim() || ("بکاپ " + stamp()) : "", note = nt ? (nt.value || "").trim() : "";
+            S.view = "main"; S.pick = null; render();
+            withBusy(async function () {
+                var bid = target;
+                if (!bid) { setProg("ساخت بکاپ…", 0); var c = await api("/backups", { method: "POST", body: { name: name, note: note } }); bid = c.item.id; S.items.unshift(c.item); }
+                var r = await addNotes(bid, list); await refresh(true);
+                S.report = { err: r.skipped.length && !r.ok, text: "✅ " + fa(r.ok) + " یادداشت در بکاپ ذخیره شد.\n" + usageLine(r.used) + (r.skipped.length ? "\n⚠️ جا نشد (سقف ۳.۵GB برای هر بکاپ / ۳.۶GB برای کل): " + r.skipped.join("، ") : "") };
+            });
+        },
+        fullBackup: async function () {
+            var o = await ask({ title: "بکاپ کامل برنامه", text: "همهٔ داده‌ها (یادداشت‌ها، تنظیمات، مدیاها) در یک فایل ذخیره می‌شود؛ حداکثر ۳.۵ گیگابایت.", input: "نام بکاپ", ok: "شروع" }); if (!o) return;
+            var n = (o.value || "").trim() || ("بکاپ کامل " + stamp());
+            withBusy(async function () { var it = await createBackup(n, "", "manual"); await refresh(true); S.report = { text: "✅ بکاپ کامل ذخیره شد (" + fmtSize(it.size) + ")" }; });
+        },
+        saveApi: function () { var v = ($("#api").value || "").trim().replace(/\/+$/, ""); if (v && !/^https:\/\//i.test(v)) return say("#apiMsg", "آدرس باید با https:// شروع شود."); s(LS_API, v || null); say("#apiMsg", "ذخیره شد.", true); },
+        ping: async function () { A.saveApi(); try { var r = await api("/", { auth: false }); say("#apiMsg", "اتصال برقرار است ✓ (سقف هر بکاپ " + fmtSize(r.maxBackupBytes) + " · سقف کل " + fmtSize(r.maxTotalBytes || MAX_TOTAL) + ")", true); } catch (e) { say("#apiMsg", e.message); } },
+        refresh: function () { refresh(false).catch(function () { }); },
+        cancel: function () { S.cancel = true; S.abortXhr && S.abortXhr(); },
+        logout: function () { s(LS_TOK, null); S.items = []; S.view = "auth"; S.tab = "login"; render(); },
+        upfile: function () {
+            var inp = document.createElement("input"); inp.type = "file"; inp.accept = ".mksv,application/octet-stream";
+            inp.onchange = function () {
+                var f = inp.files && inp.files[0]; if (!f) return;
+                withBusy(async function () {
+                    setProg("بررسی فایل…", 0); var sn = await parseSnapshot(f), c = sn.header.counts || {};
+                    var it = await uploadBlob(f, { notes: c.notes, media: c.media, folders: c.folders, mediaBytes: c.mediaBytes }, f.name.replace(/\.mksv$/i, "") || "Imported", "فایل واردشده");
+                    await refresh(true); render(); toast("✅ فایل به عنوان بکاپ جدید ذخیره شد (" + fmtSize(it.size) + ")");
+                });
+            }; inp.click();
+        },
+        pw: async function () {
+            var o = await ask({ title: "تغییر رمز", text: "رمز فعلی را وارد کن:", input: "رمز فعلی", password: 1 }); if (!o || !o.value) return;
+            var n = await ask({ title: "رمز جدید", text: "رمز جدید (حداقل ۸ نویسه). بعد از تغییر، بقیهٔ دستگاه‌ها خارج می‌شوند.", input: "رمز جدید", password: 1 }); if (!n || !n.value) return;
+            try { var r = await api("/auth/password", { method: "POST", body: { password: o.value, newPassword: n.value } }); s(LS_TOK, r.token); toast("🔑 رمز عوض شد."); } catch (e) { toast(e.message); }
+        },
+        logoutAll: async function () { var o = await ask({ title: "خروج از همهٔ دستگاه‌ها", text: "همهٔ نشست‌های فعال (از جمله همین دستگاه) بسته می‌شوند.", danger: 1, ok: "خروج" }); if (!o) return; try { await api("/auth/logout-all", { method: "POST" }); } catch (e) { } A.logout(); },
+        delAcc: async function () {
+            var o = await ask({ title: "حذف حساب", text: "حساب و تمام بکاپ‌هایش برای همیشه پاک می‌شود و قابل بازگشت نیست. رمز را وارد کن:", input: "رمز عبور", password: 1, danger: 1, ok: "حذف دائمی" }); if (!o || !o.value) return;
+            try { await api("/me", { method: "DELETE", body: { password: o.value } }); s(LS_USER, null); S.user = ""; A.logout(); toast("حساب حذف شد."); } catch (e) { toast(e.message); }
+        },
+    };
+    var IA = {  /* per-backup actions */
+        tog: function (it, el) { S.exp[it.id] = !S.exp[it.id]; var c = el.closest(".item"); c && (c.outerHTML = itemHtml(it)); },
+        addN: function (it) { openPick(it.id, false); },
+        radd: async function (it) {
+            var o = await ask({ title: "بازیابی همهٔ یادداشت‌ها", text: "«" + it.name + "»: " + fa(it.items.length) + " یادداشت به یادداشت‌های فعلی برنامه اضافه می‌شود؛ چیزی حذف یا بازنویسی نمی‌شود و یادداشت کاملاً یکسان دوباره اضافه نمی‌شود.", ok: "بازیابی" }); if (!o) return;
+            withBusy(async function () { var r = await restoreItems(it, it.items); S.local = null; await refresh(true); S.report = { text: "✅ " + fa(r.added) + " یادداشت اضافه شد" + (r.dup ? "، " + fa(r.dup) + " تکراری رد شد" : "") + (r.media ? "، " + fa(r.media) + " مدیا" : "") + (r.folders ? "، " + fa(r.folders) + " پوشه" : "") }; });
+        },
+        iadd: function (it, el) {
+            var row = el.closest(".it"), x = row && it.items.filter(function (n) { return n.id === row.dataset.iid; })[0]; if (!x) return;
+            withBusy(async function () { var r = await restoreItems(it, [x]); S.local = null; await refresh(true); S.report = { text: r.added ? "✅ «" + x.title + "» به برنامه اضافه شد." : "این یادداشت دقیقاً همین‌جوری از قبل در برنامه هست." }; });
+        },
+        idel: async function (it, el) {
+            var row = el.closest(".it"), x = row && it.items.filter(function (n) { return n.id === row.dataset.iid; })[0]; if (!x) return;
+            var o = await ask({ title: "حذف یادداشت از بکاپ", text: "«" + x.title + "» (" + fmtSize(x.size) + ") فقط از این بکاپ پاک می‌شود؛ یادداشتِ داخل برنامه دست‌نخورده می‌ماند.", danger: 1, ok: "حذف" }); if (!o) return;
+            withBusy(function () { return delThenPurge(function () { return api("/backups/" + it.id + "/items/" + x.id, { method: "DELETE" }); }).then(function () { toast("🗑 از بکاپ حذف شد."); }); });
+        },
+        clear: async function (it) {
+            var o = await ask({ title: "حذف همهٔ یادداشت‌ها", text: "همهٔ " + fa(it.items.length) + " یادداشتِ «" + it.name + "» (" + fmtSize(it.size) + ") از بکاپ پاک می‌شود و بکاپ خالی می‌ماند. یادداشت‌های داخل برنامه دست‌نخورده می‌مانند.", danger: 1, ok: "حذف همه" }); if (!o) return;
+            withBusy(function () { return delThenPurge(function () { return api("/backups/" + it.id + "/items", { method: "DELETE" }); }).then(function () { toast("🧹 بکاپ خالی شد."); }); });
+        },
+        edit: async function (it) {
+            var n = await ask({ title: "ویرایش نام", text: "", input: "نام بکاپ", ok: "ذخیره" }); if (!n) return;
+            var t = await ask({ title: "ویرایش توضیح", text: "(خالی = بدون توضیح)", input: "توضیح", ok: "ذخیره" });
+            try { await api("/backups/" + it.id, { method: "PATCH", body: { name: n.value || it.name, note: t ? t.value : it.note } }); await refresh(true); } catch (e) { toast(e.message); }
+        },
+        del: async function (it) {
+            var o = await ask({ title: "حذف بکاپ", text: "«" + it.name + "» (" + fmtSize(it.size) + ") برای همیشه از سرور پاک می‌شود (بکاپ‌های بزرگ تکه‌تکه و با نوار پیشرفت پاک می‌شوند؛ تا پایان کار صفحه را نبند).", danger: 1, ok: "حذف" }); if (!o) return;
+            withBusy(function () { return delThenPurge(function () { return api("/backups/" + it.id, { method: "DELETE" }); }).then(function () { toast("🗑 بکاپ حذف شد."); }); });
+        },
+        dl: function (it) { withBusy(async function () { var b = await downloadBlob(it); await saveFile(b, "markhin-" + stamp(it.createdAt) + ".mksv"); render(); toast("⬇️ فایل آماده شد."); }); },
+        add: async function (it) {
+            var o = await ask({ title: "افزودن به برنامه", text: "یادداشت‌های این بکاپ به یادداشت‌های فعلی اضافه می‌شوند؛ چیزی حذف یا بازنویسی نمی‌شود. یادداشتِ کاملاً یکسان دوباره اضافه نمی‌شود و اگر شناسه‌ای تکراری با محتوای متفاوت باشد، به‌صورت نسخهٔ جدید اضافه می‌شود.", ok: "افزودن" }); if (!o) return;
+            withBusy(async function () {
+                var blob = await downloadBlob(it); setProg("خواندن بکاپ…", 100); var sn = await parseSnapshot(blob);
+                setProg("افزودن یادداشت‌ها و مدیاها…", 100); var r = await restoreAdd(sn); S.local = null; render();
+                toast("✅ " + fa(r.added) + " یادداشت اضافه شد" + (r.dup ? "، " + fa(r.dup) + " تکراری رد شد" : "") + (r.media ? "، " + fa(r.media) + " مدیا" : "") + (r.folders ? "، " + fa(r.folders) + " پوشه" : ""));
+            });
+        },
+        replace: async function (it) {
+            var o = await ask({ title: "جایگزینی کامل", text: "همهٔ یادداشت‌ها، مدیاها و تنظیمات فعلی این دستگاه با این بکاپ عوض می‌شوند و برنامه دوباره بارگذاری می‌شود.", danger: 1, ok: "جایگزین کن", check: { on: true, label: "قبل از جایگزینی، از وضعیت فعلی یک نسخهٔ ایمنی روی سرور بگیر" } }); if (!o) return;
+            withBusy(async function () {
+                var blob = await downloadBlob(it); setProg("بررسی بکاپ…", 100); var sn = await parseSnapshot(blob);
+                if (o.check) { var sb = await buildSnapshot(setProg); await uploadBlob(sb.blob, sb.counts, "🛟 نسخهٔ ایمنی " + stamp(), "خودکار، قبل از جایگزینی با «" + it.name + "»", "safety"); }
+                setProg("جایگزینی داده‌ها…", 0); await restoreReplace(sn); setProg("انجام شد؛ بارگذاری مجدد…", 100); toast("✅ جایگزینی انجام شد."); await sleep(900); location.reload();
+            });
+        },
+    };
+    function onClick(e) {
+        var t = e.target.closest && e.target.closest("[data-a]"); if (!t) return;
+        var a = t.dataset.a, itemEl = t.closest(".item");
+        if (itemEl && IA[a]) { var it = S.items.filter(function (x) { return x.id === itemEl.dataset.id; })[0]; if (it) IA[a](it, t); return; }
+        A[a] && A[a](t);
+    }
+
+    /* ---------- open flow ---------- */
+    async function openPanel() {
+        S.open = true; ensureRoot();
+        if (token() && apiBase()) { S.view = "main"; S.local = null; render(); try { await refresh(true); } catch (e) { } }
+        else { S.view = "auth"; S.tab = "login"; render(); }
+    }
+    async function gatePrompt() {
+        ensureRoot(); S.open = true; mount('<div class="wrap" id="wrap" style="align-items:center"><div class="dlg" style="position:static;background:none"><div id="gbox"><h3>🔐</h3><input id="gi" type="password" autocomplete="off" placeholder="••••••" style="text-align:center"><div class="row" style="margin-top:10px"><button class="btn pri grow" id="gy">ورود</button><button class="btn grow" id="gn">بستن</button></div></div></div></div>');
+        var inp = $("#gi"), box = $("#gbox"); setTimeout(function () { inp.focus(); }, 40);
+        var close = function () { S.open = false; mount(""); };
+        var go = async function () {
+            var v = inp.value; inp.value = "";
+            var ok = false; try { ok = (await sha256hex(GATE_SALT + v)) === GATE_HASH; } catch (e) { }
+            if (!ok) { await sleep(700); box.classList.remove("shake"); void box.offsetWidth; box.classList.add("shake"); return; }
+            S.gate = v; openPanel();
+        };
+        $("#gy").onclick = go; $("#gn").onclick = close; inp.onkeydown = function (e) { e.key === "Enter" && go(); e.key === "Escape" && close(); };
+    }
+
+    /* ---------- the MARKHIN word in the dashboard ---------- */
+    /* delegated on document so a dashboard re-render in the middle of the hold can't cancel it */
+    function armWord() {
+        var timer = 0, sx = 0, sy = 0, t0 = 0, raf = 0, isW = function (e) { return e.target && e.target.closest && e.target.closest(".mksv-word"); };
+        var word = function () { return document.querySelector(".mksv-word"); };
+        var stop = function () { clearTimeout(timer); timer = 0; cancelAnimationFrame(raf); var w = word(); if (w) w.style.opacity = ""; };
+        var tick = function () { if (!timer) return; var w = word(), p = Math.min(1, (Date.now() - t0) / HOLD_MS); if (w) w.style.opacity = String(.45 + .5 * p); raf = requestAnimationFrame(tick); };
+        document.addEventListener("pointerdown", function (e) { if (!isW(e) || e.button > 0) return; sx = e.clientX; sy = e.clientY; t0 = Date.now(); stop(); timer = setTimeout(function () { timer = 0; stop(); if (navigator.vibrate) try { navigator.vibrate(30); } catch (x) { } gatePrompt(); }, HOLD_MS); tick(); }, true);
+        ["pointerup", "pointercancel"].forEach(function (n) { document.addEventListener(n, stop, true); });
+        document.addEventListener("pointermove", function (e) { if (timer && (Math.abs(e.clientX - sx) > 24 || Math.abs(e.clientY - sy) > 24)) stop(); }, true);
+        document.addEventListener("contextmenu", function (e) { if (isW(e)) e.preventDefault(); }, true);
+        document.addEventListener("selectstart", function (e) { if (isW(e)) e.preventDefault(); }, true);
+    }
+    function placeWord() {
+        var card = document.getElementById("advancedCard"); if (!card) return;
+        var secs = card.querySelector(".mdb-secs"); if (!secs) return;
+        if (secs.parentNode.querySelector(".mksv-word")) return;
+        var w = document.createElement("div"); w.className = "mksv-word"; w.textContent = "MARKHIN"; w.setAttribute("aria-hidden", "true");
+        w.style.cssText = "margin:26px auto 10px;text-align:center;font:700 11px/1 system-ui,sans-serif;letter-spacing:6px;opacity:.45;user-select:none;-webkit-user-select:none;-webkit-touch-callout:none;touch-action:manipulation;padding:12px 18px;width:max-content;max-width:100%;cursor:default;-webkit-tap-highlight-color:transparent;color:inherit";
+        secs.parentNode.insertBefore(w, secs.nextSibling);
+    }
+    var pend = 0;
+    function schedule() { if (pend) return; pend = requestAnimationFrame(function () { pend = 0; placeWord(); }); }
+    function init() {
+        new MutationObserver(schedule).observe(document.body, { childList: true, subtree: true });
+        armWord(); schedule();
+    }
+    window.__mkSvTest = { gate: function (v) { S.gate = v; return openPanel(); }, S: S, parse: parseSnapshot, build: buildSnapshot, restoreAdd: restoreAdd, restoreReplace: restoreReplace, openGate: gatePrompt };
+    if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", init); else init();
+})();
+</script>
+
 </body>
 </html>
