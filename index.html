@@ -40444,7 +40444,7 @@ body.mu-nfsbk-on #mkBackupBar { display:none!important; }
     function navToggleGrp(sec) { var grp = sec.closest(".mu-nav-grp"); if (!grp) return; var k = sec.getAttribute("data-navtoggle"), c = grp.classList.toggle("mu-collapsed"); sec.setAttribute("aria-expanded", c ? "false" : "true"); navColl()[k] = c ? 1 : 0; clearTimeout(window.__mkNavSaveT), window.__mkNavSaveT = setTimeout(function () { try { localStorage.setItem("mkNavCollapsed", JSON.stringify(navColl())); } catch (e) { console.warn("silent catch -> setItem @muNotesFsJs:787", e); } }, 400); }
     document.addEventListener("click", function (e) { var t = e.target && e.target.closest && e.target.closest("#muNavPanel .mu-nav-sec[data-navtoggle]"); if (t) { e.preventDefault(), e.stopPropagation(), navToggleGrp(t); } }, !0);
     document.addEventListener("keydown", function (e) { if (e.key !== "Enter" && e.key !== " ") return; var t = e.target && e.target.closest && e.target.closest("#muNavPanel .mu-nav-sec[data-navtoggle]"); if (t) { e.preventDefault(), navToggleGrp(t); } }, !0);
-    var NAV_GROUPS = [{ fa: "مدیریت یادداشت‌ها", en: "Notes Management", items: [{ k: "notes", ic: "bulb", fa: "یادداشت‌ها", en: "Notes", pr: "a" }, { k: "folders", ic: "folder", fa: "پوشه‌ها", en: "Folders", pr: "a" }, { k: "list", ic: "list", fa: "لیست", en: "List", pr: "b" }, { k: "vault", ic: "vault", fa: "گاوصندوق", en: "Vault", pr: "b" }, { k: "search", ic: "search", fa: "جستجوی هوشمند", en: "Smart Search", pr: "b" }, { k: "delete", ic: "trash", fa: "حذف", en: "Delete", pr: "b" }] }, { fa: "مجموعه‌ها", en: "Collections", items: [{ k: "archive", ic: "archive", fa: "بایگانی", en: "Archive" }, { k: "favorites", ic: "star", fa: "علاقه‌مندی‌ها", en: "Favorites", pr: "d" }, { k: "locked", ic: "lock", fa: "قفل‌شده‌ها", en: "Locked", pr: "d" }, { k: "pinned", ic: "pin", fa: "پین‌شده‌ها", en: "Pinned", pr: "h" }, { k: "tags", ic: "tags", fa: "برچسب‌ها", en: "Tags", pr: "h" }] }, { fa: "پشتیبان‌گیری داده‌ها", en: "Data backup", items: [{ k: "cloud", ic: "cloud", fa: "بکاپ ابری تلگرام", en: "Telegram Cloud Backup", pr: "m" }, { k: "cloudmedia", ic: "cloudmedia", fa: "همگام‌سازی رسانه", en: "Sync media", pr: "m" }, { k: "imp", ic: "imp", fa: "ورودی‌ها", en: "Import", pr: "c" }, { k: "exp", ic: "exp", fa: "خروجی‌ها", en: "Export", pr: "c" }] }, { fa: "ابزارها", en: "Tools", items: [{ k: "fileviewer", ic: "fview", fa: "نمایشگر و رمزگشایی فایل‌ها", en: "File Viewer & Decryptor" }, { k: "morse", ic: "morse", fa: "مبدل کد مورس", en: "Morse Code Converter", pr: "e" }, { k: "binary", ic: "binary", fa: "مبدل کد باینری", en: "Binary Code Converter", pr: "e" }, { k: "kg", ic: "graph", fa: "شبکه دانش", en: "Knowledge Graph", pr: "g" }, { k: "portal", ic: "portal", fa: "پورتال رندوم", en: "Random Portal", pr: "g" }] }], navTimer = 0, navIsOpen = !1;
+    var NAV_GROUPS = [{ fa: "مدیریت یادداشت‌ها", en: "Notes Management", items: [{ k: "notes", ic: "bulb", fa: "یادداشت‌ها", en: "Notes", pr: "a" }, { k: "folders", ic: "folder", fa: "پوشه‌ها", en: "Folders", pr: "a" }, { k: "list", ic: "list", fa: "لیست", en: "List", pr: "b" }, { k: "vault", ic: "vault", fa: "گاوصندوق", en: "Vault", pr: "b" }, { k: "search", ic: "search", fa: "جستجوی هوشمند", en: "Smart Search", pr: "b" }, { k: "delete", ic: "trash", fa: "حذف", en: "Delete", pr: "b" }] }, { fa: "مجموعه‌ها", en: "Collections", items: [{ k: "archive", ic: "archive", fa: "بایگانی", en: "Archive" }, { k: "favorites", ic: "star", fa: "علاقه‌مندی‌ها", en: "Favorites", pr: "d" }, { k: "locked", ic: "lock", fa: "قفل‌شده‌ها", en: "Locked", pr: "d" }, { k: "pinned", ic: "pin", fa: "پین‌شده‌ها", en: "Pinned", pr: "h" }, { k: "tags", ic: "tags", fa: "برچسب‌ها", en: "Tags", pr: "h" }] }, { fa: "پشتیبان‌گیری داده‌ها", en: "Data backup", items: [{ k: "cloud", ic: "cloud", fa: "بکاپ ابری تلگرام", en: "Telegram Cloud Backup", pr: "m" }, { k: "imp", ic: "imp", fa: "ورودی‌ها", en: "Import", pr: "c" }, { k: "exp", ic: "exp", fa: "خروجی‌ها", en: "Export", pr: "c" }] }, { fa: "ابزارها", en: "Tools", items: [{ k: "fileviewer", ic: "fview", fa: "نمایشگر و رمزگشایی فایل‌ها", en: "File Viewer & Decryptor" }, { k: "morse", ic: "morse", fa: "مبدل کد مورس", en: "Morse Code Converter", pr: "e" }, { k: "binary", ic: "binary", fa: "مبدل کد باینری", en: "Binary Code Converter", pr: "e" }, { k: "kg", ic: "graph", fa: "شبکه دانش", en: "Knowledge Graph", pr: "g" }, { k: "portal", ic: "portal", fa: "پورتال رندوم", en: "Random Portal", pr: "g" }] }], navTimer = 0, navIsOpen = !1;
     function modalEl() { return $2("advancedModal"); }
     function modalVisible() { var m = modalEl(); return !!(m && m.style.display === "flex"); }
     function fsOpen() { var r = $2("muNotesFs"); return !!(r && r.classList.contains("mu-open")); }
@@ -59880,7 +59880,7 @@ var CONT = [["AS", "آسیا", "Asia"], ["EU", "اروپا", "Europe"], ["NA", "
     const LS_CFG = "mkmed_cfg_v1", LS_ON = "mkmed_on_v1", LS_SEEN = "mkmed_seen_v1", LS_DEV = "mkmed_dev_v1", KV_STATE = "mkmed_state_v1";
     const LS_AUTO = "mkmed_auto_v1", LS_CLEAN = "mkmed_autoclean_v1";   // auto sync switch (default ON; only "0" turns it off)
     const CFG_KEY = "mk_media_cfg", IDX_PFX = "mk_medx_", CH_PFX = "mk_med_";
-    const TG_BASE = "https://api.telegram.org", DEF_BASE = "https://weathered-moon-f167.madebymarkhin.workers.dev", MAX_UP = 49 * 1024 * 1024, MAX_DL = 20 * 1024 * 1024, OVH = 32;
+    const TG_BASE = "https://api.telegram.org", DEF_BASE = "https://proxy.mvrkhiiin.workers.dev", MAX_UP = 49 * 1024 * 1024, MAX_DL = 20 * 1024 * 1024, OVH = 32;
     const SEND_GAP = 3100, MAGIC = [77, 75, 77, 49], AAD_BLOB = new TextEncoder().encode("mkmed-blob"), AAD_TOK = new TextEncoder().encode("mkmed-token"), AAD_DK = new TextEncoder().encode("mkmed-datakey");
     const enc = new TextEncoder(), dec = new TextDecoder();
     /* Default media bot, kept out of the UI: people only choose a password. TOK_OBF is the token scrambled by MKMED.encodeToken("<token>")
@@ -61105,7 +61105,7 @@ var CONT = [["AS", "آسیا", "Asia"], ["EU", "اروپا", "Europe"], ["NA", "
     var SET = function (name, v) { try { (0, eval)(name + "=" + JSON.stringify(v)); } catch (e) { } };
 
     /* ---------- state ---------- */
-    var S = { pass: null, encSalt: null, keys: {}, gate: "", view: "auth", tab: "login", user: g(LS_USER) || "", items: [], info: null, sort: "new", q: "", busy: null, report: null, pick: null, exp: {}, cancel: false, local: null, host: null, root: null, open: false };
+    var S = { dsel: {}, pass: null, encSalt: null, keys: {}, gate: "", view: "auth", tab: "login", user: g(LS_USER) || "", items: [], info: null, sort: "new", q: "", busy: null, report: null, pick: null, exp: {}, cancel: false, local: null, host: null, root: null, open: false };
 
     /* =====================================================================================
        NETWORK
@@ -61365,7 +61365,7 @@ var CONT = [["AS", "آسیا", "Asia"], ["EU", "اروپا", "Europe"], ["NA", "
     async function upl(blob, path, body, onBytes) {
         blob = await encryptBlob(blob);   /* nothing is ever uploaded in plain form */
         if (blob.size > MAX) throw new Error("حجم این بخش " + fmtSize(blob.size) + " است و از سقف ۳.۵ گیگابایتِ هر بکاپ بیشتر است.");
-        S.cancel = false; body.size = blob.size;
+        body.size = blob.size;
         var init = await api(path, { method: "POST", body: body });
         var id = init.id, partSize = init.partSize || PART, total = init.parts, done = new Array(total).fill(0), parts = new Array(total), next = 0, xhrs = new Set(), failed = null;
         var report = function () { var sum = done.reduce(function (a, b) { return a + b; }, 0); onBytes ? onBytes(sum) : setProg("آپلود… " + fmtSize(sum) + " از " + fmtSize(blob.size), sum / blob.size * 100, true); };
@@ -61386,8 +61386,9 @@ var CONT = [["AS", "آسیا", "Asia"], ["EU", "اروپا", "Europe"], ["NA", "
                 }
             }
         }
-        S.abortXhr = function () { xhrs.forEach(function (x) { try { x.abort(); } catch (e) { } }); };
-        try { await Promise.all(new Array(Math.min(PAR, total)).fill(0).map(worker)); } finally { S.abortXhr = null; }
+        var mine = function () { xhrs.forEach(function (x) { try { x.abort(); } catch (e) { } }); };
+        (S.aborts = S.aborts || new Set()).add(mine); S.abortXhr = function () { S.aborts.forEach(function (f) { f(); }); };
+        try { await Promise.all(new Array(Math.min(PAR, total)).fill(0).map(worker)); } finally { S.aborts.delete(mine); if (!S.aborts.size) S.abortXhr = null; }
         if (S.cancel || failed) { try { await api(path + "/" + id + "/abort", { method: "POST" }); } catch (e) { } if (S.cancel) throw Object.assign(new Error("آپلود لغو شد."), { cancelled: 1 }); throw failed; }
         return await api(path + "/" + id + "/complete", { method: "POST", body: { parts: parts.map(function (p) { return { partNumber: p.partNumber, etag: p.etag }; }) } });
     }
@@ -61397,19 +61398,30 @@ var CONT = [["AS", "آسیا", "Asia"], ["EU", "اروپا", "Europe"], ["NA", "
     }
     /* add the chosen notes to backup `bid`, one by one, showing every note's size and the running usage */
     async function addNotes(bid, list) {
-        var info = S.items.filter(function (x) { return x.id === bid; })[0], used = info ? info.size : 0, ok = 0, skipped = [], total = list.length;
-        for (var i = 0; i < total; i++) {
-            if (S.cancel) throw Object.assign(new Error("لغو شد."), { cancelled: 1 });
-            var n = list[i], head = "📝 " + fa(i + 1) + " از " + fa(total) + " — «" + n.title + "»";
-            setProg(head + "\nبسته‌بندی…", i / total * 100, true, used);
-            var pk = await buildNotePack(n.note), old = ((info && info.items) || []).filter(function (x) { return x.noteId === n.id; })[0], base = used - (old ? old.size : 0);
-            if (base + pk.blob.size > MAX || othersTotal(bid) + base + pk.blob.size > MAX_TOTAL) { skipped.push(n.title + " (" + fmtSize(pk.blob.size) + ")"); continue; }
+        var info = S.items.filter(function (x) { return x.id === bid; })[0], used = info ? info.size : 0, ok = 0, skipped = [], total = list.length, doneN = 0, next = 0, inflight = 0, prog = {}, failed = null;
+        await getPass(true);   /* ask for the encryption passphrase once, before the parallel uploads start */
+        var paint = function () {
+            var ks = Object.keys(prog), part = 0, bytes = 0; ks.forEach(function (k) { part += prog[k].f; bytes += prog[k].b; });
+            setProg("📝 " + fa(doneN) + " از " + fa(total) + " یادداشت ذخیره شد" + (ks.length ? "\nدر حال ارسال: " + fa(ks.length) + " یادداشت · " + fmtSize(bytes) : ""), (doneN + part) / total * 100, true, used);
+        };
+        async function one(i) {
+            var n = list[i], key = "n" + i; prog[key] = { f: 0, b: 0 }; paint();
             try {
-                var res = await upl(pk.blob, "/backups/" + bid + "/items", { noteId: n.id, title: n.title, media: pk.media, folder: pk.folders[0] || "" }, function (sum) { setProg(head + "\nحجم این یادداشت: " + fmtSize(pk.blob.size) + " · آپلود " + fmtSize(sum), (i + sum / pk.blob.size) / total * 100, true, base + sum); });
-            } catch (e) { if (e.status === 413) { skipped.push(n.title + " (" + fmtSize(pk.blob.size) + ")"); continue; } throw e; }
-            info = res.backup; used = info.size; ok++;
-            S.items = S.items.map(function (x) { return x.id === bid ? info : x; });
+                var pk = await buildNotePack(n.note), old = ((info && info.items) || []).filter(function (x) { return x.noteId === n.id; })[0], base = used - (old ? old.size : 0) + inflight;
+                if (base + pk.blob.size > MAX || othersTotal(bid) + base + pk.blob.size > MAX_TOTAL) { skipped.push(n.title + " (" + fmtSize(pk.blob.size) + ")"); return; }
+                inflight += pk.blob.size;
+                var res;
+                try { res = await upl(pk.blob, "/backups/" + bid + "/items", { noteId: n.id, title: n.title, media: pk.media, folder: pk.folders[0] || "" }, function (sum) { prog[key] = { f: Math.min(1, sum / pk.blob.size), b: sum }; paint(); }); }
+                catch (e) { if (e.status === 413) { skipped.push(n.title + " (" + fmtSize(pk.blob.size) + ")"); return; } throw e; }
+                finally { inflight -= pk.blob.size; }
+                if (!info || (res.backup.updatedAt || 0) >= (info.updatedAt || 0)) { info = res.backup; used = info.size; }
+                ok++; S.items = S.items.map(function (x) { return x.id === bid ? info : x; });
+            } finally { delete prog[key]; doneN++; paint(); }
         }
+        async function worker() { while (!failed && !S.cancel) { var i = next++; if (i >= total) return; try { await one(i); } catch (e) { failed = failed || e; return; } } }
+        await Promise.all(new Array(Math.min(3, total)).fill(0).map(worker));   /* 3 notes at a time */
+        if (S.cancel) throw Object.assign(new Error("لغو شد."), { cancelled: 1 });
+        if (failed) throw failed;
         return { ok: ok, skipped: skipped, used: used };
     }
     async function restoreItems(it, list) {
@@ -61636,6 +61648,7 @@ details summary{cursor:pointer;color:#cfc9ff;font-weight:600;padding:4px 0}\
         var sh = host.attachShadow({ mode: "open" }); sh.innerHTML = "<style>" + CSS + "</style><div id=\"mount\"></div>";
         document.documentElement.appendChild(host); S.host = host; S.root = sh;
         sh.addEventListener("click", onClick);
+        sh.addEventListener("change", function (e) { var t = e.target; if (!t || !t.dataset || t.dataset.dsel == null) return; var c = t.closest(".item"), bid = c && c.dataset.id, it = bid && S.items.filter(function (x) { return x.id === bid; })[0]; if (!it) return; var set = dsSet(bid); t.checked ? set.add(t.dataset.dsel) : set.delete(t.dataset.dsel); var b = c.querySelector('[data-a="dsDel"]'); if (b) b.textContent = dsLabel(it); });
         sh.addEventListener("input", function (e) { var t = e.target; if (t && t.id === "q") { S.q = t.value; var l = $("#list"); l && (l.innerHTML = listHtml()); } });
         sh.addEventListener("change", function (e) { var t = e.target; if (t && t.id === "so") { S.sort = t.value; var l = $("#list"); l && (l.innerHTML = listHtml()); } });
         sh.addEventListener("change", function (e) { var t = e.target, P = S.pick; if (t && P && t.dataset && t.dataset.nid != null) { t.checked ? P.sel.add(t.dataset.nid) : P.sel.delete(t.dataset.nid); var bx = $("#pkSum"); bx && (bx.innerHTML = pickSumHtml()); } });
@@ -61668,6 +61681,11 @@ details summary{cursor:pointer;color:#cfc9ff;font-weight:600;padding:4px 0}\
         var by = { new: function (x, y) { return y.createdAt - x.createdAt; }, old: function (x, y) { return x.createdAt - y.createdAt; }, big: function (x, y) { return y.size - x.size; }, name: function (x, y) { return String(x.name).localeCompare(String(y.name), "fa"); } };
         return a.sort(by[S.sort] || by.new);
     }
+    /* multi-select delete inside an expanded backup */
+    function dsSet(bid) { return S.dsel[bid] || (S.dsel[bid] = new Set()); }
+    function dsCount(x) { var set = dsSet(x.id); return (x.items || []).filter(function (n) { return set.has(n.id); }).length; }
+    function dsLabel(x) { return "🗑 حذف انتخاب‌شده‌ها (" + fa(dsCount(x)) + ")"; }
+    function dsBar(x) { return '<div class="row" style="margin-top:8px"><button class="btn sm" data-a="dsAll">☑️ انتخاب همه</button><button class="btn sm" data-a="dsNone">⬜ هیچ‌کدام</button><button class="btn sm dng" data-a="dsDel">' + dsLabel(x) + '</button></div>'; }
     function itemHtml(x) {
         var nw = Array.isArray(x.items), pct = Math.min(100, (x.size || 0) / MAX * 100);
         var h = '<div class="item" data-id="' + esc(x.id) + '"><div class="nm">' + (x.kind === "safety" ? "🛟 " : "") + esc(x.name) + (nw ? "" : ' <small class="muted">(فایل کامل قدیمی)</small>') + '</div>' + (x.note ? '<div class="nt">' + esc(x.note) + '</div>' : '') +
@@ -61676,8 +61694,8 @@ details summary{cursor:pointer;color:#cfc9ff;font-weight:600;padding:4px 0}\
         h += nw ? '<div class="acts"><button class="btn sm pri" data-a="addN">➕ افزودن یادداشت</button><button class="btn sm" data-a="radd">↩️ بازیابی همه</button><button class="btn sm" data-a="tog">📋 یادداشت‌ها (' + fa(x.items.length) + ')</button><button class="btn sm" data-a="edit">✏️ ویرایش</button><button class="btn sm dng" data-a="clear">🧹 حذف همهٔ یادداشت‌ها</button><button class="btn sm dng" data-a="del">🗑 حذف بکاپ</button></div>'
             : '<div class="acts"><button class="btn sm pri" data-a="add">➕ افزودن به برنامه</button><button class="btn sm" data-a="replace">♻️ جایگزینی کامل</button><button class="btn sm" data-a="dl">⬇️ فایل</button><button class="btn sm" data-a="edit">✏️ ویرایش</button><button class="btn sm dng" data-a="del">🗑 حذف</button></div>';
         if (nw && S.exp[x.id]) {
-            h += x.items.length ? x.items.slice().sort(function (p, q) { return q.addedAt - p.addedAt; }).map(function (n) {
-                return '<div class="row it" data-iid="' + esc(n.id) + '" style="justify-content:space-between;background:#0f0e1f;border-radius:8px;padding:6px 8px;margin-top:6px"><span class="grow" style="word-break:break-word">📝 ' + esc(n.title) + ' <small class="muted">· ' + bd(fmtSize(n.size)) + (n.media ? ' · 🖼' + fa(n.media) : '') + '</small></span><button class="btn sm" data-a="iadd">↩️</button><button class="btn sm dng" data-a="idel">🗑</button></div>';
+            h += x.items.length ? dsBar(x) + x.items.slice().sort(function (p, q) { return q.addedAt - p.addedAt; }).map(function (n) {
+                return '<div class="row it" data-iid="' + esc(n.id) + '" style="justify-content:space-between;background:#0f0e1f;border-radius:8px;padding:6px 8px;margin-top:6px"><label class="chk grow" style="margin:0;font-size:14px;color:inherit;cursor:pointer"><input type="checkbox" data-dsel="' + esc(n.id) + '"' + (dsSet(x.id).has(n.id) ? " checked" : "") + '><span style="word-break:break-word">📝 ' + esc(n.title) + ' <small class="muted">· ' + bd(fmtSize(n.size)) + (n.media ? ' · 🖼' + fa(n.media) : '') + '</small></span></label><button class="btn sm" data-a="iadd">↩️</button><button class="btn sm dng" data-a="idel">🗑</button></div>';
             }).join("") : '<div class="muted" style="margin-top:8px">این بکاپ خالی است.</div>';
         }
         return h + '</div>';
@@ -61888,6 +61906,19 @@ details summary{cursor:pointer;color:#cfc9ff;font-weight:600;padding:4px 0}\
             var row = el.closest(".it"), x = row && it.items.filter(function (n) { return n.id === row.dataset.iid; })[0]; if (!x) return;
             var o = await ask({ title: "حذف یادداشت از بکاپ", text: "«" + x.title + "» (" + fmtSize(x.size) + ") فقط از این بکاپ پاک می‌شود؛ یادداشتِ داخل برنامه دست‌نخورده می‌ماند.", danger: 1, ok: "حذف" }); if (!o) return;
             withBusy(function () { return delThenPurge(function () { return api("/backups/" + it.id + "/items/" + x.id, { method: "DELETE" }); }).then(function () { toast("🗑 از بکاپ حذف شد."); }); });
+        },
+        dsAll: function (it, el) { var s2 = dsSet(it.id); (it.items || []).forEach(function (n) { s2.add(n.id); }); var c = el.closest(".item"); c && (c.outerHTML = itemHtml(it)); },
+        dsNone: function (it, el) { S.dsel[it.id] = new Set(); var c = el.closest(".item"); c && (c.outerHTML = itemHtml(it)); },
+        dsDel: async function (it) {
+            var set = dsSet(it.id), list = (it.items || []).filter(function (n) { return set.has(n.id); });
+            if (!list.length) return toast("اول چند یادداشت را تیک بزن.");
+            var size = list.reduce(function (a, n) { return a + (n.size || 0); }, 0);
+            var o = await ask({ title: "حذف یادداشت‌های انتخابی", text: fa(list.length) + " یادداشت (" + fmtSize(size) + ") فقط از بکاپ «" + it.name + "» پاک می‌شوند؛ یادداشت‌های داخل برنامه دست‌نخورده می‌مانند.", danger: 1, ok: "حذف" }); if (!o) return;
+            withBusy(function () {
+                return delThenPurge(async function () {
+                    for (var i = 0; i < list.length; i++) { setProg("حذف از بکاپ… " + fa(i + 1) + " از " + fa(list.length), i / list.length * 100); await api("/backups/" + it.id + "/items/" + list[i].id, { method: "DELETE" }); }
+                }).then(function () { S.dsel[it.id] = new Set(); toast("🗑 " + fa(list.length) + " یادداشت از بکاپ حذف شد."); });
+            });
         },
         clear: async function (it) {
             var o = await ask({ title: "حذف همهٔ یادداشت‌ها", text: "همهٔ " + fa(it.items.length) + " یادداشتِ «" + it.name + "» (" + fmtSize(it.size) + ") از بکاپ پاک می‌شود و بکاپ خالی می‌ماند. یادداشت‌های داخل برنامه دست‌نخورده می‌مانند.", danger: 1, ok: "حذف همه" }); if (!o) return;
