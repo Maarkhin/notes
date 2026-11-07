@@ -59889,7 +59889,7 @@ var CONT = [["AS", "آسیا", "Asia"], ["EU", "اروپا", "Europe"], ["NA", "
             cap: "سقف حجم محلی (MB)", usage: "حجم رسانهٔ محلی", browser: "حافظهٔ مرورگر", keys: "کلید مانیفست",
             queue: "صف", idle: "بیکار", fullM: "⚠️ مانیفست پر است؛ رسانه‌های جدید در فهرست ابری ثبت نمی‌شوند.",
             okConnected: "✅ متصل شد:", errToken: "توکن نامعتبر است.", errPw: "رمز حداقل ۶ نویسه و هر دو یکسان باشد.", errChat: "شناسهٔ کاربر تلگرام در دسترس نیست؛ برنامه را داخل تلگرام باز کن.",
-            errNet: "ارتباط با API ممکن نشد (شبکه/CORS). پایین‌تر در «پیشرفته (پروکسی)» همین پنل آدرس پروکسی بگذار.", errStart: "ربات نمی‌تواند پیام بدهد؛ ابتدا در تلگرام به ربات /start بده.", errWrong: "رمز اشتباه است.",
+            errNet: "اتصال به سرور ربات برقرار نشد. پروکسی تلگرام (MTProto) برای مینی‌اپ کار نمی‌کند؛ برای ارسال فایل‌ها VPN یا اینترنت آزاد لازم است. به‌محض وصل شدن، خودکار ادامه می‌دهد.", errStart: "ربات نمی‌تواند پیام بدهد؛ ابتدا در تلگرام به ربات /start بده.", errWrong: "رمز اشتباه است.",
             qd: "⏳ در صف", dl: "⬇️ در حال دریافت…", er: "⚠️ خطا — بزن تا دوباره", lk: "🔒 بزن و رمز را وارد کن", big: "⛔ فایل بزرگ‌تر از حد Bot API",
             confirmFree: "رسانه‌هایی که نسخهٔ آپلودشده دارند از این دستگاه پاک شوند؟ هر وقت لازم شد دوباره دریافت می‌شوند.", confirmRm: "⚠️ هشدار: تنظیمات بکاپ رسانه از این دستگاه و Cloud حذف می‌شود.\n\nاگر دوباره راه‌اندازی کنی، کلید جدید ساخته می‌شود و فایل‌هایی که قبلاً آپلود شده‌اند دیگر باز نمی‌شوند (خطای decrypt-failed). برای عوض‌کردن رمز از «تغییر رمز» استفاده کن.\n\nفایل‌های داخل چت ربات و رسانه‌های روی دستگاه پاک نمی‌شوند.\n\nبرای تأیید، کلمه‌ی ok را تایپ کن:",
             ok: "تأیید", cancel: "انصراف", enterPw: "رمز رسانه را وارد کن", warnKeys: "⚠️ کلیدهای Cloud تقریباً پر است؛ سقف بکاپ متن کمتر می‌شود.", done: "انجام شد", capFull: "سقف حجم محلی پر شد.",
@@ -59911,7 +59911,7 @@ var CONT = [["AS", "آسیا", "Asia"], ["EU", "اروپا", "Europe"], ["NA", "
             cap: "Local size limit (MB)", usage: "Local media size", browser: "Browser storage", keys: "Manifest keys",
             queue: "Queue", idle: "idle", fullM: "⚠️ Manifest is full; new media are not listed in the cloud.",
             okConnected: "✅ Connected:", errToken: "Invalid token.", errPw: "Password: at least 6 characters, both fields equal.", errChat: "Telegram user id unavailable; open the app inside Telegram.",
-            errNet: "Cannot reach the API (network/CORS). Set a proxy under “Advanced (proxy)” further down in this panel.", errStart: "The bot cannot message you; send /start to it in Telegram first.", errWrong: "Wrong password.",
+            errNet: "Cannot reach the bot server. A Telegram (MTProto) proxy does not carry mini-app traffic; a VPN or open internet is needed to send files. It resumes automatically once connected.", errStart: "The bot cannot message you; send /start to it in Telegram first.", errWrong: "Wrong password.",
             qd: "⏳ Queued", dl: "⬇️ Downloading…", er: "⚠️ Error — tap to retry", lk: "🔒 Tap and enter password", big: "⛔ File larger than Bot API limit",
             confirmFree: "Remove media that have an uploaded copy from this device? They are re-downloaded when needed.", confirmRm: "⚠️ Warning: the media backup setup will be removed from this device and Cloud.\n\nIf you set it up again, a new key is created and files uploaded earlier can no longer be opened (decrypt-failed error). To change the password use “Change password”.\n\nFiles in the bot chat and media on this device are not deleted.\n\nType ok to confirm:",
             ok: "OK", cancel: "Cancel", enterPw: "Enter the media password", warnKeys: "⚠️ Cloud keys are nearly full; the text backup limit shrinks.", done: "Done", capFull: "Local size limit reached.",
@@ -60051,24 +60051,53 @@ var CONT = [["AS", "آسیا", "Asia"], ["EU", "اروپا", "Europe"], ["NA", "
     /* ---------- Bot API ---------- */
     class ApiErr extends Error { constructor(code, desc, extra) { super(desc); this.code = code; this.desc = desc; Object.assign(this, extra || {}); } }
     async function gate() { const now = Date.now(), wait = Math.max(0, S.nextSend - now); S.nextSend = Math.max(now, S.nextSend) + SEND_GAP; wait && await sleep(wait); }
+    /* Route picking. A Telegram-only (MTProto/SOCKS) proxy does NOT tunnel this page's fetch(), so with only that proxy on, both the
+       worker and api.telegram.org can hang. Probe both routes in parallel with a short timeout, use the first one that really
+       answers with Bot-API JSON, remember it for a while, and if none answers fail fast (the queue pauses and retries by itself). */
+    const PROBE_MS = 6000, ROUTE_TTL = 90000;
+    let routeBase = "", routeKey = "", routeAt = 0, routeP = null;
+    const otherBase = b => b === DEF_BASE ? TG_BASE : b === TG_BASE ? DEF_BASE : null;
+    const curBase = () => (routeBase && routeKey === S.base + "|" + S.token) ? routeBase : S.base;
+    function probeOne(base, token) {
+        return new Promise((resolve, reject) => {
+            const ac = typeof AbortController === "function" ? new AbortController : null;
+            const to = setTimeout(() => { try { ac && ac.abort(); } catch { } reject(new Error("timeout")); }, PROBE_MS);
+            fetch(`${base}/bot${token}/getMe`, { method: "GET", cache: "no-store", signal: ac ? ac.signal : void 0 })
+                .then(r => r.json()).then(js => { clearTimeout(to); js && typeof js.ok === "boolean" ? resolve(base) : reject(new Error("bad")); }, e => { clearTimeout(to); reject(e); });
+        });
+    }
+    function firstOk(list) { return new Promise((resolve, reject) => { let n = list.length; list.forEach(p => p.then(resolve, () => { --n || reject(new Error("net")); })); }); }
+    async function pickRoute(force) {
+        const key = S.base + "|" + S.token;
+        if (!force && routeBase && routeKey === key && Date.now() - routeAt < ROUTE_TTL) return routeBase;
+        if (!routeP) {
+            const cands = [S.base], alt = otherBase(S.base); alt && cands.push(alt);
+            routeP = firstOk(cands.map(b => probeOne(b, S.token))).then(b => { routeBase = b; routeKey = key; routeAt = Date.now(); routeP = null; return b; }, e => { routeBase = ""; routeP = null; throw e; });
+        }
+        return routeP;
+    }
     async function api(method, body, o) {
-        o = o || {}; let lastErr = null, base = S.base; const alt = base === DEF_BASE ? TG_BASE : base === TG_BASE ? DEF_BASE : null;
+        o = o || {}; let lastErr = null;
         for (let a = 0; a < 5; a++) {
+            let base;
+            try { base = await pickRoute(a > 0); }
+            catch (e) { lastErr = new ApiErr(0, "network", { net: !0 }); if (!S.netErr) { S.netErr = !0; try { scheduleRender(); } catch { } } throw lastErr; }
             o.send && await gate();
-            const ac = typeof AbortController === "function" ? new AbortController : null, to = ac ? setTimeout(() => ac.abort(), o.timeout || 30000) : 0;
+            const ac = typeof AbortController === "function" ? new AbortController : null, to = ac ? setTimeout(() => ac.abort(), o.timeout || 20000) : 0;
             let res, js = null;
             try {
-                res = await fetch(`${base}/bot${S.token}/${method}`, { method: "POST", body, signal: ac ? ac.signal : void 0 }); S.netErr && (S.netErr = !1); base !== S.base && (S.base = base);
+                res = await fetch(`${base}/bot${S.token}/${method}`, { method: "POST", body, signal: ac ? ac.signal : void 0 }); S.netErr && (S.netErr = !1);
                 try { js = await res.json(); } catch { js = null; }
             } catch (e) {
-                clearTimeout(to); lastErr = new ApiErr(0, "network", { net: !0 }); if (!S.netErr) { S.netErr = !0; try { scheduleRender(); } catch { } }
-                if (a === 0 && alt) base = alt; else if (a === 1 && alt) base = base === alt ? S.base : alt; if (a < 3) { await sleep(1500 * Math.pow(2, a) + Math.random() * 400); continue; } throw lastErr;
+                clearTimeout(to); lastErr = new ApiErr(0, "network", { net: !0 }); routeBase = "";
+                if (a < 3) { await sleep(800 * (a + 1) + Math.random() * 300); continue; }
+                if (!S.netErr) { S.netErr = !0; try { scheduleRender(); } catch { } } throw lastErr;
             }
             clearTimeout(to);
             if (js && js.ok) return js.result;
             const code = js && js.error_code || res.status, desc = js && js.description || ("HTTP " + res.status);
             if (code === 429) { const ra = (js && js.parameters && js.parameters.retry_after || 5) * 1000 + 600; S.nextSend = Math.max(S.nextSend, Date.now() + ra); await sleep(ra); lastErr = new ApiErr(429, desc); continue; }
-            if (code >= 500 && a < 3) { await sleep(1500 * Math.pow(2, a)); lastErr = new ApiErr(code, desc); continue; }
+            if (code >= 500 && a < 3) { await sleep(1500 * Math.pow(2, a)); lastErr = new ApiErr(code, desc); routeBase = ""; continue; }
             throw new ApiErr(code, desc, { fatal: code === 401 || code === 403 || code === 404 });
         }
         throw lastErr || new ApiErr(0, "failed");
@@ -60441,7 +60470,7 @@ var CONT = [["AS", "آسیا", "Asia"], ["EU", "اروپا", "Europe"], ["NA", "
         S.stage = T("stGet"); updateProg(); const f = await api("getFile", form({ file_id: r.fid }));
         if (!f || !f.file_path) throw new ApiErr(0, "no file_path");
         let resp;
-        try { resp = await fetch(`${S.base}/file/bot${S.token}/${f.file_path}`); } catch { throw new ApiErr(0, "network", { net: !0 }); }
+        try { resp = await fetch(`${curBase()}/file/bot${S.token}/${f.file_path}`); } catch { throw new ApiErr(0, "network", { net: !0 }); }
         if (!resp.ok) throw new ApiErr(resp.status, "HTTP " + resp.status);
         const packed = new Uint8Array(await resp.arrayBuffer());
         if (packed.length < OVH || MAGIC.some((b, i) => packed[i] !== b)) throw new ApiErr(0, "bad-format");
