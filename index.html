@@ -14393,6 +14393,71 @@ html:not([dir=ltr]) .mu-nb-en {
 .mu-nfs-media+.mu-nfs-voice {
     margin-top:7px;
 }
+.mu-nfs-file {
+    display:flex;
+    align-items:center;
+    gap:8px;
+    margin-top:9px;
+    padding:6px 9px;
+    border-radius:12px;
+    background:var(--nfs-border);
+    color:var(--nfs-text);
+    min-width:0;
+    line-height:1.2;
+}
+.mu-nfs-media+.mu-nfs-file,.mu-nfs-file+.mu-nfs-file {
+    margin-top:6px;
+}
+.mu-nfs-fic {
+    flex:none;
+    display:inline-flex;
+    align-items:center;
+    justify-content:center;
+    min-width:30px;
+    height:30px;
+    padding:0 5px;
+    box-sizing:border-box;
+    border-radius:8px;
+    background:rgba(94,205,230,.18);
+    border:1px solid rgba(94,205,230,.4);
+    font-size:14px;
+}
+.mu-nfs-fic.mu-x {
+    font-size:10px;
+    font-weight:800;
+    letter-spacing:.3px;
+    font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+}
+.mu-nfs-fnm {
+    flex:1 1 auto;
+    min-width:0;
+    overflow:hidden;
+    text-overflow:ellipsis;
+    white-space:nowrap;
+    font-size:12.5px;
+    font-weight:700;
+    unicode-bidi:plaintext;
+    text-align:start;
+}
+.mu-nfs-fsz {
+    flex:none;
+    font-size:10.5px;
+    opacity:.7;
+    direction:ltr;
+    unicode-bidi:isolate;
+}
+.mu-nfs-fmore {
+    margin-top:5px;
+    font-size:11.5px;
+    font-weight:700;
+    opacity:.7;
+    direction:ltr;
+    text-align:start;
+}
+#muNotesFs .mu-nfs-file,#muNotesFs .mu-nfs-file span,#muNotesFs .mu-nfs-fmore {
+    color:var(--nfs-text)!important;
+    -webkit-text-fill-color:var(--nfs-text)!important;
+}
 .advanced-card.mk-page.mk-paper,.mkc,.mkl-wrap {
     color-scheme:dark;
 }
@@ -40086,7 +40151,7 @@ body.mu-nfsbk-on #mkBackupBar { display:none!important; }
     var MCACHE = Object.create(null);
     function mediaOf(c2) { var html = c2.html; if (!html || typeof html != "string")
         return null; var sig = String(c2.lastEdited || "") + "|" + html.length, hit = MCACHE[c2.id]; if (hit && hit.s === sig)
-        return hit.v; var v2 = null; if (/<img\b|<audio\b|<video\b/i.test(html)) {
+        return hit.v; var v2 = null; if (/<img\b|<audio\b|<video\b|\bfile-wrapper\b/i.test(html)) {
         for (var imgs = [], count = 0, m, re = /<(?:img|video)\b[^>]*>/gi; m = re.exec(html);)
             if (count++, imgs.length < 2) {
                 var tag = m[0], id = /data-mu-media\s*=\s*["']([^"']+)["']/i.exec(tag), src = /\bsrc\s*=\s*["']([^"']+)["']/i.exec(tag);
@@ -40094,7 +40159,16 @@ body.mu-nfsbk-on #mkBackupBar { display:none!important; }
                 id ? imgs.push({ id: id[1] }) : src && /^(data:image\/|https?:)/i.test(src[1]) ? imgs.push({ src: src[1] }) : imgs.push({});
             }
         var au = html.match(/<audio\b/gi);
-        (count || au) && (v2 = { imgs: imgs, n: count, voice: au ? au.length : 0 });
+        // attached files (div.file-wrapper, name/size live in data-fname / data-fsize) -> shown as file chips in the card
+        var fls = [], fcount = 0, fm, fre = /<div\b[^>]*\bfile-wrapper\b[^>]*>/gi;
+        for (; fm = fre.exec(html);) {
+            fcount++;
+            if (fls.length < 3) {
+                var fnm = /data-fname\s*=\s*"([^"]*)"/i.exec(fm[0]) || /data-fname\s*=\s*'([^']*)'/i.exec(fm[0]), fsz = /data-fsize\s*=\s*["']?(\d+)/i.exec(fm[0]);
+                fls.push({ name: fnm ? fnm[1].replace(/&quot;/g, '"').replace(/&#0?39;/g, "'").replace(/&lt;/g, "<").replace(/&gt;/g, ">").replace(/&amp;/g, "&") : "", size: fsz ? +fsz[1] : 0 });
+            }
+        }
+        (count || au || fcount) && (v2 = { imgs: imgs, n: count, voice: au ? au.length : 0, files: fls, fn: fcount });
     } return MCACHE[c2.id] = { s: sig, v: v2 }, v2; }
     function noteFolders(c) { var a = []; try {
         a = (H.has("mu_noteFolders") ? H.call("mu_noteFolders", c) : c.folder ? [c.folder] : []) || [];
@@ -40458,13 +40532,13 @@ body.mu-nfsbk-on #mkBackupBar { display:none!important; }
         return;
     } inf.fl.forEach(function (f) { map[f] || (map[f] = [], order.push(f)), map[f].push(inf); }); }); var g = order.map(function (n) { return { name: n, none: !1, items: map[n] }; }); none.length && g.push({ name: "", none: !0, items: none }), searching && (g = g.filter(function (x) { return x.items.length; })), S2.groups = g; }
     function est(inf) { if (inf.cl)
-        return 74 + Math.min(inf.cl.items.length, 5) * 26; return 58 + (inf.body && S2.lines > 0 ? Math.min(S2.lines, Math.ceil(inf.body.length / 30)) * 22 + 8 : 0) + (inf.media ? (inf.media.n ? inf.media.n > 1 ? 78 : 112 : 0) + (inf.media.voice ? 36 : 0) : 0); }
+        return 74 + Math.min(inf.cl.items.length, 5) * 26; return 58 + (inf.body && S2.lines > 0 ? Math.min(S2.lines, Math.ceil(inf.body.length / 30)) * 22 + 8 : 0) + (inf.media ? (inf.media.n ? inf.media.n > 1 ? 78 : 112 : 0) + (inf.media.voice ? 36 : 0) + (inf.media.files ? inf.media.files.length * 40 : 0) : 0); }
     var TH = Object.create(null);
     function mediaHtml(inf) { var m = inf.media; if (!m)
         return ""; var h = ""; if (m.n) {
         var shown = m.imgs, extra = m.n - shown.length;
         h += '<div class="mu-nfs-media' + (shown.length > 1 ? " mu-two" : "") + '">', shown.forEach(function (t, i) { var key = inf.id + "#" + i; TH[key] = t; var more = i === shown.length - 1 && extra > 0 ? '<b class="mu-nfs-more-n">+' + extra + "</b>" : ""; h += '<span class="mu-nfs-thumb' + (t.v ? " mu-vid" : "") + '" data-tk="' + esc(key) + '">' + more + "</span>"; }), h += "</div>";
-    } return m.voice && (h += '<div class="mu-nfs-voice">' + ICONS.mic + "<span>" + (fa2() ? "ویس" : "Voice") + (m.voice > 1 ? " ×" + m.voice : "") + "</span></div>"), h; }
+    } m.files && m.files.length && (h += m.files.map(function (f) { var nm = String(f.name || (fa2() ? "فایل" : "file")), em = /\.([A-Za-z0-9]{1,8})$/.exec(nm), ext = em ? em[1].toUpperCase().slice(0, 4) : "", n = +f.size || 0, sz = n ? (n < 1024 ? n + " B" : n < 1048576 ? (n / 1024).toFixed(1) + " KB" : (n / 1048576).toFixed(n < 10485760 ? 2 : 1) + " MB") : ""; return '<div class="mu-nfs-file"><span class="mu-nfs-fic' + (ext ? " mu-x" : "") + '">' + esc(ext || "📎") + '</span><span class="mu-nfs-fnm" dir="auto">' + esc(nm) + "</span>" + (sz ? '<span class="mu-nfs-fsz">' + sz + "</span>" : "") + "</div>"; }).join("") + (m.fn > m.files.length ? '<div class="mu-nfs-fmore">+' + (m.fn - m.files.length) + "</div>" : "")); return m.voice && (h += '<div class="mu-nfs-voice">' + ICONS.mic + "<span>" + (fa2() ? "ویس" : "Voice") + (m.voice > 1 ? " ×" + m.voice : "") + "</span></div>"), h; }
     // lazy thumbnail loading: a thumbnail is only fetched from IndexedDB once it is near the screen
     var THURL = Object.create(null), thIO = null, thRaf = 0;
     function thSet(el, url) { el.style.backgroundImage = 'url("' + String(url).replace(/"/g, "%22") + '")', el.classList.add("mu-ok"); }
