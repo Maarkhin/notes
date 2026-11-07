@@ -59818,7 +59818,7 @@ var CONT = [["AS", "آسیا", "Asia"], ["EU", "اروپا", "Europe"], ["NA", "
     const LS_CFG = "mkmed_cfg_v1", LS_ON = "mkmed_on_v1", LS_SEEN = "mkmed_seen_v1", LS_DEV = "mkmed_dev_v1", KV_STATE = "mkmed_state_v1";
     const CFG_KEY = "mk_media_cfg", IDX_PFX = "mk_medx_", CH_PFX = "mk_med_";
     const DEF_BASE = "https://api.telegram.org", MAX_UP = 49 * 1024 * 1024, MAX_DL = 20 * 1024 * 1024, OVH = 32;
-    const SEND_GAP = 3100, MAGIC = [77, 75, 77, 49], AAD_BLOB = new TextEncoder().encode("mkmed-blob"), AAD_TOK = new TextEncoder().encode("mkmed-token");
+    const SEND_GAP = 3100, MAGIC = [77, 75, 77, 49], AAD_BLOB = new TextEncoder().encode("mkmed-blob"), AAD_TOK = new TextEncoder().encode("mkmed-token"), AAD_DK = new TextEncoder().encode("mkmed-datakey");
     const enc = new TextEncoder(), dec = new TextDecoder();
 
     /* ---------- i18n (fa/en), merged into the app's i18n object ---------- */
@@ -59835,12 +59835,15 @@ var CONT = [["AS", "آسیا", "Asia"], ["EU", "اروپا", "Europe"], ["NA", "
             cap: "سقف حجم محلی (MB)", usage: "حجم رسانهٔ محلی", browser: "حافظهٔ مرورگر", keys: "کلید مانیفست",
             queue: "صف", idle: "بیکار", fullM: "⚠️ مانیفست پر است؛ رسانه‌های جدید در فهرست ابری ثبت نمی‌شوند.",
             okConnected: "✅ متصل شد:", errToken: "توکن نامعتبر است.", errPw: "رمز حداقل ۶ نویسه و هر دو یکسان باشد.", errChat: "شناسهٔ کاربر تلگرام در دسترس نیست؛ برنامه را داخل تلگرام باز کن.",
-            errNet: "ارتباط با API ممکن نشد (شبکه/CORS). در «پیشرفته» یک پروکسی بگذار.", errStart: "ربات نمی‌تواند پیام بدهد؛ ابتدا در تلگرام به ربات /start بده.", errWrong: "رمز اشتباه است.",
+            errNet: "ارتباط با API ممکن نشد (شبکه/CORS). پایین‌تر در «پیشرفته (پروکسی)» همین پنل آدرس پروکسی بگذار.", errStart: "ربات نمی‌تواند پیام بدهد؛ ابتدا در تلگرام به ربات /start بده.", errWrong: "رمز اشتباه است.",
             qd: "⏳ در صف", dl: "⬇️ در حال دریافت…", er: "⚠️ خطا — بزن تا دوباره", lk: "🔒 بزن و رمز را وارد کن", big: "⛔ فایل بزرگ‌تر از حد Bot API",
             confirmFree: "رسانه‌هایی که نسخهٔ آپلودشده دارند از این دستگاه پاک شوند؟ هر وقت لازم شد دوباره دریافت می‌شوند.", confirmRm: "تنظیمات ربات رسانه از این دستگاه و Cloud حذف شود؟ فایل‌های داخل چت ربات پاک نمی‌شوند.",
             ok: "تأیید", cancel: "انصراف", enterPw: "رمز رسانه را وارد کن", warnKeys: "⚠️ کلیدهای Cloud تقریباً پر است؛ سقف بکاپ متن کمتر می‌شود.", done: "انجام شد", capFull: "سقف حجم محلی پر شد.",
             remember: "رمز روی این دستگاه یادآوری شود (هر بار نپرسد)", errExists: "برای این حساب قبلاً بکاپ رسانه تنظیم شده است. فقط رمز رسانه را در بخش «باز کردن قفل» وارد کن (تنظیم مجدد، کلید دستگاه‌های دیگر را خراب می‌کند).",
-            uploadOld: "{n} عکس/ویس قدیمی هنوز آپلود نشده. همین حالا آپلود شوند تا در دستگاه دیگر هم دیده شوند؟", found: "📦 بکاپ رسانه برای این حساب فعال است. روی تصویر خاکستری بزن و رمز رسانه را وارد کن.", cfgChanged: "تنظیمات بکاپ رسانه در دستگاه دیگر عوض شد؛ دوباره رمز را وارد کن."
+            uploadOld: "{n} عکس/ویس قدیمی هنوز آپلود نشده. همین حالا آپلود شوند تا در دستگاه دیگر هم دیده شوند؟", found: "📦 بکاپ رسانه برای این حساب فعال است. روی تصویر خاکستری بزن و رمز رسانه را وارد کن.", cfgChanged: "تنظیمات بکاپ رسانه در دستگاه دیگر عوض شد؛ دوباره رمز را وارد کن.",
+            advHint: "اگر تلگرام/شبکه‌ات api.telegram.org را مسدود کرده، آدرس یک پروکسی سازگار با Bot API را اینجا بگذار (مثلاً https://your-proxy.example.com). توکن و رمز فقط به همین آدرس می‌روند؛ پس فقط پروکسی مورد اعتماد خودت را بگذار.",
+            advSave: "ذخیره و تست", advTest: "فقط تست", advReset: "برگشت به پیش‌فرض", advBad: "آدرس نامعتبر است؛ باید با https:// شروع شود.", advSaved: "✅ آدرس ذخیره شد", advDef: "آدرس پیش‌فرض برگردانده شد", advNow: "آدرس فعلی", advLocked: "ذخیره شد؛ برای تست، اول قفل را باز کن.",
+            chpw: "تغییر رمز", chpwT: "تغییر رمز رسانه", oldPw: "رمز فعلی", newPw: "رمز جدید (حداقل ۶ نویسه)", newPw2: "تکرار رمز جدید", pwChanged: "✅ رمز رسانه تغییر کرد", errSame: "رمز جدید باید با رمز فعلی فرق کند.", chpwNote: "رسانه‌های قبلی دوباره آپلود نمی‌شوند و همچنان باز می‌شوند. روی دستگاه‌های دیگر باید یک بار رمز جدید را وارد کنی."
         },
         en: {
             title: "📦 Media backup (photos & voice)", off: "Off", notset: "Not set up", test: "Test connection", bot: "Bot", on: "On", locked: "Locked", unlocked: "Unlocked",
@@ -59854,12 +59857,15 @@ var CONT = [["AS", "آسیا", "Asia"], ["EU", "اروپا", "Europe"], ["NA", "
             cap: "Local size limit (MB)", usage: "Local media size", browser: "Browser storage", keys: "Manifest keys",
             queue: "Queue", idle: "idle", fullM: "⚠️ Manifest is full; new media are not listed in the cloud.",
             okConnected: "✅ Connected:", errToken: "Invalid token.", errPw: "Password: at least 6 characters, both fields equal.", errChat: "Telegram user id unavailable; open the app inside Telegram.",
-            errNet: "Cannot reach the API (network/CORS). Set a proxy under “Advanced”.", errStart: "The bot cannot message you; send /start to it in Telegram first.", errWrong: "Wrong password.",
+            errNet: "Cannot reach the API (network/CORS). Set a proxy under “Advanced (proxy)” further down in this panel.", errStart: "The bot cannot message you; send /start to it in Telegram first.", errWrong: "Wrong password.",
             qd: "⏳ Queued", dl: "⬇️ Downloading…", er: "⚠️ Error — tap to retry", lk: "🔒 Tap and enter password", big: "⛔ File larger than Bot API limit",
             confirmFree: "Remove media that have an uploaded copy from this device? They are re-downloaded when needed.", confirmRm: "Remove the media-bot setup from this device and Cloud? Files already in the bot chat are not deleted.",
             ok: "OK", cancel: "Cancel", enterPw: "Enter the media password", warnKeys: "⚠️ Cloud keys are nearly full; the text backup limit shrinks.", done: "Done", capFull: "Local size limit reached.",
             remember: "Remember the password on this device (do not ask every time)", errExists: "Media backup is already set up for this account. Just enter the media password under “Unlock” (setting up again would break the key on other devices).",
-            uploadOld: "{n} older photos/voice notes are not uploaded yet. Upload them now so they show up on your other device too?", found: "📦 Media backup is on for this account. Tap a gray image and enter the media password.", cfgChanged: "Media backup settings changed on another device; enter the password again."
+            uploadOld: "{n} older photos/voice notes are not uploaded yet. Upload them now so they show up on your other device too?", found: "📦 Media backup is on for this account. Tap a gray image and enter the media password.", cfgChanged: "Media backup settings changed on another device; enter the password again.",
+            advHint: "If Telegram/your network blocks api.telegram.org, enter a Bot-API compatible proxy URL here (e.g. https://your-proxy.example.com). Your token and password-protected data go only to that address, so use a proxy you trust.",
+            advSave: "Save & test", advTest: "Test only", advReset: "Reset to default", advBad: "Invalid URL; it must start with https://", advSaved: "✅ Address saved", advDef: "Default address restored", advNow: "Current address", advLocked: "Saved; unlock first to test.",
+            chpw: "Change password", chpwT: "Change media password", oldPw: "Current password", newPw: "New password (min. 6 characters)", newPw2: "Repeat new password", pwChanged: "✅ Media password changed", errSame: "The new password must differ from the current one.", chpwNote: "Existing media are not re-uploaded and still open. On your other devices enter the new password once."
         }
     };
     try { for (const l of ["fa", "en"]) if (typeof i18n === "object" && i18n[l]) for (const k in D[l]) i18n[l]["mkmed_" + k] = D[l][k]; } catch { }
@@ -59917,10 +59923,10 @@ var CONT = [["AS", "آسیا", "Asia"], ["EU", "اروپا", "Europe"], ["NA", "
             const ac = typeof AbortController === "function" ? new AbortController : null, to = ac ? setTimeout(() => ac.abort(), o.timeout || 30000) : 0;
             let res, js = null;
             try {
-                res = await fetch(`${S.base}/bot${S.token}/${method}`, { method: "POST", body, signal: ac ? ac.signal : void 0 });
+                res = await fetch(`${S.base}/bot${S.token}/${method}`, { method: "POST", body, signal: ac ? ac.signal : void 0 }); S.netErr && (S.netErr = !1);
                 try { js = await res.json(); } catch { js = null; }
             } catch (e) {
-                clearTimeout(to); lastErr = new ApiErr(0, "network", { net: !0 });
+                clearTimeout(to); lastErr = new ApiErr(0, "network", { net: !0 }); if (!S.netErr) { S.netErr = !0; try { scheduleRender(); } catch { } }
                 if (a < 3) { await sleep(1500 * Math.pow(2, a) + Math.random() * 400); continue; } throw lastErr;
             }
             clearTimeout(to);
@@ -59954,8 +59960,8 @@ var CONT = [["AS", "آسیا", "Asia"], ["EU", "اروپا", "Europe"], ["NA", "
     /* ---------- config / unlock ---------- */
     async function unlockWith(pw, cfg) {
         cfg = cfg || readCfg(); if (!cfg) throw new Error("nocfg");
-        const key = await derive(pw, unb64u(cfg.s), cfg.i || 250000);
-        let tok; try { tok = dec.decode(await aesDec(key, unb64u(cfg.t), AAD_TOK)); } catch { const e = new Error("wrong"); e.wrong = !0; throw e; }
+        let key = await derive(pw, unb64u(cfg.s), cfg.i || 250000);
+        let tok; try { if (cfg.dk) key = await crypto.subtle.importKey("raw", await aesDec(key, unb64u(cfg.dk), AAD_DK), "AES-GCM", !1, ["encrypt", "decrypt"]); tok = dec.decode(await aesDec(key, unb64u(cfg.t), AAD_TOK)); } catch { const e = new Error("wrong"); e.wrong = !0; throw e; }
         S.key = key; S.token = tok; S.base = cfg.base || lsGet("mkmed_base_v1") || DEF_BASE; keyRemember(key, cfg); return !0;
     }
     function lockNow() { S.key = null; S.token = null; S.paused = !0; KEYDB.del(); render(); }
@@ -59982,7 +59988,7 @@ var CONT = [["AS", "آسیا", "Asia"], ["EU", "اروپا", "Europe"], ["NA", "
         const cid = chatId(); if (!cid) throw new Error(T("errChat"));
         if (cloudOk()) {
             let exo = null; try { const ex = await serial(() => cloudGetItem(CFG_KEY)); exo = ex ? JSON.parse(ex) : null; } catch { }
-            if (exo && exo.s && exo.t) { lsSet(LS_SEEN, "1"); readCfg() || lsSet(LS_CFG, JSON.stringify({ v: 1, s: exo.s, i: exo.i, t: exo.t, b: exo.b || "", since: 0, ts: exo.ts })); applyBudget(); throw new Error(T("errExists")); }
+            if (exo && exo.s && exo.t) { lsSet(LS_SEEN, "1"); readCfg() || lsSet(LS_CFG, JSON.stringify({ v: 1, s: exo.s, i: exo.i, t: exo.t, dk: exo.dk, b: exo.b || "", since: 0, ts: exo.ts })); applyBudget(); throw new Error(T("errExists")); }
         }
         S.token = token; S.base = base; S.warn = "";
         let stage = "getMe";
@@ -60007,6 +60013,44 @@ var CONT = [["AS", "آسیا", "Asia"], ["EU", "اروپا", "Europe"], ["NA", "
             S.key = key; keyRemember(key, cfg); S.paused = !1; S.draft = {}; S.msg = ""; kickBackup(); applyBudget(); await loadState(); await pullManifest(); startObservers(); scheduleScan();
             return me;
         } catch (e) { S.token = null; S.key = null; const m = (e && e.code !== void 0 ? errText(e) : e && e.message || String(e)); const er = new Error("[" + stage + "] " + m); er.stage = stage; throw er; }
+    }
+    function chpwModal() {
+        return new Promise(res => {
+            const m = document.createElement("div"); m.className = "mkmed-modal";
+            const inp = id => `<input type="password" class="mkmed-in" data-f="${id}" autocomplete="off" placeholder="${esc(T(id))}">`;
+            m.innerHTML = `<div class="mkmed-card" dir="auto"><div class="mkmed-h">${esc(T("chpwT"))}</div>${inp("oldPw")}${inp("newPw")}${inp("newPw2")}<div class="mkmed-note" style="margin:4px 0">${esc(T("chpwNote"))}</div><div class="mkmed-row"><button type="button" class="btn-main" data-x="ok">${esc(T("ok"))}</button><button type="button" class="btn-main" data-x="no">${esc(T("cancel"))}</button></div><div class="mkmed-msg" data-m></div></div>`;
+            document.body.appendChild(m); const f = n => m.querySelector(`[data-f="${n}"]`), out = t => { m.querySelector("[data-m]").textContent = t; };
+            setTimeout(() => { try { f("oldPw").focus(); } catch { } }, 50);
+            let busy = !1;
+            m.addEventListener("click", async e => {
+                const x = e.target.closest("[data-x]"); if (!x || busy) return;
+                if (x.dataset.x === "no") { m.remove(); return res(!1); }
+                busy = !0; out("…");
+                try { await changePassword(f("oldPw").value, f("newPw").value, f("newPw2").value); m.remove(); res(!0); } catch (er) { out(er.wrong ? T("errWrong") : String(er.message || er)); busy = !1; }
+            });
+        });
+    }
+    async function changePassword(oldPw, newPw, newPw2) {
+        const cfg = readCfg(); if (!cfg) throw new Error("nocfg");
+        if (!newPw || newPw.length < 6 || newPw !== newPw2) throw new Error(T("errPw"));
+        if (newPw === oldPw) throw new Error(T("errSame"));
+        const oldIter = cfg.i || 250000, salt0 = unb64u(cfg.s);
+        const oldWrap = await derive(oldPw, salt0, oldIter); let raw;
+        try {
+            if (cfg.dk) raw = await aesDec(oldWrap, unb64u(cfg.dk), AAD_DK);
+            else {
+                const km = await crypto.subtle.importKey("raw", enc.encode(oldPw), "PBKDF2", !1, ["deriveBits"]);
+                raw = new Uint8Array(await crypto.subtle.deriveBits({ name: "PBKDF2", salt: salt0, iterations: oldIter, hash: "SHA-256" }, km, 256));
+                const chk = await crypto.subtle.importKey("raw", raw, "AES-GCM", !1, ["decrypt"]); await aesDec(chk, unb64u(cfg.t), AAD_TOK);
+            }
+        } catch { const e = new Error("wrong"); e.wrong = !0; throw e; }
+        const dataKey = await crypto.subtle.importKey("raw", raw, "AES-GCM", !1, ["encrypt", "decrypt"]);
+        const tok = dec.decode(await aesDec(dataKey, unb64u(cfg.t), AAD_TOK));
+        const salt = crypto.getRandomValues(new Uint8Array(16)), iter = typeof NOTE_KDF_ITERATIONS === "number" ? NOTE_KDF_ITERATIONS : 250000, wrap = await derive(newPw, salt, iter);
+        const nc = Object.assign({}, cfg, { s: b64u(salt), i: iter, dk: b64u(await aesEnc(wrap, raw, AAD_DK)), ts: Date.now() });
+        if (tgw() && tgw().CloudStorage) { const ok = await serial(() => cloudSetItem(CFG_KEY, JSON.stringify({ v: 1, s: nc.s, i: nc.i, t: nc.t, dk: nc.dk, b: nc.b || "", ts: nc.ts }))); if (!ok) throw new Error("Cloud write failed"); }
+        if (!lsSet(LS_CFG, JSON.stringify(nc))) throw new Error("localStorage write failed");
+        S.key = dataKey; S.token = tok; S.paused = !1; keyRemember(dataKey, nc); return !0;
     }
     const applyBudget = () => { try { cloudApplyManualLimit(MAX_MANUAL_BACKUPS); } catch { } };
 
@@ -60085,9 +60129,9 @@ var CONT = [["AS", "آسیا", "Asia"], ["EU", "اروپا", "Europe"], ["NA", "
             let c = null; try { c = JSON.parse(raw); } catch { } if (!c || !c.s || !c.t) return;
             lsSet(LS_SEEN, "1"); applyBudget();
             const cur = readCfg();
-            if (!cur) { lsSet(LS_CFG, JSON.stringify({ v: 1, s: c.s, i: c.i, t: c.t, b: c.b || "", since: 0, ts: c.ts })); isOn() || toast(T("found"), 5000); }
+            if (!cur) { lsSet(LS_CFG, JSON.stringify({ v: 1, s: c.s, i: c.i, t: c.t, dk: c.dk, b: c.b || "", since: 0, ts: c.ts })); isOn() || toast(T("found"), 5000); }
             else if (cur.s !== c.s && (c.ts || 0) >= (cur.ts || 0)) {
-                lsSet(LS_CFG, JSON.stringify(Object.assign({}, cur, { s: c.s, i: c.i, t: c.t, b: c.b || cur.b, ts: c.ts }))); S.key = null; S.token = null; KEYDB.del(); toast(T("cfgChanged"), 5000);
+                lsSet(LS_CFG, JSON.stringify(Object.assign({}, cur, { s: c.s, i: c.i, t: c.t, dk: c.dk, b: c.b || cur.b, ts: c.ts }))); S.key = null; S.token = null; KEYDB.del(); toast(T("cfgChanged"), 5000);
             }
             render(); markDormant();
         } catch { }
@@ -60287,6 +60331,11 @@ var CONT = [["AS", "آسیا", "Asia"], ["EU", "اروپا", "Europe"], ["NA", "
         for (const id in S.fail) err++;
         return { total: all.size, up, uns, here: S.localKeys.size, err };
     }
+    const normBase = v => { v = String(v || "").trim().replace(/\/+$/, ""); if (!v) return DEF_BASE; if (!/^[a-z][a-z0-9+.-]*:\/\//i.test(v)) v = "https://" + v; v = v.replace(/\/bot[^/]*$/i, "").replace(/\/+$/, ""); try { const u = new URL(v); if (u.protocol !== "https:" && u.protocol !== "http:") return null; return v; } catch { return null; } };
+    function advHtml() {
+        const open = S.netErr || S.advOpen || S.base !== DEF_BASE, val = S.draft.mkmedBase !== void 0 ? S.draft.mkmedBase : (S.base !== DEF_BASE ? S.base : "");
+        return `<details id="mkmedAdv" ${open ? "open" : ""}><summary class="mkmed-note" style="cursor:pointer;font-weight:bold">⚙️ ${T("adv")}</summary><div class="mkmed-note" style="margin:4px 0">${T("advHint")}</div><div class="mkmed-note" dir="ltr" style="margin:2px 0">${T("advNow")}: <b>${esc(S.base)}</b></div><input class="mkmed-in" id="mkmedBase" inputmode="url" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="${DEF_BASE}" value="${esc(val)}"><div class="mkmed-row"><button type="button" class="btn-main" data-mkact="saveBase">${T("advSave")}</button><button type="button" class="btn-main" data-mkact="testBase">${T("advTest")}</button><button type="button" class="btn-main" data-mkact="resetBase">${T("advReset")}</button></div></details>`;
+    }
     function bodyHtml() {
         const cfg = readCfg(), on = isOn(), unl = !!(S.token && S.key), st = stats(), fa = lang() === "fa";
         const chip = !cfg ? `<span class="mkmed-chip">${T("notset")}</span>` : on ? `<span class="mkmed-chip">${T("on")} · ${unl ? T("unlocked") : T("locked")}</span>` : `<span class="mkmed-chip">${T("off")}</span>`;
@@ -60294,10 +60343,11 @@ var CONT = [["AS", "آسیا", "Asia"], ["EU", "اروپا", "Europe"], ["NA", "
         cfg && (h += `<div class="mkmed-note" dir="ltr" style="margin:4px 0">🤖 ${T("bot")}: <b>${esc(cfg.b || "?")}</b> · chat ${esc(String(chatId() || "?"))}${S.base !== DEF_BASE ? " · " + esc(S.base) : ""}</div>`);
         S.warn && (h += `<div class="mkmed-note" style="margin:4px 0">⚠️ ${esc(S.warn)}</div>`);
         if (!cfg) {
-            h += `<div class="mkmed-note" style="margin:6px 0">${T("steps")}</div><input class="mkmed-in" id="mkmedTok" placeholder="${T("token")}" autocomplete="off" value="${esc(S.draft.mkmedTok || "")}"><input class="mkmed-in" id="mkmedPw" type="password" placeholder="${T("pw")}" autocomplete="new-password" value="${esc(S.draft.mkmedPw || "")}"><input class="mkmed-in" id="mkmedPw2" type="password" placeholder="${T("pw2")}" autocomplete="new-password" value="${esc(S.draft.mkmedPw2 || "")}"><details><summary class="mkmed-note">${T("adv")}</summary><input class="mkmed-in" id="mkmedBase" placeholder="${DEF_BASE}" value="${esc(S.draft.mkmedBase || "")}"></details><div class="mkmed-note">${T("pwnote")}</div><div class="mkmed-row"><button type="button" class="btn-main" data-mkact="setup">${T("connect")}</button></div><div class="mkmed-msg" id="mkmedMsg">${esc(S.msg || "")}</div>`;
+            h += `<div class="mkmed-note" style="margin:6px 0">${T("steps")}</div><input class="mkmed-in" id="mkmedTok" placeholder="${T("token")}" autocomplete="off" value="${esc(S.draft.mkmedTok || "")}"><input class="mkmed-in" id="mkmedPw" type="password" placeholder="${T("pw")}" autocomplete="new-password" value="${esc(S.draft.mkmedPw || "")}"><input class="mkmed-in" id="mkmedPw2" type="password" placeholder="${T("pw2")}" autocomplete="new-password" value="${esc(S.draft.mkmedPw2 || "")}">${advHtml()}<div class="mkmed-note">${T("pwnote")}</div><div class="mkmed-row"><button type="button" class="btn-main" data-mkact="setup">${T("connect")}</button></div><div class="mkmed-msg" id="mkmedMsg">${esc(S.msg || "")}</div>`;
             return h;
         }
         if (!unl) h += `<div class="mkmed-note" style="margin:6px 0">${T("cloudcfg")}</div><input class="mkmed-in" id="mkmedPw" type="password" placeholder="${T("pw")}" autocomplete="current-password"><label class="mkmed-note" style="display:block;margin:4px 0"><input type="checkbox" id="mkmedRem" ${S.remember ? "checked" : ""}> ${T("remember")}</label><div class="mkmed-row"><button type="button" class="btn-main" data-mkact="unlock">${T("unlock")}</button></div><div class="mkmed-msg" id="mkmedMsg">${esc(S.msg || "")}</div>`;
+        h += advHtml();
         h += `<div class="mkmed-grid"><div><b>${st.total}</b><span>${T("total")}</span></div><div><b>${st.up}</b><span>${T("uploaded")}</span></div><div><b>${st.uns}</b><span>${T("unsynced")}</span></div><div><b>${st.here}</b><span>${T("here")}</span></div><div><b>${st.err}</b><span>${T("errors")}</span></div></div>`;
         const cap = capBytes(), pct = Math.min(100, S.usage / cap * 100), mb = n => (n / 1048576).toFixed(1);
         h += `<div class="mkmed-note">${T("usage")}: ${S.usageKnown ? mb(S.usage) : "…"} / ${mb(cap)} MB</div><div class="mkmed-bar"><i style="width:${pct}%"></i></div><div class="mkmed-note" id="mkmedEst"></div><div class="mkmed-note">${T("keys")}: ${S.mkeys} / ${BUDGET}</div>`;
@@ -60305,7 +60355,7 @@ var CONT = [["AS", "آسیا", "Asia"], ["EU", "اروپا", "Europe"], ["NA", "
         { const fe = Object.keys(S.fail).sort((x, y) => (S.fail[y].ts || 0) - (S.fail[x].ts || 0)).slice(0, 4); fe.length && (h += `<div class="mkmed-note" dir="ltr" style="margin:4px 0">${fe.map(id => "⚠️ " + esc(id) + ": " + esc(S.fail[id].m)).join("<br>")}</div>`); }
         h += `<div class="mkmed-note">${T("queue")}: ${S.busy ? (S.qUp.length + S.qDown.length + (S.cur ? 1 : 0)) : T("idle")}</div>`;
         h += `<div class="mkmed-row"><button type="button" class="btn-main" data-mkact="sendAll">${T("sendAll")}</button><button type="button" class="btn-main" data-mkact="retry">${T("retry")}</button><button type="button" class="btn-main" data-mkact="syncAll">${T("syncAll")}</button><button type="button" class="btn-main" data-mkact="free">${T("free")}</button></div>`;
-        h += `<div class="mkmed-row"><label class="mkmed-note">${T("cap")} <input class="mkmed-in" id="mkmedCap" type="number" min="20" step="10" value="${Math.round(cap / 1048576)}" style="width:90px;display:inline-block"></label><button type="button" class="btn-main" data-mkact="${on ? "disable" : "enable"}">${on ? T("disable") : T("enable")}</button>${unl ? `<button type="button" class="btn-main" data-mkact="test">${T("test")}</button><button type="button" class="btn-main" data-mkact="lock">${T("lock")}</button>` : ""}<button type="button" class="btn-main" data-mkact="remove">${T("remove")}</button></div><div class="mkmed-msg" id="mkmedMsg">${esc(S.msg || "")}</div>`;
+        h += `<div class="mkmed-row"><label class="mkmed-note">${T("cap")} <input class="mkmed-in" id="mkmedCap" type="number" min="20" step="10" value="${Math.round(cap / 1048576)}" style="width:90px;display:inline-block"></label><button type="button" class="btn-main" data-mkact="${on ? "disable" : "enable"}">${on ? T("disable") : T("enable")}</button>${unl ? `<button type="button" class="btn-main" data-mkact="test">${T("test")}</button><button type="button" class="btn-main" data-mkact="lock">${T("lock")}</button>` : ""}<button type="button" class="btn-main" data-mkact="chpw">${T("chpw")}</button><button type="button" class="btn-main" data-mkact="remove">${T("remove")}</button></div><div class="mkmed-msg" id="mkmedMsg">${esc(S.msg || "")}</div>`;
         return h;
     }
     function render() {
@@ -60322,6 +60372,19 @@ var CONT = [["AS", "آسیا", "Asia"], ["EU", "اروپا", "Europe"], ["NA", "
     const msg = (t, bad) => { S.msg = t || ""; const m = document.getElementById("mkmedMsg"); m && (m.textContent = t || ""); };
     async function onAct(a) {
         try {
+            if (a === "chpw") { if (await chpwModal()) { msg(T("pwChanged")); toast(T("pwChanged"), 3000); render(); S.token && S.key && (scheduleScan(), pump()); } return; }
+            if (a === "saveBase" || a === "testBase" || a === "resetBase") {
+                const inp = document.getElementById("mkmedBase"); try { document.activeElement && document.activeElement.blur(); } catch { }
+                S.advOpen = !0; const old = S.base;
+                if (a === "resetBase") { S.base = DEF_BASE; S.draft.mkmedBase = ""; lsSet("mkmed_base_v1", null); S.netErr = !1; msg(T("advDef")); render(); if (S.token && S.key) { S.paused = !1; try { onAct("retry"); } catch { } } return; }
+                const nb = normBase(inp ? inp.value : S.draft.mkmedBase); if (!nb) { msg(T("advBad")); return; }
+                S.draft.mkmedBase = nb === DEF_BASE ? "" : nb;
+                if (!S.token || !S.key) { if (a === "saveBase" && readCfg()) { S.base = nb; lsSet("mkmed_base_v1", nb === DEF_BASE ? null : nb); msg(T("advLocked")); render(); } else if (a === "saveBase") { S.base = nb; msg(T("advSaved")); render(); } else msg(T("advLocked")); return; }
+                msg("…"); S.base = nb;
+                try { const me = await api("getMe", form({})); S.netErr = !1; if (a === "saveBase") { lsSet("mkmed_base_v1", nb === DEF_BASE ? null : nb); msg(T("advSaved") + " @" + (me && me.username || "")); S.paused = !1; render(); onAct("retry"); } else { S.base = old; msg(T("okConnected") + " @" + (me && me.username || "")); } }
+                catch (e) { if (a === "saveBase") { lsSet("mkmed_base_v1", nb === DEF_BASE ? null : nb); msg(errText(e) + " (" + nb + ")"); render(); } else { S.base = old; msg(errText(e)); } }
+                return;
+            }
             if (a === "setup") {
                 const g = i => (document.getElementById(i) || {}).value || "";
                 msg("…"); const me = await setupWith(g("mkmedTok"), g("mkmedPw"), g("mkmedPw2"), g("mkmedBase"));
