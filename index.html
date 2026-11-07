@@ -3467,6 +3467,123 @@ html[dir=ltr] .preview-box {
     border-radius:16px;
     opacity:.8;
 }
+/* ===== video attachments: same block family as voice notes (audio-wrapper), framed by dotted lines ===== */
+.audio-wrapper.video-wrapper {
+    display:block;
+    position:relative;
+    padding:8px;
+    margin:16px 0;
+    max-width:100%;
+}
+.audio-wrapper.video-wrapper video {
+    display:block;
+    width:100%;
+    max-width:100%;
+    max-height:420px;
+    border-radius:8px;
+    background:#000;
+    outline:none;
+    object-fit:contain;
+}
+.audio-wrapper.video-wrapper>button.img-btn {
+    position:absolute;
+    top:14px;
+    inset-inline-end:14px;
+    z-index:3;
+    background:#0000008c;
+    color:#fff;
+}
+.img-below-line.mu-vid-line,.img-top-divider.mu-vid-line {
+    border-top:1px dotted rgba(128,128,128,.7);
+}
+.img-above-line.mu-vid-line {
+    border-bottom:1px dotted rgba(128,128,128,.7);
+}
+.img-below-line.mu-vid-line.mu-dash-off,.img-top-divider.mu-vid-line.mu-dash-off {
+    border-top-color:transparent;
+}
+.img-above-line.mu-vid-line.mu-dash-off {
+    border-bottom-color:transparent;
+}
+.mu-viewer.is-editing .mu-viewer-body .audio-wrapper.video-wrapper {
+    padding-right:8px;
+}
+.audio-wrapper.video-wrapper>.mu-ed-del,.audio-wrapper.video-wrapper>.mu-ed-move {
+    top:14px;
+    margin-top:0;
+}
+.mu-ed-ghost.audio-wrapper.video-wrapper video {
+    display:none;
+}
+.mu-ed-ghost.audio-wrapper.video-wrapper:before {
+    content:"\1F3AC";
+    font-size:22px;
+}
+.file-wrapper {
+    margin:16px 0;
+    cursor:default;
+    -webkit-user-select:none;
+    user-select:none;
+}
+.file-wrapper .file-chip {
+    display:flex;
+    align-items:center;
+    gap:10px;
+    flex:1 1 auto;
+    min-width:0;
+    cursor:pointer;
+    -webkit-tap-highlight-color:transparent;
+}
+.file-wrapper .file-ic {
+    flex:0 0 auto;
+    display:inline-flex;
+    align-items:center;
+    justify-content:center;
+    min-width:38px;
+    height:38px;
+    padding:0 6px;
+    box-sizing:border-box;
+    border-radius:10px;
+    background:rgba(94,205,230,.16);
+    border:1px solid rgba(94,205,230,.35);
+    font-size:18px;
+    line-height:1;
+}
+.file-wrapper .file-ic.has-ext {
+    font-size:11px;
+    font-weight:800;
+    letter-spacing:.3px;
+    font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+}
+.file-wrapper .file-info {
+    display:flex;
+    flex-direction:column;
+    gap:2px;
+    min-width:0;
+    flex:1 1 auto;
+}
+.file-wrapper .file-name {
+    font-weight:700;
+    font-size:14px;
+    overflow:hidden;
+    text-overflow:ellipsis;
+    white-space:nowrap;
+    unicode-bidi:plaintext;
+    text-align:start;
+}
+.file-wrapper .file-size {
+    font-size:11px;
+    opacity:.7;
+    direction:ltr;
+    unicode-bidi:isolate;
+    text-align:start;
+}
+.file-wrapper:hover .file-name {
+    text-decoration:underline;
+}
+.mu-viewer.is-editing .mu-viewer-body .file-wrapper {
+    padding-right:78px;
+}
 body.glitching {
     animation:glitchFlash .38s steps(2,end);
 }
@@ -13602,7 +13719,6 @@ html:not([dir=ltr]) .mu-nb-en {
     width:18px;
     height:18px;
     flex:0 0 auto;
-    transition:transform .15s;
 }
 .mu-nfs-fgroup.mu-collapsed .mu-nfs-chev {
     transform:rotate(-90deg);
@@ -19105,22 +19221,19 @@ html body:not(#_m1):not(#_m2):not(#_m3):not(#_m4) #contentsContainer .mxe .mxe-p
 })();
 </script>
 <style id="muNavCollapse">
-/* Smooth group open/close: the items live in .mu-nav-body (grid 1fr <-> 0fr) so the height animates instead of snapping with display:none */
+/* Instant group open/close: no transitions, collapsed body is display:none (no layout/paint cost, no lag) */
 #muNav .mu-nav-sec[data-navtoggle]{cursor:pointer;display:flex;align-items:center;justify-content:space-between;gap:8px;user-select:none;-webkit-user-select:none;-webkit-tap-highlight-color:transparent;touch-action:manipulation}
 #muNav .mu-nav-sec[data-navtoggle]:hover{opacity:.9}
-#muNav .mu-nav-chev{flex:0 0 auto;transition:transform .3s cubic-bezier(.32,.72,0,1)}
+#muNav .mu-nav-chev{flex:0 0 auto}
 #muNav .mu-nav-grp.mu-collapsed .mu-nav-chev{transform:rotate(-90deg)}
 #muNav[dir="rtl"] .mu-nav-grp.mu-collapsed .mu-nav-chev{transform:rotate(90deg)}
-#muNav .mu-nav-sec[data-navtoggle]{transition:font-size .3s cubic-bezier(.32,.72,0,1),opacity .3s ease,padding .3s cubic-bezier(.32,.72,0,1)}
 #muNav .mu-nav-panel .mu-nav-grp.mu-collapsed>.mu-nav-sec[data-navtoggle]{font-size:16px!important;font-weight:700!important;opacity:1!important;padding-top:10px!important;padding-bottom:10px!important;color:var(--nfs-ink,var(--nfs-text))!important}
 #muNav .mu-nav-panel .mu-nav-grp.mu-collapsed .mu-nav-chev{width:18px;height:18px}
-#muNav .mu-nav-body{display:grid;grid-template-rows:1fr;flex:0 0 auto;transition:grid-template-rows .3s cubic-bezier(.32,.72,0,1),margin-top .3s cubic-bezier(.32,.72,0,1)}
-#muNav .mu-nav-inner{min-height:0;min-width:0;overflow:hidden;display:flex;flex-direction:column;gap:1px;opacity:1;transform:translateZ(0);transition:opacity .24s ease .04s,transform .3s cubic-bezier(.32,.72,0,1),visibility 0s linear 0s}
+#muNav .mu-nav-body{display:block;flex:0 0 auto}
+#muNav .mu-nav-inner{min-height:0;min-width:0;display:flex;flex-direction:column;gap:1px}
 #muNav .mu-nav-panel.mu-nav-paired .mu-nav-inner{gap:6px}
-#muNav .mu-nav-grp.mu-collapsed>.mu-nav-body{grid-template-rows:0fr;margin-top:-1px}
-#muNav .mu-nav-panel.mu-nav-paired .mu-nav-grp.mu-collapsed>.mu-nav-body{margin-top:-6px}
-#muNav .mu-nav-grp.mu-collapsed>.mu-nav-body>.mu-nav-inner{opacity:0;transform:translate3d(0,-8px,0);visibility:hidden;transition:opacity .14s ease,transform .3s cubic-bezier(.32,.72,0,1),visibility 0s linear .3s}
-@media(prefers-reduced-motion:reduce){#muNav .mu-nav-body,#muNav .mu-nav-inner,#muNav .mu-nav-chev,#muNav .mu-nav-sec[data-navtoggle]{transition-duration:.01s!important;transition-delay:0s!important}}
+#muNav .mu-nav-grp.mu-collapsed>.mu-nav-body{display:none!important}
+#muNav .mu-nav-grp.mu-collapsed>.mu-nav-sec[data-navtoggle],#muNav .mu-nav-grp .mu-nav-chev,#muNav .mu-nav-body,#muNav .mu-nav-inner,#muNav .mu-nav-inner>*{transition:none!important;animation:none!important}
 /* Telegram WebView: no per-item stagger layers while the panel slides, only the panel itself moves (lighter + smoother) */
 html.mk-tg #muNav .mu-nav-panel>*{opacity:1!important;transform:none!important;transition:none!important}
 html.mk-tg #muNav .mu-nav-panel{will-change:transform}
@@ -21195,7 +21308,7 @@ async function cloudDecompress(b64, mode) { if (mode === 5 || mode === 6) {
 catch {
     return null;
 } }
-const CLOUD_PLACEHOLDERS = { img: ["[تصویر — فقط روی همین دستگاه]", "[image — this device only]"], audio: ["[صدا — فقط روی همین دستگاه]", "[audio — this device only]"] };
+const CLOUD_PLACEHOLDERS = { img: ["[تصویر — فقط روی همین دستگاه]", "[image — this device only]"], audio: ["[صدا — فقط روی همین دستگاه]", "[audio — this device only]"], video: ["[ویدیو — فقط روی همین دستگاه]", "[video — this device only]"], file: ["[فایل — فقط روی همین دستگاه]", "[file — this device only]"] };
 function cloudPlaceholder(kind) { return CLOUD_PLACEHOLDERS[kind][currentLang === "fa" ? 0 : 1]; }
 // Strips embedded images AND voice notes (the things that can make a note huge, or that would restore as a
 // broken player on another device) so the rest of the note's text has a real shot at fitting the cloud
@@ -21204,7 +21317,7 @@ const CLOUD_MKMED_ID_RE = /^m_[a-z0-9_]{3,40}$/i;
 function cloudMediaOn() { try { return localStorage.getItem("mkmed_on_v1") === "1"; } catch { return !1; } }
 // media id carried by a wrapper / img / audio element (only used when media sync is on)
 function cloudMediaIdOf(el) { try { const pm0 = el.getAttribute && el.getAttribute("data-mkmed"); if (pm0) { const pid = pm0.split(":")[1]; return pid && CLOUD_MKMED_ID_RE.test(pid) ? pid : null; } const m = el.hasAttribute && el.hasAttribute("data-mu-media") ? el : el.querySelector && el.querySelector("[data-mu-media]"), id = m && m.getAttribute("data-mu-media"); return id && CLOUD_MKMED_ID_RE.test(id) ? id : null; } catch { return null; } }
-function cloudStripImages(html) { const src = String(html || ""); if (!/<img|<audio|img-drag-wrapper|audio-wrapper/i.test(src))
+function cloudStripImages(html) { const src = String(html || ""); if (!/<img|<audio|<video|img-drag-wrapper|audio-wrapper/i.test(src))
     return src; try {
     const tpl = document.createElement("template");
     tpl.innerHTML = src;
@@ -21212,23 +21325,23 @@ function cloudStripImages(html) { const src = String(html || ""); if (!/<img|<au
     // With media sync on, the placeholder keeps the media id (data-mkmed="img:<id>") so another device can fetch the real file.
     const mk = (kind, block, srcEl) => { const id = keep ? cloudMediaIdOf(srcEl) : null; if (block || id) {
         const d = document.createElement(block ? "div" : "span");
-        return d.textContent = cloudPlaceholder(kind), id && d.setAttribute("data-mkmed", kind + ":" + id), d;
+        const fnm = kind === "file" && srcEl && srcEl.getAttribute ? srcEl.getAttribute("data-fname") : ""; kind === "file" && srcEl && srcEl.getAttribute && ["data-fname", "data-fsize", "data-ftype"].forEach(a => { const v = srcEl.getAttribute(a); v && d.setAttribute(a, v); }); return d.textContent = id && fnm ? "📎 " + fnm : cloudPlaceholder(kind), id && d.setAttribute("data-mkmed", kind + ":" + id), d;
     } return document.createTextNode(cloudPlaceholder(kind)); };
-    return tpl.content.querySelectorAll(".img-drag-wrapper, .audio-wrapper").forEach(w => { w.replaceWith(mk(w.classList.contains("audio-wrapper") ? "audio" : "img", !0, w)); }), tpl.content.querySelectorAll("img, audio").forEach(el => { el.replaceWith(mk(el.tagName === "AUDIO" ? "audio" : "img", !1, el)); }), tpl.innerHTML;
+    return tpl.content.querySelectorAll(".img-drag-wrapper, .audio-wrapper").forEach(w => { w.replaceWith(mk(w.classList.contains("file-wrapper") ? "file" : w.classList.contains("video-wrapper") ? "video" : w.classList.contains("audio-wrapper") ? "audio" : "img", !0, w)); }), tpl.content.querySelectorAll("img, audio, video").forEach(el => { el.replaceWith(mk(el.tagName === "AUDIO" ? "audio" : el.tagName === "VIDEO" ? "video" : "img", !1, el)); }), tpl.innerHTML;
 }
 catch {
-    return src.replace(/<img[^>]*>/gi, cloudPlaceholder("img")).replace(/<audio[\s\S]*?<\/audio>/gi, cloudPlaceholder("audio"));
+    return src.replace(/<img[^>]*>/gi, cloudPlaceholder("img")).replace(/<audio[\s\S]*?<\/audio>/gi, cloudPlaceholder("audio")).replace(/<video[\s\S]*?<\/video>/gi, cloudPlaceholder("video"));
 } }
-function cloudHtmlHasMedia(html) { return /<img|<audio|img-drag-wrapper|audio-wrapper|data-mu-media|data-mkmed/i.test(String(html || "")); }
+function cloudHtmlHasMedia(html) { return /<img|<audio|<video|img-drag-wrapper|audio-wrapper|data-mu-media|data-mkmed/i.test(String(html || "")); }
 // Restore helper: takes the newer cloud HTML (media are placeholders only) and puts the local note's real
 // images/voice notes back in order, skipping placeholders nested inside another media block.
-function cloudMergeKeepMedia(cloudHtml, localHtml) { const lt = document.createElement("template"); lt.innerHTML = String(localHtml || ""); const sel = ".img-drag-wrapper, .audio-wrapper, img, audio, [data-mkmed]", blocks = { img: [], audio: [] }; lt.content.querySelectorAll(sel).forEach(el => { if (el.parentElement && el.parentElement.closest(sel))
-    return; const isAudio = el.classList.contains("audio-wrapper") || el.tagName === "AUDIO" || /^audio:/.test(el.getAttribute("data-mkmed") || ""); blocks[isAudio ? "audio" : "img"].push({ h: el.outerHTML, id: cloudMediaIdOf(el), ph: el.hasAttribute("data-mkmed") }); }); let out = String(cloudHtml || ""); const esc = s => s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), hold = [];
+function cloudMergeKeepMedia(cloudHtml, localHtml) { const lt = document.createElement("template"); lt.innerHTML = String(localHtml || ""); const sel = ".img-drag-wrapper, .audio-wrapper, img, audio, video, [data-mkmed]", blocks = { img: [], audio: [], video: [], file: [] }; lt.content.querySelectorAll(sel).forEach(el => { if (el.parentElement && el.parentElement.closest(sel))
+    return; const mkp = el.getAttribute("data-mkmed") || "", isFile = el.classList.contains("file-wrapper") || /^file:/.test(mkp), isVideo = el.classList.contains("video-wrapper") || el.tagName === "VIDEO" || /^video:/.test(mkp), isAudio = el.classList.contains("audio-wrapper") || el.tagName === "AUDIO" || /^audio:/.test(mkp); blocks[isFile ? "file" : isVideo ? "video" : isAudio ? "audio" : "img"].push({ h: el.outerHTML, id: cloudMediaIdOf(el), ph: el.hasAttribute("data-mkmed") }); }); let out = String(cloudHtml || ""); const esc = s => s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), hold = [];
     // Placeholders that carry a media id (data-mkmed) are matched by id: this device's real block when it has it, otherwise the placeholder stays (the media-sync module downloads it)
     if (out.indexOf("data-mkmed") > -1)
-        try { const ct = document.createElement("template"); ct.innerHTML = out; ct.content.querySelectorAll("[data-mkmed]").forEach(el => { const p = (el.getAttribute("data-mkmed") || "").split(":"), kind = p[0] === "audio" ? "audio" : "img", i = blocks[kind].findIndex(b => b.id && b.id === p[1]); if (i > -1) { hold.push(blocks[kind][i].h); blocks[kind].splice(i, 1); } else hold.push(el.outerHTML); el.replaceWith(document.createTextNode("\u0001MKM" + (hold.length - 1) + "\u0001")); }); out = ct.innerHTML; } catch { }
+        try { const ct = document.createElement("template"); ct.innerHTML = out; ct.content.querySelectorAll("[data-mkmed]").forEach(el => { const p = (el.getAttribute("data-mkmed") || "").split(":"), kind = p[0] === "file" ? "file" : p[0] === "video" ? "video" : p[0] === "audio" ? "audio" : "img", i = blocks[kind].findIndex(b => b.id && b.id === p[1]); if (i > -1) { hold.push(blocks[kind][i].h); blocks[kind].splice(i, 1); } else hold.push(el.outerHTML); el.replaceWith(document.createTextNode("\u0001MKM" + (hold.length - 1) + "\u0001")); }); out = ct.innerHTML; } catch { }
     // Placeholders that found no local media to swap in stay visible as text
-    ["img", "audio"].forEach(kind => { const alt = CLOUD_PLACEHOLDERS[kind].map(esc).join("|"), re = new RegExp("<div>\\s*(?:" + alt + ")\\s*</div>|(?:" + alt + ")", "g"); out = out.replace(re, m => blocks[kind].length ? blocks[kind].shift().h : m); }); hold.length && (out = out.replace(/\u0001MKM(\d+)\u0001/g, (m, i) => hold[+i])); return out + blocks.img.filter(b => !b.ph).map(b => b.h).join("") + blocks.audio.filter(b => !b.ph).map(b => b.h).join(""); }
+    ["img", "audio", "video", "file"].forEach(kind => { const alt = CLOUD_PLACEHOLDERS[kind].map(esc).join("|"), re = new RegExp("<div>\\s*(?:" + alt + ")\\s*</div>|(?:" + alt + ")", "g"); out = out.replace(re, m => blocks[kind].length ? blocks[kind].shift().h : m); }); hold.length && (out = out.replace(/\u0001MKM(\d+)\u0001/g, (m, i) => hold[+i])); return out + blocks.img.filter(b => !b.ph).map(b => b.h).join("") + blocks.audio.filter(b => !b.ph).map(b => b.h).join("") + blocks.video.filter(b => !b.ph).map(b => b.h).join("") + blocks.file.filter(b => !b.ph).map(b => b.h).join(""); }
 function cloudHashStr(str) { let h1 = 3735928559, h2 = 1103547991; for (let i = 0; i < str.length; i++) {
     const ch = str.charCodeAt(i);
     h1 = Math.imul(h1 ^ ch, 2654435761), h2 = Math.imul(h2 ^ ch, 1597334677);
@@ -24314,7 +24427,7 @@ catch (err) {
 // Turns every <img data-mu-media>/<audio data-mu-media> inside container that isn't already showing its
 // current media into a live blob: URL
 async function hydrateMedia(container) { if (!container || !container.querySelectorAll)
-    return; const els = container.querySelectorAll("img[data-mu-media], audio[data-mu-media]"); for (const el of els) {
+    return; const els = container.querySelectorAll("img[data-mu-media], audio[data-mu-media], video[data-mu-media], .file-wrapper[data-mu-media]"); for (const el of els) {
     const mediaId = el.getAttribute("data-mu-media");
     if (!mediaId || el.dataset.muHydratedFor === mediaId)
         continue;
@@ -24326,6 +24439,10 @@ async function hydrateMedia(container) { if (!container || !container.querySelec
     if (!blob)
         // media missing (device without IndexedDB, or purged) — leave placeholder
         continue;
+    if (el.classList && el.classList.contains("file-wrapper")) {
+        el.dataset.muHydratedFor = mediaId, blob.size && !el.getAttribute("data-fsize") && el.setAttribute("data-fsize", String(blob.size)), typeof mu_fileFillChip == "function" && mu_fileFillChip(el);
+        continue;
+    }
     const oldUrl = el.dataset.muObjectUrl;
     let url;
     try {
@@ -24334,7 +24451,7 @@ async function hydrateMedia(container) { if (!container || !container.querySelec
     catch {
         continue;
     }
-    if (el.src = url, el.dataset.muHydratedFor = mediaId, el.dataset.muObjectUrl = url, el.tagName === "AUDIO" && typeof mu_fixAudioDuration == "function" && mu_fixAudioDuration(el), oldUrl && oldUrl !== url)
+    if (el.src = el.tagName === "VIDEO" ? url + "#t=0.001" : url, el.dataset.muHydratedFor = mediaId, el.dataset.muObjectUrl = url, el.tagName === "AUDIO" && typeof mu_fixAudioDuration == "function" && mu_fixAudioDuration(el), oldUrl && oldUrl !== url)
         try {
             URL.revokeObjectURL(oldUrl);
         }
@@ -24343,10 +24460,31 @@ async function hydrateMedia(container) { if (!container || !container.querySelec
 // Export-time counterpart to hydrateMedia(): produces a copy of `html` where every data-mu-media reference
 // has been replaced with the actual media embedded as a base64 data: URL
 async function resolveMediaSrcInHtml(html, opts) { const strict = !!(opts && opts.strict), str = String(html || ""); if (!/data-mu-media\s*=/.test(str))
-    return str; const template = document.createElement("template"); template.innerHTML = str; const els = template.content.querySelectorAll("img[data-mu-media], audio[data-mu-media]"); for (const el of els) {
+    return str; const template = document.createElement("template"); template.innerHTML = str; const els = template.content.querySelectorAll("img[data-mu-media], audio[data-mu-media], video[data-mu-media], .file-wrapper[data-mu-media]"); for (const el of els) {
     const mediaId = el.getAttribute("data-mu-media");
     if (!mediaId)
         continue;
+    if (el.classList && el.classList.contains("file-wrapper")) {
+        // files are embedded as data-fdata (fake audio/x-mkfile mime so every existing "has embedded media" check still fires)
+        let fu = null;
+        try {
+            const fb = await Media.get(mediaId);
+            fb && (fu = await blobToDataUrl(new Blob([fb], { type: "audio/x-mkfile" })));
+        }
+        catch (err) {
+            if (strict)
+                throw err;
+        }
+        if (!fu) {
+            const cur = el.getAttribute("data-fdata") || "";
+            /^data:audio\/x-mkfile;/i.test(cur) && (fu = cur);
+        }
+        if (fu)
+            el.setAttribute("data-fdata", fu), el.removeAttribute("data-mu-media");
+        else if (strict)
+            throw new Error("media-unreadable:" + mediaId);
+        continue;
+    }
     let dataUrl = null;
     try {
         const blob = await Media.get(mediaId);
@@ -24372,12 +24510,14 @@ async function resolveItemsMediaForExport(items) { const list = Array.isArray(it
     item && typeof item.html == "string" && /data-mu-media\s*=/.test(item.html) ? out.push(Object.assign({}, item, { html: await resolveMediaSrcInHtml(item.html) })) : out.push(item); return out; }
     // Per-note migration: moves inline base64 <img>/<audio> into the Blob store as data-mu-media
     // references.
-    async function migrateNoteMediaToBlobs(item) { if (!item || typeof item.html != "string" || !/data:(image|audio)\//i.test(item.html))
-    return !1; const template = document.createElement("template"); template.innerHTML = item.html; const els = template.content.querySelectorAll('img[src^="data:image/"], audio[src^="data:audio/"]'); let changed = !1; for (const el of els) {
-    const dataUrl = el.getAttribute("src");
+    async function migrateNoteMediaToBlobs(item) { if (!item || typeof item.html != "string" || !/data:(image|audio|video)\//i.test(item.html))
+    return !1; const template = document.createElement("template"); template.innerHTML = item.html; const els = template.content.querySelectorAll('img[src^="data:image/"], audio[src^="data:audio/"], video[src^="data:video/"], .file-wrapper[data-fdata^="data:audio/x-mkfile"]'); let changed = !1; for (const el of els) {
+    const isFile = !!(el.classList && el.classList.contains("file-wrapper")), dataUrl = el.getAttribute(isFile ? "data-fdata" : "src");
     try {
-        const blob = await (await fetch(dataUrl)).blob(), mediaId = await mediaPut(blob);
-        mediaId && (el.setAttribute("data-mu-media", mediaId), el.removeAttribute("src"), changed = !0);
+        let blob = await (await fetch(dataUrl)).blob();
+        isFile && (blob = new Blob([blob], { type: "application/octet-stream" }));
+        const mediaId = await mediaPut(blob);
+        mediaId && (el.setAttribute("data-mu-media", mediaId), el.removeAttribute(isFile ? "data-fdata" : "src"), changed = !0);
     }
     catch { }
 } return changed && (item.html = template.innerHTML), changed; }
@@ -24402,7 +24542,7 @@ catch { } if (done)
 catch (e) { console.warn("silent catch -> setItem @main:4218", e); } }
 // Collects every media id any current note's saved HTML still points to, straight off the raw string (no
 // live DOM needed for this scan)
-function collectReferencedMediaIds() { const ids = new Set, re = /data-mu-media="([^"]+)"|data-mkmed="(?:img|audio):([^"]+)"/g, scanHtml = html => { if (typeof html != "string")
+function collectReferencedMediaIds() { const ids = new Set, re = /data-mu-media="([^"]+)"|data-mkmed="(?:img|audio|video|file):([^"]+)"/g, scanHtml = html => { if (typeof html != "string")
     return; re.lastIndex = 0; let m; for (; m = re.exec(html);)
     ids.add(m[1] || m[2]); }; for (const item of categories)
     scanHtml(item && item.html); return ids; } const GC_INTERVAL = 1440 * 60 * 1e3;
@@ -25083,11 +25223,11 @@ function mu_sanitizeNoteHtml(id, raw) { const src = String(raw ?? ""), hit = mu_
     const live = new Set(categories.map(function (c) { return c && c.id; }));
     mu_noteSanCache.forEach(function (_v, k) { live.has(k) || mu_noteSanCache.delete(k); });
 } return mu_noteSanCache.set(id, { src: src, out: out }), out; }
-function sanitizeHtml(html) { const template = document.createElement("template"); template.innerHTML = String(html ?? ""); const allowedTags = new Set(["B", "STRONG", "I", "EM", "U", "S", "BR", "P", "DIV", "SPAN", "UL", "OL", "LI", "BLOCKQUOTE", "PRE", "CODE", "A", "IMG", "AUDIO", "BUTTON", "TABLE", "THEAD", "TBODY", "TFOOT", "TR", "TD", "TH", "CAPTION"]), walker = document.createTreeWalker(template.content, NodeFilter.SHOW_ELEMENT), elements = []; for (; walker.nextNode();)
+function sanitizeHtml(html) { const template = document.createElement("template"); template.innerHTML = String(html ?? ""); const allowedTags = new Set(["B", "STRONG", "I", "EM", "U", "S", "BR", "P", "DIV", "SPAN", "UL", "OL", "LI", "BLOCKQUOTE", "PRE", "CODE", "A", "IMG", "AUDIO", "VIDEO", "BUTTON", "TABLE", "THEAD", "TBODY", "TFOOT", "TR", "TD", "TH", "CAPTION"]), walker = document.createTreeWalker(template.content, NodeFilter.SHOW_ELEMENT), elements = []; for (; walker.nextNode();)
     elements.push(walker.currentNode); return elements.forEach(el => { if (!allowedTags.has(el.tagName)) {
     el.replaceWith(document.createTextNode(el.textContent || ""));
     return;
-} [...el.attributes].forEach(attr => { const name = attr.name.toLowerCase(), value = attr.value.trim(), isAllowed = (el.tagName === "DIV" || el.tagName === "SPAN") && name === "data-mkmed" && /^(?:img|audio):m_[a-z0-9_]{3,40}$/i.test(value) || el.tagName === "SPAN" && name === "style" && /^--mk-x:#[0-9a-f]{6};?$/i.test(value.replace(/\s+/g, "")) || el.tagName === "SPAN" && name === "style" && /^font-size:\d(?:\.\d{1,3})?em;?$/i.test(value.replace(/\s+/g, "")) || ["class", "id", "contenteditable", "draggable", "aria-label"].includes(name) || el.tagName === "A" && ["href", "target", "rel"].includes(name) || el.tagName === "IMG" && ["src", "alt", "width", "height", "data-mu-media"].includes(name) || el.tagName === "AUDIO" && ["src", "controls", "data-mu-media"].includes(name) || el.tagName === "BUTTON" && name === "type" || (el.tagName === "TD" || el.tagName === "TH") && (name === "colspan" || name === "rowspan") && /^(?:[2-9]|[1-9]\d)$/.test(value) || name === "style" && /^(?:width:\d{2,4}px|height:\d{2,3}px);?$/i.test(value.replace(/\s+/g, "")) && (/^(?:width)/i.test(value.replace(/\s+/g, "")) ? el.tagName === "TD" || el.tagName === "TH" : el.tagName === "TR"); (name.startsWith("on") || !isAllowed) && el.removeAttribute(attr.name), name === "href" && !/^(https?:|mailto:)/i.test(value) && el.removeAttribute(attr.name), name === "src" && !/^(https?:|data:image\/|data:audio\/)/i.test(value) && el.removeAttribute(attr.name); }), el.tagName === "A" && (el.setAttribute("target", "_blank"), el.setAttribute("rel", "noopener noreferrer")), el.tagName === "IMG" && el.setAttribute("draggable", "true"); }), template.innerHTML; }
+} [...el.attributes].forEach(attr => { const name = attr.name.toLowerCase(), value = attr.value.trim(), isAllowed = (el.tagName === "DIV" || el.tagName === "SPAN") && name === "data-mkmed" && /^(?:img|audio|video|file):m_[a-z0-9_]{3,40}$/i.test(value) || (el.tagName === "DIV" || el.tagName === "SPAN") && ["data-fname", "data-fsize", "data-ftype"].includes(name) || el.tagName === "DIV" && el.classList.contains("file-wrapper") && (name === "data-mu-media" && /^m_[a-z0-9_]{3,40}$/i.test(value) || name === "data-fdata" && /^data:audio\/x-mkfile;base64,[A-Za-z0-9+\/=]*$/.test(value)) || el.tagName === "SPAN" && name === "style" && /^--mk-x:#[0-9a-f]{6};?$/i.test(value.replace(/\s+/g, "")) || el.tagName === "SPAN" && name === "style" && /^font-size:\d(?:\.\d{1,3})?em;?$/i.test(value.replace(/\s+/g, "")) || ["class", "id", "contenteditable", "draggable", "aria-label"].includes(name) || el.tagName === "A" && ["href", "target", "rel"].includes(name) || el.tagName === "IMG" && ["src", "alt", "width", "height", "data-mu-media"].includes(name) || el.tagName === "AUDIO" && ["src", "controls", "data-mu-media"].includes(name) || el.tagName === "VIDEO" && ["src", "controls", "playsinline", "preload", "data-mu-media"].includes(name) || el.tagName === "BUTTON" && name === "type" || (el.tagName === "TD" || el.tagName === "TH") && (name === "colspan" || name === "rowspan") && /^(?:[2-9]|[1-9]\d)$/.test(value) || name === "style" && /^(?:width:\d{2,4}px|height:\d{2,3}px);?$/i.test(value.replace(/\s+/g, "")) && (/^(?:width)/i.test(value.replace(/\s+/g, "")) ? el.tagName === "TD" || el.tagName === "TH" : el.tagName === "TR"); (name.startsWith("on") || !isAllowed) && el.removeAttribute(attr.name), name === "href" && !/^(https?:|mailto:)/i.test(value) && el.removeAttribute(attr.name), name === "src" && !/^(https?:|data:image\/|data:audio\/|data:video\/)/i.test(value) && el.removeAttribute(attr.name); }), el.tagName === "A" && (el.setAttribute("target", "_blank"), el.setAttribute("rel", "noopener noreferrer")), el.tagName === "IMG" && el.setAttribute("draggable", "true"); }), template.innerHTML; }
 function getSearchQuery() { const el = document.getElementById("searchInput"); return normalizeText(el ? el.value : ""); }
 function getVisibleCategories() { const query = getSearchQuery(); let visible = currentFolder === "__FAVORITES__" ? categories.filter(c => !!c.favorite) : currentFolder === DEFAULT_FOLDER ? categories : categories.filter(c => window.mu_inFolder(c, currentFolder)); return query ? visible.filter(item => normalizeText(item.name).includes(query) || normalizeText(item.text || item.html || "").includes(query)) : visible; }
 function toggleFolderDeleteMode() { if (isDeleteFolderMode = !isDeleteFolderMode, applyLanguageUI(), renderFolders(), isDeleteFolderMode) {
@@ -25115,7 +25255,7 @@ function mkTitleHex(v) { return typeof v == "string" && /^#[0-9a-f]{6}$/i.test(v
 function mkTitleStyle(item) { const c = item && mkTitleHex(item.titleColor); return c ? "color:" + c + " !important;-webkit-text-fill-color:" + c + " !important" : ""; }
 function mkPaintTitles() { try { const cs = typeof categories != "undefined" ? categories : [], mp = new Map(cs.map(c => [String(c.id), c])); document.querySelectorAll(".custom-btn[data-note-id] .note-item-title, .mu-nfs-card[data-id] .mu-nfs-ttl").forEach(el => { const b = el.closest("[data-note-id],[data-id]"), it = mp.get(String(b.dataset.noteId || b.dataset.id)), c = it && mkTitleHex(it.titleColor); c ? (el.style.setProperty("color", c, "important"), el.style.setProperty("-webkit-text-fill-color", c, "important")) : (el.style.removeProperty("color"), el.style.removeProperty("-webkit-text-fill-color")); }); } catch { } }
 try { let _raf = 0; const _ob = new MutationObserver(ms => { ms.every(m => m.target.closest && m.target.closest(".text-box,.mc-title-input")) || _raf || (_raf = requestAnimationFrame(() => { _raf = 0; mkPaintTitles(); })); }); const _go = () => { document.body ? (_ob.observe(document.body, { childList: true, subtree: true }), mkPaintTitles()) : setTimeout(_go, 200); }; document.readyState === "loading" ? document.addEventListener("DOMContentLoaded", _go) : _go(); } catch { }
-const MXE_IC = { back: '<svg viewBox="0 0 24 24"><path d="M20 12H5M11.5 5.5L5 12l6.5 6.5"/></svg>', focus: '<svg viewBox="0 0 24 24"><path d="M4 9V6a2 2 0 012-2h3M15 4h3a2 2 0 012 2v3M20 15v3a2 2 0 01-2 2h-3M9 20H6a2 2 0 01-2-2v-3"/><circle cx="12" cy="12" r="3.2"/><path class="mxe-slash" d="M3.5 3.5l17 17"/></svg>', fav: '<svg viewBox="0 0 24 24"><path class="fo" d="M12 3.5l2.6 5.4 5.9.8-4.3 4.1 1 5.9-5.2-2.8-5.2 2.8 1-5.9-4.3-4.1 5.9-.8z"/></svg>', pin: '<svg viewBox="0 0 24 24"><path class="fo" d="M9 3h6M10 3v6.2L7 12.5V14h10v-1.5l-3-3.3V3"/><path d="M12 14v7"/></svg>', lockOff: '<svg viewBox="0 0 24 24"><rect x="4.5" y="10.5" width="15" height="10" rx="2.2"/><path d="M8 10.5V8a4 4 0 017.5-1.9"/><circle class="f" cx="12" cy="15.5" r="1.3"/></svg>', lockOn: '<svg viewBox="0 0 24 24"><rect x="4.5" y="10.5" width="15" height="10" rx="2.2"/><path d="M8 10.5V8a4 4 0 018 0v2.5"/><circle class="f" cx="12" cy="15.5" r="1.3"/></svg>', arc: '<svg viewBox="0 0 24 24"><path d="M4 8.5V18a2 2 0 002 2h12a2 2 0 002-2V8.5"/><rect x="3" y="4" width="18" height="4.5" rx="1.3"/><path d="M12 11.5v5.5M9.5 14.6l2.5 2.6 2.5-2.6"/></svg>', save: '<svg viewBox="0 0 24 24"><path d="M5 3h11l3 3v13a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2zM7 3v5h8V3M7 21v-7h10v7"/></svg>', image: '<svg viewBox="0 0 24 24"><rect x="3.5" y="4.5" width="17" height="15" rx="2.5"/><circle cx="9" cy="10" r="1.6"/><path d="M4 17l5-4.5 4 3.5 3-2.5 4 3.5"/></svg>', mic: '<svg viewBox="0 0 24 24"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5.5 11.5a6.5 6.5 0 0013 0M12 18v3"/></svg>', stop: '<svg viewBox="0 0 24 24"><rect x="6" y="6" width="12" height="12" rx="2.5"/></svg>', draw: '<svg viewBox="0 0 24 24"><path d="M4 20l1-4L16.5 4.5a2 2 0 013 3L8 19z"/><path d="M14.5 6.5l3 3"/></svg>', write: '<svg viewBox="0 0 24 24"><path d="M6 15.5L12 3l6 12.5M8.2 11h7.6"/><path d="M5 20.5h14" stroke-width="2.4"/></svg>', undo: '<svg viewBox="0 0 24 24"><path d="M9 14L4 9l5-5M4 9h10.5a5.5 5.5 0 010 11H11"/></svg>', redo: '<svg viewBox="0 0 24 24"><path d="M15 14l5-5-5-5M20 9H9.5a5.5 5.5 0 000 11H13"/></svg>', copy: '<svg viewBox="0 0 24 24"><rect x="8.5" y="8.5" width="12" height="12" rx="2.2"/><path d="M15.5 8.5V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7.5a2 2 0 002 2h2.5"/></svg>', trash: '<svg viewBox="0 0 24 24"><path d="M4 7h16M9.5 7V4.5h5V7M6.5 7l1 13h9l1-13M10 11v6M14 11v6"/></svg>', more: '<svg viewBox="0 0 24 24"><circle class="f" cx="12" cy="5" r="2"/><circle class="f" cx="12" cy="12" r="2"/><circle class="f" cx="12" cy="19" r="2"/></svg>', hide: '<svg viewBox="0 0 24 24"><path d="M2.5 12S6 5.5 12 5.5 21.5 12 21.5 12 18 18.5 12 18.5 2.5 12 2.5 12z"/><circle cx="12" cy="12" r="2.8"/><path d="M4 20L20 4"/></svg>', link: '<svg viewBox="0 0 24 24"><path d="M10 14a4 4 0 005.7 0l3-3a4 4 0 00-5.7-5.7l-1 1M14 10a4 4 0 00-5.7 0l-3 3A4 4 0 0011 18.7l1-1"/></svg>', eye: '<svg viewBox="0 0 24 24"><path d="M2.5 12S6 5.5 12 5.5 21.5 12 21.5 12 18 18.5 12 18.5 2.5 12 2.5 12z"/><circle cx="12" cy="12" r="2.8"/></svg>', search: '<svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="6.5"/><path d="M16 16l4.5 4.5"/></svg>', dna: '<svg viewBox="0 0 24 24"><path d="M7 3c0 6 10 6 10 12s-10 6-10 6M17 3c0 6-10 6-10 12M8 7h8M8 17h8"/></svg>', hint: '<svg viewBox="0 0 24 24"><path d="M9 18h6M10 21h4M12 3a6 6 0 00-3.5 10.9c.6.5 1 1.2 1 2.1h5c0-.9.4-1.6 1-2.1A6 6 0 0012 3z"/></svg>', doc: '<svg viewBox="0 0 24 24"><rect x="5" y="3" width="14" height="18" rx="2"/><path d="M8.5 8h7M8.5 12h7M8.5 16h4"/></svg>', spark: '<svg viewBox="0 0 24 24"><path d="M12 3l1.8 5.2L19 10l-5.2 1.8L12 17l-1.8-5.2L5 10l5.2-1.8zM18.5 15.5l.8 2.2 2.2.8-2.2.8-.8 2.2-.8-2.2-2.2-.8 2.2-.8z"/></svg>', tag: '<svg viewBox="0 0 24 24"><path d="M3 12V4h8l10 10-8 8z"/><circle cx="7.5" cy="8.5" r="1.2"/></svg>', tr: '<svg viewBox="0 0 24 24"><path d="M4 6h9M8.5 4v2M6 6c.5 3 2.5 5.5 5.5 7M11 6c-.5 3-3 6-6.5 7.5M13 20l4-9 4 9M14.4 17h5.2"/></svg>', trEn: '<svg viewBox="0 0 24 24"><path d="M4 7h16M4 12h10M4 17h6"/></svg>', trFa: '<svg viewBox="0 0 24 24"><path d="M20 7H4M20 12H10M20 17h-6"/></svg>', palette: '<svg viewBox="0 0 24 24"><path d="M12 3a9 9 0 100 18c1.2 0 1.9-.9 1.6-1.9-.3-1 .3-2.1 1.4-2.1H17a4 4 0 004-4c0-5-4.3-10-9-10z"/><circle class="f" cx="7.6" cy="11.2" r="1.1"/><circle class="f" cx="10.4" cy="7.2" r="1.1"/><circle class="f" cx="15.2" cy="7.6" r="1.1"/></svg>', dup: '<svg viewBox="0 0 24 24"><rect x="8.5" y="8.5" width="11.5" height="11.5" rx="3"/><path d="M15.5 8.5V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7.5a2 2 0 002 2h2.5"/></svg>', folder: '<svg viewBox="0 0 24 24"><path d="M3 7a2 2 0 012-2h4l2 2.5h8a2 2 0 012 2V18a2 2 0 01-2 2H5a2 2 0 01-2-2z"/></svg>', capsule: '<svg viewBox="0 0 24 24"><circle cx="12" cy="13" r="7.5"/><path d="M12 9v4l2.5 2M9.5 3h5"/></svg>', sun: '<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"/><path d="M12 2.5v2.2M12 19.3v2.2M2.5 12h2.2M19.3 12h2.2M5.3 5.3l1.6 1.6M17.1 17.1l1.6 1.6M18.7 5.3l-1.6 1.6M6.9 17.1l-1.6 1.6"/></svg>', moon: '<svg viewBox="0 0 24 24"><path d="M20 14.5A8 8 0 019.5 4a8 8 0 1010.5 10.5z"/></svg>', ghost: '<svg viewBox="0 0 24 24"><path d="M5 21V11a7 7 0 0114 0v10l-3-2-2 2-2-2-2 2-2-2z"/><circle class="f" cx="9.5" cy="11" r="1"/><circle class="f" cx="14.5" cy="11" r="1"/></svg>' }, MXE_L = { fa: { back: "بازگشت و ذخیره", focus: "حالت تمرکز", fav: "علاقه‌مندی", pin: "سنجاق", enc: "قفل یادداشت", arc: "بایگانی", save: "ذخیره", media: "رسانه", write: "ابزار نوشتن", undo: "واگرد", redo: "جلو", copy: "کپی متن", clear: "پاک‌کردن متن", more: "بیشتر", image: "تصویر", voice: "ضبط صدا", voiceStop: "توقف ضبط", draw: "نقاشی", bold: "پررنگ", italic: "کج", strike: "خط‌خورده", heading: "عنوان", ul: "فهرست", todo: "چک‌لیست", quote: "نقل‌قول", code: "کد", codeMode: "تایپ کپی‌شو", underline: "زیرخط", highlight: "هایلایت", color: "رنگ متن", colorOff: "بدون رنگ", colorCustom: "رنگ دلخواه", titleColor: "رنگ عنوان", ol: "شماره‌دار", table: "جدول", linkf: "لینک", smaller: "کوچک‌تر", bigger: "بزرگ‌تر", clearf: "حذف قالب", normal: "معمولی", size: "اندازه", gQuick: "دسترسی سریع", toDay: "حالت روز", toNight: "حالت شب", gTheme: "تم", gManage: "مدیریت", gSecurity: "امنیت", gTr: "ترجمه", gOrganize: "سازمان‌دهی", gSpecial: "جلوه‌های ویژه", gDanger: "خطر", gInfo: "اطلاعات", view: "نمایش یادداشت", fakeEdit: "ویرایش یادداشت جعلی", fake: "یادداشت جعلی", vault: "افزودن به گاوصندوق", toEn: "ترجمه به انگلیسی", toFa: "ترجمه به فارسی", dup: "تکثیر یادداشت", tags: "برچسب‌ها", folder: "افزودن / حذف پوشه", capsule: "کپسول زمان", ghost: "Ghost", del: "حذف یادداشت", last: "آخرین ویرایش:", never: "ثبت نشده" }, en: { back: "Back (saves)", focus: "Focus mode", fav: "Favorite", pin: "Pin", enc: "Lock note", arc: "Archive", save: "Save", media: "Media", write: "Writing tools", undo: "Undo", redo: "Redo", copy: "Copy text", clear: "Clear text", more: "More", image: "Image", voice: "Voice", voiceStop: "Stop recording", draw: "Drawing", bold: "Bold", italic: "Italic", strike: "Strike", heading: "Heading", ul: "List", todo: "Checklist", quote: "Quote", code: "Code", codeMode: "Tap-copy", underline: "Underline", highlight: "Highlight", color: "Text color", colorOff: "No color", colorCustom: "Custom color", titleColor: "Title color", ol: "Numbered", table: "Table", linkf: "Link", smaller: "Smaller", bigger: "Bigger", clearf: "Clear format", normal: "Normal", size: "Size", gQuick: "Quick actions", toDay: "Day mode", toNight: "Night mode", gTheme: "Theme", gManage: "Manage", gSecurity: "Security", gTr: "Translate", gOrganize: "Organize", gSpecial: "Special effects", gDanger: "Danger", gInfo: "Info", view: "View note", fakeEdit: "Edit fake note", fake: "Fake note", vault: "Add to vault", toEn: "Translate to EN", toFa: "Translate to FA", dup: "Duplicate note", tags: "Tags", folder: "Add / remove folder", capsule: "Time capsule", ghost: "Ghost", del: "Delete note", last: "Last edited:", never: "Not recorded" } };
+const MXE_IC = { back: '<svg viewBox="0 0 24 24"><path d="M20 12H5M11.5 5.5L5 12l6.5 6.5"/></svg>', focus: '<svg viewBox="0 0 24 24"><path d="M4 9V6a2 2 0 012-2h3M15 4h3a2 2 0 012 2v3M20 15v3a2 2 0 01-2 2h-3M9 20H6a2 2 0 01-2-2v-3"/><circle cx="12" cy="12" r="3.2"/><path class="mxe-slash" d="M3.5 3.5l17 17"/></svg>', fav: '<svg viewBox="0 0 24 24"><path class="fo" d="M12 3.5l2.6 5.4 5.9.8-4.3 4.1 1 5.9-5.2-2.8-5.2 2.8 1-5.9-4.3-4.1 5.9-.8z"/></svg>', pin: '<svg viewBox="0 0 24 24"><path class="fo" d="M9 3h6M10 3v6.2L7 12.5V14h10v-1.5l-3-3.3V3"/><path d="M12 14v7"/></svg>', lockOff: '<svg viewBox="0 0 24 24"><rect x="4.5" y="10.5" width="15" height="10" rx="2.2"/><path d="M8 10.5V8a4 4 0 017.5-1.9"/><circle class="f" cx="12" cy="15.5" r="1.3"/></svg>', lockOn: '<svg viewBox="0 0 24 24"><rect x="4.5" y="10.5" width="15" height="10" rx="2.2"/><path d="M8 10.5V8a4 4 0 018 0v2.5"/><circle class="f" cx="12" cy="15.5" r="1.3"/></svg>', arc: '<svg viewBox="0 0 24 24"><path d="M4 8.5V18a2 2 0 002 2h12a2 2 0 002-2V8.5"/><rect x="3" y="4" width="18" height="4.5" rx="1.3"/><path d="M12 11.5v5.5M9.5 14.6l2.5 2.6 2.5-2.6"/></svg>', save: '<svg viewBox="0 0 24 24"><path d="M5 3h11l3 3v13a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2zM7 3v5h8V3M7 21v-7h10v7"/></svg>', image: '<svg viewBox="0 0 24 24"><rect x="3.5" y="4.5" width="17" height="15" rx="2.5"/><circle cx="9" cy="10" r="1.6"/><path d="M4 17l5-4.5 4 3.5 3-2.5 4 3.5"/></svg>', mic: '<svg viewBox="0 0 24 24"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5.5 11.5a6.5 6.5 0 0013 0M12 18v3"/></svg>', stop: '<svg viewBox="0 0 24 24"><rect x="6" y="6" width="12" height="12" rx="2.5"/></svg>', file: '<svg viewBox="0 0 24 24"><path d="M20.5 11.5l-8.2 8.2a5 5 0 01-7.1-7.1l8.5-8.5a3.3 3.3 0 014.7 4.7l-8.4 8.4a1.7 1.7 0 01-2.4-2.4l7.7-7.7"/></svg>', video: '<svg viewBox="0 0 24 24"><rect x="3.5" y="6" width="12" height="12" rx="2.5"/><path d="M15.5 10.5l5-2.5v8l-5-2.5"/></svg>', draw: '<svg viewBox="0 0 24 24"><path d="M4 20l1-4L16.5 4.5a2 2 0 013 3L8 19z"/><path d="M14.5 6.5l3 3"/></svg>', write: '<svg viewBox="0 0 24 24"><path d="M6 15.5L12 3l6 12.5M8.2 11h7.6"/><path d="M5 20.5h14" stroke-width="2.4"/></svg>', undo: '<svg viewBox="0 0 24 24"><path d="M9 14L4 9l5-5M4 9h10.5a5.5 5.5 0 010 11H11"/></svg>', redo: '<svg viewBox="0 0 24 24"><path d="M15 14l5-5-5-5M20 9H9.5a5.5 5.5 0 000 11H13"/></svg>', copy: '<svg viewBox="0 0 24 24"><rect x="8.5" y="8.5" width="12" height="12" rx="2.2"/><path d="M15.5 8.5V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7.5a2 2 0 002 2h2.5"/></svg>', trash: '<svg viewBox="0 0 24 24"><path d="M4 7h16M9.5 7V4.5h5V7M6.5 7l1 13h9l1-13M10 11v6M14 11v6"/></svg>', more: '<svg viewBox="0 0 24 24"><circle class="f" cx="12" cy="5" r="2"/><circle class="f" cx="12" cy="12" r="2"/><circle class="f" cx="12" cy="19" r="2"/></svg>', hide: '<svg viewBox="0 0 24 24"><path d="M2.5 12S6 5.5 12 5.5 21.5 12 21.5 12 18 18.5 12 18.5 2.5 12 2.5 12z"/><circle cx="12" cy="12" r="2.8"/><path d="M4 20L20 4"/></svg>', link: '<svg viewBox="0 0 24 24"><path d="M10 14a4 4 0 005.7 0l3-3a4 4 0 00-5.7-5.7l-1 1M14 10a4 4 0 00-5.7 0l-3 3A4 4 0 0011 18.7l1-1"/></svg>', eye: '<svg viewBox="0 0 24 24"><path d="M2.5 12S6 5.5 12 5.5 21.5 12 21.5 12 18 18.5 12 18.5 2.5 12 2.5 12z"/><circle cx="12" cy="12" r="2.8"/></svg>', search: '<svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="6.5"/><path d="M16 16l4.5 4.5"/></svg>', dna: '<svg viewBox="0 0 24 24"><path d="M7 3c0 6 10 6 10 12s-10 6-10 6M17 3c0 6-10 6-10 12M8 7h8M8 17h8"/></svg>', hint: '<svg viewBox="0 0 24 24"><path d="M9 18h6M10 21h4M12 3a6 6 0 00-3.5 10.9c.6.5 1 1.2 1 2.1h5c0-.9.4-1.6 1-2.1A6 6 0 0012 3z"/></svg>', doc: '<svg viewBox="0 0 24 24"><rect x="5" y="3" width="14" height="18" rx="2"/><path d="M8.5 8h7M8.5 12h7M8.5 16h4"/></svg>', spark: '<svg viewBox="0 0 24 24"><path d="M12 3l1.8 5.2L19 10l-5.2 1.8L12 17l-1.8-5.2L5 10l5.2-1.8zM18.5 15.5l.8 2.2 2.2.8-2.2.8-.8 2.2-.8-2.2-2.2-.8 2.2-.8z"/></svg>', tag: '<svg viewBox="0 0 24 24"><path d="M3 12V4h8l10 10-8 8z"/><circle cx="7.5" cy="8.5" r="1.2"/></svg>', tr: '<svg viewBox="0 0 24 24"><path d="M4 6h9M8.5 4v2M6 6c.5 3 2.5 5.5 5.5 7M11 6c-.5 3-3 6-6.5 7.5M13 20l4-9 4 9M14.4 17h5.2"/></svg>', trEn: '<svg viewBox="0 0 24 24"><path d="M4 7h16M4 12h10M4 17h6"/></svg>', trFa: '<svg viewBox="0 0 24 24"><path d="M20 7H4M20 12H10M20 17h-6"/></svg>', palette: '<svg viewBox="0 0 24 24"><path d="M12 3a9 9 0 100 18c1.2 0 1.9-.9 1.6-1.9-.3-1 .3-2.1 1.4-2.1H17a4 4 0 004-4c0-5-4.3-10-9-10z"/><circle class="f" cx="7.6" cy="11.2" r="1.1"/><circle class="f" cx="10.4" cy="7.2" r="1.1"/><circle class="f" cx="15.2" cy="7.6" r="1.1"/></svg>', dup: '<svg viewBox="0 0 24 24"><rect x="8.5" y="8.5" width="11.5" height="11.5" rx="3"/><path d="M15.5 8.5V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7.5a2 2 0 002 2h2.5"/></svg>', folder: '<svg viewBox="0 0 24 24"><path d="M3 7a2 2 0 012-2h4l2 2.5h8a2 2 0 012 2V18a2 2 0 01-2 2H5a2 2 0 01-2-2z"/></svg>', capsule: '<svg viewBox="0 0 24 24"><circle cx="12" cy="13" r="7.5"/><path d="M12 9v4l2.5 2M9.5 3h5"/></svg>', sun: '<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"/><path d="M12 2.5v2.2M12 19.3v2.2M2.5 12h2.2M19.3 12h2.2M5.3 5.3l1.6 1.6M17.1 17.1l1.6 1.6M18.7 5.3l-1.6 1.6M6.9 17.1l-1.6 1.6"/></svg>', moon: '<svg viewBox="0 0 24 24"><path d="M20 14.5A8 8 0 019.5 4a8 8 0 1010.5 10.5z"/></svg>', ghost: '<svg viewBox="0 0 24 24"><path d="M5 21V11a7 7 0 0114 0v10l-3-2-2 2-2-2-2 2-2-2z"/><circle class="f" cx="9.5" cy="11" r="1"/><circle class="f" cx="14.5" cy="11" r="1"/></svg>' }, MXE_L = { fa: { back: "بازگشت و ذخیره", focus: "حالت تمرکز", fav: "علاقه‌مندی", pin: "سنجاق", enc: "قفل یادداشت", arc: "بایگانی", save: "ذخیره", media: "رسانه", write: "ابزار نوشتن", undo: "واگرد", redo: "جلو", copy: "کپی متن", clear: "پاک‌کردن متن", more: "بیشتر", image: "تصویر", voice: "ضبط صدا", voiceStop: "توقف ضبط", file: "فایل", video: "ویدیو", draw: "نقاشی", bold: "پررنگ", italic: "کج", strike: "خط‌خورده", heading: "عنوان", ul: "فهرست", todo: "چک‌لیست", quote: "نقل‌قول", code: "کد", codeMode: "تایپ کپی‌شو", underline: "زیرخط", highlight: "هایلایت", color: "رنگ متن", colorOff: "بدون رنگ", colorCustom: "رنگ دلخواه", titleColor: "رنگ عنوان", ol: "شماره‌دار", table: "جدول", linkf: "لینک", smaller: "کوچک‌تر", bigger: "بزرگ‌تر", clearf: "حذف قالب", normal: "معمولی", size: "اندازه", gQuick: "دسترسی سریع", toDay: "حالت روز", toNight: "حالت شب", gTheme: "تم", gManage: "مدیریت", gSecurity: "امنیت", gTr: "ترجمه", gOrganize: "سازمان‌دهی", gSpecial: "جلوه‌های ویژه", gDanger: "خطر", gInfo: "اطلاعات", view: "نمایش یادداشت", fakeEdit: "ویرایش یادداشت جعلی", fake: "یادداشت جعلی", vault: "افزودن به گاوصندوق", toEn: "ترجمه به انگلیسی", toFa: "ترجمه به فارسی", dup: "تکثیر یادداشت", tags: "برچسب‌ها", folder: "افزودن / حذف پوشه", capsule: "کپسول زمان", ghost: "Ghost", del: "حذف یادداشت", last: "آخرین ویرایش:", never: "ثبت نشده" }, en: { back: "Back (saves)", focus: "Focus mode", fav: "Favorite", pin: "Pin", enc: "Lock note", arc: "Archive", save: "Save", media: "Media", write: "Writing tools", undo: "Undo", redo: "Redo", copy: "Copy text", clear: "Clear text", more: "More", image: "Image", voice: "Voice", voiceStop: "Stop recording", file: "File", video: "Video", draw: "Drawing", bold: "Bold", italic: "Italic", strike: "Strike", heading: "Heading", ul: "List", todo: "Checklist", quote: "Quote", code: "Code", codeMode: "Tap-copy", underline: "Underline", highlight: "Highlight", color: "Text color", colorOff: "No color", colorCustom: "Custom color", titleColor: "Title color", ol: "Numbered", table: "Table", linkf: "Link", smaller: "Smaller", bigger: "Bigger", clearf: "Clear format", normal: "Normal", size: "Size", gQuick: "Quick actions", toDay: "Day mode", toNight: "Night mode", gTheme: "Theme", gManage: "Manage", gSecurity: "Security", gTr: "Translate", gOrganize: "Organize", gSpecial: "Special effects", gDanger: "Danger", gInfo: "Info", view: "View note", fakeEdit: "Edit fake note", fake: "Fake note", vault: "Add to vault", toEn: "Translate to EN", toFa: "Translate to FA", dup: "Duplicate note", tags: "Tags", folder: "Add / remove folder", capsule: "Time capsule", ghost: "Ghost", del: "Delete note", last: "Last edited:", never: "Not recorded" } };
 function mxe_getTheme() { try {
     return localStorage.getItem("mxe_theme") === "light" ? "light" : "dark";
 }
@@ -25126,7 +25266,7 @@ catch {
 // top: back, A+ / A-, focus, day / night, favorite, pin, lock, archive, save.
 // bottom: media, writing tools, undo / redo, copy, delete, view, more (each popover opens upward).
 // ctx: { fa, t, isHidden, isRecordingThis, lastEditedText }
-function mxe_markup(item, ctx) { const fa = !!ctx.fa, L = MXE_L[fa ? "fa" : "en"], t = ctx.t || {}, locked = isNoteLocked(item), focusOn = !!(window.__mxeFocus && window.__mxeFocus.has(String(item.id))), q = s => escapeHtml(String(s)), btn = (act, cls, label, icon, extra) => `<button type="button" class="mxe-btn ${cls || ""}" data-mxe="${act}" aria-label="${q(label)}" title="${q(label)}" ${extra || ""}>${icon}</button>`, pitem = (act, icon, label, cls, extra) => `<button type="button" class="${cls || ""}" data-mxe="${act}" ${extra || ""}>${icon}<span>${q(label)}</span></button>`, fmt = (k, glyph, label) => `<button type="button" data-mxe="fmt:${k}" data-fmtk="${k}">${glyph}<span>${q(label)}</span></button>`, top = '<div class="mxe-top">' + btn("back", "mxe-back", L.back, MXE_IC.back) + btn("focus", "mxe-focus-btn" + (focusOn ? " on" : ""), L.focus, MXE_IC.focus, `aria-pressed="${focusOn}"`) + '<div class="mxe-grp mxe-grp-t">' + btn("fmt:bigger", "mxe-txt", L.bigger, "<b>A+</b>") + btn("fmt:smaller", "mxe-txt", L.smaller, "<b>A-</b>") + '</div><div class="mxe-grp mxe-grp-t mxe-grp-s">' + btn("flag:favorite", "mxe-fillon" + (item.favorite ? " mc-icon-active" : ""), L.fav, MXE_IC.fav, 'data-flag="favorite"') + btn("flag:pinned", "mxe-fillon" + (item.pinned ? " mc-icon-active" : ""), L.pin, MXE_IC.pin, 'data-flag="pinned"') + btn("archive", "mxe-lock-btn mxe-arc-btn" + (item.archived ? " on" : ""), L.arc, MXE_IC.arc) + btn("lock", "mxe-lock-btn" + (locked ? " on" : ""), L.enc, locked ? MXE_IC.lockOn : MXE_IC.lockOff) + '</div>' + btn("theme:toggle", "mxe-theme-btn", L.toDay + " / " + L.toNight, MXE_IC.sun.replace("<svg ", '<svg class="ic-sun" ') + MXE_IC.moon.replace("<svg ", '<svg class="ic-moon" ')) + btn("save", "", L.save, MXE_IC.save) + "</div>", sizes = [12, 13, 15, 16, 18, 22, 28], curSize = Number(item.fontSize) || 16; sizes.indexOf(curSize) < 0 && (sizes.push(curSize), sizes.sort((a, b) => a - b)); const sizeOpts = sizes.map(n => `<option value="${n}" ${n === curSize ? "selected" : ""}>${n}</option>`).join(""), rec = !!ctx.isRecordingThis, bottom = '<div class="mxe-bottom"><div class="mxe-pop l" data-pop="media">' + pitem("media:image", MXE_IC.image, L.image) + pitem("media:voice", rec ? MXE_IC.stop : MXE_IC.mic, rec ? L.voiceStop : L.voice, rec ? "danger" : "") + pitem("media:draw", MXE_IC.draw, L.draw) + '</div><div class="mxe-pop l' + (window.__mxeWriteClosed && window.__mxeWriteClosed.has(String(item.id)) ? '' : ' open') + '" data-pop="write"><div class="grid">' + fmt("color", '<span class="mxe-cico">A</span>', L.color) + fmt("bold", '<b style="font-size:18px">B</b>', L.bold) + fmt("highlight", '<span style="font-size:15px;font-weight:800;background:#ffeb3b;color:#111;padding:0 6px;border-radius:4px;line-height:1.4">A</span>', L.highlight) + fmt("strike", '<s style="font-size:18px">S</s>', L.strike) + fmt("underline", '<u style="font-size:18px">U</u>', L.underline) + fmt("heading", '<b style="font-size:16px">H</b>', L.heading) + fmt("ol", '<span style="font-size:15px">1.</span>', L.ol) + fmt("quote", '<span style="font-size:20px">”</span>', L.quote) + `<button type="button" class="mxe-wexp" aria-expanded="false" aria-label="${q(fa ? "ابزارهای بیشتر" : "More tools")}" title="${q(fa ? "ابزارهای بیشتر" : "More tools")}"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg></button>` + fmt("normal", '<span style="font-size:15px;font-weight:700">Aa</span>', L.normal) + fmt("italic", '<i style="font-size:18px;font-family:serif">I</i>', L.italic) + fmt("codeMode", '<span style="font-size:15px;font-family:monospace;font-weight:800">`·`</span>', L.codeMode) + fmt("table", '<svg width="22" height="22" viewBox="0 0 22 22" aria-hidden="true" fill="none"><rect x="2.5" y="3.5" width="17" height="15" rx="3" stroke="currentColor" stroke-width="1.5"/><path d="M5.5 3.5h11a3 3 0 0 1 3 3V9h-17V6.5a3 3 0 0 1 3-3z" fill="#4cc9f0" fill-opacity=".55"/><path d="M2.5 9h17M2.5 13.75h17M9 9v9.5M14.5 9v9.5" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg>', L.table) + fmt("todo", '<span style="font-size:18px">☐</span>', L.todo) + fmt("ul", '<span style="font-size:18px">•</span>', L.ul) + fmt("link", MXE_IC.link, L.linkf) + fmt("code", '<span style="font-size:14px;font-family:monospace">&lt;/&gt;</span>', L.code) + fmt("clear", '<span style="font-size:18px">✕</span>', L.clearf) + `<div class="szrow"><label>${q(L.size)}</label><select class="mxe-size" data-mxe-size="1">${sizeOpts}</select></div></div><div class="mxe-colors" role="group" aria-label="${q(L.color)}"><span class="mxe-collab">${q(L.color)}</span>${MXE_COLORS.map((c, i) => `<button type="button" class="mxe-sw" data-mxe="fmt:color:${i + 1}" data-sw="${i + 1}" style="--sw:${c}" aria-label="${q(L.color)} ${i + 1}"></button>`).join("")}<button type="button" class="mxe-sw custom" data-mxe="fmt:cpick" title="${q(L.colorCustom)}" aria-label="${q(L.colorCustom)}"></button><button type="button" class="mxe-sw none" data-mxe="fmt:color:0" data-sw="0" title="${q(L.colorOff)}" aria-label="${q(L.colorOff)}">✕</button></div><div class="mxe-colors tt" role="group" aria-label="${q(L.titleColor)}"><span class="mxe-collab">${q(L.titleColor)}</span>${MXE_COLORS.map((c, i) => `<button type="button" class="mxe-sw" data-mxe="fmt:tcolor:${i + 1}" data-tsw="${i + 1}" style="--sw:${c}" aria-label="${q(L.titleColor)} ${i + 1}"></button>`).join("")}<button type="button" class="mxe-sw custom" data-mxe="fmt:tcpick" title="${q(L.colorCustom)}" aria-label="${q(L.colorCustom)}"></button><button type="button" class="mxe-sw none" data-mxe="fmt:tcolor:0" data-tsw="0" title="${q(L.colorOff)}" aria-label="${q(L.colorOff)}">✕</button></div></div><div class="mxe-pop r" data-pop="trash">` + pitem("clear", MXE_IC.trash, fa ? "حذف متن یادداشت" : "Delete note text") + pitem("more:delete", MXE_IC.trash, fa ? "حذف خود یادداشت" : "Delete the note itself", "danger") + '</div><div class="mxe-pop r" data-pop="more"><span class="mxm-handle" aria-hidden="true"></span>' + pitem("more:find", MXE_IC.search, fa ? "جستجو در یادداشت" : "Search in note", "mxm-search") + '<div class="mxm-quick">' + pitem("save", MXE_IC.save, L.save) + pitem("archive", MXE_IC.arc, L.arc, item.archived ? "on" : "") + pitem("more:view", MXE_IC.eye, fa ? "نمایش" : "View") + pitem("focus", MXE_IC.focus, fa ? "تمرکز" : "Focus", focusOn ? "on" : "") + pitem("flag:pinned", MXE_IC.pin, L.pin, "mxe-fillon") + pitem("flag:favorite", MXE_IC.fav, L.fav, "mxe-fillon") + '</div><div class="mxm-seg" role="group">' + pitem("theme:light", MXE_IC.sun, L.toDay, "", 'data-theme-opt="light"') + pitem("theme:dark", MXE_IC.moon, L.toNight, "", 'data-theme-opt="dark"') + `</div><div class="mxm-sec"><div class="grp">${q(L.gOrganize)}</div><div class="mxm-list">` + pitem("more:folder", MXE_IC.folder, L.folder) + pitem("more:tags", MXE_IC.tag, L.tags) + pitem("more:color", MXE_IC.palette, fa ? "رنگ یادداشت" : "Colour") + pitem("more:bxc", MXE_IC.palette, window.MK_Bxc ? MK_Bxc.label(fa) : (fa ? "رنگ کادرها" : "Box colours")) + pitem("more:dup", MXE_IC.dup, L.dup) + `</div></div><div class="mxm-sec"><div class="grp">${q(L.gManage)}</div><div class="mxm-list">` + pitem("more:hide", MXE_IC.hide, ctx.isHidden ? t.show || "Show" : t.hide || "Hide") + pitem("more:link", MXE_IC.link, t.previewLink || "Link preview") + pitem("more:dna", MXE_IC.dna, "DNA") + pitem("more:fade", MXE_IC.eye, window.MK_EdFade ? MK_EdFade.label(fa) : (fa ? "محو شدن متن زیر نوارها" : "Fade text under bars"), window.MK_EdFade && MK_EdFade.on() ? "on" : "", 'aria-pressed="' + (window.MK_EdFade && MK_EdFade.on() ? "true" : "false") + '"') + `</div></div><div class="mxm-sec"><div class="grp">${q(L.gSecurity)}</div><div class="mxm-list">` + pitem("lock", locked ? MXE_IC.lockOn : MXE_IC.lockOff, L.enc) + (locked ? pitem("more:hint", MXE_IC.hint, t.changeHint || "Change hint") : "") + pitem("more:fake", MXE_IC.doc, item.fakeContent ? L.fakeEdit : L.fake) + pitem("more:vault", MXE_IC.lockOn, L.vault) + `</div></div><div class="mxm-sec"><div class="grp">${q(L.gTr)}</div><div class="mxm-list">` + pitem("more:toen", MXE_IC.trEn, L.toEn) + pitem("more:tofa", MXE_IC.trFa, L.toFa) + `</div></div><div class="mxm-sec"><div class="grp">${q(L.gSpecial)}</div><div class="mxm-list">` + pitem("more:capsule", MXE_IC.capsule, L.capsule) + pitem("more:ghost", MXE_IC.ghost, L.ghost) + "</div></div>" + pitem("more:delete", MXE_IC.trash, L.del, "danger mxm-danger") + `<div class="info">${q(L.last)} <span dir="ltr" class="mxe-info-val">${q(ctx.lastEditedText || L.never)}</span></div></div>` + '<div class="mxe-grp mxe-grp-a">' + btn("pop:media", rec ? "warn" : "", L.media, MXE_IC.image) + btn("pop:write", "", L.write, MXE_IC.write) + btn("undo", "mxe-undo", L.undo, MXE_IC.undo) + btn("redo", "mxe-redo", L.redo, MXE_IC.redo) + btn("more:tags", "", L.tags, MXE_IC.tag) + btn("copy", "", L.copy, MXE_IC.copy) + btn("pop:trash", "", fa ? "حذف" : "Delete", MXE_IC.trash) + '</div><span class="mxe-sp"></span><div class="mxe-grp mxe-grp-b">' + btn("more:view", "mxe-viewnote", L.view, `<span class="mxe-vlbl">${fa ? "نمایش" : "View"}</span>`) + btn("pop:more", "mxe-more", L.more, MXE_IC.more) + "</div></div>"; return { top: top, bottom: bottom }; }
+function mxe_markup(item, ctx) { const fa = !!ctx.fa, L = MXE_L[fa ? "fa" : "en"], t = ctx.t || {}, locked = isNoteLocked(item), focusOn = !!(window.__mxeFocus && window.__mxeFocus.has(String(item.id))), q = s => escapeHtml(String(s)), btn = (act, cls, label, icon, extra) => `<button type="button" class="mxe-btn ${cls || ""}" data-mxe="${act}" aria-label="${q(label)}" title="${q(label)}" ${extra || ""}>${icon}</button>`, pitem = (act, icon, label, cls, extra) => `<button type="button" class="${cls || ""}" data-mxe="${act}" ${extra || ""}>${icon}<span>${q(label)}</span></button>`, fmt = (k, glyph, label) => `<button type="button" data-mxe="fmt:${k}" data-fmtk="${k}">${glyph}<span>${q(label)}</span></button>`, top = '<div class="mxe-top">' + btn("back", "mxe-back", L.back, MXE_IC.back) + btn("focus", "mxe-focus-btn" + (focusOn ? " on" : ""), L.focus, MXE_IC.focus, `aria-pressed="${focusOn}"`) + '<div class="mxe-grp mxe-grp-t">' + btn("fmt:bigger", "mxe-txt", L.bigger, "<b>A+</b>") + btn("fmt:smaller", "mxe-txt", L.smaller, "<b>A-</b>") + '</div><div class="mxe-grp mxe-grp-t mxe-grp-s">' + btn("flag:favorite", "mxe-fillon" + (item.favorite ? " mc-icon-active" : ""), L.fav, MXE_IC.fav, 'data-flag="favorite"') + btn("flag:pinned", "mxe-fillon" + (item.pinned ? " mc-icon-active" : ""), L.pin, MXE_IC.pin, 'data-flag="pinned"') + btn("archive", "mxe-lock-btn mxe-arc-btn" + (item.archived ? " on" : ""), L.arc, MXE_IC.arc) + btn("lock", "mxe-lock-btn" + (locked ? " on" : ""), L.enc, locked ? MXE_IC.lockOn : MXE_IC.lockOff) + '</div>' + btn("theme:toggle", "mxe-theme-btn", L.toDay + " / " + L.toNight, MXE_IC.sun.replace("<svg ", '<svg class="ic-sun" ') + MXE_IC.moon.replace("<svg ", '<svg class="ic-moon" ')) + btn("save", "", L.save, MXE_IC.save) + "</div>", sizes = [12, 13, 15, 16, 18, 22, 28], curSize = Number(item.fontSize) || 16; sizes.indexOf(curSize) < 0 && (sizes.push(curSize), sizes.sort((a, b) => a - b)); const sizeOpts = sizes.map(n => `<option value="${n}" ${n === curSize ? "selected" : ""}>${n}</option>`).join(""), rec = !!ctx.isRecordingThis, bottom = '<div class="mxe-bottom"><div class="mxe-pop l" data-pop="media">' + pitem("media:image", MXE_IC.image, L.image) + pitem("media:video", MXE_IC.video, L.video) + pitem("media:voice", rec ? MXE_IC.stop : MXE_IC.mic, rec ? L.voiceStop : L.voice, rec ? "danger" : "") + pitem("media:file", MXE_IC.file, L.file) + pitem("media:draw", MXE_IC.draw, L.draw) + '</div><div class="mxe-pop l' + (window.__mxeWriteClosed && window.__mxeWriteClosed.has(String(item.id)) ? '' : ' open') + '" data-pop="write"><div class="grid">' + fmt("color", '<span class="mxe-cico">A</span>', L.color) + fmt("bold", '<b style="font-size:18px">B</b>', L.bold) + fmt("highlight", '<span style="font-size:15px;font-weight:800;background:#ffeb3b;color:#111;padding:0 6px;border-radius:4px;line-height:1.4">A</span>', L.highlight) + fmt("strike", '<s style="font-size:18px">S</s>', L.strike) + fmt("underline", '<u style="font-size:18px">U</u>', L.underline) + fmt("heading", '<b style="font-size:16px">H</b>', L.heading) + fmt("ol", '<span style="font-size:15px">1.</span>', L.ol) + fmt("quote", '<span style="font-size:20px">”</span>', L.quote) + `<button type="button" class="mxe-wexp" aria-expanded="false" aria-label="${q(fa ? "ابزارهای بیشتر" : "More tools")}" title="${q(fa ? "ابزارهای بیشتر" : "More tools")}"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg></button>` + fmt("normal", '<span style="font-size:15px;font-weight:700">Aa</span>', L.normal) + fmt("italic", '<i style="font-size:18px;font-family:serif">I</i>', L.italic) + fmt("codeMode", '<span style="font-size:15px;font-family:monospace;font-weight:800">`·`</span>', L.codeMode) + fmt("table", '<svg width="22" height="22" viewBox="0 0 22 22" aria-hidden="true" fill="none"><rect x="2.5" y="3.5" width="17" height="15" rx="3" stroke="currentColor" stroke-width="1.5"/><path d="M5.5 3.5h11a3 3 0 0 1 3 3V9h-17V6.5a3 3 0 0 1 3-3z" fill="#4cc9f0" fill-opacity=".55"/><path d="M2.5 9h17M2.5 13.75h17M9 9v9.5M14.5 9v9.5" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg>', L.table) + fmt("todo", '<span style="font-size:18px">☐</span>', L.todo) + fmt("ul", '<span style="font-size:18px">•</span>', L.ul) + fmt("link", MXE_IC.link, L.linkf) + fmt("code", '<span style="font-size:14px;font-family:monospace">&lt;/&gt;</span>', L.code) + fmt("clear", '<span style="font-size:18px">✕</span>', L.clearf) + `<div class="szrow"><label>${q(L.size)}</label><select class="mxe-size" data-mxe-size="1">${sizeOpts}</select></div></div><div class="mxe-colors" role="group" aria-label="${q(L.color)}"><span class="mxe-collab">${q(L.color)}</span>${MXE_COLORS.map((c, i) => `<button type="button" class="mxe-sw" data-mxe="fmt:color:${i + 1}" data-sw="${i + 1}" style="--sw:${c}" aria-label="${q(L.color)} ${i + 1}"></button>`).join("")}<button type="button" class="mxe-sw custom" data-mxe="fmt:cpick" title="${q(L.colorCustom)}" aria-label="${q(L.colorCustom)}"></button><button type="button" class="mxe-sw none" data-mxe="fmt:color:0" data-sw="0" title="${q(L.colorOff)}" aria-label="${q(L.colorOff)}">✕</button></div><div class="mxe-colors tt" role="group" aria-label="${q(L.titleColor)}"><span class="mxe-collab">${q(L.titleColor)}</span>${MXE_COLORS.map((c, i) => `<button type="button" class="mxe-sw" data-mxe="fmt:tcolor:${i + 1}" data-tsw="${i + 1}" style="--sw:${c}" aria-label="${q(L.titleColor)} ${i + 1}"></button>`).join("")}<button type="button" class="mxe-sw custom" data-mxe="fmt:tcpick" title="${q(L.colorCustom)}" aria-label="${q(L.colorCustom)}"></button><button type="button" class="mxe-sw none" data-mxe="fmt:tcolor:0" data-tsw="0" title="${q(L.colorOff)}" aria-label="${q(L.colorOff)}">✕</button></div></div><div class="mxe-pop r" data-pop="trash">` + pitem("clear", MXE_IC.trash, fa ? "حذف متن یادداشت" : "Delete note text") + pitem("more:delete", MXE_IC.trash, fa ? "حذف خود یادداشت" : "Delete the note itself", "danger") + '</div><div class="mxe-pop r" data-pop="more"><span class="mxm-handle" aria-hidden="true"></span>' + pitem("more:find", MXE_IC.search, fa ? "جستجو در یادداشت" : "Search in note", "mxm-search") + '<div class="mxm-quick">' + pitem("save", MXE_IC.save, L.save) + pitem("archive", MXE_IC.arc, L.arc, item.archived ? "on" : "") + pitem("more:view", MXE_IC.eye, fa ? "نمایش" : "View") + pitem("focus", MXE_IC.focus, fa ? "تمرکز" : "Focus", focusOn ? "on" : "") + pitem("flag:pinned", MXE_IC.pin, L.pin, "mxe-fillon") + pitem("flag:favorite", MXE_IC.fav, L.fav, "mxe-fillon") + '</div><div class="mxm-seg" role="group">' + pitem("theme:light", MXE_IC.sun, L.toDay, "", 'data-theme-opt="light"') + pitem("theme:dark", MXE_IC.moon, L.toNight, "", 'data-theme-opt="dark"') + `</div><div class="mxm-sec"><div class="grp">${q(L.gOrganize)}</div><div class="mxm-list">` + pitem("more:folder", MXE_IC.folder, L.folder) + pitem("more:tags", MXE_IC.tag, L.tags) + pitem("more:color", MXE_IC.palette, fa ? "رنگ یادداشت" : "Colour") + pitem("more:bxc", MXE_IC.palette, window.MK_Bxc ? MK_Bxc.label(fa) : (fa ? "رنگ کادرها" : "Box colours")) + pitem("more:dup", MXE_IC.dup, L.dup) + `</div></div><div class="mxm-sec"><div class="grp">${q(L.gManage)}</div><div class="mxm-list">` + pitem("more:hide", MXE_IC.hide, ctx.isHidden ? t.show || "Show" : t.hide || "Hide") + pitem("more:link", MXE_IC.link, t.previewLink || "Link preview") + pitem("more:dna", MXE_IC.dna, "DNA") + pitem("more:fade", MXE_IC.eye, window.MK_EdFade ? MK_EdFade.label(fa) : (fa ? "محو شدن متن زیر نوارها" : "Fade text under bars"), window.MK_EdFade && MK_EdFade.on() ? "on" : "", 'aria-pressed="' + (window.MK_EdFade && MK_EdFade.on() ? "true" : "false") + '"') + `</div></div><div class="mxm-sec"><div class="grp">${q(L.gSecurity)}</div><div class="mxm-list">` + pitem("lock", locked ? MXE_IC.lockOn : MXE_IC.lockOff, L.enc) + (locked ? pitem("more:hint", MXE_IC.hint, t.changeHint || "Change hint") : "") + pitem("more:fake", MXE_IC.doc, item.fakeContent ? L.fakeEdit : L.fake) + pitem("more:vault", MXE_IC.lockOn, L.vault) + `</div></div><div class="mxm-sec"><div class="grp">${q(L.gTr)}</div><div class="mxm-list">` + pitem("more:toen", MXE_IC.trEn, L.toEn) + pitem("more:tofa", MXE_IC.trFa, L.toFa) + `</div></div><div class="mxm-sec"><div class="grp">${q(L.gSpecial)}</div><div class="mxm-list">` + pitem("more:capsule", MXE_IC.capsule, L.capsule) + pitem("more:ghost", MXE_IC.ghost, L.ghost) + "</div></div>" + pitem("more:delete", MXE_IC.trash, L.del, "danger mxm-danger") + `<div class="info">${q(L.last)} <span dir="ltr" class="mxe-info-val">${q(ctx.lastEditedText || L.never)}</span></div></div>` + '<div class="mxe-grp mxe-grp-a">' + btn("pop:media", rec ? "warn" : "", L.media, MXE_IC.image) + btn("pop:write", "", L.write, MXE_IC.write) + btn("undo", "mxe-undo", L.undo, MXE_IC.undo) + btn("redo", "mxe-redo", L.redo, MXE_IC.redo) + btn("more:tags", "", L.tags, MXE_IC.tag) + btn("copy", "", L.copy, MXE_IC.copy) + btn("pop:trash", "", fa ? "حذف" : "Delete", MXE_IC.trash) + '</div><span class="mxe-sp"></span><div class="mxe-grp mxe-grp-b">' + btn("more:view", "mxe-viewnote", L.view, `<span class="mxe-vlbl">${fa ? "نمایش" : "View"}</span>`) + btn("pop:more", "mxe-more", L.more, MXE_IC.more) + "</div></div>"; return { top: top, bottom: bottom }; }
 // Slim tag row just above the bottom bar: one #tag chip per tag (tap / long-press opens Edit / Delete).
 // Empty — and hidden by CSS :empty — when the note has no tags, is a fake (decoy) note or is hidden.
 function mxe_tagbarInner(item) { try {
@@ -25443,6 +25583,164 @@ function insertAudioToNote(id, audioSrc, mediaId) { const textBox = document.get
     // Same top dashed-line frame images/drawings get: a blank writable line above (if the note is empty so
     // far) or just a plain dashed divider under existing text
     const wrapper = document.createElement("div"); wrapper.className = "audio-wrapper", wrapper.contentEditable = "false"; const audioEl = document.createElement("audio"); audioEl.controls = !0, audioEl.src = audioSrc, mediaId && (audioEl.dataset.muMedia = mediaId), mu_fixAudioDuration(audioEl); const delBtn = document.createElement("button"); delBtn.className = "img-btn", delBtn.innerText = "✖", delBtn.onclick = () => { confirm(i18n[currentLang].confirmDelete) && (mu_removeMediaWrapper(wrapper), saveCategory(id)); }, wrapper.appendChild(audioEl), wrapper.appendChild(delBtn), mu_prepareImgAboveInsertion(textBox), textBox.appendChild(wrapper); const belowLine = mu_createImgBelowLine(); textBox.appendChild(belowLine), saveCategory(id), setTimeout(() => mu_focusImgBelowLine(belowLine), 30); }
+/* ===== File attachments: any file (js, sql, zip, pdf ...) can be added to a note. Same dashed frame lines as images;
+   the bytes live in the media store (data-mu-media), so media sync, the vault, the private backup and the cloud
+   placeholders all carry them like images / voice notes. The wrapper also has the audio-wrapper class so every
+   existing "media block" code path (move, delete, frame lines, viewer editing, export stripping) treats it as one. ===== */
+function mu_fileFmtSize(n) { n = +n || 0; return n < 1024 ? n + " B" : n < 1048576 ? (n / 1024).toFixed(1) + " KB" : n < 1073741824 ? (n / 1048576).toFixed(n < 10485760 ? 2 : 1) + " MB" : (n / 1073741824).toFixed(2) + " GB"; }
+function mu_fileExt(name) { const m = /\.([A-Za-z0-9]{1,8})$/.exec(String(name || "")); return m ? m[1].toUpperCase().slice(0, 4) : ""; }
+function mu_fileFillChip(w, force) {
+    if (!w || !w.querySelector)
+        return;
+    let chip = w.querySelector(".file-chip");
+    if (chip && !force && chip.querySelector(".file-name"))
+        return;
+    if (!chip) {
+        chip = document.createElement("span");
+        chip.className = "file-chip";
+        w.insertBefore(chip, w.firstChild);
+    }
+    const name = w.getAttribute("data-fname") || (currentLang === "fa" ? "فایل" : "file"), size = +w.getAttribute("data-fsize") || 0, ext = mu_fileExt(name);
+    const ic = document.createElement("span");
+    ic.className = "file-ic" + (ext ? " has-ext" : ""), ic.textContent = ext || "📎";
+    const info = document.createElement("span");
+    info.className = "file-info";
+    const nm = document.createElement("span");
+    nm.className = "file-name", nm.textContent = name;
+    const sz = document.createElement("span");
+    sz.className = "file-size", sz.textContent = size ? mu_fileFmtSize(size) : "";
+    info.appendChild(nm), info.appendChild(document.createTextNode(" ")), info.appendChild(sz);
+    chip.textContent = "", chip.appendChild(ic), chip.appendChild(document.createTextNode(" ")), chip.appendChild(info);
+}
+function mu_buildFileWrapper(mediaId, meta) {
+    meta = meta || {};
+    const w = document.createElement("div");
+    w.className = "audio-wrapper file-wrapper", w.contentEditable = "false";
+    mediaId && w.setAttribute("data-mu-media", mediaId);
+    meta.name && w.setAttribute("data-fname", String(meta.name).slice(0, 180));
+    +meta.size > 0 && w.setAttribute("data-fsize", String(Math.round(+meta.size)));
+    meta.type && /^[\w.+-]+\/[\w.+-]+$/.test(meta.type) && w.setAttribute("data-ftype", String(meta.type));
+    mu_fileFillChip(w, !0);
+    const del = document.createElement("button");
+    del.type = "button", del.className = "img-btn", del.innerText = "✖";
+    w.appendChild(del);
+    return w;
+}
+async function mu_fileDownload(w) {
+    const id = w.getAttribute("data-mu-media"), name = w.getAttribute("data-fname") || "file", type = w.getAttribute("data-ftype") || "application/octet-stream";
+    let blob = null;
+    try {
+        id && (blob = await MU_MEDIA.get(id));
+    }
+    catch { }
+    if (!blob) {
+        const d = w.getAttribute("data-fdata");
+        if (d)
+            try {
+                blob = await (await fetch(d)).blob();
+            }
+            catch { }
+    }
+    if (!blob) {
+        typeof showToast == "function" && showToast(currentLang === "fa" ? "فایل روی این دستگاه نیست؛ باید با بکاپ رسانه‌ای دریافت شود." : "This file is not on this device yet; it has to arrive through media backup.");
+        return;
+    }
+    try {
+        await triggerDownload(new Blob([blob], { type: type }), name, type);
+    }
+    catch (e) {
+        console.warn("file download failed", e);
+    }
+}
+document.addEventListener("click", function (e) {
+    const chip = e.target && e.target.closest && e.target.closest(".file-wrapper .file-chip");
+    if (!chip)
+        return;
+    const w = chip.closest(".file-wrapper");
+    if (!w || w.hasAttribute("data-mkst"))
+        return;
+    e.preventDefault(), e.stopPropagation(), mu_fileDownload(w);
+});
+function triggerFileUpload(id) { const el = document.getElementById(`file-input-${id}`); el && el.click(); }
+async function insertFileToNote(id, event) {
+    const files = event.target.files ? Array.from(event.target.files) : [];
+    if (event.target.value = "", !files.length)
+        return;
+    const textBox = document.getElementById(`text-${id}`);
+    if (!textBox)
+        return;
+    const fa = currentLang === "fa";
+    let lastBelow = null, added = 0;
+    for (const file of files) {
+        // Stored as an opaque blob (never recompressed); real name / size / type travel as attributes of the wrapper
+        const mediaId = await mu_mediaPut(new Blob([file], { type: "application/octet-stream" }));
+        if (!mediaId) {
+            typeof showToast == "function" && showToast(fa ? "ذخیره‌ی فایل ممکن نشد (حافظه‌ی مرورگر در دسترس نیست)." : "Could not store the file (browser storage is unavailable).");
+            continue;
+        }
+        file.size > 49 * 1024 * 1024 && typeof showToast == "function" && showToast(fa ? "این فایل از ۴۹ مگابایت بیشتر است و در بکاپ رسانه‌ای (تلگرام) آپلود نمی‌شود." : "This file is over 49 MB, so Telegram media backup cannot upload it.");
+        const wrapper = mu_buildFileWrapper(mediaId, { name: file.name, size: file.size, type: file.type });
+        wrapper.dataset.muHydratedFor = mediaId;
+        const delBtn = wrapper.querySelector("button");
+        delBtn.onclick = e => { e.preventDefault(), e.stopPropagation(), confirm(i18n[currentLang].confirmDelete) && (mu_removeMediaWrapper(wrapper), saveCategory(id)); };
+        textBox.appendChild(wrapper);
+        // plain blank line (no dashed rule) so the person can keep typing under the file
+        const belowLine = document.createElement("div");
+        belowLine.innerHTML = "<br>", textBox.appendChild(belowLine), lastBelow = belowLine, added++;
+    }
+    added && (saveCategory(id), setTimeout(() => mu_focusImgBelowLine(lastBelow), 30));
+}
+/* ===== Video attachments. Same flow as an image: the bytes go into the media store (data-mu-media), so media sync, the
+   vault, the private backup and the cloud placeholders carry them; a blank writable line is added ABOVE (or a divider
+   when text already sits there) and BELOW the player, drawn dotted (class mu-vid-line). The wrapper also has the
+   audio-wrapper class so every existing "media block" path (move, delete, frame lines, viewer editing, export) applies. ===== */
+function triggerVideoUpload(id) { const el = document.getElementById(`video-input-${id}`); el && el.click(); }
+function mu_videoMimeOf(file) { const t = String(file && file.type || ""); if (/^video\//i.test(t))
+    return t; const m = /\.([A-Za-z0-9]{2,5})$/.exec(String(file && file.name || "")), map = { mp4: "video/mp4", m4v: "video/mp4", mov: "video/quicktime", webm: "video/webm", ogv: "video/ogg", mkv: "video/x-matroska", "3gp": "video/3gpp", avi: "video/x-msvideo" }; return m && map[m[1].toLowerCase()] || ""; }
+function mu_buildVideoWrapper(src, mediaId) {
+    const wrapper = document.createElement("div");
+    wrapper.className = "audio-wrapper video-wrapper", wrapper.contentEditable = "false";
+    const videoEl = document.createElement("video");
+    videoEl.controls = !0, videoEl.setAttribute("playsinline", ""), videoEl.setAttribute("preload", "metadata"), videoEl.src = src + "#t=0.001";
+    mediaId && (videoEl.dataset.muMedia = mediaId, videoEl.dataset.muHydratedFor = mediaId, videoEl.dataset.muObjectUrl = src);
+    const delBtn = document.createElement("button");
+    delBtn.type = "button", delBtn.className = "img-btn", delBtn.innerText = "✖";
+    wrapper.appendChild(videoEl), wrapper.appendChild(delBtn);
+    return wrapper;
+}
+async function insertVideoToNote(id, event) {
+    const files = event.target.files ? Array.from(event.target.files) : [];
+    if (event.target.value = "", !files.length)
+        return;
+    const textBox = document.getElementById(`text-${id}`);
+    if (!textBox)
+        return;
+    const fa = currentLang === "fa", say = m => { typeof showToast == "function" && showToast(m); };
+    let lastBelow = null, added = 0;
+    for (const file of files) {
+        const vtype = mu_videoMimeOf(file);
+        if (!vtype) {
+            say(fa ? "این فایل ویدیو نیست." : "This is not a video file.");
+            continue;
+        }
+        // Stored as-is (never recompressed); a missing mime type is filled in from the extension so it plays back
+        const blob = file.type === vtype ? file : new Blob([file], { type: vtype });
+        const mediaId = await mu_mediaPut(blob);
+        if (!mediaId) {
+            say(fa ? "ذخیره‌ی ویدیو ممکن نشد (حافظه‌ی مرورگر در دسترس نیست)." : "Could not store the video (browser storage is unavailable).");
+            continue;
+        }
+        file.size > 49 * 1024 * 1024 ? say(fa ? "این ویدیو از ۴۹ مگابایت بیشتر است و در بکاپ رسانه‌ای (تلگرام) آپلود نمی‌شود." : "This video is over 49 MB, so Telegram media backup cannot upload it.") : file.size > 20 * 1024 * 1024 && say(fa ? "این ویدیو از ۲۰ مگابایت بیشتر است؛ آپلود می‌شود ولی روی دستگاه‌های دیگر از طریق بکاپ رسانه‌ای دانلود نخواهد شد." : "This video is over 20 MB: it uploads, but other devices cannot download it through media backup.");
+        const src = URL.createObjectURL(mu_mediaBlob(mediaId, blob));
+        { const lastN = textBox.lastChild, blankN = n => !!n && n.nodeType === 1 && /^(DIV|P)$/.test(n.tagName) && !n.querySelector("img,video,audio,canvas,table,.audio-wrapper,.img-drag-wrapper") && !n.textContent.replace(/[\u200B\s]/g, ""); blankN(lastN) || textBox.appendChild(mu_createImgAboveLine()); }
+        const wrapper = mu_buildVideoWrapper(src, mediaId), delBtn = wrapper.querySelector("button");
+        delBtn.onclick = e => { e.preventDefault(), e.stopPropagation(), confirm(i18n[currentLang].confirmDelete) && (mu_removeMediaWrapper(wrapper), saveCategory(id)); };
+        textBox.appendChild(wrapper);
+        const belowLine = mu_createImgBelowLine();
+        textBox.appendChild(belowLine), lastBelow = belowLine, added++;
+    }
+    added && (saveCategory(id), setTimeout(() => mu_focusImgBelowLine(lastBelow), 30));
+}
 function toggleDrawingBox(id) { const drawBox = document.getElementById(`draw-box-${id}`); drawBox && (drawBox.style.display === "block" ? drawBox.style.display = "none" : (drawBox.style.display = "block", initCanvas(id), window.mkDrawReveal && window.mkDrawReveal(id))); window.mkDrawSync && window.mkDrawSync(id); }
 function closeDrawingBox(id) { const drawBox = document.getElementById(`draw-box-${id}`); drawBox && (drawBox.style.display = "none"); window.mkDrawSync && window.mkDrawSync(id); }
 // While the drawing panel is open, the Draw option (and the Media button that holds it) shows as selected
@@ -25480,7 +25778,7 @@ function addCanvasToText(id) { const canvas = document.getElementById(`canvas-${
 function attachWrapperEvents(categoryId) { const textBox = document.getElementById(`text-${categoryId}`); if (!textBox)
     return;
     // Fire-and-forget: turns any data-mu-media reference in this note into a live blob: URL.
-    mu_hydrateMedia(textBox); const isMedia = n => !!n && n.classList && (n.classList.contains("img-drag-wrapper") || n.classList.contains("audio-wrapper") || n.classList.contains("mu-img-row")); mu_cleanImgRows(textBox), mu_ensureRowBelow(textBox), textBox.querySelectorAll(".img-below-line").forEach(el => { isMedia(el.previousElementSibling) || mu_stripFrameLineDash(el); }), textBox.querySelectorAll(".img-above-line, .img-top-divider").forEach(el => { isMedia(el.nextElementSibling) || mu_stripFrameLineDash(el); }), textBox.querySelectorAll(".img-drag-wrapper").forEach(wrapper => { wrapper.querySelector("img") && (wrapper.querySelector(".img-toolbar")?.remove(), wrapper.appendChild(Object.assign(document.createElement("div"), { className: "img-toolbar" })), wrapper.onclick = function (e) { e.stopPropagation(), mu_openImageLightbox(wrapper, categoryId); }); }), textBox.querySelectorAll(".audio-wrapper").forEach(wrapper => { wrapper.contentEditable = "false"; let delBtn = wrapper.querySelector("button"); delBtn || (delBtn = document.createElement("button"), delBtn.type = "button", delBtn.className = "img-btn", delBtn.innerText = "✖", wrapper.appendChild(delBtn)), delBtn.onclick = e => { e.preventDefault(), e.stopPropagation(), confirm(i18n[currentLang].confirmDelete) && (mu_removeMediaWrapper(wrapper), saveCategory(categoryId)); }; }); }
+    mu_hydrateMedia(textBox); const isMedia = n => !!n && n.classList && (n.classList.contains("img-drag-wrapper") || n.classList.contains("audio-wrapper") || n.classList.contains("mu-img-row")); mu_cleanImgRows(textBox), mu_ensureRowBelow(textBox), textBox.querySelectorAll(".img-below-line").forEach(el => { isMedia(el.previousElementSibling) || mu_stripFrameLineDash(el); }), textBox.querySelectorAll(".img-above-line, .img-top-divider").forEach(el => { isMedia(el.nextElementSibling) || mu_stripFrameLineDash(el); }), textBox.querySelectorAll(".img-drag-wrapper").forEach(wrapper => { wrapper.querySelector("img") && (wrapper.querySelector(".img-toolbar")?.remove(), wrapper.appendChild(Object.assign(document.createElement("div"), { className: "img-toolbar" })), wrapper.onclick = function (e) { e.stopPropagation(), mu_openImageLightbox(wrapper, categoryId); }); }), textBox.querySelectorAll(".audio-wrapper").forEach(wrapper => { wrapper.contentEditable = "false", wrapper.classList.contains("file-wrapper") && mu_fileFillChip(wrapper); let delBtn = wrapper.querySelector("button"); delBtn || (delBtn = document.createElement("button"), delBtn.type = "button", delBtn.className = "img-btn", delBtn.innerText = "✖", wrapper.appendChild(delBtn)), delBtn.onclick = e => { e.preventDefault(), e.stopPropagation(), confirm(i18n[currentLang].confirmDelete) && (mu_removeMediaWrapper(wrapper), saveCategory(categoryId)); }; }); }
 // Translation engine: tries several services, splits long text into chunks
 function mu_trSplit(text, max) { const pieces = []; String(text).split(/(\n)/).forEach(p => { if (p.length <= max) {
     pieces.push(p);
@@ -25523,7 +25821,7 @@ async function translateText(id, sourceLang, targetLang) { const t = i18n[curren
 }
 // Translating rewrites the note as plain translated text, so anything that isn't plain text — images,
 // audio, drawings, tables, links — would be lost in the process
-if (textEl.querySelector("img,audio,canvas,table,a") && !confirm(currentLang === "fa" ? "ترجمه، تصاویر/صدا/جدول/لینک داخل این یادداشت را حذف می‌کند و فقط متن ساده‌ی ترجمه‌شده باقی می‌ماند. ادامه می‌دهید؟" : "Translating will remove any images, audio, tables, or links in this note, leaving only the translated plain text. Continue?"))
+if (textEl.querySelector("img,audio,video,canvas,table,a") && !confirm(currentLang === "fa" ? "ترجمه، تصاویر/صدا/جدول/لینک داخل این یادداشت را حذف می‌کند و فقط متن ساده‌ی ترجمه‌شده باقی می‌ماند. ادامه می‌دهید؟" : "Translating will remove any images, audio, tables, or links in this note, leaving only the translated plain text. Continue?"))
     return;
     // Snapshot the pre-translation state as its own undo checkpoint — this is what lets Undo step back to
     // exactly "before translation" even if the debounced autosave hadn't captured it yet
@@ -26436,7 +26734,7 @@ function createImageExportCard(item) {
     }
     const body = document.createElement("div");
     return body.className = "image-export-body", body.style.cssText = "white-space:pre-wrap;overflow-wrap:anywhere;", body.innerHTML = sanitizeHtml(item.html || escapeHtml(item.text || "").replace(/\r\n?/g, `
-`).replace(/\n/g, "<br>")), body.querySelectorAll(".img-toolbar, .audio-wrapper button").forEach(el => el.remove()), body.querySelectorAll("audio").forEach(audio => { const label = document.createElement("div"); label.textContent = currentLang === "fa" ? "🎵 فایل صوتی" : "🎵 Audio file", label.style.cssText = "padding:10px 14px;border:1px solid #ddd;border-radius:10px;margin:10px 0;color:#555;", audio.replaceWith(label); }), body.querySelectorAll("img").forEach(img => { img.style.maxWidth = "100%", img.style.height = "auto", img.style.display = "block", img.style.margin = "14px auto"; }), window.muExportBidi && muExportBidi.apply(body), mu_fitTableFonts(body), card.appendChild(body), card.appendChild(Object.assign(document.createElement("style"), { textContent: mu_fixedTableCss(".image-export-body") })), card;
+`).replace(/\n/g, "<br>")), body.querySelectorAll(".img-toolbar, .audio-wrapper button").forEach(el => el.remove()), body.querySelectorAll("video").forEach(vid => { const label = document.createElement("div"); label.textContent = currentLang === "fa" ? "🎬 ویدیو" : "🎬 Video", label.style.cssText = "padding:10px 14px;border:1px solid #ddd;border-radius:10px;margin:10px 0;color:#555;", (vid.closest(".video-wrapper") || vid).replaceWith(label); }), body.querySelectorAll("audio").forEach(audio => { const label = document.createElement("div"); label.textContent = currentLang === "fa" ? "🎵 فایل صوتی" : "🎵 Audio file", label.style.cssText = "padding:10px 14px;border:1px solid #ddd;border-radius:10px;margin:10px 0;color:#555;", audio.replaceWith(label); }), body.querySelectorAll("img").forEach(img => { img.style.maxWidth = "100%", img.style.height = "auto", img.style.display = "block", img.style.margin = "14px auto"; }), window.muExportBidi && muExportBidi.apply(body), mu_fitTableFonts(body), card.appendChild(body), card.appendChild(Object.assign(document.createElement("style"), { textContent: mu_fixedTableCss(".image-export-body") })), card;
 }
 async function canvasToFormatBlob(canvas, format) { const wantJpeg = format === "jpg", mime = wantJpeg ? "image/jpeg" : "image/png", quality = wantJpeg ? .92 : void 0, attempt = src => new Promise((resolve, reject) => { src.toBlob(b => b ? resolve(b) : reject(new Error("toBlob failed")), mime, quality); }); let blob = null; try {
     blob = await attempt(canvas);
@@ -26509,7 +26807,7 @@ async function renderNoteToImage(item, format) {
     else {
         const box = document.createElement("div");
         box.innerHTML = sanitizeHtml(item.html || escapeHtml(item.text || "").replace(/\r\n?/g, `
-`).replace(/\n/g, "<br>")), box.querySelectorAll(".img-toolbar, button").forEach(el => el.remove()), box.querySelectorAll("audio").forEach(a => a.replaceWith(document.createTextNode(`
+`).replace(/\n/g, "<br>")), box.querySelectorAll(".img-toolbar, button").forEach(el => el.remove()), box.querySelectorAll("video").forEach(v => (v.closest(".video-wrapper") || v).replaceWith(document.createTextNode("\n" + (fa2 ? "🎬 ویدیو" : "🎬 Video") + "\n"))), box.querySelectorAll("audio").forEach(a => a.replaceWith(document.createTextNode(`
 ` + (fa2 ? "🎵 فایل صوتی" : "🎵 Audio file") + `
 `))), box.querySelectorAll("img").forEach(im => {
             const k = imgSrcs.push(im.getAttribute("src") || "") - 1;
@@ -26770,7 +27068,7 @@ async function exportPDFPrint(items, chosenName) { let list = items; try {
 catch { }
 // The browser's own "Save as PDF" dialog uses the page title as its suggested file name — passing the name
 // chosen in promptFilename() through here keeps that suggestion consistent with every other
-const printable = document.createElement("div"); printable.dir = currentLang === "fa" ? "rtl" : "ltr", printable.className = "mu-print-root", printable.style.cssText = "position:fixed;inset:0;background:#fff;color:#111;padding:40px;z-index:2147483647;overflow:auto;font-family:Tahoma,Vazirmatn,Arial,sans-serif;"; const bodyHtml = item => !isNoteLocked(item) && item.html ? mu_bidiHtml(sanitizeHtml(item.html)) : mu_bidiHtml(escapeHtml(getTxtContent(item.id, item))); printable.innerHTML = '<style>.mu-print-root,.mu-print-root *{color:#111!important;-webkit-text-fill-color:#111!important;text-shadow:none!important}.mu-print-body{white-space:pre-wrap;line-height:1.9;unicode-bidi:plaintext;text-align:start;overflow-wrap:anywhere}.mu-print-body div,.mu-print-body p,.mu-print-body li,.mu-print-body blockquote{unicode-bidi:plaintext}.mu-print-body img{max-width:100%;height:auto}.mu-print-body .img-toolbar,.mu-print-body button,.mu-print-body audio{display:none!important}' + mu_fixedTableCss('.mu-print-body') + '</style><h1 style="margin-top:0">Markhin Note</h1>' + list.map((item, i) => `<section style="page-break-after:always;margin-bottom:40px"><h2 dir="auto">${escapeHtml(`${i + 1}. ${item.name}`)}</h2><div class="mu-print-body">${bodyHtml(item)}</div></section>`).join(""), document.body.appendChild(printable), printable.querySelectorAll(".mu-print-body").forEach(function (b) { b.style.maxWidth = "640px"; }), mu_fitTableFonts(printable); const oldTitle = document.title; document.title = chosenName || (list.length === 1 ? sanitizeFilename(list[0].name) : "Markhin_Note_All_Notes"), await Promise.all(Array.from(printable.querySelectorAll("img")).map(img => img.complete ? 0 : new Promise(r => { img.onload = img.onerror = r, setTimeout(r, 2500); }))), setTimeout(() => { window.print(), setTimeout(() => { printable.remove(), document.title = oldTitle; }, 700); }, 80); }
+const printable = document.createElement("div"); printable.dir = currentLang === "fa" ? "rtl" : "ltr", printable.className = "mu-print-root", printable.style.cssText = "position:fixed;inset:0;background:#fff;color:#111;padding:40px;z-index:2147483647;overflow:auto;font-family:Tahoma,Vazirmatn,Arial,sans-serif;"; const bodyHtml = item => !isNoteLocked(item) && item.html ? mu_bidiHtml(sanitizeHtml(item.html)) : mu_bidiHtml(escapeHtml(getTxtContent(item.id, item))); printable.innerHTML = '<style>.mu-print-root,.mu-print-root *{color:#111!important;-webkit-text-fill-color:#111!important;text-shadow:none!important}.mu-print-body{white-space:pre-wrap;line-height:1.9;unicode-bidi:plaintext;text-align:start;overflow-wrap:anywhere}.mu-print-body div,.mu-print-body p,.mu-print-body li,.mu-print-body blockquote{unicode-bidi:plaintext}.mu-print-body img{max-width:100%;height:auto}.mu-print-body .img-toolbar,.mu-print-body button,.mu-print-body audio,.mu-print-body .video-wrapper{display:none!important}' + mu_fixedTableCss('.mu-print-body') + '</style><h1 style="margin-top:0">Markhin Note</h1>' + list.map((item, i) => `<section style="page-break-after:always;margin-bottom:40px"><h2 dir="auto">${escapeHtml(`${i + 1}. ${item.name}`)}</h2><div class="mu-print-body">${bodyHtml(item)}</div></section>`).join(""), document.body.appendChild(printable), printable.querySelectorAll(".mu-print-body").forEach(function (b) { b.style.maxWidth = "640px"; }), mu_fitTableFonts(printable); const oldTitle = document.title; document.title = chosenName || (list.length === 1 ? sanitizeFilename(list[0].name) : "Markhin_Note_All_Notes"), await Promise.all(Array.from(printable.querySelectorAll("img")).map(img => img.complete ? 0 : new Promise(r => { img.onload = img.onerror = r, setTimeout(r, 2500); }))), setTimeout(() => { window.print(), setTimeout(() => { printable.remove(), document.title = oldTitle; }, 700); }, 80); }
 let __docxEnginePromise = null;
 function loadScriptOnce(src) { return new Promise((resolve, reject) => { if (Array.from(document.scripts).find(x => x.src === src) && window.docx)
     return resolve(window.docx); const script = document.createElement("script"); script.crossOrigin = "anonymous", script.src = src, script.async = !0, script.onload = () => window.docx ? resolve(window.docx) : reject(new Error("DOCX script loaded but global engine was not created")), script.onerror = () => { try { script.remove(); } catch (_) { } reject(new Error("Could not load " + src)); }, document.head.appendChild(script); }); }
@@ -26972,6 +27270,14 @@ async function mu_htmlToDocxBlocks(html, engine, rtl) {
         if (tag !== "BUTTON" && !(node.classList && node.classList.contains("img-toolbar"))) {
             if (tag === "IMG") {
                 blocks.push(await mu_docxImageParagraph(node, engine, rtl));
+                return;
+            }
+            if (node.classList && node.classList.contains("file-wrapper")) {
+                await paragraphFromInline([document.createTextNode("📎 " + (node.getAttribute("data-fname") || (currentLang === "fa" ? "فایل" : "file")))]);
+                return;
+            }
+            if (tag === "VIDEO" || node.classList && node.classList.contains("video-wrapper")) {
+                await paragraphFromInline([document.createTextNode(currentLang === "fa" ? "🎬 ویدیو" : "🎬 Video")]);
                 return;
             }
             if (tag === "AUDIO" || node.classList && node.classList.contains("audio-wrapper")) {
@@ -27857,7 +28163,7 @@ ${mu_bidiText(getTxtContent(item.id, item).replace(/\n+$/, ""))}
   .mu-note-body pre{background:rgba(127,127,127,.12);border:1px solid rgba(127,127,127,.25);border-radius:8px;padding:10px 12px;margin:10px 0;direction:ltr;text-align:left;unicode-bidi:normal;white-space:pre-wrap;overflow-wrap:anywhere;font-size:13px;line-height:1.6}
   .mu-note-body pre code{background:none;padding:0;border-radius:0;font:inherit}
   .mu-note-body ul,.mu-note-body ol{padding-inline-start:1.6em;margin:.5em 0}
-  .mu-note-body audio{max-width:100%}
+  .mu-note-body audio{max-width:100%}.mu-note-body video{max-width:100%;height:auto;border-radius:8px;background:#000}
   .mu-note-body a{color:#2563eb}
   .mu-note-sep{border:none;border-top:1px solid #ddd;margin:40px 0}
   @media (prefers-color-scheme: dark){ body{background:#0f172a;color:#e2e8f0} .mu-note-sep{border-top-color:#334155} .mu-note-body a{color:#7dd3fc} }
@@ -28297,7 +28603,7 @@ function htmlToMarkdown(html, fallbackText) {
 `;
         if (t === "IMG")
             return "![" + (n.getAttribute("alt") || "") + "](" + (n.getAttribute("src") || "") + ")";
-        if (t === "AUDIO")
+        if (t === "AUDIO" || t === "VIDEO")
             return "";
         const inner = Array.from(n.childNodes).map(inline).join("");
         return t === "B" || t === "STRONG" ? wrapMd(inner, "**") : t === "I" || t === "EM" ? wrapMd(inner, "*") : t === "S" ? wrapMd(inner, "~~") : t === "SPAN" && n.classList && n.classList.contains("mk-hl") ? wrapMd(inner, "==") : t === "SPAN" && n.classList && n.classList.contains("mk-cb") ? n.classList.contains("mk-cb-on") ? "[x] " : "[ ] " : t === "CODE" ? inner && "`" + inner + "`" : t === "A" ? "[" + inner + "](" + (n.getAttribute("href") || "") + ")" : inner;
@@ -30091,7 +30397,7 @@ document.addEventListener("DOMContentLoaded", () => { initAdvancedSystems(); });
     } {
         const wSlot = box.querySelector(".mc-writing-slot");
         wSlot ? wSlot.appendChild(row) : tools.parentNode.insertBefore(row, tools.nextSibling);
-    } text.style.fontFamily = item.fontFamily || "", text.style.fontSize = (item.fontSize || 16) + "px"; const undoRedoRow = document.createElement("div"); undoRedoRow.className = "markhin-undo-redo-row", undoRedoRow.innerHTML = `<button type="button" class="img-btn" title="${fa ? "حذف متن یادداشت" : "Delete note text"}" onclick="clearNoteText('${item.id}')">${MK.icon("trash")}</button><button type="button" class="img-btn" title="${fa ? "کپی متن" : "Copy text"}" onclick="copyCategory('${item.id}')">${MK.icon("copy")}</button><button type="button" id="mu-undo-${item.id}" class="img-btn mu-undo-redo-btn" title="${fa ? "واگرد (بازگشت به مرحله قبل)" : "Undo (step back)"}">${MK.icon("undo")}</button><button type="button" id="mu-redo-${item.id}" class="img-btn mu-undo-redo-btn" title="${fa ? "ازنو (رفتن به مرحله بعد)" : "Redo (step forward)"}">${MK.icon("redo")}</button><button type="button" class="img-btn" title="${t.draw}" onclick="toggleDrawingBox('${item.id}')">${MK.icon("draw")}</button><button type="button" id="mu-rec-${item.id}" class="img-btn" title="${isRecordingThis ? t.stopAudio : t.recAudio}" style="${isRecordingThis ? "background:rgba(239,68,68,0.75);color:#fff;" : ""}" onclick="toggleAudioRecording('${item.id}')">${MK.icon(isRecordingThis ? "stop" : "mic")}</button><button type="button" class="img-btn" title="${t.addImage}" onclick="triggerImageUpload('${item.id}')">${MK.icon("image")}</button><input type="file" id="img-input-${item.id}" style="display:none" accept="image/*" onchange="insertImageToText('${item.id}', event)">`, undoRedoRow.querySelector("#mu-undo-" + item.id).onclick = () => HX().mu_undoText(item.id), undoRedoRow.querySelector("#mu-redo-" + item.id).onclick = () => HX().mu_redoText(item.id); {
+    } text.style.fontFamily = item.fontFamily || "", text.style.fontSize = (item.fontSize || 16) + "px"; const undoRedoRow = document.createElement("div"); undoRedoRow.className = "markhin-undo-redo-row", undoRedoRow.innerHTML = `<button type="button" class="img-btn" title="${fa ? "حذف متن یادداشت" : "Delete note text"}" onclick="clearNoteText('${item.id}')">${MK.icon("trash")}</button><button type="button" class="img-btn" title="${fa ? "کپی متن" : "Copy text"}" onclick="copyCategory('${item.id}')">${MK.icon("copy")}</button><button type="button" id="mu-undo-${item.id}" class="img-btn mu-undo-redo-btn" title="${fa ? "واگرد (بازگشت به مرحله قبل)" : "Undo (step back)"}">${MK.icon("undo")}</button><button type="button" id="mu-redo-${item.id}" class="img-btn mu-undo-redo-btn" title="${fa ? "ازنو (رفتن به مرحله بعد)" : "Redo (step forward)"}">${MK.icon("redo")}</button><button type="button" class="img-btn" title="${t.draw}" onclick="toggleDrawingBox('${item.id}')">${MK.icon("draw")}</button><button type="button" id="mu-rec-${item.id}" class="img-btn" title="${isRecordingThis ? t.stopAudio : t.recAudio}" style="${isRecordingThis ? "background:rgba(239,68,68,0.75);color:#fff;" : ""}" onclick="toggleAudioRecording('${item.id}')">${MK.icon(isRecordingThis ? "stop" : "mic")}</button><button type="button" class="img-btn" title="${t.addImage}" onclick="triggerImageUpload('${item.id}')">${MK.icon("image")}</button><input type="file" id="img-input-${item.id}" style="display:none" accept="image/*" onchange="insertImageToText('${item.id}', event)"><button type="button" class="img-btn" title="${t.addFile || (currentLang === "fa" ? "افزودن فایل" : "Add file")}" onclick="triggerFileUpload('${item.id}')">${MK.icon("attach")}</button><input type="file" id="file-input-${item.id}" multiple style="display:none" onchange="insertFileToNote('${item.id}', event)"><button type="button" class="img-btn" title="${fa ? "افزودن ویدیو" : "Add video"}" onclick="triggerVideoUpload('${item.id}')">${MK.icon("video")}</button><input type="file" id="video-input-${item.id}" multiple style="display:none" accept="video/*" onchange="insertVideoToNote('${item.id}', event)">`, undoRedoRow.querySelector("#mu-undo-" + item.id).onclick = () => HX().mu_undoText(item.id), undoRedoRow.querySelector("#mu-redo-" + item.id).onclick = () => HX().mu_redoText(item.id); {
         // Tools line at the very top of the note card: DNA button (left) + undo-row (right)
         const dnaBtn = box.querySelector('.mc-head-actions [onclick^="openNoteDNA"]'), toolsLine = document.createElement("div");
         if (toolsLine.className = "mu-tools-line", dnaBtn) {
@@ -30133,9 +30439,13 @@ document.addEventListener("DOMContentLoaded", () => { initAdvancedSystems(); });
         // offers them in its media popover)
         const mSlot = box.querySelector(".mu-last-edited .mu-media-slot");
         if (mSlot) {
-            [...undoRedoRow.querySelectorAll("button")].filter(b => { const oc = b.getAttribute("onclick") || ""; return oc.indexOf("toggleDrawingBox") > -1 || oc.indexOf("triggerImageUpload") > -1 || (b.id || "").indexOf("mu-rec-") === 0; }).forEach(b => mSlot.appendChild(b));
+            [...undoRedoRow.querySelectorAll("button")].filter(b => { const oc = b.getAttribute("onclick") || ""; return oc.indexOf("toggleDrawingBox") > -1 || oc.indexOf("triggerImageUpload") > -1 || oc.indexOf("triggerFileUpload") > -1 || oc.indexOf("triggerVideoUpload") > -1 || (b.id || "").indexOf("mu-rec-") === 0; }).forEach(b => mSlot.appendChild(b));
             const fi = undoRedoRow.querySelector("#img-input-" + item.id);
             fi && mSlot.appendChild(fi);
+            const fi2 = undoRedoRow.querySelector("#file-input-" + item.id);
+            fi2 && mSlot.appendChild(fi2);
+            const fi3 = undoRedoRow.querySelector("#video-input-" + item.id);
+            fi3 && mSlot.appendChild(fi3);
         }
     }
     // Tags are shown in the full-screen editor's tag row (above the bottom bar) and in the Dashboard / Note-DNA
@@ -33226,7 +33536,7 @@ HX().scheduleCloudBackup(!1, !0), HX().showToast(fa ? `✅ ذخیره شد — �
     let mu_focusedBeforeTap = null;
     // Tapping anywhere empty on the page closes the currently open note — unless the keyboard is currently
     // up because the title/content/tag field of that note is focused.
-    document.addEventListener("pointerdown", function () { mu_focusedBeforeTap = document.activeElement; }, !0), document.addEventListener("click", function (e) { if (!HX().activeOpenId || e.target.closest(".content-container") || e.target.closest(".note-btn-wrap") || e.target.closest(".advanced-modal") || e.target.closest(".mu-viewer") || e.target.closest(".markhin-move-menu") || e.target.closest("#muNotesFs") || e.target.closest("#muFsSheet") || e.target.closest("#muNav") || e.target.closest(".mu-img-lightbox") || e.target.closest(".mkl-ov") || e.target.closest("[data-mu-download-anchor]"))
+    document.addEventListener("pointerdown", function () { mu_focusedBeforeTap = document.activeElement; }, !0), document.addEventListener("click", function (e) { if (!HX().activeOpenId || e.target.closest(".content-container") || e.target.closest(".note-btn-wrap") || e.target.closest(".advanced-modal") || e.target.closest(".mu-viewer") || e.target.closest(".markhin-move-menu") || e.target.closest("#muNotesFs") || e.target.closest("#muFsSheet") || e.target.closest("#muNav") || e.target.closest(".mu-img-lightbox") || e.target.closest(".mkl-ov") || e.target.closest(".mk-fbar") || e.target.closest(".mk-vmv") || e.target.closest("[data-mu-download-anchor]"))
         return; const activeBox = document.getElementById("container-" + HX().activeOpenId), focused = mu_focusedBeforeTap; if (focused && focused !== document.body && activeBox && activeBox.contains(focused)) {
         typeof focused.blur == "function" && focused.blur();
         return;
@@ -35419,7 +35729,7 @@ catch (e) { console.warn("silent catch -> setItem @muNoteViewerJs:69", e); } }, 
 </script>
 
 <script id="muIconJs">
-window.muIcon = function (name) { var P = { trash: '<path d="M4 7h16"/><path d="M9.5 7V4.8c0-.4.3-.8.8-.8h3.4c.5 0 .8.4.8.8V7"/><path d="M6.2 7l.9 12.2c.1.9.8 1.6 1.7 1.6h6.4c.9 0 1.6-.7 1.7-1.6L17.8 7"/><path d="M10 11v6.2M14 11v6.2"/>', copy: '<rect x="8.5" y="8.5" width="11.5" height="11.5" rx="3"/><path d="M15.5 8.5V6.8A2.8 2.8 0 0 0 12.7 4H6.8A2.8 2.8 0 0 0 4 6.8v5.9a2.8 2.8 0 0 0 2.8 2.8h1.7"/>', undo: '<path d="M8.5 4.5 4 9l4.5 4.5"/><path d="M4 9h9.2a6.3 6.3 0 0 1 0 12.5H9.5"/>', redo: '<path d="M15.5 4.5 20 9l-4.5 4.5"/><path d="M20 9h-9.2a6.3 6.3 0 0 0 0 12.5h3.7"/>', draw: '<path d="M12 2.5C6.7 2.5 2.5 6.7 2.5 12S6.7 21.5 12 21.5c.9 0 1.6-.7 1.6-1.6 0-.4-.2-.8-.4-1.1-.3-.3-.4-.6-.4-1.1 0-.9.7-1.6 1.6-1.6h1.9c2.9 0 5.3-2.4 5.3-5.3C21.6 6.3 17.3 2.5 12 2.5z"/><circle cx="7.6" cy="11.3" r=".6"/><circle cx="9.6" cy="7.2" r=".6"/><circle cx="14.2" cy="6.9" r=".6"/><circle cx="17.4" cy="10.4" r=".6"/>', mic: '<rect x="9" y="3" width="6" height="11.2" rx="3"/><path d="M5.5 11.2a6.5 6.5 0 0 0 13 0"/><path d="M12 17.8V21"/><path d="M8.8 21h6.4"/>', image: '<rect x="3.5" y="4.5" width="17" height="15" rx="3.2"/><circle cx="9" cy="10" r="1.7"/><path d="M4 17.2l4.9-4.4 3.8 3.3 3-2.6 4.4 3.9"/>', stop: '<rect x="6.5" y="6.5" width="11" height="11" rx="2.6"/>' }, cls = "mu-ic" + (name === "stop" ? " mu-ic-fill" : ""); return '<svg class="' + cls + '" viewBox="0 0 24 24" aria-hidden="true" focusable="false">' + (P[name] || "") + "</svg>"; };
+window.muIcon = function (name) { var P = { trash: '<path d="M4 7h16"/><path d="M9.5 7V4.8c0-.4.3-.8.8-.8h3.4c.5 0 .8.4.8.8V7"/><path d="M6.2 7l.9 12.2c.1.9.8 1.6 1.7 1.6h6.4c.9 0 1.6-.7 1.7-1.6L17.8 7"/><path d="M10 11v6.2M14 11v6.2"/>', copy: '<rect x="8.5" y="8.5" width="11.5" height="11.5" rx="3"/><path d="M15.5 8.5V6.8A2.8 2.8 0 0 0 12.7 4H6.8A2.8 2.8 0 0 0 4 6.8v5.9a2.8 2.8 0 0 0 2.8 2.8h1.7"/>', undo: '<path d="M8.5 4.5 4 9l4.5 4.5"/><path d="M4 9h9.2a6.3 6.3 0 0 1 0 12.5H9.5"/>', redo: '<path d="M15.5 4.5 20 9l-4.5 4.5"/><path d="M20 9h-9.2a6.3 6.3 0 0 0 0 12.5h3.7"/>', draw: '<path d="M12 2.5C6.7 2.5 2.5 6.7 2.5 12S6.7 21.5 12 21.5c.9 0 1.6-.7 1.6-1.6 0-.4-.2-.8-.4-1.1-.3-.3-.4-.6-.4-1.1 0-.9.7-1.6 1.6-1.6h1.9c2.9 0 5.3-2.4 5.3-5.3C21.6 6.3 17.3 2.5 12 2.5z"/><circle cx="7.6" cy="11.3" r=".6"/><circle cx="9.6" cy="7.2" r=".6"/><circle cx="14.2" cy="6.9" r=".6"/><circle cx="17.4" cy="10.4" r=".6"/>', mic: '<rect x="9" y="3" width="6" height="11.2" rx="3"/><path d="M5.5 11.2a6.5 6.5 0 0 0 13 0"/><path d="M12 17.8V21"/><path d="M8.8 21h6.4"/>', image: '<rect x="3.5" y="4.5" width="17" height="15" rx="3.2"/><circle cx="9" cy="10" r="1.7"/><path d="M4 17.2l4.9-4.4 3.8 3.3 3-2.6 4.4 3.9"/>', attach: '<path d="M20.5 11.5l-8.2 8.2a5 5 0 0 1-7.1-7.1l8.5-8.5a3.3 3.3 0 0 1 4.7 4.7l-8.4 8.4a1.7 1.7 0 0 1-2.4-2.4l7.7-7.7"/>', video: '<rect x="3.5" y="6" width="12" height="12" rx="3"/><path d="M15.5 10.6l5-2.6v8l-5-2.6"/>', stop: '<rect x="6.5" y="6.5" width="11" height="11" rx="2.6"/>' }, cls = "mu-ic" + (name === "stop" ? " mu-ic-fill" : ""); return '<svg class="' + cls + '" viewBox="0 0 24 24" aria-hidden="true" focusable="false">' + (P[name] || "") + "</svg>"; };
 </script>
 
 <script id="mkLiteHost">
@@ -35802,6 +36112,8 @@ window.mu_flagIc = function (kind) { return kind === "pin" ? '<svg class="mu-fla
         return "copy";
     if (oc.indexOf("toggleDrawingBox") > -1)
         return "draw";
+    if (oc.indexOf("triggerFileUpload") > -1)
+        return "file";
     if (oc.indexOf("triggerImageUpload") > -1)
         return "image";
     if (id.indexOf("mu-undo-") === 0)
@@ -37881,7 +38193,12 @@ catch { } };
                 callFn("triggerImageUpload", id);
             }
             catch { }
-        else if (arg === "voice")
+        else if (arg === "file")
+            try {
+                callFn("triggerFileUpload", id);
+            }
+            catch { }
+        else if (arg === "video") { try { callFn("triggerVideoUpload", id); } catch { } } else if (arg === "voice")
             callFn("toggleAudioRecording", id);
         else if (arg === "draw") {
             callFn("toggleDrawingBox", id);
@@ -38197,7 +38514,7 @@ catch { } };
     // Long-press help texts: key -> [fa name, fa description, en name, en description]. Keys are data-mxe values;
     // TM (hidden-toolbar buttons matched by their title) and FN (buttons whose handler is a JS property, matched
     // by function name) map the other buttons onto these keys
-    var DM = { back: ["بازگشت و ذخیره", "یادداشت را ذخیره می‌کند و به فهرست یادداشت‌ها برمی‌گردد.", "Back (saves)", "Saves the note and returns to the notes list."], focus: ["حالت تمرکز", "نوار ابزار را ساده می‌کند تا فقط روی نوشتن تمرکز کنی؛ با زدن دوباره به حالت عادی برمی‌گردد.", "Focus mode", "Simplifies the toolbar so you can concentrate on writing; tap again to go back."], "flag:favorite": ["علاقه‌مندی", "یادداشت را به علاقه‌مندی‌ها اضافه می‌کند یا از آن‌ها برمی‌دارد.", "Favorite", "Adds the note to your favorites or removes it."], "flag:pinned": ["سنجاق", "یادداشت را بالای فهرست سنجاق می‌کند یا سنجاقش را برمی‌دارد.", "Pin", "Pins the note to the top of the list, or unpins it."], lock: ["قفل یادداشت", "برای یادداشت رمز می‌گذارد یا قفل آن را برمی‌دارد.", "Lock note", "Protects the note with a password, or removes the lock."], archive: ["بایگانی", "یادداشت را به بایگانی می‌برد یا از بایگانی بیرون می‌آورد.", "Archive", "Moves the note to the archive, or brings it back."], save: ["ذخیره", "تغییرات یادداشت را همین حالا ذخیره می‌کند (بدون بستن آن).", "Save", "Saves your changes right now (without closing the note)."], "pop:trash": ["حذف", "انتخاب می‌کنی فقط متن یادداشت پاک شود یا خود یادداشت حذف شود.", "Delete", "Choose between deleting just the note text or the whole note."], "pop:media": ["رسانه", "منوی افزودن تصویر، ضبط صدا و نقاشی را باز می‌کند.", "Media", "Opens the menu for adding an image, a voice recording or a drawing."], "pop:write": ["ابزار نوشتن", "منوی قالب‌بندی متن (پررنگ، کج، عنوان، فهرست، جدول، لینک و …) را باز می‌کند.", "Writing tools", "Opens the text-formatting menu (bold, italic, heading, list, table, link and more)."], undo: ["واگرد", "آخرین تغییرِ متن را برمی‌گرداند.", "Undo", "Reverts the last change to the text."], redo: ["جلو", "تغییری را که واگرد کرده بودی دوباره اعمال می‌کند.", "Redo", "Re-applies a change you undid."], copy: ["کپی متن", "متن یادداشت را کپی می‌کند.", "Copy text", "Copies the note text."], clear: ["پاک‌کردن متن", "کل متن یادداشت را پاک می‌کند.", "Clear text", "Erases the whole text of the note."], "pop:more": ["بیشتر", "منوی کامل گزینه‌ها (مدیریت، امنیت، ترجمه، سازمان‌دهی، تم، حذف) را باز می‌کند.", "More", "Opens the full options menu (manage, security, translate, organize, theme, delete)."], "media:image": ["تصویر", "یک عکس به یادداشت اضافه می‌کند.", "Image", "Adds a picture to the note."], "media:voice": ["ضبط صدا", "ضبط صدا را شروع می‌کند و در یادداشت می‌گذارد؛ برای توقف دوباره بزن.", "Voice", "Starts a voice recording and puts it in the note; tap again to stop."], "media:draw": ["نقاشی", "بوم نقاشی را باز می‌کند تا داخل یادداشت بکشی.", "Drawing", "Opens a canvas so you can draw inside the note."], "fmt:bold": ["پررنگ", "متن انتخاب‌شده را پررنگ می‌کند.", "Bold", "Makes the selected text bold."], "fmt:italic": ["کج", "متن انتخاب‌شده را کج (ایتالیک) می‌کند.", "Italic", "Makes the selected text italic."], "fmt:strike": ["خط‌خورده", "روی متن انتخاب‌شده خط می‌کشد.", "Strikethrough", "Draws a line through the selected text."], "fmt:heading": ["عنوان", "خط فعلی را به عنوان (تیتر) تبدیل می‌کند.", "Heading", "Turns the current line into a heading."], "fmt:ul": ["فهرست", "یک فهرست نقطه‌ای می‌سازد.", "List", "Creates a bulleted list."], "fmt:todo": ["چک‌لیست", "فهرست کارها با کادر تیک می‌سازد.", "Checklist", "Creates a to-do list with tick boxes."], "fmt:quote": ["نقل‌قول", "متن را به صورت نقل‌قول (بلوک ارجاع) درمی‌آورد.", "Quote", "Formats the text as a quote block."], "fmt:code": ["کد", "متن را با قالب کد (فونت ثابت) نشان می‌دهد.", "Code", "Shows the text in code (monospace) style."], "fmt:highlight": ["هایلایت", "متن انتخاب‌شده را زرد هایلایت می‌کند؛ دوباره بزنی برمی‌دارد. بدون انتخاب، متنِ بعدی که می‌نویسی هایلایت می‌شود.", "Highlight", "Highlights the selected text in yellow; tap again to remove. With no selection, the next text you type is highlighted."], "fmt:underline": ["زیرخط", "زیر متن انتخاب‌شده خط می‌کشد.", "Underline", "Underlines the selected text."], "fmt:ol": ["شماره‌دار", "یک فهرست شماره‌دار می‌سازد.", "Numbered list", "Creates a numbered list."], "fmt:table": ["جدول", "یک جدول در یادداشت درج می‌کند.", "Table", "Inserts a table into the note."], "fmt:link": ["لینک", "برای متن انتخاب‌شده لینک می‌سازد یا یک آدرس درج می‌کند.", "Link", "Turns the selected text into a link, or inserts a URL."], "fmt:smaller": ["کوچک‌تر", "اندازه‌ی متن را کم می‌کند.", "Smaller", "Decreases the text size."], "fmt:bigger": ["بزرگ‌تر", "اندازه‌ی متن را زیاد می‌کند.", "Bigger", "Increases the text size."], "fmt:normal": ["معمولی", "همه‌ی قالب‌ها (هایلایت، پررنگ، عنوان، نقل‌قول، لیست و…) را برمی‌دارد و متن انتخاب‌شده معمولی می‌شود.", "Normal", "Removes all formatting (highlight, bold, heading, quote, list…) so the selected text becomes plain."], "fmt:clear": ["حذف قالب", "قالب‌بندی متن انتخاب‌شده را پاک می‌کند (خود متن می‌ماند).", "Clear format", "Removes formatting from the selected text (the text stays)."], "more:view": ["نمایش یادداشت", "یادداشت را در حالت خواندن (بدون ویرایش) باز می‌کند.", "View note", "Opens the note in read-only view."], "more:hide": ["مخفی / نمایش", "محتوای یادداشت را پنهان یا دوباره آشکار می‌کند.", "Hide / Show", "Hides the note content, or reveals it again."], "more:link": ["پیش‌نمایش لینک", "پیش‌نمایش لینک‌های داخل یادداشت را نشان می‌دهد یا پنهان می‌کند.", "Link preview", "Shows or hides previews of the links inside the note."], "more:dna": ["DNA", "آمار و ویژگی‌های یادداشت (کلمه‌ها، کلیدواژه‌ها، تصویر و لینک) را نشان می‌دهد.", "DNA", "Shows statistics and traits of the note (words, keywords, images, links)."], "more:hint": ["تغییر راهنما", "راهنمای رمزِ یادداشت قفل‌شده را عوض می‌کند.", "Change hint", "Changes the password hint of a locked note."], "more:fake": ["یادداشت جعلی", "یک محتوای جعلی تعریف می‌کند که به‌جای متن واقعی نمایش داده شود.", "Fake note", "Sets a decoy content that is shown instead of the real text."], "more:vault": ["افزودن به گاوصندوق", "یادداشت را با پین رمزنگاری می‌کند و از لیست عادی برمی‌دارد.", "Add to vault", "Encrypts the note with your PIN and removes it from the normal list."], "more:toen": ["ترجمه به انگلیسی", "متن یادداشت را از فارسی به انگلیسی ترجمه می‌کند.", "Translate to EN", "Translates the note text from Persian to English."], "more:tofa": ["ترجمه به فارسی", "متن یادداشت را از انگلیسی به فارسی ترجمه می‌کند.", "Translate to FA", "Translates the note text from English to Persian."], "more:dup": ["تکثیر یادداشت", "یک کپی از این یادداشت می‌سازد.", "Duplicate note", "Makes a copy of this note."], "more:color": ["رنگ یادداشت", "یکی از رنگ‌های ساده را برای یادداشت انتخاب می‌کنی.", "Colour", "Pick one of the basic colours for this note."], "more:tags": ["برچسب‌ها", "برچسب‌های یادداشت را ویرایش می‌کند.", "Tags", "Edits the tags of the note."], "more:folder": ["افزودن / حذف پوشه", "یادداشت را به پوشه‌ها اضافه می‌کند یا از آن‌ها برمی‌دارد.", "Add / remove folder", "Adds the note to folders or removes it from them."], "more:capsule": ["کپسول زمان", "یادداشت را تا تاریخ و ساعتی که تعیین می‌کنی بسته نگه می‌دارد.", "Time capsule", "Keeps the note sealed until the date and time you choose."], "more:ghost": ["Ghost", "یادداشت بعد از تعداد ساعتی که تعیین می‌کنی خودکار محو می‌شود.", "Ghost", "The note disappears automatically after the number of hours you set."], "more:delete": ["حذف یادداشت", "این یادداشت را پاک می‌کند.", "Delete note", "Deletes this note."], "theme:light": ["حالت روز", "ظاهر ویرایشگر را روشن می‌کند.", "Day mode", "Switches the editor to a light look."], "theme:toggle": ["روز / شب", "بین حالت روز و شب ویرایشگر جابه‌جا می‌شود.", "Day / Night", "Switches the editor between day and night mode."], "theme:dark": ["حالت شب", "ظاهر ویرایشگر را تیره می‌کند.", "Night mode", "Switches the editor to a dark look."], "x:save-close": ["ذخیره", "یادداشت را ذخیره و می‌بندد.", "Save", "Saves the note and closes it."], "x:removelock": ["برداشتن قفل", "قفل یادداشت را برمی‌دارد.", "Remove lock", "Removes the lock from the note."], "x:setlock": ["قفل کردن", "یادداشت را با رمز قفل می‌کند.", "Set lock", "Locks the note with a password."], "x:tab": ["بخش گزینه‌ها", "گزینه‌های این بخش را نشان می‌دهد.", "Options section", "Shows the options of this section."] }, FN = { toggleArchiveNote: "archive", toggleVisibility: "more:hide", toggleLinkPreview: "more:link", deleteCategory: "more:delete", removeLock: "x:removelock", setLock: "x:setlock", changeHint: "more:hint", editFake: "more:fake", duplicateNote: "more:dup", mu_openFolderPicker: "more:folder", setTimeCapsule: "more:capsule", setGhostNote: "more:ghost", saveAndCloseCategory: "x:save-close", mu_openNoteViewer: "more:view", openNoteDNA: "more:dna", muTabSelect: "x:tab" }, TM = { bold: "fmt:bold", italic: "fmt:italic", underline: "fmt:underline", quote: "fmt:quote", list: "fmt:ul", table: "fmt:table", link: "fmt:link", strikethrough: "fmt:strike", "numbered list": "fmt:ol", "clear formatting": "fmt:clear" };
+    var DM = { back: ["بازگشت و ذخیره", "یادداشت را ذخیره می‌کند و به فهرست یادداشت‌ها برمی‌گردد.", "Back (saves)", "Saves the note and returns to the notes list."], focus: ["حالت تمرکز", "نوار ابزار را ساده می‌کند تا فقط روی نوشتن تمرکز کنی؛ با زدن دوباره به حالت عادی برمی‌گردد.", "Focus mode", "Simplifies the toolbar so you can concentrate on writing; tap again to go back."], "flag:favorite": ["علاقه‌مندی", "یادداشت را به علاقه‌مندی‌ها اضافه می‌کند یا از آن‌ها برمی‌دارد.", "Favorite", "Adds the note to your favorites or removes it."], "flag:pinned": ["سنجاق", "یادداشت را بالای فهرست سنجاق می‌کند یا سنجاقش را برمی‌دارد.", "Pin", "Pins the note to the top of the list, or unpins it."], lock: ["قفل یادداشت", "برای یادداشت رمز می‌گذارد یا قفل آن را برمی‌دارد.", "Lock note", "Protects the note with a password, or removes the lock."], archive: ["بایگانی", "یادداشت را به بایگانی می‌برد یا از بایگانی بیرون می‌آورد.", "Archive", "Moves the note to the archive, or brings it back."], save: ["ذخیره", "تغییرات یادداشت را همین حالا ذخیره می‌کند (بدون بستن آن).", "Save", "Saves your changes right now (without closing the note)."], "pop:trash": ["حذف", "انتخاب می‌کنی فقط متن یادداشت پاک شود یا خود یادداشت حذف شود.", "Delete", "Choose between deleting just the note text or the whole note."], "pop:media": ["رسانه", "منوی افزودن تصویر، ضبط صدا و نقاشی را باز می‌کند.", "Media", "Opens the menu for adding an image, a voice recording or a drawing."], "pop:write": ["ابزار نوشتن", "منوی قالب‌بندی متن (پررنگ، کج، عنوان، فهرست، جدول، لینک و …) را باز می‌کند.", "Writing tools", "Opens the text-formatting menu (bold, italic, heading, list, table, link and more)."], undo: ["واگرد", "آخرین تغییرِ متن را برمی‌گرداند.", "Undo", "Reverts the last change to the text."], redo: ["جلو", "تغییری را که واگرد کرده بودی دوباره اعمال می‌کند.", "Redo", "Re-applies a change you undid."], copy: ["کپی متن", "متن یادداشت را کپی می‌کند.", "Copy text", "Copies the note text."], clear: ["پاک‌کردن متن", "کل متن یادداشت را پاک می‌کند.", "Clear text", "Erases the whole text of the note."], "pop:more": ["بیشتر", "منوی کامل گزینه‌ها (مدیریت، امنیت، ترجمه، سازمان‌دهی، تم، حذف) را باز می‌کند.", "More", "Opens the full options menu (manage, security, translate, organize, theme, delete)."], "media:image": ["تصویر", "یک عکس به یادداشت اضافه می‌کند.", "Image", "Adds a picture to the note."], "media:file": ["فایل", "هر فایلی (js، sql، zip، pdf و...) را به یادداشت اضافه می‌کند.", "File", "Adds any file (js, sql, zip, pdf ...) to the note."], "media:video": ["ویدیو", "یک ویدیو به یادداشت اضافه می‌کند.", "Video", "Adds a video to the note."], "media:voice": ["ضبط صدا", "ضبط صدا را شروع می‌کند و در یادداشت می‌گذارد؛ برای توقف دوباره بزن.", "Voice", "Starts a voice recording and puts it in the note; tap again to stop."], "media:draw": ["نقاشی", "بوم نقاشی را باز می‌کند تا داخل یادداشت بکشی.", "Drawing", "Opens a canvas so you can draw inside the note."], "fmt:bold": ["پررنگ", "متن انتخاب‌شده را پررنگ می‌کند.", "Bold", "Makes the selected text bold."], "fmt:italic": ["کج", "متن انتخاب‌شده را کج (ایتالیک) می‌کند.", "Italic", "Makes the selected text italic."], "fmt:strike": ["خط‌خورده", "روی متن انتخاب‌شده خط می‌کشد.", "Strikethrough", "Draws a line through the selected text."], "fmt:heading": ["عنوان", "خط فعلی را به عنوان (تیتر) تبدیل می‌کند.", "Heading", "Turns the current line into a heading."], "fmt:ul": ["فهرست", "یک فهرست نقطه‌ای می‌سازد.", "List", "Creates a bulleted list."], "fmt:todo": ["چک‌لیست", "فهرست کارها با کادر تیک می‌سازد.", "Checklist", "Creates a to-do list with tick boxes."], "fmt:quote": ["نقل‌قول", "متن را به صورت نقل‌قول (بلوک ارجاع) درمی‌آورد.", "Quote", "Formats the text as a quote block."], "fmt:code": ["کد", "متن را با قالب کد (فونت ثابت) نشان می‌دهد.", "Code", "Shows the text in code (monospace) style."], "fmt:highlight": ["هایلایت", "متن انتخاب‌شده را زرد هایلایت می‌کند؛ دوباره بزنی برمی‌دارد. بدون انتخاب، متنِ بعدی که می‌نویسی هایلایت می‌شود.", "Highlight", "Highlights the selected text in yellow; tap again to remove. With no selection, the next text you type is highlighted."], "fmt:underline": ["زیرخط", "زیر متن انتخاب‌شده خط می‌کشد.", "Underline", "Underlines the selected text."], "fmt:ol": ["شماره‌دار", "یک فهرست شماره‌دار می‌سازد.", "Numbered list", "Creates a numbered list."], "fmt:table": ["جدول", "یک جدول در یادداشت درج می‌کند.", "Table", "Inserts a table into the note."], "fmt:link": ["لینک", "برای متن انتخاب‌شده لینک می‌سازد یا یک آدرس درج می‌کند.", "Link", "Turns the selected text into a link, or inserts a URL."], "fmt:smaller": ["کوچک‌تر", "اندازه‌ی متن را کم می‌کند.", "Smaller", "Decreases the text size."], "fmt:bigger": ["بزرگ‌تر", "اندازه‌ی متن را زیاد می‌کند.", "Bigger", "Increases the text size."], "fmt:normal": ["معمولی", "همه‌ی قالب‌ها (هایلایت، پررنگ، عنوان، نقل‌قول، لیست و…) را برمی‌دارد و متن انتخاب‌شده معمولی می‌شود.", "Normal", "Removes all formatting (highlight, bold, heading, quote, list…) so the selected text becomes plain."], "fmt:clear": ["حذف قالب", "قالب‌بندی متن انتخاب‌شده را پاک می‌کند (خود متن می‌ماند).", "Clear format", "Removes formatting from the selected text (the text stays)."], "more:view": ["نمایش یادداشت", "یادداشت را در حالت خواندن (بدون ویرایش) باز می‌کند.", "View note", "Opens the note in read-only view."], "more:hide": ["مخفی / نمایش", "محتوای یادداشت را پنهان یا دوباره آشکار می‌کند.", "Hide / Show", "Hides the note content, or reveals it again."], "more:link": ["پیش‌نمایش لینک", "پیش‌نمایش لینک‌های داخل یادداشت را نشان می‌دهد یا پنهان می‌کند.", "Link preview", "Shows or hides previews of the links inside the note."], "more:dna": ["DNA", "آمار و ویژگی‌های یادداشت (کلمه‌ها، کلیدواژه‌ها، تصویر و لینک) را نشان می‌دهد.", "DNA", "Shows statistics and traits of the note (words, keywords, images, links)."], "more:hint": ["تغییر راهنما", "راهنمای رمزِ یادداشت قفل‌شده را عوض می‌کند.", "Change hint", "Changes the password hint of a locked note."], "more:fake": ["یادداشت جعلی", "یک محتوای جعلی تعریف می‌کند که به‌جای متن واقعی نمایش داده شود.", "Fake note", "Sets a decoy content that is shown instead of the real text."], "more:vault": ["افزودن به گاوصندوق", "یادداشت را با پین رمزنگاری می‌کند و از لیست عادی برمی‌دارد.", "Add to vault", "Encrypts the note with your PIN and removes it from the normal list."], "more:toen": ["ترجمه به انگلیسی", "متن یادداشت را از فارسی به انگلیسی ترجمه می‌کند.", "Translate to EN", "Translates the note text from Persian to English."], "more:tofa": ["ترجمه به فارسی", "متن یادداشت را از انگلیسی به فارسی ترجمه می‌کند.", "Translate to FA", "Translates the note text from English to Persian."], "more:dup": ["تکثیر یادداشت", "یک کپی از این یادداشت می‌سازد.", "Duplicate note", "Makes a copy of this note."], "more:color": ["رنگ یادداشت", "یکی از رنگ‌های ساده را برای یادداشت انتخاب می‌کنی.", "Colour", "Pick one of the basic colours for this note."], "more:tags": ["برچسب‌ها", "برچسب‌های یادداشت را ویرایش می‌کند.", "Tags", "Edits the tags of the note."], "more:folder": ["افزودن / حذف پوشه", "یادداشت را به پوشه‌ها اضافه می‌کند یا از آن‌ها برمی‌دارد.", "Add / remove folder", "Adds the note to folders or removes it from them."], "more:capsule": ["کپسول زمان", "یادداشت را تا تاریخ و ساعتی که تعیین می‌کنی بسته نگه می‌دارد.", "Time capsule", "Keeps the note sealed until the date and time you choose."], "more:ghost": ["Ghost", "یادداشت بعد از تعداد ساعتی که تعیین می‌کنی خودکار محو می‌شود.", "Ghost", "The note disappears automatically after the number of hours you set."], "more:delete": ["حذف یادداشت", "این یادداشت را پاک می‌کند.", "Delete note", "Deletes this note."], "theme:light": ["حالت روز", "ظاهر ویرایشگر را روشن می‌کند.", "Day mode", "Switches the editor to a light look."], "theme:toggle": ["روز / شب", "بین حالت روز و شب ویرایشگر جابه‌جا می‌شود.", "Day / Night", "Switches the editor between day and night mode."], "theme:dark": ["حالت شب", "ظاهر ویرایشگر را تیره می‌کند.", "Night mode", "Switches the editor to a dark look."], "x:save-close": ["ذخیره", "یادداشت را ذخیره و می‌بندد.", "Save", "Saves the note and closes it."], "x:removelock": ["برداشتن قفل", "قفل یادداشت را برمی‌دارد.", "Remove lock", "Removes the lock from the note."], "x:setlock": ["قفل کردن", "یادداشت را با رمز قفل می‌کند.", "Set lock", "Locks the note with a password."], "x:tab": ["بخش گزینه‌ها", "گزینه‌های این بخش را نشان می‌دهد.", "Options section", "Shows the options of this section."] }, FN = { triggerFileUpload: "media:file", triggerVideoUpload: "media:video", toggleArchiveNote: "archive", toggleVisibility: "more:hide", toggleLinkPreview: "more:link", deleteCategory: "more:delete", removeLock: "x:removelock", setLock: "x:setlock", changeHint: "more:hint", editFake: "more:fake", duplicateNote: "more:dup", mu_openFolderPicker: "more:folder", setTimeCapsule: "more:capsule", setGhostNote: "more:ghost", saveAndCloseCategory: "x:save-close", mu_openNoteViewer: "more:view", openNoteDNA: "more:dna", muTabSelect: "x:tab" }, TM = { bold: "fmt:bold", italic: "fmt:italic", underline: "fmt:underline", quote: "fmt:quote", list: "fmt:ul", table: "fmt:table", link: "fmt:link", strikethrough: "fmt:strike", "numbered list": "fmt:ol", "clear formatting": "fmt:clear" };
     function labelOf(btn) { var sp = btn.querySelector("span"), l = sp && sp.textContent ? sp.textContent.trim() : ""; return l || (l = (btn.getAttribute("aria-label") || btn.getAttribute("title") || "").trim()), l || (l = (btn.textContent || "").trim()), l; }
     function resolve(btn) { var key = btn.getAttribute("data-mxe"); if (!(key && DM[key])) {
         key = null;
@@ -39769,10 +40086,11 @@ body.mu-nfsbk-on #mkBackupBar { display:none!important; }
     var MCACHE = Object.create(null);
     function mediaOf(c2) { var html = c2.html; if (!html || typeof html != "string")
         return null; var sig = String(c2.lastEdited || "") + "|" + html.length, hit = MCACHE[c2.id]; if (hit && hit.s === sig)
-        return hit.v; var v2 = null; if (/<img\b|<audio\b/i.test(html)) {
-        for (var imgs = [], count = 0, m, re = /<img\b[^>]*>/gi; m = re.exec(html);)
+        return hit.v; var v2 = null; if (/<img\b|<audio\b|<video\b/i.test(html)) {
+        for (var imgs = [], count = 0, m, re = /<(?:img|video)\b[^>]*>/gi; m = re.exec(html);)
             if (count++, imgs.length < 2) {
                 var tag = m[0], id = /data-mu-media\s*=\s*["']([^"']+)["']/i.exec(tag), src = /\bsrc\s*=\s*["']([^"']+)["']/i.exec(tag);
+                if (/^<video/i.test(tag)) { imgs.push(id ? { id: id[1], v: 1 } : { v: 1 }); continue; }
                 id ? imgs.push({ id: id[1] }) : src && /^(data:image\/|https?:)/i.test(src[1]) ? imgs.push({ src: src[1] }) : imgs.push({});
             }
         var au = html.match(/<audio\b/gi);
@@ -40145,11 +40463,32 @@ body.mu-nfsbk-on #mkBackupBar { display:none!important; }
     function mediaHtml(inf) { var m = inf.media; if (!m)
         return ""; var h = ""; if (m.n) {
         var shown = m.imgs, extra = m.n - shown.length;
-        h += '<div class="mu-nfs-media' + (shown.length > 1 ? " mu-two" : "") + '">', shown.forEach(function (t, i) { var key = inf.id + "#" + i; TH[key] = t; var more = i === shown.length - 1 && extra > 0 ? '<b class="mu-nfs-more-n">+' + extra + "</b>" : ""; h += '<span class="mu-nfs-thumb" data-tk="' + esc(key) + '">' + more + "</span>"; }), h += "</div>";
+        h += '<div class="mu-nfs-media' + (shown.length > 1 ? " mu-two" : "") + '">', shown.forEach(function (t, i) { var key = inf.id + "#" + i; TH[key] = t; var more = i === shown.length - 1 && extra > 0 ? '<b class="mu-nfs-more-n">+' + extra + "</b>" : ""; h += '<span class="mu-nfs-thumb' + (t.v ? " mu-vid" : "") + '" data-tk="' + esc(key) + '">' + more + "</span>"; }), h += "</div>";
     } return m.voice && (h += '<div class="mu-nfs-voice">' + ICONS.mic + "<span>" + (fa2() ? "ویس" : "Voice") + (m.voice > 1 ? " ×" + m.voice : "") + "</span></div>"), h; }
     // lazy thumbnail loading: a thumbnail is only fetched from IndexedDB once it is near the screen
     var THURL = Object.create(null), thIO = null, thRaf = 0;
     function thSet(el, url) { el.style.backgroundImage = 'url("' + String(url).replace(/"/g, "%22") + '")', el.classList.add("mu-ok"); }
+    // first frame of a stored video -> small jpeg data URL, cached for the session
+    var VPOST = Object.create(null);
+    function vidPoster(id) {
+        if (VPOST[id]) return Promise.resolve(VPOST[id]);
+        var get = null;
+        try { get = (function (M) { return M && M.get ? M.get(id) : null; })(H.media()); } catch (e) { }
+        return Promise.resolve(get).then(function (b) {
+            if (!b) return null;
+            return new Promise(function (res) {
+                var v = document.createElement("video"), url = "", done = !1, tm = 0;
+                function fin(u) { if (done) return; done = !0, clearTimeout(tm); try { v.removeAttribute("src"), v.load(); } catch (e) { } try { URL.revokeObjectURL(url); } catch (e) { } u && (VPOST[id] = u); res(u || null); }
+                try { url = URL.createObjectURL(b); } catch (e) { return res(null); }
+                v.muted = !0, v.playsInline = !0, v.preload = "auto", v.setAttribute("playsinline", "");
+                v.onloadedmetadata = function () { try { var d = v.duration; v.currentTime = d && isFinite(d) ? Math.min(0.3, d / 2) : 0.1; } catch (e) { } };
+                v.onseeked = function () { try { var w = v.videoWidth, h = v.videoHeight; if (!w || !h) return fin(null); var sc = Math.min(1, 360 / w), c = document.createElement("canvas"); c.width = Math.max(1, Math.round(w * sc)), c.height = Math.max(1, Math.round(h * sc)), c.getContext("2d").drawImage(v, 0, 0, c.width, c.height), fin(c.toDataURL("image/jpeg", .74)); } catch (e) { fin(null); } };
+                v.onerror = function () { fin(null); };
+                tm = setTimeout(function () { fin(null); }, 9000);
+                v.src = url;
+            });
+        });
+    }
     function thLoad(el) { if (!el.__ld) {
         el.__ld = 1;
         var t = TH[el.getAttribute("data-tk")];
@@ -40163,6 +40502,10 @@ body.mu-nfsbk-on #mkBackupBar { display:none!important; }
         }
         if (!t.id) {
             el.classList.add("mu-miss");
+            return;
+        }
+        if (t.v) {
+            vidPoster(t.id).then(function (u) { u ? thSet(el, u) : el.classList.add("mu-miss"); }, function () { el.classList.add("mu-miss"); });
             return;
         }
         if (THURL[t.id]) {
@@ -40439,7 +40782,7 @@ body.mu-nfsbk-on #mkBackupBar { display:none!important; }
     function navColl() { if (!__navCollMem) {
         try { __navCollMem = JSON.parse(localStorage.getItem("mkNavCollapsed") || "{}") || {}; }
         catch (e) { __navCollMem = {}; }
-        ["Collections", "Data backup", "Tools"].forEach(function (k) { __navCollMem[k] === void 0 && (__navCollMem[k] = 1); });
+        ["Collections", "Data backup", "Tools"].forEach(function (k) { __navCollMem[k] === void 0 && (__navCollMem[k] = 0); });
     } return __navCollMem; }
     function navToggleGrp(sec) { var grp = sec.closest(".mu-nav-grp"); if (!grp) return; var k = sec.getAttribute("data-navtoggle"), c = grp.classList.toggle("mu-collapsed"); sec.setAttribute("aria-expanded", c ? "false" : "true"); navColl()[k] = c ? 1 : 0; clearTimeout(window.__mkNavSaveT), window.__mkNavSaveT = setTimeout(function () { try { localStorage.setItem("mkNavCollapsed", JSON.stringify(navColl())); } catch (e) { console.warn("silent catch -> setItem @muNotesFsJs:787", e); } }, 400); }
     document.addEventListener("click", function (e) { var t = e.target && e.target.closest && e.target.closest("#muNavPanel .mu-nav-sec[data-navtoggle]"); if (t) { e.preventDefault(), e.stopPropagation(), navToggleGrp(t); } }, !0);
@@ -40476,7 +40819,7 @@ body.mu-nfsbk-on #mkBackupBar { display:none!important; }
     } return S2.page; }
     function pairOn() { try {
         var v = localStorage.getItem("mu_nav_pair_v1");
-        return v === null ? !1 : v === "1";
+        return v === null ? !0 : v === "1";
     }
     catch {
         return !1;
@@ -49729,7 +50072,7 @@ html[dir=rtl] .mkcs-bgrow:not(.mkcs-atend) {
     if (window.mkSoftFocus)
         return;
     function release(t) { try {
-        t.__mkSoftT = 0, document.activeElement === t && t.blur(), t.removeAttribute("inputmode");
+        t.__mkSoftT = 0, document.activeElement === t ? t.__mkQuiet = 1 : t.removeAttribute("inputmode");
     }
     catch { } }
     // Is the on-screen keyboard actually showing? (html.mu-kb / mu-kbo are kept by the keyboard tracker; the
@@ -49764,7 +50107,8 @@ html[dir=rtl] .mkcs-bgrow:not(.mkcs-atend) {
     // the person taps the text themselves => they want the keyboard
     function onPointerDown(e2) { var t = e2.target && e2.target.closest ? e2.target.closest('.text-box[contenteditable="true"]') : null; if (!(!t || !t.__mkSoftT && !t.__mkQuiet) && (clearTimeout(t.__mkSoftT), t.__mkSoftT = 0, t.__mkQuiet = 0, t.removeAttribute("inputmode"), document.activeElement === t))
         try {
-            t.blur();
+            var sl_ = window.getSelection();
+            sl_ && !sl_.isCollapsed && t.contains(sl_.anchorNode) || t.blur();
         }
         catch { } }
     document.addEventListener("pointerdown", onPointerDown, !0), document.addEventListener("touchstart", onPointerDown, !0);
@@ -53948,14 +54292,14 @@ html body #contentsContainer .mxe .mc-title-input{opacity:.8!important}</style>
   var qTimers = [], qTb = null, qHad = null;
   function unquiet() {
     qTimers.forEach(clearTimeout); qTimers = [];
-    if (qTb) { qHad === null ? qTb.removeAttribute("inputmode") : qTb.setAttribute("inputmode", qHad); qTb = null; }
+    if (qTb) { if (D.activeElement === qTb) { qTb.__mkQuiet = 1; } else { qHad === null ? qTb.removeAttribute("inputmode") : qTb.setAttribute("inputmode", qHad); } qTb = null; }
   }
   function hush() {
     var tb = ctx && ctx.tb;
     if (!tb || ctx.title || D.activeElement === tb && !qTb) return;
     if (qTb !== tb) { unquiet(); qTb = tb; qHad = tb.getAttribute("inputmode"); tb.setAttribute("inputmode", "none"); }
     qTimers.forEach(clearTimeout); qTimers = [];
-    [100, 300, 650].forEach(function (ms) { qTimers.push(setTimeout(function () { if (D.activeElement === tb) { try { tb.blur(); } catch (e) { } } }, ms)); });
+    /* keep focus: the caret/selection must stay visible; inputmode=none keeps the keyboard down */
     qTimers.push(setTimeout(unquiet, 900));
   }
   function quiet(run) { hush(); run(); }
@@ -55016,20 +55360,9 @@ html.mu-nfs-dark body #muNav#muNav .mu-nav-panel .mu-nav-head .mu-nav-layout {
 html body #muNav#muNav .mu-nav-panel .mu-nav-head .mu-nav-layout:active {
     background: #7f7f7f42 !important;
 }
-/* gentle, fluid group opening: body eases down, options fade/slide in one after another */
-html body #muNav#muNav .mu-nav-body{transition:grid-template-rows .5s cubic-bezier(.25,.8,.25,1),margin-top .5s cubic-bezier(.25,.8,.25,1)!important}
-html body #muNav#muNav .mu-nav-grp:not(.mu-collapsed)>.mu-nav-body>.mu-nav-inner{transition:opacity .35s ease .05s,transform .5s cubic-bezier(.25,.8,.25,1),visibility 0s linear 0s!important}
-html body #muNav#muNav .mu-nav-grp.mu-collapsed>.mu-nav-body>.mu-nav-inner{transition:opacity .35s ease,transform .5s cubic-bezier(.25,.8,.25,1),visibility 0s linear .5s!important}
-html body #muNav#muNav .mu-nav-inner>*{transition:opacity .4s ease,transform .5s cubic-bezier(.25,.8,.25,1)}
-html body #muNav#muNav .mu-nav-grp.mu-collapsed>.mu-nav-body>.mu-nav-inner>*{opacity:0;transform:translate3d(0,-6px,0);transition-duration:.35s,.5s;transition-delay:0s}
-html body #muNav#muNav .mu-nav-grp:not(.mu-collapsed)>.mu-nav-body>.mu-nav-inner>*:nth-child(1){transition-delay:0.040s!important}
-html body #muNav#muNav .mu-nav-grp:not(.mu-collapsed)>.mu-nav-body>.mu-nav-inner>*:nth-child(2){transition-delay:0.085s!important}
-html body #muNav#muNav .mu-nav-grp:not(.mu-collapsed)>.mu-nav-body>.mu-nav-inner>*:nth-child(3){transition-delay:0.130s!important}
-html body #muNav#muNav .mu-nav-grp:not(.mu-collapsed)>.mu-nav-body>.mu-nav-inner>*:nth-child(4){transition-delay:0.175s!important}
-html body #muNav#muNav .mu-nav-grp:not(.mu-collapsed)>.mu-nav-body>.mu-nav-inner>*:nth-child(5){transition-delay:0.220s!important}
-html body #muNav#muNav .mu-nav-grp:not(.mu-collapsed)>.mu-nav-body>.mu-nav-inner>*:nth-child(6){transition-delay:0.265s!important}
-html body #muNav#muNav .mu-nav-grp:not(.mu-collapsed)>.mu-nav-body>.mu-nav-inner>*:nth-child(7){transition-delay:0.310s!important}
-html body #muNav#muNav .mu-nav-grp:not(.mu-collapsed)>.mu-nav-body>.mu-nav-inner>*:nth-child(8){transition-delay:0.355s!important}
+/* group open/close is instant: no staggered/eased transitions (see the instant block above) */
+html body #muNav#muNav .mu-nav-grp .mu-nav-sec,html body #muNav#muNav .mu-nav-grp .mu-nav-chev,html body #muNav#muNav .mu-nav-body,html body #muNav#muNav .mu-nav-inner,html body #muNav#muNav .mu-nav-inner>*{transition:none!important;transition-delay:0s!important;animation:none!important}
+html body #muNav#muNav .mu-nav-grp.mu-collapsed>.mu-nav-body{display:none!important}
 #muTgClock{display:none;position:fixed;left:50%;top:var(--mu-clk-top,0px);height:var(--mu-clk-h,44px);transform:translateX(-50%);z-index:10210;flex-direction:column;align-items:center;justify-content:center;gap:1px;width:min(176px,40vw);box-sizing:border-box;padding:0 8px;margin:0;border:0;background:transparent;color:var(--mu-clk-fg,#fff);font-family:inherit;line-height:1.1;text-align:center;cursor:pointer;-webkit-tap-highlight-color:transparent;-webkit-user-select:none;user-select:none;touch-action:manipulation;contain:layout paint style}
 html.mu-tg-fs #muTgClock{display:flex}
 html.mk-boot #muTgClock,html.mu-clk-off #muTgClock{display:none!important}
@@ -59891,7 +60224,7 @@ var CONT = [["AS", "آسیا", "Asia"], ["EU", "اروپا", "Europe"], ["NA", "
     const D = {
         fa: {
             title: "📦 بکاپ رسانه (عکس و ویس)", off: "خاموش", notset: "تنظیم نشده", test: "تست اتصال", bot: "ربات", on: "روشن", locked: "قفل", unlocked: "باز",
-            intro: "عکس و ویس‌ها رمزنگاری می‌شوند و در چت خصوصی ربات شخصی خودت ذخیره می‌شوند؛ هیچ سروری در کار نیست.",
+            intro: "عکس، ویس و فایل‌ها رمزنگاری می‌شوند و در چت خصوصی ربات شخصی خودت ذخیره می‌شوند؛ هیچ سروری در کار نیست.",
             steps: "۱) در @BotFather یک ربات بساز و توکن را کپی کن. ۲) یک بار به ربات پیام /start بده. ۳) توکن و یک رمز (حداقل ۶ نویسه؛ عدد یا حرف؛ روی همه‌ی دستگاه‌ها همان) را اینجا وارد کن. راهنمای کامل: دکمه‌ی ❓ بالای همین پنل.",
             token: "توکن ربات", pw: "رمز رسانه (حداقل ۶ نویسه)", pw2: "تکرار رمز", adv: "پیشرفته: آدرس پایهٔ API (پروکسی)", base: "آدرس پایه",
             connect: "اتصال و تست", unlock: "باز کردن قفل", lock: "قفل کردن", pwnote: "رمز هیچ‌جا ذخیره نمی‌شود؛ هر نشست یک بار پرسیده می‌شود. اگر فراموشش کنی رسانه‌ها قابل بازیابی نیستند.",
@@ -59912,8 +60245,8 @@ var CONT = [["AS", "آسیا", "Asia"], ["EU", "اروپا", "Europe"], ["NA", "
             chpw: "تغییر رمز", chpwT: "تغییر رمز رسانه", oldPw: "رمز فعلی", newPw: "رمز جدید (حداقل ۶ نویسه)", newPw2: "تکرار رمز جدید", pwChanged: "✅ رمز رسانه تغییر کرد", errSame: "رمز جدید باید با رمز فعلی فرق کند.", chpwNote: "رسانه‌های قبلی دوباره آپلود نمی‌شوند و همچنان باز می‌شوند. روی دستگاه‌های دیگر باید یک بار رمز جدید را وارد کنی."
         },
         en: {
-            title: "📦 Media backup (photos & voice)", off: "Off", notset: "Not set up", test: "Test connection", bot: "Bot", on: "On", locked: "Locked", unlocked: "Unlocked",
-            intro: "Photos and voice notes are encrypted and stored in the private chat of your own bot. No server involved.",
+            title: "📦 Media backup (photos, voice & files)", off: "Off", notset: "Not set up", test: "Test connection", bot: "Bot", on: "On", locked: "Locked", unlocked: "Unlocked",
+            intro: "Photos, voice notes and files are encrypted and stored in the private chat of your own bot. No server involved.",
             steps: "1) Create a bot with @BotFather and copy its token. 2) Send /start to your bot once. 3) Enter the token and a password here (at least 6 characters, digits or letters, the same on every device). Full guide: the ❓ button at the top of this panel.",
             token: "Bot token", pw: "Media password (min. 6 characters)", pw2: "Repeat password", adv: "Advanced: custom API base URL (proxy)", base: "Base URL",
             connect: "Connect & test", unlock: "Unlock", lock: "Lock", pwnote: "The password is never stored; it is asked once per session. If you forget it the media cannot be recovered.",
@@ -59935,7 +60268,7 @@ var CONT = [["AS", "آسیا", "Asia"], ["EU", "اروپا", "Europe"], ["NA", "
         }
     };
     Object.assign(D.fa, {
-        intro: "عکس و ویس‌ها رمزنگاری می‌شوند و در چت خصوصی ربات شخصی خودت ذخیره می‌شوند. سرور ذخیره‌سازی در کار نیست؛ فقط درخواست‌های ربات به‌صورت پیش‌فرض از یک پروکسی ساده به api.telegram.org می‌رسد (در «پیشرفته» قابل تغییر).",
+        intro: "عکس، ویس و فایل‌ها رمزنگاری می‌شوند و در چت خصوصی ربات شخصی خودت ذخیره می‌شوند. سرور ذخیره‌سازی در کار نیست؛ فقط درخواست‌های ربات به‌صورت پیش‌فرض از یک پروکسی ساده به api.telegram.org می‌رسد (در «پیشرفته» قابل تغییر).",
         pwnote: "خودِ رمز هیچ‌جا ذخیره نمی‌شود. به‌صورت پیش‌فرض یک کلید غیرقابل‌استخراج روی همین دستگاه می‌ماند تا رمز را دوباره نپرسد (با «قفل کردن» پاک می‌شود). اگر رمز را فراموش کنی رسانه‌ها قابل بازیابی نیستند.",
         pgUp: "آپلود", pgDn: "دریافت", pgOf: "از", pgDone: "✅ انجام شد (موفق / کل)", working: "در حال انجام…", queueL: "صف",
         stEnc: "رمزنگاری فایل…", stSend: "ارسال به تلگرام… (بین فایل‌ها ~۳ ثانیه فاصله است)", stGet: "دریافت از تلگرام…", stDec: "رمزگشایی و ذخیره…",
@@ -59944,7 +60277,7 @@ var CONT = [["AS", "آسیا", "Asia"], ["EU", "اروپا", "Europe"], ["NA", "
         offDone: "✅ بکاپ رسانه غیرفعال شد", onDone: "✅ بکاپ رسانه فعال شد", lockDone: "🔒 قفل شد؛ برای ادامه رمز را وارد کن"
     });
     Object.assign(D.en, {
-        intro: "Photos and voice notes are encrypted and stored in the private chat of your own bot. There is no storage server; by default the bot requests only pass through a simple proxy to api.telegram.org (changeable under “Advanced”).",
+        intro: "Photos, voice notes and files are encrypted and stored in the private chat of your own bot. There is no storage server; by default the bot requests only pass through a simple proxy to api.telegram.org (changeable under “Advanced”).",
         pwnote: "The password itself is never stored. By default a non-extractable key stays on this device so it does not ask again (“Lock” erases it). If you forget the password the media cannot be recovered.",
         pgUp: "Upload", pgDn: "Download", pgOf: "of", pgDone: "✅ Finished (ok / total)", working: "Working…", queueL: "Queue",
         stEnc: "Encrypting file…", stSend: "Sending to Telegram… (about 3 s between files)", stGet: "Downloading from Telegram…", stDec: "Decrypting & saving…",
@@ -60047,8 +60380,8 @@ var CONT = [["AS", "آسیا", "Asia"], ["EU", "اروپا", "Europe"], ["NA", "
     const known = id => { const a = S.recs[id], b = S.remote[id], k = S.kid; if (!k) return a || b || null; const oa = a && (!a.k || a.k === k), ob = b && (!b.k || b.k === k); if (oa && ob) return (a.k === k || b.k !== k) ? a : b; return oa ? a : ob ? b : null; };
     const isBad = r => !!(r && S.bad && S.bad[r.fid]);
     const findBySha = sha => { const ok = r => r && r.sha === sha && r.fid && !isBad(r) && (!S.kid || r.k === S.kid); for (const k in S.recs) if (ok(S.recs[k])) return S.recs[k]; for (const k in S.remote) if (ok(S.remote[k])) return S.remote[k]; return null; };
-    const mimeShort = m => String(m || "").split(";")[0].replace(/^image\//, "i:").replace(/^audio\//, "a:") || "o";
-    const mimeLong = s => /^i:/.test(s) ? "image/" + s.slice(2) : /^a:/.test(s) ? "audio/" + s.slice(2) : "application/octet-stream";
+    const mimeShort = m => String(m || "").split(";")[0].replace(/^image\//, "i:").replace(/^audio\//, "a:").replace(/^video\//, "v:") || "o";
+    const mimeLong = s => /^i:/.test(s) ? "image/" + s.slice(2) : /^a:/.test(s) ? "audio/" + s.slice(2) : /^v:/.test(s) ? "video/" + s.slice(2) : "application/octet-stream";
     const idTime = id => { const m = /^m_([a-z0-9]+)_/i.exec(id || ""); return m ? parseInt(m[1], 36) || 0 : 0; };
 
     /* ---------- crypto ---------- */
@@ -60409,7 +60742,7 @@ var CONT = [["AS", "آسیا", "Asia"], ["EU", "اروپا", "Europe"], ["NA", "
 
     /* ---------- referenced ids ---------- */
     function referenced() {
-        const ids = new Set, re = /data-mu-media="([^"]+)"|data-mkmed="(?:img|audio):([^"]+)"/g;
+        const ids = new Set, re = /data-mu-media="([^"]+)"|data-mkmed="(?:img|audio|video|file):([^"]+)"/g;
         try { for (const it of categories) { const h = it && it.html; if (typeof h !== "string" || h.indexOf("data-m") < 0) continue; re.lastIndex = 0; let m; while (m = re.exec(h)) ids.add(m[1] || m[2]); } } catch { }
         return ids;
     }
@@ -60590,7 +60923,13 @@ var CONT = [["AS", "آسیا", "Asia"], ["EU", "اروپا", "Europe"], ["NA", "
     }
 
     /* ---------- DOM integration ---------- */
-    function buildBlock(kind, id) {
+    function buildBlock(kind, id, src) {
+        if (kind === "file" && typeof mu_buildFileWrapper === "function") { const g = n => src && src.getAttribute ? src.getAttribute(n) : null; return mu_buildFileWrapper(id, { name: g("data-fname"), size: g("data-fsize"), type: g("data-ftype") }); }
+        if (kind === "video") {
+            const w = document.createElement("div"); w.className = "audio-wrapper video-wrapper"; w.setAttribute("contenteditable", "false");
+            const v = document.createElement("video"); v.controls = !0; v.setAttribute("playsinline", ""); v.setAttribute("preload", "metadata"); v.setAttribute("data-mu-media", id);
+            const b = document.createElement("button"); b.type = "button"; b.className = "img-btn"; b.textContent = "✖"; w.append(v, b); return w;
+        }
         if (kind === "audio") {
             const w = document.createElement("div"); w.className = "audio-wrapper"; w.setAttribute("contenteditable", "false");
             const a = document.createElement("audio"); a.controls = !0; a.setAttribute("data-mu-media", id);
@@ -60605,7 +60944,7 @@ var CONT = [["AS", "آسیا", "Asia"], ["EU", "اروپا", "Europe"], ["NA", "
             for (const it of categories) {
                 if (!it || typeof it.html !== "string" || it.html.indexOf(":" + id + '"') < 0 || it.html.indexOf("data-mkmed") < 0) continue;
                 const tpl = document.createElement("template"); tpl.innerHTML = it.html; let ch = !1;
-                tpl.content.querySelectorAll("[data-mkmed]").forEach(el => { const p = (el.getAttribute("data-mkmed") || "").split(":"); if (p[1] === id) { el.replaceWith(buildBlock(p[0], id)); ch = !0; } });
+                tpl.content.querySelectorAll("[data-mkmed]").forEach(el => { const p = (el.getAttribute("data-mkmed") || "").split(":"); if (p[1] === id) { el.replaceWith(buildBlock(p[0], id, el)); ch = !0; } });
                 if (ch) { it.html = tpl.innerHTML; changed = !0; }
             }
             changed && typeof saveToLocalStorage === "function" && saveToLocalStorage();
@@ -60614,15 +60953,15 @@ var CONT = [["AS", "آسیا", "Asia"], ["EU", "اروپا", "Europe"], ["NA", "
     function afterDownload(id) {
         patchModel(id);
         const hosts = new Set;
-        document.querySelectorAll("[data-mkmed]").forEach(el => { const p = (el.getAttribute("data-mkmed") || "").split(":"); if (p[1] === id) { const h = el.closest('[id^="text-"],.mu-viewer-body,[contenteditable]') || document.body; el.replaceWith(buildBlock(p[0], id)); hosts.add(h); } });
-        document.querySelectorAll('img[data-mu-media="' + id + '"],audio[data-mu-media="' + id + '"]').forEach(el => { el.removeAttribute("data-mkst"); el.removeAttribute("data-mkmsg"); const h = el.closest('[id^="text-"],.mu-viewer-body') || document.body; hosts.add(h); const wr = el.closest(".img-drag-wrapper,.audio-wrapper"); wr && (wr.removeAttribute("data-mkst"), wr.removeAttribute("data-mkmsg")); });
+        document.querySelectorAll("[data-mkmed]").forEach(el => { const p = (el.getAttribute("data-mkmed") || "").split(":"); if (p[1] === id) { const h = el.closest('[id^="text-"],.mu-viewer-body,[contenteditable]') || document.body; el.replaceWith(buildBlock(p[0], id, el)); hosts.add(h); } });
+        document.querySelectorAll('img[data-mu-media="' + id + '"],audio[data-mu-media="' + id + '"],video[data-mu-media="' + id + '"],.file-wrapper[data-mu-media="' + id + '"]').forEach(el => { el.removeAttribute("data-mkst"); el.removeAttribute("data-mkmsg"); const h = el.closest('[id^="text-"],.mu-viewer-body') || document.body; hosts.add(h); const wr = el.closest(".img-drag-wrapper,.audio-wrapper"); wr && (wr.removeAttribute("data-mkst"), wr.removeAttribute("data-mkmsg")); });
         hosts.forEach(h => { try { const m = /^text-(.+)$/.exec(h.id || ""); m && typeof attachWrapperEvents === "function" && attachWrapperEvents(m[1]); } catch { } try { MU_IndexedDB.hydrateMedia(h); } catch { } });
         scheduleRender();
     }
     const MSG = { qd: "qd", dl: "dl", er: "er", lk: "lk", big: "big" };
     function markEl(id, st) {
-        document.querySelectorAll('[data-mkmed$=":' + id + '"],img[data-mu-media="' + id + '"],audio[data-mu-media="' + id + '"]').forEach(el => {
-            if (el.matches("img,audio") && el.dataset.muHydratedFor === id) return;
+        document.querySelectorAll('[data-mkmed$=":' + id + '"],img[data-mu-media="' + id + '"],audio[data-mu-media="' + id + '"],video[data-mu-media="' + id + '"],.file-wrapper[data-mu-media="' + id + '"]').forEach(el => {
+            if (el.matches("img,audio,video,.file-wrapper") && el.dataset.muHydratedFor === id) return;
             const f = S.fail[id], target = el.closest(".img-drag-wrapper,.audio-wrapper") || el;
             target.setAttribute("data-mkst", st); target.setAttribute("data-mkmsg", st === "er" && f && f.k === "big" ? T("big") : T(MSG[st] || "er"));
         });
@@ -60640,7 +60979,7 @@ var CONT = [["AS", "آسیا", "Asia"], ["EU", "اروپا", "Europe"], ["NA", "
     }
     function scanDom(force) {
         if (!isOn()) return;
-        document.querySelectorAll("[data-mkmed],img[data-mu-media],audio[data-mu-media]").forEach(el => { if (!force && seenEls.has(el)) return; seenEls.add(el); if (io) { try { io.unobserve(el); } catch { } io.observe(el); } else onVisible(el); });
+        document.querySelectorAll("[data-mkmed],img[data-mu-media],audio[data-mu-media],video[data-mu-media],.file-wrapper[data-mu-media]").forEach(el => { if (!force && seenEls.has(el)) return; seenEls.add(el); if (io) { try { io.unobserve(el); } catch { } io.observe(el); } else onVisible(el); });
     }
     function scheduleScan(force) { force && (scanForce = !0); clearTimeout(scanT); scanT = setTimeout(() => { const f = scanForce; scanForce = !1; scanDom(f); }, 400); }
     function startObservers() {
@@ -60991,7 +61330,7 @@ var CONT = [["AS", "آسیا", "Asia"], ["EU", "اروپا", "Europe"], ["NA", "
         const el = e.target.closest && e.target.closest("[data-mkst]");
         if (el && (el.dataset.mkst === "er" || el.dataset.mkst === "lk")) {
             e.preventDefault(); e.stopPropagation();
-            const inner = el.matches("[data-mkmed]") ? el : el.querySelector("img[data-mu-media],audio[data-mu-media]") || el, id = (inner.getAttribute("data-mkmed") || "").split(":")[1] || inner.getAttribute("data-mu-media");
+            const inner = el.matches("[data-mkmed]") ? el : el.querySelector("img[data-mu-media],audio[data-mu-media],video[data-mu-media]") || el, id = (inner.getAttribute("data-mkmed") || "").split(":")[1] || inner.getAttribute("data-mu-media");
             (async () => { if (!id) return; if (!await ensureUnlocked(!0)) return; if (!isOn()) await activate(); delete S.fail[id]; S.paused = !1; markEl(id, "qd"); ensure(id, { prio: !0 }); })();
         }
     }, !0);
@@ -61472,7 +61811,7 @@ var CONT = [["AS", "آسیا", "Asia"], ["EU", "اروپا", "Europe"], ["NA", "
     /* =====================================================================================
        RESTORE  (add = merge notes in, replace = overwrite everything on this device)
        ===================================================================================== */
-    var MEDIA_RE = /data-mu-media="([^"]+)"|data-mkmed="(?:img|audio):([^"]+)"/g;
+    var MEDIA_RE = /data-mu-media="([^"]+)"|data-mkmed="(?:img|audio|video|file):([^"]+)"/g;
     async function restoreAdd(snap) {
         var cats = G("categories"); if (!Array.isArray(cats)) throw new Error("لیست یادداشت‌های برنامه در دسترس نیست.");
         var incoming; try { incoming = JSON.parse(snap.header.notes || "[]"); } catch (e) { throw new Error("یادداشت‌های داخل بکاپ خوانده نشد."); }
@@ -61780,7 +62119,7 @@ details summary{cursor:pointer;color:#cfc9ff;font-weight:600;padding:4px 0}\
     }
     function mainView() {
         return '<div class="card" id="stats">' + statsHtml() + '</div>' +
-            '<div class="card"><h3>➕ بکاپ جدید</h3><div class="row"><button class="btn pri grow" data-a="newPick">🗂 انتخاب یادداشت‌ها</button><button class="btn grow" data-a="newAll">⚡ همهٔ یادداشت‌ها</button></div><div class="muted" style="margin-top:8px">هر یادداشت جداگانه (همراه عکس و ویس خودش) ذخیره می‌شود. سقف هر بکاپ ۳.۵ گیگابایت و سقف مجموع همهٔ بکاپ‌ها ۳.۶ گیگابایت است و پیش از شروع و هنگام افزودن هر یادداشت، حجم و فضای باقی‌مانده نشان داده می‌شود.</div></div>' +
+            '<div class="card"><h3>➕ بکاپ جدید</h3><div class="row"><button class="btn pri grow" data-a="newPick">🗂 انتخاب یادداشت‌ها</button><button class="btn grow" data-a="newAll">⚡ همهٔ یادداشت‌ها</button></div><div class="muted" style="margin-top:8px">هر یادداشت جداگانه (همراه عکس، ویس و فایل‌های خودش) ذخیره می‌شود. سقف هر بکاپ ۳.۵ گیگابایت و سقف مجموع همهٔ بکاپ‌ها ۳.۶ گیگابایت است و پیش از شروع و هنگام افزودن هر یادداشت، حجم و فضای باقی‌مانده نشان داده می‌شود.</div></div>' +
             '<div class="card"><h3>🗂 بکاپ‌ها</h3><div class="row" style="margin-bottom:10px"><input class="fa grow" id="q" placeholder="جستجو…" value="' + esc(S.q) + '"><select id="so" style="width:auto"><option value="new"' + (S.sort === "new" ? " selected" : "") + '>جدیدترین</option><option value="old"' + (S.sort === "old" ? " selected" : "") + '>قدیمی‌ترین</option><option value="big"' + (S.sort === "big" ? " selected" : "") + '>بزرگ‌ترین</option><option value="name"' + (S.sort === "name" ? " selected" : "") + '>نام</option></select><button class="btn sm" data-a="refresh">↻</button></div><div id="list">' + listHtml() + '</div></div>' +
             '<details class="card"><summary>⚙️ حساب و تنظیمات</summary><div class="row" style="margin:10px 0"><button class="btn sm" data-a="pw">🔑 تغییر رمز</button><button class="btn sm" data-a="logoutAll">🚪 خروج از همهٔ دستگاه‌ها</button><button class="btn sm" data-a="logout">خروج از حساب</button><button class="btn sm dng" data-a="delAcc">حذف حساب و همهٔ بکاپ‌ها</button></div><label>آدرس سرور</label><input id="api" value="' + esc(apiBase()) + '"><div class="row" style="margin-top:10px"><button class="btn sm" data-a="saveApi">ذخیره</button></div><div id="apiMsg" class="muted"></div></details>';
     }
@@ -62096,6 +62435,180 @@ details summary{cursor:pointer;color:#cfc9ff;font-weight:600;padding:4px 0}\
         armWord(); placeWord();
     }
     if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", init); else init();
+})();
+</script>
+
+<style id="mkFileBarCss">
+html body .mk-fbar{position:fixed;left:8px;top:8px;z-index:2147483000;display:none;align-items:center;gap:2px;padding:5px;border-radius:18px;direction:ltr;background:rgba(24,24,28,.96);border:1px solid rgba(255,255,255,.16);box-shadow:0 8px 28px rgba(0,0,0,.45);max-width:calc(100vw - 16px);box-sizing:border-box;width:max-content}
+html body .mk-fbar.on{display:flex}
+html body .mk-fbar button{width:38px;height:38px;min-width:0;margin:0;padding:0;border:0!important;border-radius:12px;background:transparent!important;color:#fff!important;font-size:17px;line-height:1;cursor:pointer;display:flex;align-items:center;justify-content:center;box-shadow:none;-webkit-tap-highlight-color:transparent}
+html body .mk-fbar button:hover{background:rgba(255,255,255,.14)!important}
+html body .mk-fbar button:active{background:rgba(255,255,255,.24)!important;transform:scale(.92)}
+html body .mk-fbar .mk-sep{width:1px;align-self:stretch;margin:4px 3px;background:rgba(255,255,255,.16)}
+html body .file-wrapper.mk-fsel{outline:2px solid #5ecde6;outline-offset:2px;border-radius:12px}
+</style>
+<script id="mkFileBarJs">
+// Tap a file in a note -> floating bar: download / move up / move down / delete
+(function () {
+    var bar = null, cur = null, raf = 0, key = "";
+    function T(fa, en) { var f = !0; try { f = currentLang === "fa"; } catch (e) { } return f ? fa : en; }
+    function editHost(w) { return w && w.closest ? w.closest('[contenteditable="true"]') : null; }
+    function mk(cls, icon, fn) {
+        var b = document.createElement("button"); b.type = "button"; b.className = cls; b.textContent = icon;
+        b.addEventListener("click", function (e) { e.preventDefault(); e.stopPropagation(); fn(); });
+        return b;
+    }
+    function catId(h) { return h && h.id && h.id.indexOf("text-") === 0 ? h.id.slice(5) : null; }
+    function saved(deleted) {
+        var h = cur && cur.host, id = catId(h);
+        try {
+            if (id) { deleted ? saveCategory(id) : (typeof autosaveCategory === "function" ? autosaveCategory(id) : saveCategory(id)); }
+            else if (h) h.dispatchEvent(new Event("input", { bubbles: !0 }));
+        } catch (e) { }
+    }
+    function build() {
+        if (bar) return;
+        bar = document.createElement("div"); bar.className = "mk-fbar"; bar.setAttribute("role", "toolbar");
+        bar.addEventListener("mousedown", function (e) { e.preventDefault(); });
+        bar.appendChild(mk("mk-dl", "📥", function () { var w = cur && cur.w; if (w && typeof mu_fileDownload === "function") mu_fileDownload(w); }));
+        var s1 = document.createElement("span"); s1.className = "mk-sep"; bar.appendChild(s1);
+        bar.appendChild(mk("mk-up", "⬆️", function () { var w = cur && cur.w; if (w && mu_moveImageWrapper(w, -1)) saved(!1); }));
+        bar.appendChild(mk("mk-down", "⬇️", function () { var w = cur && cur.w; if (w && mu_moveImageWrapper(w, 1)) saved(!1); }));
+        var s2 = document.createElement("span"); s2.className = "mk-sep"; bar.appendChild(s2);
+        bar.appendChild(mk("mk-del", "🗑️", function () {
+            if (!cur) return; var w = cur.w, ctl = w.querySelector(".mu-ed-del");
+            if (ctl) { close(); ctl.click(); return; } // viewer edit mode has its own confirm + save
+            var msg = T("حذف شود؟", "Delete?"); try { msg = i18n[currentLang].confirmDelete || msg; } catch (e) { }
+            if (!confirm(msg)) return;
+            var h = cur.host; try { close(); typeof mu_removeMediaWrapper === "function" ? mu_removeMediaWrapper(w) : w.remove(); } catch (e) { w.remove(); }
+            cur = { w: w, host: h }; saved(!0); cur = null;
+        }));
+        bar.appendChild(mk("mk-x", "✕", function () { close(); }));
+        document.body.appendChild(bar);
+    }
+    function labels() {
+        var m = { "mk-dl": ["دانلود فایل", "Download file"], "mk-up": ["یک خط بالاتر", "Move up"], "mk-down": ["یک خط پایین‌تر", "Move down"], "mk-del": ["حذف", "Delete"], "mk-x": ["بستن", "Close"] };
+        Object.keys(m).forEach(function (k) { var b = bar.querySelector("." + k); if (b) { b.title = T(m[k][0], m[k][1]); b.setAttribute("aria-label", b.title); } });
+    }
+    function tick() {
+        if (!cur) return;
+        var w = cur.w; if (!w.isConnected) { close(); return; }
+        var r = w.getBoundingClientRect(), vv = window.visualViewport, top0 = vv ? vv.offsetTop : 0, bot0 = vv ? vv.offsetTop + vv.height : innerHeight, bw = bar.offsetWidth, bh = bar.offsetHeight;
+        var top = r.bottom + 8; top + bh > bot0 - 8 && (top = r.top - bh - 8); top < top0 + 8 && (top = Math.max(top0 + 8, bot0 - bh - 12));
+        var left = Math.max(8, Math.min(r.left + r.width / 2 - bw / 2, innerWidth - bw - 8)), k = [top, left, bw, bh].map(Math.round).join();
+        if (k !== key) { key = k; bar.style.left = left + "px"; bar.style.top = top + "px"; }
+        raf = requestAnimationFrame(tick);
+    }
+    function open(w) {
+        if (cur && cur.w === w) { close(); return; }
+        close(); build(); labels();
+        cur = { w: w, host: editHost(w) }; w.classList.add("mk-fsel"); bar.classList.add("on"); key = "";
+        var ae = document.activeElement; ae && ae !== document.body && ae.blur && (ae.isContentEditable || /^(INPUT|TEXTAREA)$/.test(ae.tagName)) && ae.blur();
+        cancelAnimationFrame(raf); tick();
+    }
+    function close() {
+        if (cur && cur.w) cur.w.classList.remove("mk-fsel");
+        cur = null; cancelAnimationFrame(raf); raf = 0; bar && bar.classList.remove("on");
+    }
+    // capture phase: runs before the original "tap file = download now" handler
+    document.addEventListener("click", function (e) {
+        var t = e.target; if (!t || !t.closest) return;
+        var w = t.closest(".file-wrapper"); if (!w || w.hasAttribute("data-mkst")) return;
+        if (t.closest("button")) return;           // existing ✖ / editor controls keep working
+        if (!editHost(w)) return;                  // read-only view: tap still downloads directly
+        e.preventDefault(); e.stopPropagation(); e.stopImmediatePropagation();
+        open(w);
+    }, !0);
+    document.addEventListener("pointerdown", function (e) {
+        if (!cur) return; var t = e.target;
+        if (t && t.closest && (t.closest(".mk-fbar") || t.closest(".file-wrapper") === cur.w)) return;
+        close();
+    }, !0);
+    document.addEventListener("keydown", function (e) { e.key === "Escape" && close(); });
+})();
+</script>
+
+
+<style id="mkVideoFixCss">
+/* video: corner controls (delete + move) always visible and usable in the editor */
+html body .audio-wrapper.video-wrapper>button.img-btn.img-btn.img-btn.img-btn.img-btn.img-btn{position:absolute!important;top:14px!important;inset-inline-end:14px!important;z-index:5!important;width:34px!important;height:34px!important;min-width:0!important;margin:0!important;padding:0!important;display:inline-flex!important;align-items:center!important;justify-content:center!important;border-radius:50%!important;background:rgba(0,0,0,.58)!important;color:#fff!important;border:1px solid rgba(255,255,255,.35)!important;box-shadow:none!important;line-height:1!important;cursor:pointer;-webkit-tap-highlight-color:transparent}
+html body .audio-wrapper.video-wrapper>button.img-btn.img-btn.img-btn.img-btn.img-btn.img-btn svg{width:18px!important;height:18px!important;stroke:#fff!important;stroke-width:2.4!important;fill:none!important}
+html body .audio-wrapper.video-wrapper>button.img-btn.img-btn.img-btn.img-btn.img-btn.img-btn.mk-vmv{inset-inline-end:58px!important;font-size:0!important}
+.video-wrapper>button.mk-vmv:before{content:"";display:block;width:0;height:0;border-left:7px solid transparent;border-right:7px solid transparent;border-bottom:9px solid #fff}
+.video-wrapper>button.mk-vmv.mk-vdn:before{border-bottom:0;border-top:9px solid #fff}
+html body .audio-wrapper.video-wrapper>button.img-btn.img-btn.img-btn.img-btn.img-btn.img-btn.mk-vmv.mk-vdn{inset-inline-end:102px!important}
+.video-wrapper>button.mk-vmv{display:none}
+[contenteditable="true"] .video-wrapper>button.mk-vmv{display:inline-flex}
+.mu-viewer .video-wrapper>button.mk-vmv,.mu-viewer.is-editing .video-wrapper>button.mk-vmv{display:none!important}
+/* no dotted frame around videos */
+.img-below-line.mu-vid-line,.img-top-divider.mu-vid-line,.img-above-line.mu-vid-line{border-color:transparent!important}
+/* poster thumbnail of a video in the notes list */
+.mu-nfs-thumb.mu-vid:before{content:"";position:absolute;inset:0;margin:auto;width:30px;height:30px;border-radius:50%;background:rgba(0,0,0,.52) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath fill='white' d='M8 5.5v13l11-6.5z'/%3E%3C/svg%3E") 55% center/16px no-repeat;z-index:1;pointer-events:none}
+.mu-nfs-thumb.mu-vid.mu-miss:after{content:"\1F3AC";font-size:22px;opacity:.6}
+</style>
+<script id="mkVideoFixJs">
+(function () {
+    function T(fa, en) { var f = !0; try { f = currentLang === "fa"; } catch (e) { } return f ? fa : en; }
+    function hostOf(w) { return w && w.closest ? w.closest('[contenteditable="true"]') : null; }
+    function inEditor(w) { return !!hostOf(w) && !w.closest(".mu-viewer"); }
+    function catIdOf(w) { var h = w.closest('[id^="text-"]'); return h ? h.id.slice(5) : null; }
+    function save(w, id) {
+        try { if (id) { typeof autosaveCategory === "function" ? autosaveCategory(id) : saveCategory(id); } else { var h = hostOf(w); h && h.dispatchEvent(new Event("input", { bubbles: !0 })); } } catch (e) { }
+    }
+    // the video together with its dotted frame lines moves as one block
+    function unit(w) {
+        var a = w.previousElementSibling, b = w.nextElementSibling, u = [w];
+        function blank(n) { return !!n && /^(DIV|P)$/.test(n.tagName) && !n.querySelector("img,video,audio,canvas,table,.audio-wrapper,.img-drag-wrapper") && !(n.textContent || "").replace(/[\u200B\s]/g, ""); }
+        a && (/img-above-line|img-top-divider/.test(a.className) || blank(a)) && u.unshift(a);
+        b && (b.classList.contains("img-below-line") || blank(b)) && u.push(b);
+        return u;
+    }
+    function move(w, dir) {
+        var u = unit(w), parent = w.parentNode; if (!parent) return !1;
+        if (dir < 0) { var p = u[0].previousElementSibling; if (!p) return !1; u.forEach(function (n) { parent.insertBefore(n, p); }); }
+        else { var n2 = u[u.length - 1].nextElementSibling; if (!n2) return !1; var ref = n2.nextSibling; u.forEach(function (x) { parent.insertBefore(x, ref); }); }
+        try { w.scrollIntoView({ block: "nearest" }); } catch (e) { }
+        return !0;
+    }
+    function mkBtn(cls, txt, title) {
+        var b = document.createElement("button"); b.type = "button"; b.className = "img-btn mk-vmv " + cls; b.textContent = txt; b.title = title; b.setAttribute("aria-label", title); b.setAttribute("contenteditable", "false");
+        b.addEventListener("mousedown", function (e) { e.preventDefault(); }); return b;
+    }
+    function decorate(w) {
+        if (!w || !w.isConnected || !w.classList.contains("video-wrapper")) return;
+        var del = w.querySelector(":scope>button:not(.mk-vmv)");
+        if (!del) { del = document.createElement("button"); del.type = "button"; del.className = "img-btn"; w.appendChild(del); }
+        if (!del.querySelector("svg") && !(del.textContent || "").trim()) del.textContent = "\u2716";
+        del.title = T("حذف ویدیو", "Delete video"); del.setAttribute("aria-label", del.title);
+        if (!w.querySelector(":scope>.mk-vup")) {
+            w.appendChild(mkBtn("mk-vup", "\u25B2", T("بردن به بالا", "Move up")));
+            w.appendChild(mkBtn("mk-vdn", "\u25BC", T("بردن به پایین", "Move down")));
+        }
+    }
+    function scan(root) {
+        try { (root.querySelectorAll ? root : document).querySelectorAll(".video-wrapper").forEach(function (w) { inEditor(w) && decorate(w); }); } catch (e) { }
+        try { root.classList && root.classList.contains("video-wrapper") && inEditor(root) && decorate(root); } catch (e) { }
+    }
+    var pend = 0;
+    function later() { pend || (pend = setTimeout(function () { pend = 0; scan(document); }, 150)); }
+    try { new MutationObserver(later).observe(document.body, { childList: !0, subtree: !0 }); } catch (e) { }
+    setTimeout(later, 600);
+    // capture phase: runs before the old per-button handlers, so delete/move behave the same in every state
+    document.addEventListener("click", function (e) {
+        var t = e.target; if (!t || !t.closest) return;
+        var b = t.closest(".video-wrapper>button"); if (!b) return;
+        var w = b.parentNode; if (!inEditor(w)) return;
+        e.preventDefault(); e.stopPropagation(); e.stopImmediatePropagation();
+        var id = catIdOf(w);
+        if (b.classList.contains("mk-vup") || b.classList.contains("mk-vdn")) {
+            move(w, b.classList.contains("mk-vup") ? -1 : 1) && save(w, id);
+            return;
+        }
+        var msg = T("حذف شود؟", "Delete?"); try { msg = i18n[currentLang].confirmDelete || msg; } catch (x) { }
+        if (!confirm(msg)) return;
+        try { typeof mu_removeMediaWrapper === "function" ? mu_removeMediaWrapper(w) : w.remove(); } catch (x) { try { w.remove(); } catch (y) { } }
+        try { id && saveCategory(id); } catch (x) { }
+    }, !0);
 })();
 </script>
 
