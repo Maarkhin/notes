@@ -60441,7 +60441,7 @@ var CONT = [["AS", "آسیا", "Asia"], ["EU", "اروپا", "Europe"], ["NA", "
     const LS_CFG = "mkmed_cfg_v1", LS_ON = "mkmed_on_v1", LS_SEEN = "mkmed_seen_v1", LS_DEV = "mkmed_dev_v1", KV_STATE = "mkmed_state_v1";
     const LS_AUTO = "mkmed_auto_v1", LS_CLEAN = "mkmed_autoclean_v1";   // auto sync switch (default ON; only "0" turns it off)
     const CFG_KEY = "mk_media_cfg", IDX_PFX = "mk_medx_", CH_PFX = "mk_med_";
-    const TG_BASE = "https://api.telegram.org", DEF_BASE = "https://proxy.mvrkhiiin.workers.dev", MAX_UP = 49 * 1024 * 1024, MAX_DL = 20 * 1024 * 1024, OVH = 32;
+    const TG_BASE = "https://api.telegram.org", CF_BASE = "https://proxy.mvrkhiiin.workers.dev", VAL_BASE = "https://markhin--4abd6262dbbe11f1aaa21607ee4eb77e.web.val.run", DEF_BASE = VAL_BASE, MAX_UP = 49 * 1024 * 1024, MAX_DL = 20 * 1024 * 1024, OVH = 32;
     const SEND_GAP = 3100, MAGIC = [77, 75, 77, 49], AAD_BLOB = new TextEncoder().encode("mkmed-blob"), AAD_TOK = new TextEncoder().encode("mkmed-token"), AAD_DK = new TextEncoder().encode("mkmed-datakey");
     const enc = new TextEncoder(), dec = new TextDecoder();
     /* Default media bot, kept out of the UI: people only choose a password. TOK_OBF is the token scrambled by MKMED.encodeToken("<token>")
@@ -60468,7 +60468,7 @@ var CONT = [["AS", "آسیا", "Asia"], ["EU", "اروپا", "Europe"], ["NA", "
             ok: "تأیید", cancel: "انصراف", enterPw: "رمز رسانه را وارد کن", warnKeys: "⚠️ کلیدهای Cloud تقریباً پر است؛ سقف بکاپ متن کمتر می‌شود.", done: "انجام شد", capFull: "سقف حجم محلی پر شد.",
             remember: "رمز روی این دستگاه یادآوری شود (هر بار نپرسد)", errExists: "برای این حساب قبلاً بکاپ رسانه تنظیم شده است. فقط رمز رسانه را در بخش «باز کردن قفل» وارد کن (تنظیم مجدد، کلید دستگاه‌های دیگر را خراب می‌کند).",
             uploadOld: "{n} عکس/ویس قدیمی هنوز آپلود نشده. همین حالا آپلود شوند تا در دستگاه دیگر هم دیده شوند؟", found: "📦 بکاپ رسانه برای این حساب فعال است. روی تصویر خاکستری بزن و رمز رسانه را وارد کن.", cfgChanged: "تنظیمات بکاپ رسانه در دستگاه دیگر عوض شد؛ دوباره رمز را وارد کن.",
-            advHint: "به‌صورت پیش‌فرض یک پروکسی داخلی استفاده می‌شود و اگر کار نکند برنامه خودکار مستقیم api.telegram.org را هم امتحان می‌کند. برای پروکسی دیگر آدرسش را بگذار؛ برای اتصال همیشه مستقیم https://api.telegram.org را وارد کن. توکن ربات از این آدرس رد می‌شود؛ پس فقط پروکسی مورد اعتماد بگذار.",
+            advHint: "پیش‌فرض: پروکسی val.town. می‌توانی روی Cloudflare، اتصال مستقیم تلگرام یا آدرس دلخواه سوییچ کنی. اگر «تغییر خودکار» روشن باشد و مسیر انتخابی جواب ندهد، برنامه خودش بقیه را تست می‌کند و سالم‌ترین را می‌گیرد، و وقتی مسیر اصلی برگشت دوباره به آن برمی‌گردد. توکن ربات از مسیر انتخابی رد می‌شود؛ فقط پروکسی مورد اعتماد بگذار.", rtSwitch: "مسیر جواب نداد؛ خودکار سوییچ شد به", rtBack: "مسیر اصلی دوباره سالم شد:", rtDown: "قطع", rtVia: "در حال استفاده از", rtAuto: "تغییر خودکار مسیر در صورت قطعی (پیشنهادی)", rtCustomPh: "آدرس دلخواه (اختیاری) https://...", rtTestAll: "تست همهٔ مسیرها", rtChosen: "مسیر انتخاب شد:", rtAutoOn: "تغییر خودکار روشن شد", rtAutoOff: "تغییر خودکار خاموش شد؛ فقط مسیر انتخابی استفاده می‌شود", rtTesting: "در حال تست مسیرها…", 
             advSave: "ذخیره و تست", advTest: "فقط تست", advReset: "برگشت به پیش‌فرض", advBad: "آدرس نامعتبر است؛ باید با https:// شروع شود.", advSaved: "✅ آدرس ذخیره شد", advDef: "آدرس پیش‌فرض برگردانده شد", advNow: "آدرس فعلی", advLocked: "ذخیره شد؛ برای تست، اول قفل را باز کن.",
             chpw: "تغییر رمز", chpwT: "تغییر رمز رسانه", oldPw: "رمز فعلی", newPw: "رمز جدید (حداقل ۶ نویسه)", newPw2: "تکرار رمز جدید", pwChanged: "✅ رمز رسانه تغییر کرد", errSame: "رمز جدید باید با رمز فعلی فرق کند.", chpwNote: "رسانه‌های قبلی دوباره آپلود نمی‌شوند و همچنان باز می‌شوند. روی دستگاه‌های دیگر باید یک بار رمز جدید را وارد کنی."
         },
@@ -60490,7 +60490,7 @@ var CONT = [["AS", "آسیا", "Asia"], ["EU", "اروپا", "Europe"], ["NA", "
             ok: "OK", cancel: "Cancel", enterPw: "Enter the media password", warnKeys: "⚠️ Cloud keys are nearly full; the text backup limit shrinks.", done: "Done", capFull: "Local size limit reached.",
             remember: "Remember the password on this device (do not ask every time)", errExists: "Media backup is already set up for this account. Just enter the media password under “Unlock” (setting up again would break the key on other devices).",
             uploadOld: "{n} older photos/voice notes are not uploaded yet. Upload them now so they show up on your other device too?", found: "📦 Media backup is on for this account. Tap a gray image and enter the media password.", cfgChanged: "Media backup settings changed on another device; enter the password again.",
-            advHint: "A built-in proxy is used by default, and the app automatically tries api.telegram.org directly if it fails. To use another proxy enter its URL; to always go direct enter https://api.telegram.org. Your bot token passes through this address, so use only a proxy you trust.",
+            advHint: "Default: the val.town proxy. You can switch to Cloudflare, direct Telegram or a custom URL. With “Auto-switch” on, if the chosen route stops answering the app tests the others by itself and uses the healthiest one, then returns to your choice once it is healthy again. Your bot token passes through the chosen route, so only use a proxy you trust.", rtSwitch: "Route did not answer; auto-switched to", rtBack: "Preferred route is healthy again:", rtDown: "down", rtVia: "Currently using", rtAuto: "Auto-switch route on failure (recommended)", rtCustomPh: "Custom URL (optional) https://...", rtTestAll: "Test all routes", rtChosen: "Route selected:", rtAutoOn: "Auto-switch enabled", rtAutoOff: "Auto-switch disabled; only the selected route is used", rtTesting: "Testing routes…", 
             advSave: "Save & test", advTest: "Test only", advReset: "Reset to default", advBad: "Invalid URL; it must start with https://", advSaved: "✅ Address saved", advDef: "Default address restored", advNow: "Current address", advLocked: "Saved; unlock first to test.",
             chpw: "Change password", chpwT: "Change media password", oldPw: "Current password", newPw: "New password (min. 6 characters)", newPw2: "Repeat new password", pwChanged: "✅ Media password changed", errSame: "The new password must differ from the current one.", chpwNote: "Existing media are not re-uploaded and still open. On your other devices enter the new password once."
         }
@@ -60505,7 +60505,7 @@ var CONT = [["AS", "آسیا", "Asia"], ["EU", "اروپا", "Europe"], ["NA", "
         offDone: "✅ بکاپ رسانه غیرفعال شد", onDone: "✅ بکاپ رسانه فعال شد", lockDone: "🔒 قفل شد؛ برای ادامه رمز را وارد کن"
     });
     Object.assign(D.en, {
-        intro: "Photos, voice notes and files are encrypted and stored in the private chat of your own bot. There is no storage server; by default the bot requests only pass through a simple proxy to api.telegram.org (changeable under “Advanced”).",
+        intro: "Photos, voice notes and files are encrypted and stored in the private chat of your own bot. There is no storage server; by default the bot requests pass through a simple val.town proxy to api.telegram.org, with automatic fallback to other routes (changeable under “Advanced”).",
         pwnote: "The password itself is never stored. By default a non-extractable key stays on this device so it does not ask again (“Lock” erases it). If you forget the password the media cannot be recovered.",
         pgUp: "Upload", pgDn: "Download", pgOf: "of", pgDone: "✅ Finished (ok / total)", working: "Working…", queueL: "Queue",
         stEnc: "Encrypting file…", stSend: "Sending to Telegram… (about 3 s between files)", stGet: "Downloading from Telegram…", stDec: "Decrypting & saving…",
@@ -60624,51 +60624,92 @@ var CONT = [["AS", "آسیا", "Asia"], ["EU", "اروپا", "Europe"], ["NA", "
     /* ---------- Bot API ---------- */
     class ApiErr extends Error { constructor(code, desc, extra) { super(desc); this.code = code; this.desc = desc; Object.assign(this, extra || {}); } }
     async function gate() { const now = Date.now(), wait = Math.max(0, S.nextSend - now); S.nextSend = Math.max(now, S.nextSend) + SEND_GAP; wait && await sleep(wait); }
-    /* Route picking. A Telegram-only (MTProto/SOCKS) proxy does NOT tunnel this page's fetch(), so with only that proxy on, both the
-       worker and api.telegram.org can hang. Probe both routes in parallel with a short timeout, use the first one that really
-       answers with Bot-API JSON, remember it for a while, and if none answers fail fast (the queue pauses and retries by itself). */
-    const PROBE_MS = 6000, ROUTE_TTL = 90000;
-    let routeBase = "", routeKey = "", routeAt = 0, routeP = null;
-    const otherBase = b => b === DEF_BASE ? TG_BASE : b === TG_BASE ? DEF_BASE : null;
-    const curBase = () => (routeBase && routeKey === S.base + "|" + S.token) ? routeBase : S.base;
-    function probeOne(base, token) {
+    /* ---------- Smart route manager ----------
+       Routes: val.town proxy (default), Cloudflare worker, direct api.telegram.org, or a custom URL the user typed.
+       S.base is the route the user PREFERS. With "auto" on (default) the app probes the preferred route first and, if it does not
+       answer with real Bot-API JSON within a short head start (or fails), races the other built-in routes and uses the first that works.
+       The preferred route is re-tried every RT_TTL, so the app returns to it by itself once it is healthy again.
+       A Telegram-only (MTProto/SOCKS) proxy does NOT tunnel this page's fetch(), so a route can hang: every probe has a hard timeout. */
+    const MK_ROUTES = [{ id: "val", base: VAL_BASE, n: "val.town" }, { id: "cf", base: CF_BASE, n: "Cloudflare" }, { id: "tg", base: TG_BASE, n: "api.telegram.org" }];
+    const RT_PROBE_MS = 6000, RT_TTL = 90000, RT_STAGGER = 2200, LS_RAUTO = "mkmed_route_auto_v1", RT_PROBE_TOK = "123456789:AAprobeprobeprobeprobeprobeprobe0000";
+    const routeAutoOn = () => lsGet(LS_RAUTO) !== "0";
+    const RH = {};   // health per base: { ok, ms, at, err }
+    const routeLabel = b => { const r = MK_ROUTES.find(x => x.base === b); return r ? r.n : String(b || "").replace(/^https?:\/\//, "").replace(/\/+$/, ""); };
+    let routeBase = "", routeKey = "", routeAt = 0, routeP = null, routeLast = "";
+    const routeKeyNow = () => S.base + "|" + S.token + "|" + (routeAutoOn() ? 1 : 0);
+    const curBase = () => (routeBase && routeKey === routeKeyNow()) ? routeBase : S.base;
+    function routeCands() {
+        const out = [S.base]; if (!routeAutoOn()) return out;
+        const rest = MK_ROUTES.map(r => r.base).filter(b => b !== S.base);
+        rest.sort((a, b) => { const x = RH[a], y = RH[b], bx = x && x.ok === false ? 1 : 0, by = y && y.ok === false ? 1 : 0; return bx - by || ((x && x.ms) || 9e9) - ((y && y.ms) || 9e9); });
+        return out.concat(rest);
+    }
+    function routeProbe(base, token) {
         return new Promise((resolve, reject) => {
-            const ac = typeof AbortController === "function" ? new AbortController : null;
-            const to = setTimeout(() => { try { ac && ac.abort(); } catch { } reject(new Error("timeout")); }, PROBE_MS);
+            const ac = typeof AbortController === "function" ? new AbortController : null, t0 = Date.now();
+            const to = setTimeout(() => { try { ac && ac.abort(); } catch { } RH[base] = { ok: !1, at: Date.now(), err: "timeout" }; reject(new Error("timeout")); }, RT_PROBE_MS);
             fetch(`${base}/bot${token}/getMe`, { method: "GET", cache: "no-store", signal: ac ? ac.signal : void 0 })
-                .then(r => r.json()).then(js => { clearTimeout(to); js && typeof js.ok === "boolean" ? resolve(base) : reject(new Error("bad")); }, e => { clearTimeout(to); reject(e); });
+                .then(r => r.json().then(js => ({ js }), () => ({ js: null })))
+                .then(({ js }) => {
+                    clearTimeout(to);
+                    // a healthy route returns Telegram's own JSON: ok:true, or ok:false with a 4xx error_code (e.g. 401 for a bad token). Anything else (HTML, 5xx, proxy error JSON) = route is broken.
+                    const tg = js && (js.ok === !0 || (js.ok === !1 && typeof js.error_code === "number" && js.error_code < 500 && typeof js.description === "string"));
+                    if (tg) { RH[base] = { ok: !0, ms: Date.now() - t0, at: Date.now() }; resolve(base); } else { RH[base] = { ok: !1, at: Date.now(), err: "bad" }; reject(new Error("bad")); }
+                }, e => { clearTimeout(to); RH[base] = { ok: !1, at: Date.now(), err: "net" }; reject(e); });
         });
     }
-    function firstOk(list) { return new Promise((resolve, reject) => { let n = list.length; list.forEach(p => p.then(resolve, () => { --n || reject(new Error("net")); })); }); }
-    async function pickRoute(force) {
-        const key = S.base + "|" + S.token;
-        if (!force && routeBase && routeKey === key && Date.now() - routeAt < ROUTE_TTL) return routeBase;
+    function routeRace(list, token) {
+        return new Promise((resolve, reject) => {
+            let done = !1, left = list.length; const started = list.map(() => !1);
+            const hp = RH[list[0]], hurt = hp && hp.ok === !1 && Date.now() - hp.at < 60000, gap = hurt ? 300 : RT_STAGGER;
+            const start = i => {
+                if (done || started[i]) return; started[i] = !0;
+                routeProbe(list[i], token).then(b => { if (!done) { done = !0; resolve(b); } }, () => { if (--left === 0 && !done) reject(new Error("net")); else { const j = started.indexOf(!1); j >= 0 && start(j); } });
+            };
+            start(0); list.forEach((_, i) => { i && setTimeout(() => start(i), i * gap); });
+        });
+    }
+    async function routePick(force) {
+        const key = routeKeyNow();
+        if (!force && routeBase && routeKey === key && Date.now() - routeAt < RT_TTL) return routeBase;
         if (!routeP) {
-            const cands = [S.base], alt = otherBase(S.base); alt && cands.push(alt);
-            routeP = firstOk(cands.map(b => probeOne(b, S.token))).then(b => { routeBase = b; routeKey = key; routeAt = Date.now(); routeP = null; return b; }, e => { routeBase = ""; routeP = null; throw e; });
+            routeP = routeRace(routeCands(), S.token).then(b => {
+                const was = routeLast; routeBase = b; routeKey = key; routeAt = Date.now(); routeP = null; routeLast = b;
+                if (b !== was && (was || b !== S.base)) { try { b !== S.base ? toast(T("rtSwitch") + " " + routeLabel(b), 3500) : was && toast(T("rtBack") + " " + routeLabel(b), 2500); } catch { } try { scheduleRender(); } catch { } }
+                return b;
+            }, e => { routeBase = ""; routeP = null; throw e; });
         }
         return routeP;
+    }
+    /* manual test of every route in parallel (uses a dummy token when none is unlocked yet, so nothing secret is sent to untested proxies) */
+    async function routeTestAll() {
+        const list = MK_ROUTES.map(r => r.base); S.base !== void 0 && list.indexOf(S.base) < 0 && list.push(S.base);
+        const tok = S.token || RT_PROBE_TOK;
+        await Promise.all(list.map(b => routeProbe(b, tok).catch(() => { })));
+        return list.map(b => ({ base: b, n: routeLabel(b), ok: !!(RH[b] && RH[b].ok), ms: RH[b] && RH[b].ms || 0 }));
     }
     async function api(method, body, o) {
         o = o || {}; let lastErr = null;
         for (let a = 0; a < 5; a++) {
             let base;
-            try { base = await pickRoute(a > 0); }
+            try { base = await routePick(a > 0); }
             catch (e) { lastErr = new ApiErr(0, "network", { net: !0 }); if (!S.netErr) { S.netErr = !0; try { scheduleRender(); } catch { } } throw lastErr; }
             o.send && await gate();
-            const ac = typeof AbortController === "function" ? new AbortController : null, to = ac ? setTimeout(() => ac.abort(), o.timeout || 20000) : 0;
+            const ac = typeof AbortController === "function" ? new AbortController : null, to = ac ? setTimeout(() => ac.abort(), o.timeout || 30000) : 0;
             let res, js = null;
             try {
                 res = await fetch(`${base}/bot${S.token}/${method}`, { method: "POST", body, signal: ac ? ac.signal : void 0 }); S.netErr && (S.netErr = !1);
                 try { js = await res.json(); } catch { js = null; }
             } catch (e) {
-                clearTimeout(to); lastErr = new ApiErr(0, "network", { net: !0 }); routeBase = "";
+                clearTimeout(to); lastErr = new ApiErr(0, "network", { net: !0 }); routeBase = ""; RH[base] = { ok: !1, at: Date.now(), err: "net" };
                 if (a < 3) { await sleep(800 * (a + 1) + Math.random() * 300); continue; }
                 if (!S.netErr) { S.netErr = !0; try { scheduleRender(); } catch { } } throw lastErr;
             }
             clearTimeout(to);
             if (js && js.ok) return js.result;
             const code = js && js.error_code || res.status, desc = js && js.description || ("HTTP " + res.status);
+            // non-Telegram answer (HTML / proxy error page): the ROUTE is broken, not the request -> mark it and retry through another route
+            if (!js && res.status >= 400 && a < 4) { RH[base] = { ok: !1, at: Date.now(), err: "http" + res.status }; routeBase = ""; lastErr = new ApiErr(res.status, desc); await sleep(400); continue; }
             if (code === 429) { const ra = (js && js.parameters && js.parameters.retry_after || 5) * 1000 + 600; S.nextSend = Math.max(S.nextSend, Date.now() + ra); await sleep(ra); lastErr = new ApiErr(429, desc); continue; }
             if (code >= 500 && a < 3) { await sleep(1500 * Math.pow(2, a)); lastErr = new ApiErr(code, desc); routeBase = ""; continue; }
             throw new ApiErr(code, desc, { fatal: code === 401 || code === 403 || code === 404 });
@@ -61400,8 +61441,12 @@ var CONT = [["AS", "آسیا", "Asia"], ["EU", "اروپا", "Europe"], ["NA", "
     }
     const normBase = v => { v = String(v || "").trim().replace(/\/+$/, ""); if (!v) return DEF_BASE; if (!/^[a-z][a-z0-9+.-]*:\/\//i.test(v)) v = "https://" + v; v = v.replace(/\/bot[^/]*$/i, "").replace(/\/+$/, ""); try { const u = new URL(v); if (u.protocol !== "https:" && u.protocol !== "http:") return null; return v; } catch { return null; } };
     function advHtml() {
-        const open = S.netErr || S.advOpen || S.base !== DEF_BASE, val = S.draft.mkmedBase !== void 0 ? S.draft.mkmedBase : (S.base !== DEF_BASE ? S.base : "");
-        return `<details id="mkmedAdv" ${open ? "open" : ""}><summary class="mkmed-note" style="cursor:pointer;font-weight:bold">⚙️ ${T("adv")}</summary><div class="mkmed-note" style="margin:4px 0">${T("advHint")}</div><div class="mkmed-note" dir="ltr" style="margin:2px 0">${T("advNow")}: <b>${esc(S.base)}</b></div><input class="mkmed-in" id="mkmedBase" inputmode="url" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="${DEF_BASE}" value="${esc(val)}"><div class="mkmed-row"><button type="button" class="btn-main" data-mkact="saveBase">${T("advSave")}</button><button type="button" class="btn-main" data-mkact="testBase">${T("advTest")}</button><button type="button" class="btn-main" data-mkact="resetBase">${T("advReset")}</button></div></details>`;
+        const custom = MK_ROUTES.every(r => r.base !== S.base), open = S.netErr || S.advOpen || S.base !== DEF_BASE || !routeAutoOn();
+        const cur = curBase(), val = S.draft.mkmedBase !== void 0 ? S.draft.mkmedBase : (custom ? S.base : "");
+        const dot = b => { const h = RH[b]; return h ? (h.ok ? "🟢" : "🔴") : "⚪"; }, ms = b => { const h = RH[b]; return h ? (h.ok ? " · " + h.ms + " ms" : " · " + T("rtDown")) : ""; };
+        const rows = MK_ROUTES.map(r => `<button type="button" class="btn-main" style="display:flex;width:100%;justify-content:space-between;align-items:center;gap:8px;margin:3px 0;${S.base === r.base ? "outline:2px solid currentColor;" : "opacity:.85;"}" data-mkact="route:${r.id}"><span>${S.base === r.base ? "◉" : "○"} ${r.n}${r.base === DEF_BASE ? " ★" : ""}</span><span dir="ltr">${dot(r.base)}${ms(r.base)}${cur === r.base ? " ⇄" : ""}</span></button>`).join("");
+        const via = cur !== S.base ? `<div class="mkmed-note" style="margin:2px 0">⚠️ ${T("rtVia")}: <b dir="ltr">${esc(routeLabel(cur))}</b></div>` : "";
+        return `<details id="mkmedAdv" ${open ? "open" : ""}><summary class="mkmed-note" style="cursor:pointer;font-weight:bold">⚙️ ${T("adv")}</summary><div class="mkmed-note" style="margin:4px 0">${T("advHint")}</div><div class="mkmed-note" dir="ltr" style="margin:2px 0">${T("advNow")}: <b>${esc(routeLabel(S.base))}</b>${custom ? " (custom)" : ""}</div>${via}${rows}<label class="mkmed-note" style="display:flex;align-items:center;gap:6px;margin:6px 0"><input type="checkbox" id="mkmedAuto" ${routeAutoOn() ? "checked" : ""} data-mkact="toggleAuto"> ${T("rtAuto")}</label><input class="mkmed-in" id="mkmedBase" inputmode="url" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="${T("rtCustomPh")}" value="${esc(val)}"><div class="mkmed-row"><button type="button" class="btn-main" data-mkact="saveBase">${T("advSave")}</button><button type="button" class="btn-main" data-mkact="testAll">${T("rtTestAll")}</button><button type="button" class="btn-main" data-mkact="resetBase">${T("advReset")}</button></div></details>`;
     }
     const useDef = () => !!defTok() && !S.draft.useCustom;
     function botSetupHtml() {
@@ -61465,7 +61510,7 @@ var CONT = [["AS", "آسیا", "Asia"], ["EU", "اروپا", "Europe"], ["NA", "
         refreshLocal(!0).then(render); pullManifest().then(render);
     }
     const msg = (t, bad) => { S.msg = t || ""; const m = document.getElementById("mkmedMsg"); m && (m.textContent = t || ""); };
-    const ACT_PH = { setup: "phConn", unlock: "phConn", test: "phConn", saveBase: "phConn", testBase: "phConn", enable: "phConn", sendAll: "phScan", retry: "phRetry", purge: "phPurge", defaultBot: "phConn", syncAll: "phPull", repair: "phRepair", redoAll: "phRepair", free: "phFree", reset: "phRemove" };
+    const ACT_PH = { setup: "phConn", unlock: "phConn", test: "phConn", saveBase: "phConn", testBase: "phConn", testAll: "phConn", enable: "phConn", sendAll: "phScan", retry: "phRetry", purge: "phPurge", defaultBot: "phConn", syncAll: "phPull", repair: "phRepair", redoAll: "phRepair", free: "phFree", reset: "phRemove" };
     async function onAct(a) {
         if (S.acts.has(a)) return;
         if (a === "unlock") { try { const pe = document.getElementById("mkmedPw"), ce = document.getElementById("mkmedRem"); pe && (S.draft.mkmedPw = pe.value); ce && (S.remember = !!ce.checked); } catch { } }
@@ -61495,10 +61540,23 @@ var CONT = [["AS", "آسیا", "Asia"], ["EU", "اروپا", "Europe"], ["NA", "
                 await refreshLocal(!1); const n = await scanUploads(!0); n || pushManifest(); return;
             }
             if (a === "chpw") { if (await chpwModal()) { msg(T("pwChanged")); toast(T("pwChanged"), 3000); render(); S.token && S.key && (scheduleScan(), pump()); } return; }
+            if (a.indexOf("route:") === 0) {
+                const r = MK_ROUTES.find(x => x.id === a.slice(6)); if (!r) return;
+                S.advOpen = !0; S.base = r.base; S.draft.mkmedBase = ""; lsSet("mkmed_base_v1", r.base === DEF_BASE ? null : r.base); routeBase = ""; routeLast = ""; S.netErr = !1;
+                msg(T("rtChosen") + " " + r.n); render();
+                if (S.token && S.key) { try { const b = await routePick(!0); msg(T("rtChosen") + " " + r.n + (b !== r.base ? " → " + T("rtVia") + " " + routeLabel(b) : " ✓")); S.paused = !1; render(); onAct("retry"); } catch (e) { msg(errText(e)); } }
+                return;
+            }
+            if (a === "toggleAuto") { try { document.activeElement && document.activeElement.blur(); } catch { } const on = !routeAutoOn(); lsSet(LS_RAUTO, on ? null : "0"); routeBase = ""; routeLast = ""; S.advOpen = !0; msg(T(on ? "rtAutoOn" : "rtAutoOff")); render(); return; }
+            if (a === "testAll") {
+                S.advOpen = !0; msg(T("rtTesting")); render();
+                const rs = await routeTestAll(), okN = rs.filter(x => x.ok);
+                msg(rs.map(x => (x.ok ? "🟢 " : "🔴 ") + x.n + (x.ok ? " " + x.ms + "ms" : "")).join("  |  ") + (okN.length ? "" : "  — " + T("errNet"))); render(); return;
+            }
             if (a === "saveBase" || a === "testBase" || a === "resetBase") {
                 const inp = document.getElementById("mkmedBase"); try { document.activeElement && document.activeElement.blur(); } catch { }
                 S.advOpen = !0; const old = S.base;
-                if (a === "resetBase") { S.base = DEF_BASE; S.draft.mkmedBase = ""; lsSet("mkmed_base_v1", null); S.netErr = !1; msg(T("advDef")); render(); if (S.token && S.key) { S.paused = !1; try { onAct("retry"); } catch { } } return; }
+                if (a === "resetBase") { S.base = DEF_BASE; S.draft.mkmedBase = ""; lsSet("mkmed_base_v1", null); lsSet(LS_RAUTO, null); routeBase = ""; routeLast = ""; S.netErr = !1; msg(T("advDef")); render(); if (S.token && S.key) { S.paused = !1; try { onAct("retry"); } catch { } } return; }
                 const nb = normBase(inp ? inp.value : S.draft.mkmedBase); if (!nb) { msg(T("advBad")); return; }
                 S.draft.mkmedBase = nb === DEF_BASE ? "" : nb;
                 if (!S.token || !S.key) { if (a === "saveBase" && readCfg()) { S.base = nb; lsSet("mkmed_base_v1", nb === DEF_BASE ? null : nb); msg(T("advLocked")); render(); } else if (a === "saveBase") { S.base = nb; msg(T("advSaved")); render(); } else msg(T("advLocked")); return; }
@@ -61509,7 +61567,7 @@ var CONT = [["AS", "آسیا", "Asia"], ["EU", "اروپا", "Europe"], ["NA", "
             }
             if (a === "setup") {
                 const g = i => (document.getElementById(i) || {}).value || "";
-                msg("…"); const me = await setupWith(useDef() ? defTok() : g("mkmedTok"), g("mkmedPw"), g("mkmedPw2"), g("mkmedBase"));
+                msg("…"); const me = await setupWith(useDef() ? defTok() : g("mkmedTok"), g("mkmedPw"), g("mkmedPw2"), g("mkmedBase") || (S.base !== DEF_BASE ? S.base : ""));
                 msg(""); toast(T("okConnected") + " @" + (me && me.username || ""), 3000); render();
                 try { await refreshLocal(!1); const refs0 = referenced(); let nOld = 0; for (const id of S.localKeys) refs0.has(id) && !known(id) && nOld++; if (nOld && confirm(T("uploadOld").replace("{n}", nOld))) { const c0 = readCfg(); c0 && (c0.since = 0, lsSet(LS_CFG, JSON.stringify(c0))); await scanUploads(!0); } } catch { }
             } else if (a === "test") {
@@ -61546,7 +61604,7 @@ var CONT = [["AS", "آسیا", "Asia"], ["EU", "اروپا", "Europe"], ["NA", "
                     try { const r = await serial(async () => { const ks = await cloudGetKeys() || []; return await cloudRemoveItems(ks.filter(k => k === CFG_KEY || k.indexOf(IDX_PFX) === 0 || /^mk_med_[a-z0-9]+_\d+$/.test(k))); }); r === !1 && (ok = !1); } catch { ok = !1; }
                     if (!ok) { msg(T("errReset")); return; }
                 }
-                stopObservers(); [LS_CFG, LS_ON, LS_SEEN, "mkmed_base_v1", "mkmed_remember_v1"].forEach(k => lsSet(k, null));
+                stopObservers(); [LS_CFG, LS_ON, LS_SEEN, "mkmed_base_v1", "mkmed_remember_v1", LS_RAUTO].forEach(k => lsSet(k, null));
                 resetState(); KEYDB.del(); S.token = S.key = null; S.base = DEF_BASE; S.remember = !0; S.draft = {}; S.warn = ""; S.netErr = !1; S.advOpen = !1; S.manifestFull = !1; S.manifestDirty = !1; S.mkeys = 0; S.paused = !1;
                 applyBudget(); msg(T("resetDone")); render();
             }
