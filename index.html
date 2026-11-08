@@ -62925,6 +62925,63 @@ html body .audio-wrapper.video-wrapper>button.img-btn.img-btn.img-btn.img-btn.im
 .mu-nfs-thumb.mu-vid:before{content:"";position:absolute;inset:0;margin:auto;width:30px;height:30px;border-radius:50%;background:rgba(0,0,0,.52) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath fill='white' d='M8 5.5v13l11-6.5z'/%3E%3C/svg%3E") 55% center/16px no-repeat;z-index:1;pointer-events:none}
 .mu-nfs-thumb.mu-vid.mu-miss:after{content:"\1F3AC";font-size:22px;opacity:.6}
 </style>
+
+<style id="mkAudioFixCss">
+/* voice note: the delete button is always visible (round red trash button), in every editor */
+html body .audio-wrapper:not(.video-wrapper):not(.file-wrapper)>button.img-btn.img-btn.img-btn{display:inline-flex!important;align-items:center;justify-content:center;flex:0 0 auto;position:relative;width:38px!important;height:38px!important;min-width:38px;padding:0!important;margin:0!important;border:0!important;border-radius:50%!important;font-size:0!important;line-height:0!important;color:#fff!important;background:#e5484d!important;box-shadow:0 1px 5px rgba(0,0,0,.28);opacity:1!important;visibility:visible!important;cursor:pointer;-webkit-tap-highlight-color:transparent}
+html body .audio-wrapper:not(.video-wrapper):not(.file-wrapper)>button.img-btn.img-btn.img-btn:before{content:"";display:block;width:20px;height:20px;background:#fff;-webkit-mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M4 7h16M9.5 7V4.5h5V7M6.5 7l1 13h9l1-13M10 11v6M14 11v6'/%3E%3C/svg%3E") center/contain no-repeat;mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M4 7h16M9.5 7V4.5h5V7M6.5 7l1 13h9l1-13M10 11v6M14 11v6'/%3E%3C/svg%3E") center/contain no-repeat}
+html body .audio-wrapper:not(.video-wrapper):not(.file-wrapper)>button.img-btn.img-btn.img-btn:active{transform:scale(.92)}
+html body .audio-wrapper:not(.video-wrapper):not(.file-wrapper)>button.img-btn.img-btn.img-btn>svg{display:none!important}
+html body .audio-wrapper>audio{min-width:0;flex:1 1 auto}
+/* the full viewer editor has its own delete control: hide this one there to avoid a duplicate */
+html body .mu-viewer.is-editing .mu-viewer-body .audio-wrapper>button.img-btn.img-btn.img-btn.img-btn.img-btn.img-btn.img-btn.img-btn{display:none!important}
+</style>
+
+<script id="mkAudioDelJs">
+(function () {
+    "use strict";
+    /* Voice-note delete: the button is guaranteed to exist and to work in every editor, even when another script
+       rebuilds it (without its click handler) or swaps its glyph. One delegated handler does the deleting. */
+    var SEL = ".audio-wrapper:not(.video-wrapper):not(.file-wrapper)";
+    function inEditor(w) { return !!(w && w.closest && w.closest('[contenteditable="true"]') && !w.closest(".mu-viewer")); }
+    function ensure() {
+        try {
+            document.querySelectorAll(SEL).forEach(function (w) {
+                if (!w.querySelector("audio") || !inEditor(w)) return;
+                var has = false, i, c = w.children;
+                for (i = 0; i < c.length; i++) if (c[i].tagName === "BUTTON") { has = true; break; }
+                if (has) return;
+                var b = document.createElement("button"); b.type = "button"; b.className = "img-btn"; b.textContent = "\u2716";
+                b.setAttribute("contenteditable", "false"); w.appendChild(b);
+            });
+        } catch (e) { }
+    }
+    var tm = 0;
+    function later() { tm || (tm = setTimeout(function () { tm = 0; ensure(); }, 150)); }
+    function boot() {
+        ensure();
+        try { new MutationObserver(function (recs) { for (var i = 0; i < recs.length; i++) if (recs[i].addedNodes.length || recs[i].removedNodes.length) { later(); return; } }).observe(document.body, { childList: true, subtree: true }); } catch (e) { }
+    }
+    document.addEventListener("click", function (e) {
+        var b = e.target && e.target.closest && e.target.closest(SEL + ">button");
+        if (!b) return; var w = b.parentNode; if (!inEditor(w)) return;
+        e.preventDefault(); e.stopPropagation(); e.stopImmediatePropagation();
+        if (w.__mkDelBusy) return; w.__mkDelBusy = 1;
+        var host = w.closest('[id^="text-"]'), id = host ? host.id.slice(5) : null, msg = "\u062d\u0630\u0641 \u0634\u0648\u062f\u061f";
+        try { msg = i18n[currentLang].confirmDelete || msg; } catch (x) { }
+        function done(ok) {
+            w.__mkDelBusy = 0; if (!ok) return;
+            try { mu_removeMediaWrapper(w); } catch (x) { } if (w.isConnected) { try { w.remove(); } catch (x) { } }
+            try { id && saveCategory(id); } catch (x) { }
+        }
+        try { var tg = window.Telegram && window.Telegram.WebApp; if (tg && tg.initData && tg.showConfirm && tg.isVersionAtLeast && tg.isVersionAtLeast("6.2")) { tg.showConfirm(msg, done); return; } } catch (x) { }
+        var ok = false; try { ok = confirm(msg); } catch (x) { ok = true; } done(ok);
+    }, true);
+    document.readyState === "loading" ? document.addEventListener("DOMContentLoaded", boot) : boot();
+})();
+</script>
+
+
 <script id="mkVideoFixJs">
 (function () {
     function T(fa, en) { var f = !0; try { f = currentLang === "fa"; } catch (e) { } return f ? fa : en; }
