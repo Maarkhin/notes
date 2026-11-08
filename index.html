@@ -14396,37 +14396,33 @@ html:not([dir=ltr]) .mu-nb-en {
 .mu-nfs-file {
     display:flex;
     align-items:center;
-    gap:8px;
+    gap:12px;
     margin-top:9px;
-    padding:6px 9px;
+    padding:8px 11px;
     border-radius:12px;
-    background:var(--nfs-border);
+    background:rgba(127,127,127,.14);
+    border:1px solid rgba(127,127,127,.30);
     color:var(--nfs-text);
     min-width:0;
     line-height:1.2;
+    box-sizing:border-box;
+}
+@supports (color: color-mix(in srgb,red,blue)) {
+    .mu-nfs-file {
+        background:color-mix(in srgb,var(--nfs-text) 8%,transparent);
+        border-color:color-mix(in srgb,var(--nfs-text) 20%,transparent);
+    }
+}
+#muNotesFs[data-theme=light] .mu-nfs-file {
+    background:rgba(20,40,70,.07);
+    border-color:rgba(20,40,70,.22);
+}
+#muNotesFs[data-theme=dark] .mu-nfs-file {
+    background:rgba(255,255,255,.09);
+    border-color:rgba(255,255,255,.22);
 }
 .mu-nfs-media+.mu-nfs-file,.mu-nfs-file+.mu-nfs-file {
     margin-top:6px;
-}
-.mu-nfs-fic {
-    flex:none;
-    display:inline-flex;
-    align-items:center;
-    justify-content:center;
-    min-width:30px;
-    height:30px;
-    padding:0 5px;
-    box-sizing:border-box;
-    border-radius:8px;
-    background:rgba(94,205,230,.18);
-    border:1px solid rgba(94,205,230,.4);
-    font-size:14px;
-}
-.mu-nfs-fic.mu-x {
-    font-size:10px;
-    font-weight:800;
-    letter-spacing:.3px;
-    font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
 }
 .mu-nfs-fnm {
     flex:1 1 auto;
@@ -14434,29 +14430,82 @@ html:not([dir=ltr]) .mu-nb-en {
     overflow:hidden;
     text-overflow:ellipsis;
     white-space:nowrap;
-    font-size:12.5px;
+    font-size:13px;
     font-weight:700;
     unicode-bidi:plaintext;
     text-align:start;
 }
-.mu-nfs-fsz {
+.mu-nfs-fmeta {
     flex:none;
-    font-size:10.5px;
-    opacity:.7;
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    justify-content:center;
+    gap:3px;
+    max-width:46%;
+    direction:ltr;
+}
+.mu-nfs-fsz {
+    display:block;
+    font-size:11px;
+    font-weight:600;
+    line-height:1.15;
+    white-space:nowrap;
     direction:ltr;
     unicode-bidi:isolate;
+}
+.mu-nfs-fext {
+    display:block;
+    max-width:100%;
+    overflow:hidden;
+    text-overflow:clip;
+    white-space:nowrap;
+    padding:1px 7px;
+    border-radius:6px;
+    font-size:9.5px;
+    font-weight:800;
+    line-height:1.45;
+    letter-spacing:.4px;
+    font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+    direction:ltr;
+    background:rgba(0,103,192,.14);
+    border:1px solid rgba(0,103,192,.40);
 }
 .mu-nfs-fmore {
     margin-top:5px;
     font-size:11.5px;
     font-weight:700;
-    opacity:.7;
+    opacity:.8;
     direction:ltr;
     text-align:start;
 }
 #muNotesFs .mu-nfs-file,#muNotesFs .mu-nfs-file span,#muNotesFs .mu-nfs-fmore {
     color:var(--nfs-text)!important;
     -webkit-text-fill-color:var(--nfs-text)!important;
+}
+#muNotesFs .mu-nfs-file .mu-nfs-fsz {
+    color:var(--nfs-muted)!important;
+    -webkit-text-fill-color:var(--nfs-muted)!important;
+}
+#muNotesFs[data-theme=light] .mu-nfs-file .mu-nfs-fsz {
+    color:#3c4656!important;
+    -webkit-text-fill-color:#3c4656!important;
+}
+#muNotesFs[data-theme=dark] .mu-nfs-file .mu-nfs-fsz {
+    color:#d4d8de!important;
+    -webkit-text-fill-color:#d4d8de!important;
+}
+#muNotesFs[data-theme=light] .mu-nfs-file .mu-nfs-fext {
+    color:#000!important;
+    -webkit-text-fill-color:#000!important;
+    background:rgba(0,103,192,.12);
+    border-color:rgba(0,103,192,.45);
+}
+#muNotesFs[data-theme=dark] .mu-nfs-file .mu-nfs-fext {
+    color:#fff!important;
+    -webkit-text-fill-color:#fff!important;
+    background:rgba(96,205,255,.16);
+    border-color:rgba(96,205,255,.50);
 }
 .advanced-card.mk-page.mk-paper,.mkc,.mkl-wrap {
     color-scheme:dark;
@@ -30383,6 +30432,13 @@ document.addEventListener("DOMContentLoaded", () => { initAdvancedSystems(); });
                 const s0 = window.getSelection();
                 s0 && s0.rangeCount && s0.isCollapsed && s0.anchorNode && text.contains(s0.anchorNode) && (kn = s0.anchorNode, ko = s0.anchorOffset);
             }
+            if (kn && kn.nodeType !== 3) {
+                // caret sits on an EMPTY line (empty list item / blank line): there is no text offset to keep,
+                // restoring one would throw the caret back to the end of the previous line
+                const eb = kn.nodeType === 1 ? kn : kn.parentElement, el0 = eb && eb.closest ? eb.closest("li,div,p,blockquote") : null;
+                if (el0 && el0 !== text && text.contains(el0) && !el0.textContent.replace(/[\u200b\s]/g, "") && !el0.querySelector("img,canvas,video,audio,table"))
+                    kn = null;
+            }
             if (kn) {
                 const pr = document.createRange();
                 pr.selectNodeContents(text), pr.setEnd(kn, Math.min(ko, kn.nodeType === 3 ? kn.nodeValue.length : kn.childNodes.length)), keepPos = pr.toString().length;
@@ -37213,7 +37269,7 @@ catch { } };
         if (r2.block) { var b = r2.block; if (!/^(DIV|P)$/.test(b.tagName) || !(b.firstChild && cbOf(b.firstChild)) || !mkLineHasText(b.childNodes)) return !1; return mkNewLineAfter(t, id, b); }
         if (r2.from) { var nodes = [], cb = null, stop = r2.to.nextSibling; for (var n = r2.from; n && n !== stop; n = n.nextSibling) { nodes.push(n); n.nodeType === 1 && n.classList.contains("mk-cb") && (cb = n); } if (!cb || !mkLineHasText(nodes)) return !1; if (stop && stop.nodeType === 1 && stop.tagName === "BR") return mkNewLineAfter(t, id, stop); return mkNewLineAfter(t, id, r2.to); }
         return !1; }
-    function mkKeepOlLine(id, tag) { var t = restoreText(id); if (!t) return !1; var s = window.getSelection(); if (!s.rangeCount || !s.isCollapsed || !t.contains(s.anchorNode)) return !1; var el = s.anchorNode.nodeType === 1 ? s.anchorNode : s.anchorNode.parentElement, li = el && el.closest ? el.closest("li") : null, ol = li && li.parentNode; if (!li || !ol || ol.tagName !== (tag || "OL") || !t.contains(ol) || ol.parentNode !== t || !mkLineHasText([li])) return !1;
+    function mkKeepOlLine(id, tag) { var t = restoreText(id); if (!t) return !1; var s = window.getSelection(); if (!s.rangeCount || !s.isCollapsed || !t.contains(s.anchorNode)) return !1; var el = s.anchorNode.nodeType === 1 ? s.anchorNode : s.anchorNode.parentElement, li = el && el.closest ? el.closest("li") : null, ol = li && li.parentNode; if (!li || !ol || ol.tagName !== (tag || "OL") || !t.contains(ol) || ol === t || !ol.parentNode || ol.parentNode.tagName === "LI" || !mkLineHasText([li])) return !1;
         var next = li.nextElementSibling; if (next) { var ol2 = ol.cloneNode(!1); ol2.removeAttribute("start"); for (var x = next; x;) { var nx = x.nextElementSibling; ol2.appendChild(x), x = nx; } ol.parentNode.insertBefore(ol2, ol.nextSibling); var st = parseInt(ol.getAttribute("start") || "1", 10) || 1, cnt = 0; for (var c = ol.firstElementChild; c; c = c.nextElementSibling) cnt++; ol.tagName === "OL" && ol2.setAttribute("start", String(st + cnt)); }
         return mkNewLineAfter(t, id, ol); }
     function Pe(id) { var t = restoreText(id); if (t) {
@@ -40532,13 +40588,13 @@ body.mu-nfsbk-on #mkBackupBar { display:none!important; }
         return;
     } inf.fl.forEach(function (f) { map[f] || (map[f] = [], order.push(f)), map[f].push(inf); }); }); var g = order.map(function (n) { return { name: n, none: !1, items: map[n] }; }); none.length && g.push({ name: "", none: !0, items: none }), searching && (g = g.filter(function (x) { return x.items.length; })), S2.groups = g; }
     function est(inf) { if (inf.cl)
-        return 74 + Math.min(inf.cl.items.length, 5) * 26; return 58 + (inf.body && S2.lines > 0 ? Math.min(S2.lines, Math.ceil(inf.body.length / 30)) * 22 + 8 : 0) + (inf.media ? (inf.media.n ? inf.media.n > 1 ? 78 : 112 : 0) + (inf.media.voice ? 36 : 0) + (inf.media.files ? inf.media.files.length * 40 : 0) : 0); }
+        return 74 + Math.min(inf.cl.items.length, 5) * 26; return 58 + (inf.body && S2.lines > 0 ? Math.min(S2.lines, Math.ceil(inf.body.length / 30)) * 22 + 8 : 0) + (inf.media ? (inf.media.n ? inf.media.n > 1 ? 78 : 112 : 0) + (inf.media.voice ? 36 : 0) + (inf.media.files ? inf.media.files.length * 54 : 0) : 0); }
     var TH = Object.create(null);
     function mediaHtml(inf) { var m = inf.media; if (!m)
         return ""; var h = ""; if (m.n) {
         var shown = m.imgs, extra = m.n - shown.length;
         h += '<div class="mu-nfs-media' + (shown.length > 1 ? " mu-two" : "") + '">', shown.forEach(function (t, i) { var key = inf.id + "#" + i; TH[key] = t; var more = i === shown.length - 1 && extra > 0 ? '<b class="mu-nfs-more-n">+' + extra + "</b>" : ""; h += '<span class="mu-nfs-thumb' + (t.v ? " mu-vid" : "") + '" data-tk="' + esc(key) + '">' + more + "</span>"; }), h += "</div>";
-    } m.files && m.files.length && (h += m.files.map(function (f) { var nm = String(f.name || (fa2() ? "فایل" : "file")), em = /\.([A-Za-z0-9]{1,8})$/.exec(nm), ext = em ? em[1].toUpperCase().slice(0, 4) : "", n = +f.size || 0, sz = n ? (n < 1024 ? n + " B" : n < 1048576 ? (n / 1024).toFixed(1) + " KB" : (n / 1048576).toFixed(n < 10485760 ? 2 : 1) + " MB") : ""; return '<div class="mu-nfs-file"><span class="mu-nfs-fic' + (ext ? " mu-x" : "") + '">' + esc(ext || "📎") + '</span><span class="mu-nfs-fnm" dir="auto">' + esc(nm) + "</span>" + (sz ? '<span class="mu-nfs-fsz">' + sz + "</span>" : "") + "</div>"; }).join("") + (m.fn > m.files.length ? '<div class="mu-nfs-fmore">+' + (m.fn - m.files.length) + "</div>" : "")); return m.voice && (h += '<div class="mu-nfs-voice">' + ICONS.mic + "<span>" + (fa2() ? "ویس" : "Voice") + (m.voice > 1 ? " ×" + m.voice : "") + "</span></div>"), h; }
+    } m.files && m.files.length && (h += m.files.map(function (f) { var nm = String(f.name || (fa2() ? "فایل" : "file")), em = /\.([A-Za-z0-9]{1,8})$/.exec(nm), ext = em ? em[1].toUpperCase().slice(0, 4) : "", n = +f.size || 0, sz = n ? (n < 1024 ? n + " B" : n < 1048576 ? (n / 1024).toFixed(1) + " KB" : (n / 1048576).toFixed(n < 10485760 ? 2 : 1) + " MB") : ""; return '<div class="mu-nfs-file"><span class="mu-nfs-fnm" dir="auto">' + esc(nm) + "</span>" + (sz || ext ? '<span class="mu-nfs-fmeta">' + (sz ? '<span class="mu-nfs-fsz">' + sz + "</span>" : "") + (ext ? '<span class="mu-nfs-fext">' + esc(ext) + "</span>" : "") + "</span>" : "") + "</div>"; }).join("") + (m.fn > m.files.length ? '<div class="mu-nfs-fmore">+' + (m.fn - m.files.length) + "</div>" : "")); return m.voice && (h += '<div class="mu-nfs-voice">' + ICONS.mic + "<span>" + (fa2() ? "ویس" : "Voice") + (m.voice > 1 ? " ×" + m.voice : "") + "</span></div>"), h; }
     // lazy thumbnail loading: a thumbnail is only fetched from IndexedDB once it is near the screen
     var THURL = Object.create(null), thIO = null, thRaf = 0;
     function thSet(el, url) { el.style.backgroundImage = 'url("' + String(url).replace(/"/g, "%22") + '")', el.classList.add("mu-ok"); }
@@ -53927,6 +53983,12 @@ html[data-mxe-theme=light] #mkSelBars{--sb-bg:#ffffff}
 #mkSelBars.narrow .sb-main svg{display:none}
 #mkSelBars.tmode .sb-fmt{display:none}
 #mkSelBars .sb-fmt{display:none!important}
+/* caret menu (no selection): only Paste + Select all, same look as the selection bar */
+#mkSelBars.cmode .sb-main button[data-sb=cut],#mkSelBars.cmode .sb-main button[data-sb=copy],#mkSelBars.cmode .sb-main button[data-sb=tr]{display:none}
+#mkSelBars.show:not(.placed){visibility:hidden!important}   /* never visible until it has its real position */
+#mkSelBars.cmode .sb-main{gap:4px;padding:0 4px}
+#mkSelBars.cmode .sb-main button{padding:0 12px;font-size:13.5px}
+#mkSelBars.cmode .sb-main svg{display:block!important}
 .text-box[contenteditable=true]{-webkit-touch-callout:none}
 /* legibility safety-net (dark editor / drag overlay): the app-wide "span,div,button,label,p{color:var(--text-color)}" rule used the page theme's DARK --text-color inside dark modals and overlays */
 html.mxe-open:not([data-mxe-theme=light]) #advancedModal,html.mxe-open:not([data-mxe-theme=light]) #muFolderPickerOverlay{--text-color:var(--nfs-text,#e6e6e6)}
@@ -54244,27 +54306,69 @@ html body #contentsContainer .mxe .mc-title-input{opacity:.8!important}</style>
 
   // ---------- show / hide / place ----------
   function show(c) {
-    build(); ctx = c; saved = c.title ? { s: c.s, e: c.e } : c.range.cloneRange(); bar.classList.toggle("tmode", !!c.title); bar.classList.add("show"); place(); markOn();
+    build(); ctx = c; saved = c.title ? { s: c.s, e: c.e } : c.range.cloneRange(); bar.classList.toggle("tmode", !!c.title); bar.classList.toggle("cmode", !!c.caret); bar.classList.remove("placed"); bar.classList.add("show"); place(); markOn(); requestAnimationFrame(function () { place(); requestAnimationFrame(place); }); setTimeout(place, 120); setTimeout(place, 300);
   }
-  function hide() { if (bar) bar.classList.remove("show", "tmode"); ctx = null; lastKey = ""; }
+  function hide() { if (bar) bar.classList.remove("show", "tmode", "placed"); ctx = null; lastKey = ""; }
+  function vis(el) {
+    try {
+      if (!el || !el.isConnected) return null;
+      var r = el.getBoundingClientRect(); if (r.width <= 20 || r.height <= 10) return null;
+      var cs = getComputedStyle(el); if (cs.display === "none" || cs.visibility === "hidden" || parseFloat(cs.opacity) < 0.05) return null;
+      return r;
+    } catch (e) { return null; }
+  }
+  // The part of the screen this menu may use: below the editor's top toolbar, above the writing-tools pill / bottom bar
+  // (and so above the keyboard, which is already cut off by the visual viewport). It never overlaps any of them.
+  function freeZone(box, ot, vh) {
+    var top = ot + 8, bot = ot + vh - 8;
+    try {
+      var mxe = (box && box.querySelector && box.querySelector(".mxe-bottom")) ? box : D.querySelector("#contentsContainer .mxe.show") || box;
+      if (mxe) {
+        var r = vis(mxe.querySelector(".mxe-top"));
+        if (r && r.bottom + 6 > top && r.bottom < bot) top = r.bottom + 6;
+        var cov = mxe.querySelectorAll(".mxe-bottom, .mxe-bottom .mxe-pop");
+        for (var i = 0; i < cov.length; i++) { r = vis(cov[i]); if (r && r.top - 6 < bot && r.top > top) bot = r.top - 6; }
+      }
+    } catch (e) { }
+    return { top: top, bot: bot };
+  }
+  // where the caret (or the empty line) is, for the caret menu
+  function caretBox(c, r) {
+    if (c.title) return c.tb.getBoundingClientRect();
+    var b = null;
+    try { var rs = r.getClientRects(); b = rs.length ? rs[0] : r.getBoundingClientRect(); } catch (e) { }
+    if (!b || (!b.width && !b.height)) {
+      var n = r.startContainer, el = n && (n.nodeType === 1 ? n : n.parentElement);
+      if (el && el === c.tb) { var ch = el.childNodes[Math.min(r.startOffset, el.childNodes.length - 1)]; el = ch && ch.nodeType === 1 ? ch : el; }
+      b = el ? el.getBoundingClientRect() : c.tb.getBoundingClientRect();
+    }
+    return b;
+  }
   function place() {
     if (!bar || !ctx || !bar.classList.contains("show")) return;
     if (!ctx.box.classList.contains("show") || !ctx.tb.isConnected) { hide(); return; }
-    var first, last;
+    var first, last, caret = !!ctx.caret;
     if (ctx.title) { var ir = ctx.tb.getBoundingClientRect(); first = last = ir; }
+    else if (caret) {
+      var s0 = window.getSelection(), r0 = (s0.rangeCount && s0.isCollapsed && ctx.tb.contains(s0.anchorNode)) ? s0.getRangeAt(0) : saved; if (!r0) return;
+      first = last = caretBox(ctx, r0);
+    }
     else {
       var s = window.getSelection(), live = s.rangeCount && !s.isCollapsed && ctx.tb.contains(s.anchorNode);
       var r = live ? s.getRangeAt(0) : saved; if (!r) return;
       var rects = r.getClientRects(), br = r.getBoundingClientRect();
       first = rects.length ? rects[0] : br; last = rects.length ? rects[rects.length - 1] : br;
     }
+    if (!first || !last || (!first.width && !first.height && !first.top && !first.left)) return;   // not laid out yet: wait, stay hidden
     var vv = window.visualViewport, vw = vv ? vv.width : innerWidth, vh = vv ? vv.height : innerHeight, ot = vv ? vv.offsetTop : 0, ol = vv ? vv.offsetLeft : 0;
-    var W = Math.min(vw - 16, 440), minLeft = ol + 8;
+    var W = Math.min(vw - 16, caret ? 240 : 440), minLeft = ol + 8;
     bar.style.width = W + "px"; bar.classList.remove("narrow");
     var bh = bar.offsetHeight, cx = (first.left + last.right) / 2;
-    var top = last.bottom + 46;                         // below the selection (leaves room for the handles)
-    if (top + bh > ot + vh - 8) top = first.top - bh - 14; // otherwise above it
-    top = Math.max(ot + 8, Math.min(top, ot + vh - bh - 8));
+    var Z = freeZone(ctx.box, ot, vh), lo = Z.top, hi = Z.bot - bh, top;
+    if (hi < lo) hi = lo;
+    var below = last.bottom + (caret ? 30 : 46), above = first.top - bh - (caret ? 10 : 14);   // below leaves room for the handles
+    if (caret) top = above >= lo && above <= hi ? above : (below >= lo && below <= hi ? below : Math.max(lo, Math.min(below, hi)));
+    else top = below >= lo && below <= hi ? below : (above >= lo && above <= hi ? above : Math.max(lo, Math.min(below, hi)));
     // the app's floating "back" button (#muHostBack) sits above everything at the left edge: never go under it,
     // a tap there would leave the note
     try {
@@ -54273,13 +54377,13 @@ html body #contentsContainer .mxe .mc-title-input{opacity:.8!important}</style>
         var hr = hb.getBoundingClientRect();
         if (top < hr.bottom + 8 && top + bh > hr.top - 8) {
           var lim = hr.right + 8; if (hr.left > vw / 2) { lim = minLeft; W = Math.min(W, hr.left - 8 - minLeft); } else { minLeft = Math.max(minLeft, lim); W = Math.min(W, ol + vw - 8 - minLeft); }
-          bar.style.width = W + "px"; bar.classList.toggle("narrow", W < 350);
+          bar.style.width = W + "px"; bar.classList.toggle("narrow", !caret && W < 350);
         }
       }
     } catch (e) { }
-    var bw = bar.offsetWidth, left = Math.max(minLeft, Math.min(cx - bw / 2, ol + vw - bw - 8));
+    var bw = bar.offsetWidth, left = Math.max(minLeft, Math.min(cx - bw / 2, ol + vw - bw - 8));   // always fully on screen, whichever side the caret is on
     bh = bar.offsetHeight;
-    bar.style.left = Math.round(left) + "px"; bar.style.top = Math.round(top) + "px";
+    if (isFinite(left) && isFinite(top)) { bar.style.left = Math.round(left) + "px"; bar.style.top = Math.round(top) + "px"; bar.classList.add("placed"); }
   }
   var raf = 0; function placeSoon() { raf || (raf = requestAnimationFrame(function () { raf = 0; place(); })); }
 
@@ -54338,7 +54442,8 @@ html body #contentsContainer .mxe .mc-title-input{opacity:.8!important}</style>
     clearTimeout(timer);
     timer = setTimeout(function () {
       var c = anyCurrent();
-      if (!c) { if (bar && bar.classList.contains("show") && ctx && !ctx.title && saved && saved.startContainer.isConnected && ctx.tb.isConnected) { placeSoon(); return; } hide(); return; }
+      if (!c) { if (bar && bar.classList.contains("show") && ctx && ctx.caret) { if (caretSame()) { placeSoon(); return; } hide(); return; }
+        if (bar && bar.classList.contains("show") && ctx && !ctx.title && saved && saved.startContainer.isConnected && ctx.tb.isConnected) { placeSoon(); return; } hide(); return; }
       show(c); hideNative(c); setTimeout(place, 30);
     }, 280);
 
@@ -54393,7 +54498,7 @@ html body #contentsContainer .mxe .mc-title-input{opacity:.8!important}</style>
       navigator.clipboard.readText().then(function (t) { if (!t) return; quiet(function () { restore(true); try { D.execCommand("insertText", false, t); } catch (e) { } }); }, function () { toast(T.noPaste); });
     } else { var ok = false; try { ok = D.execCommand("paste"); } catch (e) { } ok || toast(T.noPaste); }
   }
-  function actAll() { if (!ctx) return; if (ctx.title) { var ti = ctx.tb; restore(); try { ti.setSelectionRange(0, ti.value.length); } catch (e) { } saved = { s: 0, e: ti.value.length }; ctx.s = 0; ctx.e = ti.value.length; lastKey = ""; setTimeout(place, 30); return; } restore(); var s = window.getSelection(), r = D.createRange(); r.selectNodeContents(ctx.tb); s.removeAllRanges(); s.addRange(r); saved = r.cloneRange(); lastKey = ""; setTimeout(function () { var c = current(); c && (ctx = c, saved = c.range.cloneRange(), place()); }, 30); }
+  function actAll() { if (!ctx) return; ctx.caret = false; bar.classList.remove("cmode"); if (ctx.title) { var ti = ctx.tb; restore(); try { ti.setSelectionRange(0, ti.value.length); } catch (e) { } saved = { s: 0, e: ti.value.length }; ctx.s = 0; ctx.e = ti.value.length; lastKey = ""; setTimeout(place, 30); return; } restore(); var s = window.getSelection(), r = D.createRange(); r.selectNodeContents(ctx.tb); s.removeAllRanges(); s.addRange(r); saved = r.cloneRange(); lastKey = ""; setTimeout(function () { var c = current(); c && (ctx = c, saved = c.range.cloneRange(), place()); }, 30); }
   function actTr(btn) {
     var T = L(), text = selText().trim(); if (!text) return;
     if (typeof mu_translateAny !== "function") { toast(T.trFail); return; }
@@ -54448,6 +54553,53 @@ html body #contentsContainer .mxe .mc-title-input{opacity:.8!important}</style>
     if (!d || !d.had || Date.now() - d.t > 500 || Math.abs(e.clientX - d.x) > 10 || Math.abs(e.clientY - d.y) > 10) return;
     var t = e.target; if (!t || !t.closest || t.closest("#mkSelBars, button, a, input, textarea, select, label, .mxe-pop, .mxe-bottom, [class*=modal], [class*=overlay], [class*=popup], [class*=toast]")) return;
     setTimeout(function () { try { var s = window.getSelection(); if (s && s.rangeCount && !s.isCollapsed && current()) { s.removeAllRanges(); hide(); } } catch (x) { } }, 0);
+  }, true);
+
+  // ---------- caret menu: Paste / Select all when there is no selection ----------
+  // Replaces the system's own little menu (it cannot be positioned from here and runs off the screen when the caret is at the right edge).
+  function inEditable(t) { return !!(t && t.closest && t.closest('.text-box[contenteditable="true"], .content-container.mxe .mc-title-input')); }
+  function caretCurrent() {
+    var el = D.activeElement, bx;
+    if (el && el.classList && el.classList.contains("mc-title-input") && !el.disabled) {
+      bx = el.closest(".content-container.mxe"); if (!bx) return null;
+      var a, b; try { a = el.selectionStart; b = el.selectionEnd; } catch (e) { return null; }
+      if (a == null || a !== b) return null;
+      return { caret: true, title: true, tb: el, box: bx, s: a, e: a };
+    }
+    var s = window.getSelection(); if (!s || !s.rangeCount || !s.isCollapsed) return null;
+    var n = s.anchorNode, pe = n && (n.nodeType === 1 ? n : n.parentElement), tb = pe && pe.closest && pe.closest('.text-box[contenteditable="true"]');
+    if (!tb) return null;
+    bx = tb.closest(".content-container.mxe"); if (!bx) return null;
+    return { caret: true, sel: s, range: s.getRangeAt(0), tb: tb, box: bx };
+  }
+  function caretKey(c) { return c ? (c.title ? c.tb : c.range.startContainer) : null; }
+  function caretOff(c) { return c ? (c.title ? c.s : c.range.startOffset) : -1; }
+  function caretSame() {
+    if (!ctx || !ctx.caret) return false;
+    var c = caretCurrent(); if (!c) return false;
+    return c.tb === ctx.tb && (c.title ? c.s === ctx.s : (c.range.startContainer === saved.startContainer && c.range.startOffset === saved.startOffset));
+  }
+  function caretOff_() { try { return localStorage.getItem("mksb_native") === "1" || localStorage.getItem("mksb_off") === "1"; } catch (e) { return false; } }
+  function showCaret(c) { show(c); hideNative(c); setTimeout(place, 30); }
+  // long-press on an empty spot / on the caret
+  D.addEventListener("contextmenu", function (e) {
+    if (caretOff_() || !inEditable(e.target) || anyCurrent()) return;
+    var c = caretCurrent(); if (!c) return;
+    e.preventDefault(); showCaret(c);
+  }, true);
+  // tap on the caret that is already there (the system shows its menu for that tap)
+  var capD = null;
+  D.addEventListener("pointerdown", function (e) {
+    capD = null; if (caretOff_() || (bar && bar.contains(e.target)) || !inEditable(e.target)) return;
+    var c = caretCurrent(); capD = { x: e.clientX, y: e.clientY, t: Date.now(), k: caretKey(c), o: caretOff(c) };
+  }, true);
+  D.addEventListener("pointerup", function (e) {
+    var d = capD; capD = null;
+    if (!d || !d.k || Date.now() - d.t > 500 || Math.abs(e.clientX - d.x) > 10 || Math.abs(e.clientY - d.y) > 10) return;
+    setTimeout(function () {
+      if (anyCurrent()) return; var c = caretCurrent();
+      if (c && caretKey(c) === d.k && caretOff(c) === d.o) showCaret(c);
+    }, 140);
   }, true);
   window.mkSelBars = { off: function () { try { localStorage.setItem("mksb_off", "1"); } catch (e) { console.warn("silent catch -> setItem @mkSelBarsJs:294", e); } hide(); }, on: function () { try { localStorage.removeItem("mksb_off"); } catch (e) { } },
     keepNativeMenu: function (v) { try { v ? localStorage.setItem("mksb_native", "1") : localStorage.removeItem("mksb_native"); } catch (e) { console.warn("silent catch -> setItem @mkSelBarsJs:295", e); } } };
@@ -55262,7 +55414,7 @@ html.mu-nfs-open.mu-nfs-dark:not(#_dn):not(#_zb) #advancedModal #advancedCard.mk
 (function () {
     if (window.__mkCG) return; window.__mkCG = 1;
     var MIN = 4.5, CAP = 400, TXT = "button,.btn-main,.custom-btn,[role=button],summary,label,h1,h2,h3,h4,p,span,a,small,b,strong,li,td,th";
-    var SKIP = "[contenteditable],.text-box,.mxe-body,.note-body,.markhin-note-content,script,style,svg,svg *,input,textarea,select,option,code,pre,canvas,video,audio,img";
+    var SKIP = "#muNotesFs .mu-nfs-fext,[contenteditable],.text-box,.mxe-body,.note-body,.markhin-note-content,script,style,svg,svg *,input,textarea,select,option,code,pre,canvas,video,audio,img";
     function parse(s) { var m = /rgba?\(\s*([\d.]+)[,\s]+([\d.]+)[,\s]+([\d.]+)(?:[,\s/]+([\d.]+%?))?/.exec(s || ""); if (!m) return null; var a = m[4] === undefined ? 1 : (/%$/.test(m[4]) ? parseFloat(m[4]) / 100 : parseFloat(m[4])); return [+m[1], +m[2], +m[3], a]; }
     function blend(f, b) { var a = f[3]; return [f[0] * a + b[0] * (1 - a), f[1] * a + b[1] * (1 - a), f[2] * a + b[2] * (1 - a), 1]; }
     function lum(c) { var v = c.slice(0, 3).map(function (x) { x /= 255; return x <= .03928 ? x / 12.92 : Math.pow((x + .055) / 1.055, 2.4); }); return .2126 * v[0] + .7152 * v[1] + .0722 * v[2]; }
@@ -62867,6 +63019,80 @@ html body .text-box code.mk-ml,html body .mu-viewer-body code.mk-ml,html body .m
     }
     document.addEventListener("input", onOpen, true);
     document.addEventListener("input", onInput, true);
+})();
+</script>
+
+<script id="mkKeepCaretOnRenderJs">
+// Typing in a note's editor must never lose the caret. Any re-render of the notes (cloud / live sync finishing, a
+// background save, a folder change ...) rebuilds the note's box, which put the caret back at the START of the note
+// (typed text then landed in the wrong place) and could also bring back the text from the last autosave only.
+// So: right before the render the pending text is saved and the caret / selection is remembered (by DOM path, with
+// a character-offset fallback), and right after the render it is put back into the new editor box.
+(function () {
+    if (window.__mkKeepCaretOnRender) return;
+    window.__mkKeepCaretOnRender = 1;
+    var SEL = '.text-box[contenteditable="true"]';
+    function boxFromNode(n) { var el = n && (n.nodeType === 1 ? n : n.parentElement); return el && el.closest ? el.closest(SEL) : null; }
+    function pathOf(box, node) {
+        var p = [];
+        while (node && node !== box) { var par = node.parentNode; if (!par) return null; p.unshift(Array.prototype.indexOf.call(par.childNodes, node)); node = par; }
+        return node === box ? p : null;
+    }
+    function nodeAt(box, path) { var n = box; for (var i = 0; i < path.length; i++) { n = n && n.childNodes[path[i]]; if (!n) return null; } return n; }
+    function charOff(box, node, off) { var r = document.createRange(); r.selectNodeContents(box); r.setEnd(node, off); return r.toString().length; }
+    function byChars(box, pos) {
+        var w = document.createTreeWalker(box, NodeFilter.SHOW_TEXT), n, acc = 0, last = null;
+        while ((n = w.nextNode())) { var l = n.nodeValue.length; if (pos <= acc + l) return [n, pos - acc]; acc += l; last = n; }
+        return last ? [last, last.nodeValue.length] : [box, box.childNodes.length];
+    }
+    function capture() {
+        var s = window.getSelection();
+        if (!s || !s.rangeCount) return null;
+        var r = s.getRangeAt(0), box = boxFromNode(r.startContainer);
+        if (!box || !box.id || box.id.indexOf("text-") !== 0 || !box.contains(r.endContainer)) return null;
+        var sp = pathOf(box, r.startContainer), ep = pathOf(box, r.endContainer);
+        if (!sp || !ep) return null;
+        return { id: box.id, box: box, sp: sp, so: r.startOffset, ep: ep, eo: r.endOffset, sc: charOff(box, r.startContainer, r.startOffset), ec: charOff(box, r.endContainer, r.endOffset) };
+    }
+    function resolve(box, path, off, chars) {
+        var n = nodeAt(box, path);
+        if (n) {
+            var max = n.nodeType === 3 ? n.nodeValue.length : n.childNodes.length;
+            if (off <= max) { try { if (charOff(box, n, off) === chars) return [n, off]; } catch (e) { } }
+        }
+        return byChars(box, chars);
+    }
+    function restore(c) {
+        var box = document.getElementById(c.id);
+        if (!box || box.getAttribute("contenteditable") !== "true") return;
+        if (box === c.box && box.isConnected) {
+            var s0 = window.getSelection();
+            if (s0 && s0.rangeCount && box.contains(s0.anchorNode)) return;   // box untouched, caret still where it was
+        }
+        try {
+            var a = resolve(box, c.sp, c.so, c.sc), collapsed = c.sc === c.ec && c.so === c.eo && c.sp.join() === c.ep.join(),
+                b = collapsed ? a : resolve(box, c.ep, c.eo, c.ec);
+            box.focus({ preventScroll: true });
+            var r = document.createRange();
+            r.setStart(a[0], a[1]); r.setEnd(b[0], b[1]);
+            var s = window.getSelection();
+            s.removeAllRanges(); s.addRange(r);
+        } catch (e) { }
+    }
+    var inner = window.renderContents;
+    if (typeof inner !== "function") return;
+    window.renderContents = function () {
+        var c = null;
+        try {
+            c = capture();
+            if (c && typeof window.autosaveCategory === "function") {
+                try { var pr = window.autosaveCategory(c.id.slice(5)); pr && pr.catch && pr.catch(function () { }); } catch (e) { }
+            }
+        } catch (e) { c = null; }
+        var res = inner.apply(this, arguments);
+        if (c) { try { restore(c); } catch (e) { } }
+        return res;
+    };
 })();
 </script>
 
