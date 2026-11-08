@@ -62900,18 +62900,33 @@ html body .audio-wrapper.video-wrapper.mk-vplaying>button.img-btn.img-btn.img-bt
     document.addEventListener("playing", function (e) { setPlaying(e, true); }, true);
     ["pause", "ended", "emptied", "abort", "error"].forEach(function (n) { document.addEventListener(n, function (e) { setPlaying(e, false); }, true); });
 
-    /* ---- 3) tapping a video never raises the keyboard ---- */
+    /* ---- 3) tapping a video / image / drawing never raises the keyboard ---- */
+    function tapOf(t) { return t && t.closest ? t.closest(".video-wrapper,.img-drag-wrapper,.audio-wrapper,.mu-img-row,[id^=\"draw-box-\"]") : null; }
     document.addEventListener("pointerdown", function (e) {
-        var w = wrapOf(e.target); if (!w) return;
+        var w = tapOf(e.target); if (!w) return;
         var h = w.closest('[contenteditable="true"]'); if (!h || w.closest(".mu-viewer")) return;
         var had = h.getAttribute("inputmode"); if (had === "none") return;
         h.setAttribute("inputmode", "none"); clearTimeout(h.__mkvq);
         h.__mkvq = setTimeout(function () { if (h.getAttribute("inputmode") === "none") { had === null ? h.removeAttribute("inputmode") : h.setAttribute("inputmode", had); } }, 1200);
     }, true);
     document.addEventListener("mousedown", function (e) {
-        var w = wrapOf(e.target); if (!w || w.closest(".mu-viewer") || !w.closest('[contenteditable="true"]')) return;
+        var w = tapOf(e.target); if (!w || w.closest(".mu-viewer") || !w.closest('[contenteditable="true"]')) return;
         e.target.closest && e.target.closest("button") || e.preventDefault();   // no caret / focus change; the native player controls still work
     }, true);
+    /* ---- 4) touching the drawing canvas never raises the keyboard (and lowers it if it was up) ---- */
+    function noKb(e) {
+        var t = e.target; if (!t || !t.closest || !t.closest(".drawing-box") || !t.closest("canvas")) return;
+        var box = t.closest(".content-container.mxe") || document, hosts = box.querySelectorAll('.text-box[contenteditable="true"],.mc-title-input');
+        for (var i = 0; i < hosts.length; i++) {
+            (function (h) {
+                if (h.tagName !== "INPUT" && h.tagName !== "TEXTAREA") {
+                    var had = h.getAttribute("inputmode"); if (had !== "none") { h.setAttribute("inputmode", "none"); clearTimeout(h.__mkdq); h.__mkdq = setTimeout(function () { if (h.getAttribute("inputmode") === "none") { had === null ? h.removeAttribute("inputmode") : h.setAttribute("inputmode", had); } }, 1500); }
+                }
+                try { document.activeElement === h && h.blur(); } catch (x) { }
+            })(hosts[i]);
+        }
+    }
+    ["pointerdown", "touchstart", "mousedown"].forEach(function (n) { document.addEventListener(n, noKb, { capture: true, passive: true }); });
 })();
 </script>
 
