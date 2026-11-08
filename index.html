@@ -60441,8 +60441,8 @@ var CONT = [["AS", "آسیا", "Asia"], ["EU", "اروپا", "Europe"], ["NA", "
     const LS_CFG = "mkmed_cfg_v1", LS_ON = "mkmed_on_v1", LS_SEEN = "mkmed_seen_v1", LS_DEV = "mkmed_dev_v1", KV_STATE = "mkmed_state_v1";
     const LS_AUTO = "mkmed_auto_v1", LS_CLEAN = "mkmed_autoclean_v1";   // auto sync switch (default ON; only "0" turns it off)
     const CFG_KEY = "mk_media_cfg", IDX_PFX = "mk_medx_", CH_PFX = "mk_med_";
-    const TG_BASE = "https://api.telegram.org", CF_BASE = "https://proxy.mvrkhiiin.workers.dev", VAL_BASE = "https://markhin--4abd6262dbbe11f1aaa21607ee4eb77e.web.val.run", DEF_BASE = VAL_BASE, MAX_UP = 49 * 1024 * 1024, MAX_DL = 20 * 1024 * 1024, OVH = 32;
-    const SEND_GAP = 3100, MAGIC = [77, 75, 77, 49], AAD_BLOB = new TextEncoder().encode("mkmed-blob"), AAD_TOK = new TextEncoder().encode("mkmed-token"), AAD_DK = new TextEncoder().encode("mkmed-datakey");
+    const TG_BASE = "https://api.telegram.org", CF_BASE = "https://proxy.mvrkhiiin.workers.dev", VAL_BASE = "https://markhin--4abd6262dbbe11f1aaa21607ee4eb77e.web.val.run", DEF_BASE = CF_BASE, MAX_UP = 49 * 1024 * 1024, MAX_DL = 20 * 1024 * 1024, OVH = 32;
+    const SEND_GAP = 1300, MAGIC = [77, 75, 77, 49], AAD_BLOB = new TextEncoder().encode("mkmed-blob"), AAD_TOK = new TextEncoder().encode("mkmed-token"), AAD_DK = new TextEncoder().encode("mkmed-datakey");
     const enc = new TextEncoder(), dec = new TextDecoder();
     /* Default media bot, kept out of the UI: people only choose a password. TOK_OBF is the token scrambled by MKMED.encodeToken("<token>")
        (obfuscation only - anyone who reads this file or watches the network can still recover it). Empty = no default bot, the old flow. */
@@ -60545,21 +60545,21 @@ var CONT = [["AS", "آسیا", "Asia"], ["EU", "اروپا", "Europe"], ["NA", "
     });
     Object.assign(D.fa, {
         orphans: "بی‌صاحب (هیچ یادداشتی به آن‌ها اشاره نمی‌کند)", purge: "حذف رسانه‌های بی‌صاحب", phPurge: "حذف رسانه‌های بی‌صاحب…",
-        orphNone: "رسانه‌ی بی‌صاحبی پیدا نشد", orphDone: "✅ {n} رسانه‌ی بی‌صاحب از فهرست و این دستگاه حذف شد",
+        orphNone: "رسانه‌ی بی‌صاحبی پیدا نشد", orphDone: "✅ {n} رسانه‌ی بی‌صاحب از فهرست، این دستگاه و چت ربات حذف شد",
         orphUnsafe: "الان حذف امن نیست: یادداشتی بارگذاری نشده، یا یادداشت قفل‌شده/گاوصندوقی هست که نمی‌شود از رویش فهمید به کدام رسانه اشاره دارد. بعداً دوباره امتحان کن.",
         orphConfirm: "{n} رسانه هست که هیچ یادداشتی به آن اشاره نمی‌کند. از فهرست رسانه (شمارنده‌ها و Cloud) و از حافظه‌ی این دستگاه حذف شوند؟\n\nفایل رمزشده‌ی داخل چت ربات پاک نمی‌شود، ولی از برنامه دیگر قابل بازیابی نیست. اگر یادداشت‌های دستگاه دیگر هنوز اینجا همگام نشده‌اند، اول «فعال‌سازی / تعمیر سینک خودکار» را بزن.",
         cleanT: "حذف خودکار رسانه‌های بی‌صاحب",
         cleanH: "وقتی روشن است، رسانه‌ای که بیش از ۳۰ دقیقه هیچ یادداشتی به آن اشاره نکند خودکار از فهرست و حافظه‌ی این دستگاه حذف می‌شود. پیش‌فرض خاموش است. فایل داخل چت ربات پاک نمی‌شود. اگر یادداشت قفل‌شده‌ی قدیمی یا گاوصندوق قدیمی داشته باشی، حذف انجام نمی‌شود.",
-        cleanAsk: "حذف خودکار روشن شود؟ رسانه‌ای که بیش از ۳۰ دقیقه به هیچ یادداشتی وصل نباشد خودکار حذف می‌شود.", cleanOnT: "✅ حذف خودکار رسانه‌های بی‌صاحب روشن شد", cleanOffT: "⏸ حذف خودکار رسانه‌های بی‌صاحب خاموش شد"
+        cleanAsk: "حذف خودکار روشن شود؟ رسانه‌ای که بیش از ۳۰ دقیقه به هیچ یادداشتی وصل نباشد خودکار حذف می‌شود؛ پیامش در چت ربات هم پاک می‌شود.", cleanOnT: "✅ حذف خودکار رسانه‌های بی‌صاحب روشن شد", cleanOffT: "⏸ حذف خودکار رسانه‌های بی‌صاحب خاموش شد"
     });
     Object.assign(D.en, {
         orphans: "Orphans (no note points at them)", purge: "Remove orphan media", phPurge: "Removing orphan media…",
-        orphNone: "No orphan media found", orphDone: "✅ {n} orphan media removed from the list and this device",
+        orphNone: "No orphan media found", orphDone: "✅ {n} orphan media removed from the list, this device and the bot chat",
         orphUnsafe: "Removing is not safe right now: a note is not loaded, or a locked/vault note exists whose media cannot be read. Try again later.",
         orphConfirm: "{n} media file(s) are not pointed at by any note. Remove them from the media list (counters and Cloud) and from this device?\n\nThe encrypted file in the bot chat is not deleted, but the app can no longer restore it. If notes from your other device are not synced here yet, tap “Enable / fix auto sync” first.",
         cleanT: "Auto-remove orphan media",
         cleanH: "When on, media that no note has pointed at for more than 30 minutes is removed automatically from the list and this device. Off by default. The file in the bot chat is not deleted. Nothing is removed if you have an old-style locked note or an old vault.",
-        cleanAsk: "Turn on auto-remove? Media that no note points at for over 30 minutes will be removed automatically.", cleanOnT: "✅ Auto-remove of orphan media is on", cleanOffT: "⏸ Auto-remove of orphan media is off"
+        cleanAsk: "Turn on auto-remove? Media that no note points at for over 30 minutes will be removed automatically, including from the bot chat.", cleanOnT: "✅ Auto-remove of orphan media is on", cleanOffT: "⏸ Auto-remove of orphan media is off"
     });
     Object.assign(D.fa, {
         defSteps: "ربات رسانه آماده است. ۱) یک بار در تلگرام به ربات /start بده. ۲) فقط یک رمز (حداقل ۶ نویسه؛ روی همه‌ی دستگاه‌ها همان) بگذار.",
@@ -60671,15 +60671,17 @@ var CONT = [["AS", "آسیا", "Asia"], ["EU", "اروپا", "Europe"], ["NA", "
     }
     async function routePick(force) {
         const key = routeKeyNow();
-        if (!force && routeBase && routeKey === key && Date.now() - routeAt < RT_TTL) return routeBase;
+        const hasR = !force && routeBase && routeKey === key, stale = hasR && Date.now() - routeAt >= RT_TTL;
+        if (hasR && !stale) return routeBase;
         if (!routeP) {
             routeP = routeRace(routeCands(), S.token).then(b => {
                 const was = routeLast; routeBase = b; routeKey = key; routeAt = Date.now(); routeP = null; routeLast = b;
                 if (b !== was && (was || b !== S.base)) { try { b !== S.base ? toast(T("rtSwitch") + " " + routeLabel(b), 3500) : was && toast(T("rtBack") + " " + routeLabel(b), 2500); } catch { } try { scheduleRender(); } catch { } }
                 return b;
-            }, e => { routeBase = ""; routeP = null; throw e; });
+            }, e => { routeP = null; if (stale) routeAt = Date.now() - RT_TTL + 20000; else routeBase = ""; throw e; });
+            stale && routeP.catch(() => { });
         }
-        return routeP;
+        return stale ? routeBase : routeP;
     }
     /* manual test of every route in parallel (uses a dummy token when none is unlocked yet, so nothing secret is sent to untested proxies) */
     async function routeTestAll() {
@@ -60901,8 +60903,8 @@ var CONT = [["AS", "آسیا", "Asia"], ["EU", "اروپا", "Europe"], ["NA", "
     const applyBudget = () => { try { cloudApplyManualLimit(MAX_MANUAL_BACKUPS); } catch { } };
 
     /* ---------- manifest (CloudStorage) ---------- */
-    const encRec = r => [r.id, r.sha, r.fid, r.size, r.t, (r.ts || 0).toString(36), r.k || ""].join("|");
-    function decRec(line) { const p = line.split("|"); if (p.length < 6 || !p[0] || !p[2]) return null; return { id: p[0], sha: p[1], fid: p[2], size: +p[3] || 0, t: p[4], ts: parseInt(p[5], 36) || 0, k: p[6] || "" }; }
+    const encRec = r => [r.id, r.sha, r.fid, r.size, r.t, (r.ts || 0).toString(36), r.k || "", r.m || ""].join("|");
+    function decRec(line) { const p = line.split("|"); if (p.length < 6 || !p[0] || !p[2]) return null; return { id: p[0], sha: p[1], fid: p[2], size: +p[3] || 0, t: p[4], ts: parseInt(p[5], 36) || 0, k: p[6] || "", m: +p[7] || 0 }; }
     const cloudOk = () => { const w = tgw(); return !!(w && w.CloudStorage && typeof cloudGetItem === "function"); };
     function packChunks(recs) {
         const chunks = []; let cur = "";
@@ -61063,7 +61065,7 @@ var CONT = [["AS", "آسیا", "Asia"], ["EU", "اروپا", "Europe"], ["NA", "
     function hookSave() {
         try {
             if (typeof saveToLocalStorage !== "function" || saveToLocalStorage.__mkmed) return;
-            const orig = saveToLocalStorage, w = function () { const r = orig.apply(this, arguments); try { if (isOn() && autoOn() && S.token && S.key && !S.paused) { clearTimeout(saveKickT); saveKickT = setTimeout(() => { scanUploads(!1); autoSyncSoon(500); }, 2500); } } catch { } return r; };
+            const orig = saveToLocalStorage, w = function () { const r = orig.apply(this, arguments); try { if (isOn() && autoOn() && S.token && S.key && !S.paused) { clearTimeout(saveKickT); saveKickT = setTimeout(() => { scanUploads(!1); autoSyncSoon(200); }, 600); } } catch { } return r; };
             w.__mkmed = 1; saveToLocalStorage = w;
         } catch { }
     }
@@ -61100,13 +61102,13 @@ var CONT = [["AS", "آسیا", "Asia"], ["EU", "اروپا", "Europe"], ["NA", "
         S.kid || await syncKid(); const blob = await MU_MEDIA.get(id); if (!blob) return !1;
         if (blob.size + OVH > MAX_UP) { fail(id, T("big"), "big"); return !1; }
         const buf = new Uint8Array(await blob.arrayBuffer()), sha = await sha256(buf), mime = mimeShort(blob.type), dup = findBySha(sha);
-        if (dup) { S.recs[id] = { id, sha, fid: dup.fid, size: buf.length, t: mime, ts: Date.now(), k: S.kid }; clearFail(id); S.manifestDirty = !0; persist(); return !0; }
+        if (dup) { S.recs[id] = { id, sha, fid: dup.fid, size: buf.length, t: mime, ts: Date.now(), k: S.kid, m: dup.m || 0 }; clearFail(id); S.manifestDirty = !0; persist(); return !0; }
         S.stage = T("stEnc"); updateProg(); const ct = await aesEnc(S.key, buf, AAD_BLOB), packed = new Uint8Array(4 + ct.length); packed.set(MAGIC), packed.set(ct, 4);
         const cid = chatId(); if (!cid) throw new ApiErr(0, T("errChat"), { fatal: !0 });
         S.stage = T("stSend"); updateProg();
         const res = await api("sendDocument", form({ chat_id: String(cid), disable_notification: "true", caption: id + "|" + sha, document: new File([packed], id + ".bin", { type: "application/octet-stream" }) }), { send: !0, timeout: 240000 });
         const fid = res && res.document && res.document.file_id; if (!fid) throw new ApiErr(0, "no file_id");
-        S.recs[id] = { id, sha, fid, size: buf.length, t: mime, ts: Date.now(), k: S.kid }; clearFail(id); S.manifestDirty = !0; persist(); return !0;
+        S.recs[id] = { id, sha, fid, size: buf.length, t: mime, ts: Date.now(), k: S.kid, m: res.message_id || 0 }; clearFail(id); S.manifestDirty = !0; persist(); return !0;
     }
     /* ---------- auto-repair: files encrypted with a different/old key ---------- */
     const BAD_RX = /decrypt-failed|sha-mismatch|bad-format/;
@@ -61162,7 +61164,7 @@ var CONT = [["AS", "آسیا", "Asia"], ["EU", "اروپا", "Europe"], ["NA", "
     function markBusy() { try { const sec = document.getElementById("mkmedSec"); if (!sec) return; S.acts.forEach(a => sec.querySelectorAll('[data-mkact="' + a + '"]').forEach(b => { if (b.classList.contains("mkmed-busy")) return; b.disabled = !0; b.classList.add("mkmed-busy"); b.insertAdjacentHTML("afterbegin", '<span class="mkmed-spin"></span> '); })); } catch { } }
 
     let refsC = null, refsT = 0;
-    const stillRef = id => { const n = Date.now(); if (!refsC || n - refsT > 1500) { refsC = referenced(); refsT = n; } return refsC.has(id); };
+    const stillRef = id => { const n = Date.now(); if (!refsC || n - refsT > 1500) { refsC = refsAll(); refsT = n; } return refsC.has(id); };
     async function pump() {
         if (S.busy) return; refsC = null; S.busy = !0; S.pg.active || (S.pg = { active: !0, done: 0, ok: 0, err: 0, t0: Date.now(), fin: 0 }); render();
         try {
@@ -61246,6 +61248,20 @@ var CONT = [["AS", "آسیا", "Asia"], ["EU", "اروپا", "Europe"], ["NA", "
         if (S.fail[id] && S.fail[id].k === "big") { markEl(id, "er"); return; }
         markEl(id, S.cur === id ? "dl" : "qd"); ensure(id, { prio: !0 });
     }
+    /* a photo / voice / video / file just appeared in the editor: queue its upload right away instead of waiting for the note to be saved */
+    let mkKickT = 0; const mkKicked = new Set;
+    function mediaKick() {
+        if (mkKickT) return;
+        mkKickT = setTimeout(() => {
+            mkKickT = 0;
+            try {
+                if (!isOn() || !autoOn() || !S.token || !S.key || S.paused || !S.loaded) return;
+                let need = !1; const since = +(readCfg() || {}).since || 0;
+                document.querySelectorAll("[data-mu-media]").forEach(el => { const id = el.getAttribute("data-mu-media"); if (!id || mkKicked.has(id) || known(id) || S.fail[id] || S.qUp.includes(id) || S.cur === id || (since && idTime(id) && idTime(id) < since)) return; mkKicked.add(id); need = !0; });
+                need && (scanUploads(!1), autoSyncSoon(200));
+            } catch { }
+        }, 700);
+    }
     function scanDom(force) {
         if (!isOn()) return;
         document.querySelectorAll("[data-mkmed],img[data-mu-media],audio[data-mu-media],video[data-mu-media],.file-wrapper[data-mu-media]").forEach(el => { if (!force && seenEls.has(el)) return; seenEls.add(el); if (io) { try { io.unobserve(el); } catch { } io.observe(el); } else onVisible(el); });
@@ -61254,14 +61270,14 @@ var CONT = [["AS", "آسیا", "Asia"], ["EU", "اروپا", "Europe"], ["NA", "
     function startObservers() {
         if (!isOn()) return;
         if (!io && "IntersectionObserver" in window) io = new IntersectionObserver(es => es.forEach(e => { if (e.isIntersecting) { S.visible.add(e.target); onVisible(e.target); } else S.visible.delete(e.target); }), { rootMargin: "200px" });
-        if (!mo) { mo = new MutationObserver(() => scheduleScan()); mo.observe(document.body, { childList: !0, subtree: !0 }); }
+        if (!mo) { mo = new MutationObserver(() => { scheduleScan(); mediaKick(); }); mo.observe(document.body, { childList: !0, subtree: !0 }); }
         scheduleScan(); startUploadScan(); startPoll();
     }
     function stopObservers() { io && io.disconnect(), mo && mo.disconnect(); io = mo = null; clearInterval(upT); upT = 0; stopPoll(); }
     let upT = 0;
     async function scanUploads(all) {
         if (!isOn()) return 0; S.kid || await syncKid(); await refreshLocal(!1);
-        const refs = referenced(), since = +(readCfg() || {}).since || 0, okR = r => !!(r && r.fid && !isBad(r) && (all ? (!S.kid || r.k === S.kid) : (!r.k || !S.kid || r.k === S.kid)));
+        const refs = refsAll(), since = +(readCfg() || {}).since || 0, okR = r => !!(r && r.fid && !isBad(r) && (all ? (!S.kid || r.k === S.kid) : (!r.k || !S.kid || r.k === S.kid)));
         let n = 0, dropped = !1;
         if (S.qUp.length) S.qUp = S.qUp.filter(id => refs.has(id));
         { let fch = !1; for (const id in S.fail) if (!refs.has(id)) { delete S.fail[id]; fch = !0; } fch && persist(); }
@@ -61287,6 +61303,33 @@ var CONT = [["AS", "آسیا", "Asia"], ["EU", "اروپا", "Europe"], ["NA", "
         } catch { return !1; }
     }
     function orphanIds() { const refs = refsAll(); return [...new Set([...Object.keys(S.recs), ...Object.keys(S.remote), ...S.localKeys])].filter(id => !refs.has(id)); }
+    /* two-way delete: when media is purged (no note points at it any more) its message is also deleted from the bot chat.
+       Only the message ids that were recorded at upload time are known (older uploads have none), and a message shared by another still-live record (same file, deduplicated) is kept. */
+    function collectBotDeletes(drop) {
+        const keepF = new Set(), out = new Map();
+        for (const src of [S.recs, S.remote]) for (const id in src) { const r = src[id]; r && r.fid && !drop.has(id) && !S.gone[id] && keepF.add(r.fid); }
+        for (const src of [S.recs, S.remote]) for (const id in src) { const r = src[id]; r && drop.has(id) && r.m && r.fid && !keepF.has(r.fid) && out.set(r.m, r.fid); }
+        return [...out.keys()];
+    }
+    async function deleteBotMessages(ids) {
+        const cid = chatId(); if (!cid || !S.token) return;
+        for (const m of ids) { try { await api("deleteMessage", form({ chat_id: String(cid), message_id: String(m) })); } catch (e) { if (e && e.net) break; } await sleep(250); }
+    }
+    /* Only the media's own delete (✖) button marks a file for removal. Removing it with the keyboard (Backspace/Delete) leaves it alone. */
+    const XD_KEY = "mkmed_xdel_v1";
+    const xdelGet = () => { try { return JSON.parse(lsGet(XD_KEY) || "{}") || {}; } catch { return {}; } };
+    const xdelSet = o => { try { lsSet(XD_KEY, JSON.stringify(o)); } catch { } };
+    document.addEventListener("click", e => {
+        try {
+            const b = e.target && e.target.closest && e.target.closest(".img-btn"); if (!b) return;
+            const w = b.closest("[data-mu-media],[data-mkmed],.audio-wrapper,.file-wrapper,.video-wrapper,.img-wrapper,.image-wrapper") || b.parentElement; if (!w) return;
+            const ids = new Set; const add = el => { if (!el || !el.getAttribute) return; const a = el.getAttribute("data-mu-media"), m = (el.getAttribute("data-mkmed") || "").split(":")[1]; a && ids.add(a); m && ids.add(m); };
+            add(w); w.querySelectorAll && w.querySelectorAll("[data-mu-media],[data-mkmed]").forEach(add);
+            if (!ids.size) return; const x = xdelGet(), now = Date.now(); ids.forEach(id => { x[id] = now; }); xdelSet(x);
+            if (isOn()) { clearTimeout(xdelT); xdelT = setTimeout(() => { purgeOrphans(!0); }, 4000); }
+        } catch { }
+    }, !0);
+    let xdelT = 0;
     let purgeBusy = 0;
     // auto = true: only ids that stayed orphan for 30+ minutes (undo / a note still arriving from another device get a grace period)
     async function purgeOrphans(auto) {
@@ -61296,9 +61339,10 @@ var CONT = [["AS", "آسیا", "Asia"], ["EU", "اروپا", "Europe"], ["NA", "
             await refreshLocal(!1);
             const now = Date.now(), refs = refsAll(); let list = orphanIds();
             for (const id in S.orph) refs.has(id) && delete S.orph[id];
-            if (auto) { const keep = []; for (const id of list) { if (!S.orph[id]) S.orph[id] = now; else if (now - S.orph[id] >= 18e5) keep.push(id); } list = keep; }
+            if (auto) { const xd = xdelGet(); let xc = !1; for (const id in xd) if (refs.has(id)) { delete xd[id]; xc = !0; } xc && xdelSet(xd); list = list.filter(id => xd[id] && now - xd[id] >= 3000); }
             if (!list.length) { persist(); return { n: 0 }; }
-            const drop = new Set(list);
+            const drop = new Set(list), botDel = collectBotDeletes(drop);
+            { const xd2 = xdelGet(); list.forEach(id => delete xd2[id]); xdelSet(xd2); }
             for (const id of list) {
                 delete S.recs[id]; delete S.remote[id]; delete S.fail[id]; delete S.la[id]; delete S.orph[id]; S.gone[id] = now;
                 const w = S.waiters.get(id); w && (S.waiters.delete(id), w.list.forEach(f => f(!1)));
@@ -61306,6 +61350,7 @@ var CONT = [["AS", "آسیا", "Asia"], ["EU", "اروپا", "Europe"], ["NA", "
             }
             S.qUp = S.qUp.filter(x => !drop.has(x)); S.qDown = S.qDown.filter(x => !drop.has(x));
             S.manifestDirty = !0; persist(); auto ? pushManifest() : await pushManifest(!0); render();
+            botDel.length && deleteBotMessages(botDel);
             return { n: list.length };
         } catch (e) { console.warn("mkmed purgeOrphans", e); return { n: 0, failed: !0 }; } finally { purgeBusy = 0; }
     }
@@ -61455,7 +61500,7 @@ var CONT = [["AS", "آسیا", "Asia"], ["EU", "اروپا", "Europe"], ["NA", "
         return `<div class="mkmed-note" style="margin:0 0 6px">${T("steps")}</div><input class="mkmed-in" id="mkmedTok" placeholder="${T("token")}" autocomplete="off" value="${esc(S.draft.mkmedTok || "")}">${d ? `<div class="mkmed-row"><button type="button" class="btn-main" data-mkact="useDefBot">↩️ ${T("useDef")}</button></div>` : ""}`;
     }
     const pgBox = () => pgHtml();
-    function autoHtml() { return `<label class="mkmed-note" style="display:flex;align-items:center;gap:8px;margin:0 0 4px;font-weight:700"><input type="checkbox" id="mkmedAuto" ${autoOn() ? "checked" : ""}> <span>🤖 ${T("autoT")}</span></label><div class="mkmed-note" style="margin:0 0 8px">${T("autoH")}</div><label class="mkmed-note" style="display:flex;align-items:center;gap:8px;margin:0 0 4px;font-weight:700"><input type="checkbox" id="mkmedClean" ${cleanOn() ? "checked" : ""}> <span>🧹 ${T("cleanT")}</span></label><div class="mkmed-note" style="margin:0 0 8px">${T("cleanH")}</div>`; }
+    function autoHtml() { return `<label class="mkmed-note" style="display:flex;align-items:center;gap:8px;margin:0 0 4px;font-weight:700"><input type="checkbox" id="mkmedAuto" ${autoOn() ? "checked" : ""}> <span>🤖 ${T("autoT")}</span></label><div class="mkmed-note" style="margin:0 0 8px">${T("autoH")}</div><label class="mkmed-note" style="display:flex;align-items:center;gap:8px;margin:0 0 4px;font-weight:700"><input type="checkbox" id="mkmedClean" ${cleanOn() ? "checked" : ""}> <span>🧹 ${T("cleanT")}</span></label><div class="mkmed-note" style="margin:0 0 8px">${T("cleanH")}</div><label class="mkmed-note" style="display:flex;align-items:center;gap:8px;margin:0 0 4px;font-weight:700"><input type="checkbox" id="mkmedBg" ${(window.mkBgKeepOn ? window.mkBgKeepOn() : !0) ? "checked" : ""}> <span>🔋 ${lang() === "fa" ? "ادامه‌ی بکاپ‌ها در پس‌زمینه" : "Keep backups running in the background"}</span></label><div class="mkmed-note" style="margin:0 0 8px">${lang() === "fa" ? "وقتی برنامه را می‌بندی یا به برنامه‌ی دیگر می‌روی، ارسال بکاپ‌ها ادامه پیدا می‌کند. اگر گوشی برنامه را کامل ببندد، ادامه نمی‌یابد." : "Backups keep sending when you switch to another app. If the phone fully closes the app, they stop."}</div>`; }
     function bodyHtml() {
         const cfg = readCfg(), on = isOn(), unl = !!(S.token && S.key), st = stats(), fa = lang() === "fa";
         const chip = !cfg ? `<span class="mkmed-chip">${T("notset")}</span>` : on ? `<span class="mkmed-chip ${unl ? "ok" : "warn"}">${T("on")} · ${unl ? T("unlocked") : T("locked")}</span>` : `<span class="mkmed-chip">${T("off")}</span>`;
@@ -61692,6 +61737,54 @@ var CONT = [["AS", "آسیا", "Asia"], ["EU", "اروپا", "Europe"], ["NA", "
         if (window.__muTgOk !== !0) { toast(fa ? "بکاپ رسانه‌ای فقط داخل تلگرام قابل استفاده است." : "Media backup is only available when the app is opened inside Telegram.", 3500); return; }
         window.mkMediaReceive();
     };
+
+    /* ---------- BACKGROUND KEEPER ----------
+       A web page is throttled / frozen when the app goes to the background. While this is on (default), the page holds a Web Lock,
+       plays an inaudible loop (browsers do not freeze or heavily throttle pages that play audio) and runs a Worker heartbeat that keeps
+       the media queue going. It starts when the app is hidden and stops when it is shown again. The phone's OS may still end the app
+       after a long time or under memory pressure - nothing in a web page can fully prevent that. */
+    (function bgKeeper() {
+        const LS_BG = "mkmed_bgkeep_v1", bgOn = () => lsGet(LS_BG) !== "0", hidden = () => document.visibilityState === "hidden";
+        let audio = null, lockRel = null, lockAsked = !1, worker = null, ticks = 0, cc = !1;
+        function wavUrl() {
+            const sr = 8000, n = sr, b = new Uint8Array(44 + n), dv = new DataView(b.buffer), w = (o, s) => { for (let i = 0; i < s.length; i++) b[o + i] = s.charCodeAt(i); };
+            w(0, "RIFF"); dv.setUint32(4, 36 + n, !0); w(8, "WAVEfmt "); dv.setUint32(16, 16, !0); dv.setUint16(20, 1, !0); dv.setUint16(22, 1, !0); dv.setUint32(24, sr, !0); dv.setUint32(28, sr, !0); dv.setUint16(32, 1, !0); dv.setUint16(34, 8, !0); w(36, "data"); dv.setUint32(40, n, !0);
+            for (let i = 0; i < n; i++) b[44 + i] = (i & 1) ? 129 : 128;
+            return URL.createObjectURL(new Blob([b], { type: "audio/wav" }));
+        }
+        const mkAudio = () => { if (!audio) { audio = new Audio(wavUrl()); audio.loop = !0; audio.volume = .02; audio.setAttribute("playsinline", ""); } return audio; };
+        function tick() {
+            try {
+                ticks++;
+                if (!isOn() || !S.token || !S.key || S.paused) return;
+                if (ticks % 4 === 0) kickSync(!0);
+                else if (!S.busy && (S.qUp.length || S.qDown.length) && Date.now() >= netHold) pump();
+                if (S.manifestDirty && !S.manifestFull && !S.busy && ticks % 8 === 0) Promise.resolve(pushManifest()).catch(() => { });
+            } catch { }
+        }
+        function startWorker() { if (worker) return; try { worker = new Worker(URL.createObjectURL(new Blob(["setInterval(function(){postMessage(1)},4000)"], { type: "text/javascript" }))); worker.onmessage = tick; } catch { worker = null; } }
+        function stopWorker() { try { worker && worker.terminate(); } catch { } worker = null; }
+        function start() {
+            if (!bgOn()) return;
+            try { mkAudio().play().catch(() => { }); } catch { }
+            try { if (navigator.locks && !lockAsked) { lockAsked = !0; navigator.locks.request("mk-bg-keep", () => new Promise(r => { lockRel = r; if (!hidden() || !bgOn()) { r(); lockRel = null; lockAsked = !1; } })).catch(() => { lockAsked = !1; }); } } catch { }
+            startWorker();
+        }
+        function stop() {
+            try { audio && audio.pause(); } catch { }
+            try { lockRel && lockRel(); } catch { } lockRel = null; lockAsked = !1; stopWorker();
+        }
+        document.addEventListener("visibilitychange", () => { hidden() ? start() : stop(); });
+        window.addEventListener("pagehide", () => { start(); });
+        // browsers only allow audio after a touch: unlock it once on the first interaction
+        const unlock = () => { try { const a = mkAudio(); a.play().then(() => { hidden() || a.pause(); }).catch(() => { }); } catch { } ["pointerdown", "touchend", "keydown"].forEach(ev => document.removeEventListener(ev, unlock, !0)); };
+        ["pointerdown", "touchend", "keydown"].forEach(ev => document.addEventListener(ev, unlock, !0));
+        // Telegram: ask before the mini-app is closed while a backup is still being sent
+        setInterval(() => { try { const w = tgw(); if (!w || !w.enableClosingConfirmation) return; const busy = !!(S.busy || S.qUp.length || S.qDown.length || S.manifestDirty); if (busy !== cc) { cc = busy; busy ? w.enableClosingConfirmation() : w.disableClosingConfirmation(); } } catch { } }, 3000);
+        document.addEventListener("change", e => { if (e.target && e.target.id === "mkmedBg") { const v = !!e.target.checked; lsSet(LS_BG, v ? "1" : "0"); v ? hidden() && start() : stop(); toast(lang() === "fa" ? (v ? "ادامه‌ی کار در پس‌زمینه روشن شد" : "ادامه‌ی کار در پس‌زمینه خاموش شد") : (v ? "Background keep-alive on" : "Background keep-alive off"), 2500); } });
+        window.mkBgKeepOn = bgOn;
+        hidden() && start();
+    })();
     window.MKMED = { S, encodeToken, autoSync, fullSync, purgeOrphans, orphanIds, activate, api, setupWith, unlockWith, pushManifest, pullManifest, ensure, scanUploads, freeSpace, refreshLocal, known, onAct, render, patchModel, afterDownload, referenced, loadState, startObservers, readCloudCfg, sha256, _cfg: readCfg };
     init();
 })();
