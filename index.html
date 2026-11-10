@@ -19494,7 +19494,11 @@ html.mk-tg #muNav .mu-nav-panel{will-change:transform}
 
     /* run fn inside a job. Nested calls share the outer job. */
     async function run(label, fn, opts) {
-        if (cur) return fn(cur);
+        if (cur) { // nested OR concurrent call joins the running job; cleanup is deferred until the last joiner is done
+            var joined = cur; joined.joiners = (joined.joiners || 0) + 1;
+            try { return await fn(joined); }
+            finally { joined.joiners--; if (!joined.joiners && joined.deferredCleanup) { var dc = joined.deferredCleanup; joined.deferredCleanup = null; dc(); } }
+        }
         var job = new Job(label, opts && opts.silent), releaseAwake = null, origAlert = window.alert;
         cur = job;
         try { releaseAwake = keepAwake(); } catch (e) { }
@@ -19508,14 +19512,18 @@ html.mk-tg #muNav .mu-nav-panel{will-change:transform}
         try { return await fn(job); }
         catch (e) { if (isOom(e)) job.oom = true; throw e; }
         finally {
-            // let any alert() inside the app's own catch handlers fire before restoring
-            setTimeout(function () { window.alert = origAlert; }, 0);
             if (job.oom) SAFE = true;
-            cur = null; TOK.clear(); B64.clear();
-            objUrls.splice(0).forEach(function (u) { try { URL.revokeObjectURL(u); } catch (e) { } });
-            try { releaseAwake && releaseAwake(); } catch (e) { }
-            try { localStorage.removeItem(JOBFLAG); } catch (e) { }
-            try { if (job.ui) job.ui.box.remove(); } catch (e) { }
+            var cleanup = function () {
+                // let any alert() inside the app's own catch handlers fire before restoring
+                setTimeout(function () { window.alert = origAlert; }, 0);
+                cur = null; TOK.clear(); B64.clear();
+                objUrls.splice(0).forEach(function (u) { try { URL.revokeObjectURL(u); } catch (e) { } });
+                try { releaseAwake && releaseAwake(); } catch (e) { }
+                try { localStorage.removeItem(JOBFLAG); } catch (e) { }
+                try { if (job.ui) job.ui.box.remove(); } catch (e) { }
+            };
+            // another export still uses this job's media tables (TOK / B64 / object URLs): the last one out cleans up
+            if (job.joiners > 0) job.deferredCleanup = cleanup; else cleanup();
         }
     }
     function wrap(name, label) {
@@ -19565,6 +19573,34 @@ html.mk-tg #muNav .mu-nav-panel{will-change:transform}
     /* ---------- tokens / light html ---------- */
     function newToken(blob) { var id = ++tokenSeq; TOK.set(id, blob); return "MKXPH" + id + "Z"; }
     function mimeOf(b) { return (b && b.type) || "application/octet-stream"; }
+    /* ---------- export media compression (images; level chosen in Settings, stored in mk_exp_media_lvl) ---------- */
+    var EXPQ = { light: [2048, 0.85, 100 * 1024], medium: [1600, 0.75, 60 * 1024], strong: [1024, 0.6, 30 * 1024] }, SHRUNK = new Map();
+    function expLvl() { try { var v = localStorage.getItem("mk_exp_media_lvl"); return EXPQ[v] ? v : "off"; } catch (e) { return "off"; } }
+    async function shrinkImg(blob, key) {
+        var lv = expLvl(); if (lv === "off" || !blob || !/^image\/(jpeg|jpg|png|webp|bmp)$/i.test(blob.type || "")) return blob;
+        var P = EXPQ[lv]; if (blob.size < P[2]) return blob;
+        var ck = lv + "|" + key; if (SHRUNK.has(ck)) return SHRUNK.get(ck);
+        var out = blob, bmp = null, c = null;
+        try {
+            bmp = await createImageBitmap(blob);
+            var w = bmp.width, h = bmp.height, s = Math.min(1, P[0] / Math.max(w, h)), cw = Math.max(1, Math.round(w * s)), ch = Math.max(1, Math.round(h * s));
+            var alpha = false;
+            if (/png|webp/i.test(blob.type)) { var t = document.createElement("canvas"); t.width = t.height = 48; var tx = t.getContext("2d", { willReadFrequently: true }); tx.drawImage(bmp, 0, 0, 48, 48); var d = tx.getImageData(0, 0, 48, 48).data; for (var i = 3; i < d.length; i += 4) if (d[i] < 250) { alpha = true; break; } t.width = t.height = 0; }
+            c = document.createElement("canvas"); c.width = cw; c.height = ch; var x = c.getContext("2d");
+            if (!alpha) { x.fillStyle = "#fff"; x.fillRect(0, 0, cw, ch); }
+            x.drawImage(bmp, 0, 0, cw, ch);
+            var res = await new Promise(function (r) { alpha ? c.toBlob(r, "image/png") : c.toBlob(r, "image/jpeg", P[1]); });
+            if (res && res.size < blob.size * 0.95) out = res;
+        } catch (e) { out = blob; }
+        try { bmp && bmp.close && bmp.close(); if (c) c.width = c.height = 0; } catch (e) { }
+        if (SHRUNK.size > 300) SHRUNK.delete(SHRUNK.keys().next().value);
+        SHRUNK.set(ck, out); return out;
+    }
+    window.mk_expMediaSet = function (v) { try { v === "off" ? localStorage.removeItem("mk_exp_media_lvl") : localStorage.setItem("mk_exp_media_lvl", v); } catch (e) { } SHRUNK.clear(); try { showToast(T("تنظیم فشرده‌سازی رسانه ذخیره شد.", "Media compression setting saved.")); } catch (e) { } };
+    window.mk_expMediaRowHtml = function (fa) {
+        var cur = expLvl(), o = [["off", fa ? "خاموش (کیفیت اصلی)" : "Off (original quality)"], ["light", fa ? "سبک (۲۰۴۸px، کیفیت ۸۵٪)" : "Light (2048px, 85%)"], ["medium", fa ? "متوسط (۱۶۰۰px، کیفیت ۷۵٪)" : "Medium (1600px, 75%)"], ["strong", fa ? "شدید (۱۰۲۴px، کیفیت ۶۰٪)" : "Strong (1024px, 60%)"]];
+        return '<div class="mu-set-row" style="flex-direction:column;align-items:stretch"><div class="mu-set-text"><div class="mu-set-title">' + (fa ? "فشرده‌سازی عکس‌ها در خروجی" : "Compress images in exports") + '</div><div class="mu-set-desc">' + (fa ? "عکس‌ها فقط در فایل خروجی کوچک می‌شوند و نسخه‌ی اصلی داخل برنامه دست نمی‌خورد. ویس و ویدیو چون از قبل فشرده‌اند تغییری نمی‌کنند." : "Images are shrunk only in the exported file; originals in the app are untouched. Voice and video are already compressed and stay as they are.") + '</div></div><select onchange="mk_expMediaSet(this.value)" style="margin-top:8px;padding:10px 12px;border-radius:10px;font:inherit;font-size:13.5px;width:100%;cursor:pointer;color:var(--ink,inherit);background:var(--pp-surface,rgba(0,0,0,.28));border:1px solid var(--line,var(--panel-border,rgba(128,128,128,.55)));-webkit-appearance:menulist;appearance:menulist">' + o.map(function (p) { return '<option style="color:var(--ink,inherit);background:var(--pp-surface,#222)" value="' + p[0] + '"' + (p[0] === cur ? " selected" : "") + ">" + p[1] + "</option>"; }).join("") + "</select></div>";
+    };
     async function getBlob(id) { try { var b = await MED().get(id); return b || null; } catch (e) { return null; } }
 
     /* mode: "token" (default) -> placeholder; "url" -> blob: URL (for DOM renderers) */
@@ -19582,7 +19618,7 @@ html.mk-tg #muNav .mu-nav-panel{will-change:transform}
                 if (blob && isFile) blob = blob.slice(0, blob.size, "audio/x-mkfile");
                 if (!blob) ent = null;
                 else if (mode === "url" || mode === "urlkeep") { var u = URL.createObjectURL(blob); mode === "url" && objUrls.push(u); ent = { url: u, blob: blob }; }
-                else ent = { url: "data:" + mimeOf(blob) + ";base64," + newToken(blob), blob: blob };
+                else { if (!isFile && el.tagName === "IMG") blob = await shrinkImg(blob, id); ent = { url: "data:" + mimeOf(blob) + ";base64," + newToken(blob), blob: blob }; }
                 cache.set(ck, ent);
             }
             if (isFile) {
@@ -19612,6 +19648,7 @@ html.mk-tg #muNav .mu-nav-panel{will-change:transform}
     /* expand placeholders in a text into a Blob without ever holding the media as a string */
     async function textBlob(text, mime) {
         text = typeof text === "string" ? text : String(text == null ? "" : text);
+        check();
         if (text.indexOf("MKXPH") < 0) return new Blob([text], { type: mime || "" });
         var re = new RegExp(TOKRE.source, "g"), m, total = 0, hits = [];
         while ((m = re.exec(text))) { var b = TOK.get(Number(m[1])); if (b) { hits.push([m.index, m[0].length, b, Number(m[1])]); total += b.size; } }
@@ -19803,11 +19840,27 @@ html.mk-tg #muNav .mu-nav-panel{will-change:transform}
                 sbtn.disabled = true; sbtn.textContent = "\u2026";
                 Promise.resolve().then(function () { return window.mkShareBlob ? window.mkShareBlob(blob, name, mime || "application/zip") : false; }).then(function (r) {
                     sbtn.disabled = false;
-                    if (r === "share" || r === "telegram-bridge" || r === "telegram-text") sbtn.textContent = "\u2713";
+                    if (r === "share" || r === "telegram-bridge" || r === "telegram-text" || r === "bot") sbtn.textContent = "\u2713";
                     else { sbtn.textContent = T("\u0627\u0634\u062a\u0631\u0627\u06a9", "Share"); if (r !== "cancelled") try { showToast(T("\u0627\u0634\u062a\u0631\u0627\u06a9\u200c\u06af\u0630\u0627\u0631\u06cc \u0645\u0633\u062a\u0642\u06cc\u0645 \u0627\u06cc\u0646\u062c\u0627 \u0645\u0645\u06a9\u0646 \u0646\u06cc\u0633\u062a\u061b \u0627\u0632 \u00ab\u0630\u062e\u06cc\u0631\u0647\u00bb \u0627\u0633\u062a\u0641\u0627\u062f\u0647 \u06a9\u0646.", "Direct sharing isn\u2019t available here; use Save."), 4200); } catch (e) { } }
                 }, function () { sbtn.disabled = false; sbtn.textContent = T("\u0627\u0634\u062a\u0631\u0627\u06a9", "Share"); });
             });
-            var bw = document.createElement("span"); bw.style.cssText = "display:flex;gap:8px;flex:none;"; bw.appendChild(btn); bw.appendChild(sbtn);
+            var bw = document.createElement("span"); bw.style.cssText = "display:flex;gap:8px;flex:none;flex-wrap:wrap;justify-content:flex-end;"; bw.appendChild(btn); bw.appendChild(sbtn);
+            var inTgP = false; try { inTgP = !!IS_TELEGRAM; } catch (e) { }
+            if (inTgP && window.mkTgBotSend) {
+                var tbtn = document.createElement("button"); tbtn.type = "button"; tbtn.textContent = T("ربات", "Bot");
+                tbtn.style.cssText = btn.style.cssText.replace("#2b6fd6", "#7c3aed");
+                tbtn.addEventListener("click", function () {
+                    if (tbtn.disabled) return;
+                    if (!(window.mkTgBotAvailable && window.mkTgBotAvailable())) { try { showToast(T("ارسال به چت ربات به «📦 بکاپ رسانه» نیاز دارد؛ آن را یک‌بار فعال کن.", "Sending to the bot chat needs “📦 Media backup”; enable it once."), 5200); } catch (e) { } return; }
+                    tbtn.disabled = true; tbtn.textContent = "\u2026";
+                    Promise.resolve().then(function () { return window.mkTgBotSend(blob, name, mime || "application/zip"); }).then(function (r) {
+                        tbtn.disabled = false;
+                        if (r === "bot") { tbtn.textContent = "\u2713"; tbtn.style.background = "#2f8f4e"; row.style.opacity = ".7"; try { showToast(T("📨 این بخش به چت ربات رفت.", "📨 This part was sent to the bot chat."), 4200); } catch (e) { } }
+                        else { tbtn.textContent = T("ربات", "Bot"); if (r !== "cancelled") try { showToast((window.mkTgBotSend.err) || T("ارسال به چت ربات انجام نشد.", "Sending to the bot chat failed."), 5200); } catch (e) { } }
+                    }, function () { tbtn.disabled = false; tbtn.textContent = T("تلاش دوباره", "Retry"); });
+                });
+                bw.appendChild(tbtn);
+            }
             row.appendChild(lab); row.appendChild(bw); d.appendChild(row);
         });
         var close = document.createElement("button"); close.type = "button"; close.textContent = T("بستن", "Close");
@@ -19823,11 +19876,32 @@ html.mk-tg #muNav .mu-nav-panel{will-change:transform}
         for (var i = buf.length - 22; i >= 0; i--) if (v.getUint32(i, true) === 0x06054b50) { p = i; break; }
         if (p < 0) throw new Error("zip: no EOCD");
         var n = v.getUint16(p + 10, true), cdSize = v.getUint32(p + 12, true), cdOff = v.getUint32(p + 16, true);
+        if (n === 0xFFFF || cdSize === 0xFFFFFFFF || cdOff === 0xFFFFFFFF) { // ZIP64: real values live in the ZIP64 end-of-central-directory record
+            var lp = p - 20;
+            if (lp >= 0 && v.getUint32(lp, true) === 0x07064b50) {
+                var zh = new DataView(await blob.slice(Number(v.getBigUint64(lp + 8, true)), Number(v.getBigUint64(lp + 8, true)) + 56).arrayBuffer());
+                if (zh.getUint32(0, true) === 0x06064b50) { n = Number(zh.getBigUint64(32, true)); cdSize = Number(zh.getBigUint64(40, true)); cdOff = Number(zh.getBigUint64(48, true)); }
+            }
+        }
         var cd = new Uint8Array(await blob.slice(cdOff, cdOff + cdSize).arrayBuffer()), cv = new DataView(cd.buffer), q = 0, out = [], dec = new TextDecoder();
         for (var k = 0; k < n; k++) {
             if (cv.getUint32(q, true) !== 0x02014b50) throw new Error("zip: bad central dir");
             var nl = cv.getUint16(q + 28, true), el = cv.getUint16(q + 30, true), cl = cv.getUint16(q + 32, true);
-            out.push({ name: dec.decode(cd.subarray(q + 46, q + 46 + nl)), method: cv.getUint16(q + 10, true), crc: cv.getUint32(q + 16, true), csize: cv.getUint32(q + 20, true), usize: cv.getUint32(q + 24, true), lo: cv.getUint32(q + 42, true) });
+            var ent = { name: dec.decode(cd.subarray(q + 46, q + 46 + nl)), method: cv.getUint16(q + 10, true), crc: cv.getUint32(q + 16, true), csize: cv.getUint32(q + 20, true), usize: cv.getUint32(q + 24, true), lo: cv.getUint32(q + 42, true) };
+            if (ent.csize === 0xFFFFFFFF || ent.usize === 0xFFFFFFFF || ent.lo === 0xFFFFFFFF) { // ZIP64 extra field (id 1): values appear in this order, only for the saturated ones
+                var xo = q + 46 + nl, xe = xo + el;
+                while (xo + 4 <= xe) {
+                    var xid = cv.getUint16(xo, true), xs = cv.getUint16(xo + 2, true), xp = xo + 4;
+                    if (xid === 1) {
+                        if (ent.usize === 0xFFFFFFFF) { ent.usize = Number(cv.getBigUint64(xp, true)); xp += 8; }
+                        if (ent.csize === 0xFFFFFFFF) { ent.csize = Number(cv.getBigUint64(xp, true)); xp += 8; }
+                        if (ent.lo === 0xFFFFFFFF) { ent.lo = Number(cv.getBigUint64(xp, true)); xp += 8; }
+                        break;
+                    }
+                    xo += 4 + xs;
+                }
+            }
+            out.push(ent);
             q += 46 + nl + el + cl;
         }
         for (var j = 0; j < out.length; j++) {
@@ -19874,6 +19948,7 @@ html.mk-tg #muNav .mu-nav-panel{will-change:transform}
         if (!docx) docxReset();
         var hit = docx.byId.get(mediaId); if (hit) return hit;
         var blob = await getBlob(mediaId); if (!blob) return null;
+        blob = await shrinkImg(blob, mediaId);
         var mt = (blob.type || "").toLowerCase(), type = /jpe?g/.test(mt) ? "jpg" : /png/.test(mt) ? "png" : /gif/.test(mt) ? "gif" : /bmp/.test(mt) ? "bmp" : "";
         var dims = type ? await sniffDims(blob) : null;
         if (!type) { try { blob = await toPngBlob(blob); type = "png"; } catch (e) { return null; } }
@@ -20028,7 +20103,8 @@ html.mk-tg #muNav .mu-nav-panel{will-change:transform}
                     check(); var ch = mkCard(k === 0, k === chunks.length - 1); chunks[k].forEach(function (nn) { ch.b.appendChild(nn); }); host.appendChild(ch.c);
                     var urls = [], cimgs = ch.c.querySelectorAll("img"), loads = [];
                     for (var z = 0; z < cimgs.length; z++) { (function (im2) { if (!im2._mkxBlob) return; var u = URL.createObjectURL(im2._mkxBlob); urls.push(u); loads.push(new Promise(function (res) { im2.onload = im2.onerror = function () { res(); }; im2.src = u; }).then(function () { return im2.decode ? im2.decode().catch(function () { }) : 0; })); })(cimgs[z]); }
-                    await withTimeout(Promise.all(loads), 15000);
+                    await withTimeout(Promise.all(loads), 15000 + Math.min(45000, loads.length * 2000));
+                    try { var badImg = 0; for (var bz = 0; bz < cimgs.length; bz++) if (cimgs[bz]._mkxBlob && !(cimgs[bz].complete && cimgs[bz].naturalWidth)) badImg++; if (badImg && job && !job.imgWarn) { job.imgWarn = 1; if (typeof showToast === "function") showToast(T("بعضی تصاویر به‌موقع بارگذاری نشدند و ممکن است در خروجی خالی باشند.", "Some images did not load in time and may be blank in the output."), 6000); } } catch (e) { }
                     var hCss = ch.c.offsetHeight, sc = Math.max(.3, Math.min(scale0, Math.sqrt(BUDGET * 1.6 / (W * hCss)), 16000 / hCss)), cv;
                     var tries = [sc, sc / 2, sc / 4], ti = 0;
                     for (; ;) {
@@ -20538,7 +20614,7 @@ html:not(#_s5) body:not(#_s5) #foldersContainer,html:not(#_s5) body:not(#_s5) #b
         <input type="file" id="importCsvInput" style="display:none" onchange="importCSV(event)">
         <input type="file" id="importTextInput" style="display:none" onchange="importTextFile(event)">
         <input type="file" id="importDocxInput" style="display:none" accept=".docx,application/vnd.openxmlformats-officedocument.wordprocessingml.document" onchange="importDocxFile(event)">
-        <input type="file" id="importHtmlInput" style="display:none" accept=".html,.htm,text/html" onchange="importHtmlFile(event)">
+        <input type="file" id="importHtmlInput" style="display:none" accept=".html,.htm,.gz,text/html,application/gzip" onchange="importHtmlFile(event)">
     </div>
 
     <script id="mkLazy">
@@ -21381,43 +21457,91 @@ mu_setAppVh(), window.addEventListener("resize", mu_setAppVh);
 const TG_BRIDGE_MAX_BLOB_BYTES = 3 * 1024 * 1024, TG_BRIDGE_MAX_BLOB_BYTES_LAST_RESORT = 15 * 1024 * 1024;
 // Timeout wrapper for async steps with no user gesture to wait on (e.g. reading a Blob).
 function mu_withTimeout(promise, ms) { return new Promise((resolve, reject) => { const timer = setTimeout(() => reject(new Error("timeout")), ms); promise.then(v => { clearTimeout(timer), resolve(v); }, e => { clearTimeout(timer), reject(e); }); }); }
-// Reopens this page in the user's real browser with `blob` waiting to be downloaded there
-async function tgOpenInSystemBrowser(blob, filename, mime, maxBytesOverride) { if (!IS_TELEGRAM || !blob || blob.size > (maxBytesOverride || TG_BRIDGE_MAX_BLOB_BYTES))
-    return !1; try {
-    const dataUrl = await mu_withTimeout(new Promise((resolve, reject) => { const r = new FileReader; r.onload = () => resolve(r.result), r.onerror = reject, r.readAsDataURL(blob); }), 4e3), bridgeUrl = location.href.split("#")[0] + "#tgdl=" + encodeURIComponent(dataUrl) + "&tgname=" + encodeURIComponent(filename || "download");
-    return TG && TG.openLink ? TG.openLink(bridgeUrl, { try_instant_view: !1 }) : window.open(bridgeUrl, "_blank"), !0;
+// ---- Telegram -> real browser bridge ---------------------------------------------------------------------------
+// The file travels inside the URL hash. Android and Telegram silently drop very long URLs (Binder limit ~1 MB of UTF-16), which is why
+// big files used to "open in the browser" with nothing happening. The payload is now gzip-compressed, base64url-encoded (no %-escaping
+// blow-up) and hard-capped: when it cannot fit, callers get `false` and choose another route instead of reporting a fake success.
+// v2: a URL of ~190K characters made Telegram's link dialog / the Android Intent choke (freeze, black screen, reboot). Only tiny payloads may travel in a URL now.
+const TG_BRIDGE_MAX_URL_CHARS = 12000;
+function mkB64u(u8) { let s = "", CH = 32768; for (let i = 0; i < u8.length; i += CH) s += String.fromCharCode.apply(null, u8.subarray(i, i + CH)); return btoa(s).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, ""); }
+async function mkGzip(u8) { try { if (typeof CompressionStream !== "function" || typeof Response !== "function") return null; return new Uint8Array(await mu_withTimeout(new Response(new Blob([u8]).stream().pipeThrough(new CompressionStream("gzip"))).arrayBuffer(), 8000)); } catch (e) { return null; } }
+async function mkBridgeUrl(blob, filename, mime, mode) {
+    if (!blob || !blob.size || blob.size > 96 * 1024) return "";
+    const raw = new Uint8Array(await mu_withTimeout(blob.arrayBuffer(), 6000)), gz = await mkGzip(raw), useGz = !!(gz && gz.length < raw.length);
+    const url = location.href.split("#")[0] + "#tgb=" + mkB64u(useGz ? gz : raw) + (useGz ? "&tgz=1" : "") + "&tgname=" + encodeURIComponent(filename || "download") + "&tgmime=" + encodeURIComponent(mime || blob.type || "") + (mode === "share" ? "&tgmode=share" : "");
+    return url.length <= TG_BRIDGE_MAX_URL_CHARS ? url : "";
 }
-catch (e) {
-    return console.warn("Telegram system-browser bridge failed", e), !1;
-} }
-// If this page was just reopened by the bridge above — i.e. it's now running in a normal browser tab
-// outside Telegram — immediately deliver the waiting file for real and show a small confirmation screen
-(function () { const hash = location.hash || "", m = /[#&]tgdl=([^&]+)/.exec(hash); if (m)
+// Reopens this page in the user's real browser with `blob` waiting there. Returns true ONLY if the link was really handed over.
+async function tgOpenInSystemBrowser(blob, filename, mime, mode) {
+    if (!IS_TELEGRAM || !blob)
+        return !1;
     try {
-        const dataUrl = decodeURIComponent(m[1]), nameMatch = /[#&]tgname=([^&]+)/.exec(hash), name = nameMatch ? decodeURIComponent(nameMatch[1]) : "download", a = document.createElement("a");
-        const shareMode = /[#&]tgmode=share/.test(hash); shareMode || (a.href = dataUrl, a.download = name, document.body.appendChild(a), a.click(), a.remove());
+        const u = await mkBridgeUrl(blob, filename, mime, mode === "share" ? "share" : "dl");
+        if (!u)
+            return !1;
+        return TG && TG.openLink ? TG.openLink(u, { try_instant_view: !1 }) : window.open(u, "_blank"), !0;
+    }
+    catch (e) {
+        return console.warn("Telegram system-browser bridge failed", e), !1;
+    }
+}
+// If this page was just reopened by the bridge above (a normal browser tab outside Telegram), deliver the waiting file.
+(function () {
+    const hash = location.hash || "", mOld = /[#&]tgdl=([^&]+)/.exec(hash), mNew = /[#&]tgb=([^&]+)/.exec(hash);
+    if (!mOld && !mNew)
+        return;
+    try {
+        const arg = k => { const m = new RegExp("[#&]" + k + "=([^&]*)").exec(hash); try { return m ? decodeURIComponent(m[1]) : ""; } catch (e) { return m ? m[1] : ""; } };
+        const name = arg("tgname") || "download", mime0 = arg("tgmime"), isGz = /[#&]tgz=1/.test(hash), shareMode = /[#&]tgmode=share/.test(hash), payload = mNew ? mNew[1] : mOld[1];
+        const fa = /^(fa|prs|pes)(\b|-|_)/i.test(navigator.language || "");
         try {
             history.replaceState(null, "", location.pathname + location.search);
         }
-        catch { }
-        const fa = /^(fa|prs|pes)(\b|-|_)/i.test(navigator.language || ""), box = document.createElement("div");
+        catch (e) { }
+        const box = document.createElement("div");
         box.style.cssText = "position:fixed;inset:0;z-index:2147483647;display:flex;align-items:center;justify-content:center;background:#03192c;color:#90e0ef;font-family:Tahoma,sans-serif;text-align:center;padding:24px;direction:" + (fa ? "rtl" : "ltr") + ";";
-        const safeName = String(name).replace(/[<>&]/g, "");
-        box.innerHTML = '<div><div style="font-size:40px;margin-bottom:12px">✅</div><div style="font-size:16px;line-height:1.9">' + (fa ? "دانلود فایل «" + safeName + "» شروع شد.<br>فایل در پوشهٔ Downloads گوشی ذخیره می‌شود؛ اگر اعلانی ندیدید، از Files ← Downloads بازش کنید.<br>بعد این تب را ببندید و به تلگرام برگردید." : "The download for “" + safeName + "” has started.<br>The file is saved to your phone’s Downloads folder; if you see no notification, open it from Files → Downloads.<br>Then close this tab and go back to Telegram.") + "</div></div>", document.body.appendChild(box);
-        if (shareMode) {
-            const bs = 'display:block;width:100%;border:0;border-radius:11px;padding:14px;margin:0 0 10px;font:800 14px Tahoma,Arial,sans-serif;color:#fff!important;-webkit-text-fill-color:#fff!important;cursor:pointer;';
-            box.innerHTML = '<div style="max-width:340px;width:100%"><div style="font-size:40px;margin-bottom:12px">📦</div><div style="font-size:15px;line-height:1.9;margin-bottom:16px;word-break:break-all">' + (fa ? "فایل «" + safeName + "» آماده است." : "Your file “" + safeName + "” is ready.") + '</div><button type="button" id="mkLShare" style="' + bs + 'background:#059669!important">' + (fa ? "📤 اشتراک‌گذاری" : "📤 Share") + '</button><button type="button" id="mkLDl" style="' + bs + 'background:#2563eb!important">' + (fa ? "⬇️ دانلود" : "⬇️ Download") + '</button></div>';
-            const toBlob = function () { const p = String(dataUrl).split(","), mm = /^data:([^;,]*)/.exec(p[0]), bin = atob(p[1] || ""), u8 = new Uint8Array(bin.length); for (let i = 0; i < bin.length; i++) u8[i] = bin.charCodeAt(i); return new Blob([u8], { type: mm && mm[1] || "application/octet-stream" }); };
-            box.querySelector("#mkLDl").onclick = function () { const a2 = document.createElement("a"); a2.href = dataUrl, a2.download = name, document.body.appendChild(a2), a2.click(), a2.remove(); };
-            box.querySelector("#mkLShare").onclick = async function () { const b = this; try { const bl = toBlob(), file = new File([bl], name, { type: bl.type }); if (navigator.share && (!navigator.canShare || navigator.canShare({ files: [file] }))) await navigator.share({ title: name, files: [file] }); else b.textContent = fa ? "این مرورگر اشتراک‌گذاری فایل را پشتیبانی نمی‌کند؛ دانلود را بزن" : "This browser can’t share files; tap Download"; } catch (e) { if (!e || e.name !== "AbortError") b.textContent = fa ? "اشتراک‌گذاری نشد؛ دانلود را بزن" : "Sharing failed; tap Download"; } };
-        }
+        box.innerHTML = '<div style="max-width:340px;width:100%"><div style="font-size:40px;margin-bottom:12px">📦</div><div id="mkLMsg" style="font-size:15px;line-height:1.9;margin-bottom:16px;word-break:break-all"></div><div id="mkLBtns"></div></div>';
+        document.body.appendChild(box);
+        const msg = box.querySelector("#mkLMsg"), btns = box.querySelector("#mkLBtns"), say = t => { msg.textContent = t; };
+        say(fa ? "در حال آماده‌سازی «" + name + "»…" : "Preparing “" + name + "”…");
+        const unb64 = s => { s = s.replace(/-/g, "+").replace(/_/g, "/"); while (s.length % 4) s += "="; const b = atob(s), u = new Uint8Array(b.length); for (let i = 0; i < b.length; i++) u[i] = b.charCodeAt(i); return u; };
+        const build = async () => {
+            if (mNew) {
+                let u = unb64(payload);
+                if (isGz)
+                    u = new Uint8Array(await new Response(new Blob([u]).stream().pipeThrough(new DecompressionStream("gzip"))).arrayBuffer());
+                return new Blob([u], { type: mime0 || "application/octet-stream" });
+            }
+            const dataUrl = decodeURIComponent(payload), p = dataUrl.split(","), mm = /^data:([^;,]*)/.exec(p[0]), b = atob(p[1] || ""), u = new Uint8Array(b.length);
+            for (let i = 0; i < b.length; i++) u[i] = b.charCodeAt(i);
+            return new Blob([u], { type: mime0 || mm && mm[1] || "application/octet-stream" });
+        };
+        const bs = "display:block;width:100%;border:0;border-radius:11px;padding:14px;margin:0 0 10px;font:800 14px Tahoma,Arial,sans-serif;color:#fff!important;-webkit-text-fill-color:#fff!important;cursor:pointer;";
+        const addBtn = (label, color, fn) => { const b = document.createElement("button"); b.type = "button"; b.textContent = label; b.style.cssText = bs + "background:" + color + "!important"; b.onclick = fn; btns.appendChild(b); return b; };
+        build().then(blob => {
+            const download = () => { const url = URL.createObjectURL(blob), a = document.createElement("a"); a.href = url; a.download = name; a.rel = "noopener"; a.style.display = "none"; document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => { try { URL.revokeObjectURL(url); } catch (e) { } }, 60000); };
+            let file = null;
+            try { file = new File([blob], name, { type: blob.type }); } catch (e) { }
+            const canShare = !!(file && navigator.share && (!navigator.canShare || navigator.canShare({ files: [file] })));
+            say(fa ? "فایل «" + name + "» آماده است." : "Your file “" + name + "” is ready.");
+            if (canShare) {
+                const sb = addBtn(fa ? "📤 اشتراک‌گذاری" : "📤 Share", "#059669", async () => { try { await navigator.share({ title: name, files: [file] }); } catch (e) { if (!e || e.name !== "AbortError") sb.textContent = fa ? "اشتراک‌گذاری نشد؛ دانلود را بزن" : "Sharing failed; tap Download"; } });
+            }
+            else if (shareMode)
+                say(fa ? "این مرورگر اشتراک‌گذاری فایل را پشتیبانی نمی‌کند؛ از دانلود استفاده کن." : "This browser can’t share files; use Download.");
+            addBtn(fa ? "⬇️ دانلود" : "⬇️ Download", "#2563eb", download);
+            if (!shareMode) {
+                download();
+                say(fa ? "دانلود «" + name + "» شروع شد. فایل در پوشهٔ Downloads ذخیره می‌شود؛ اگر اعلانی ندیدی، از Files ← Downloads بازش کن. بعد این تب را ببند و به تلگرام برگرد." : "The download of “" + name + "” has started. It is saved to your Downloads folder; if you see no notification, open Files → Downloads. Then close this tab and go back to Telegram.");
+            }
+        }).catch(e => { console.warn("Bridge decode failed", e); say(fa ? "فایل خوانده نشد. به تلگرام برگرد و «ارسال به چت ربات» را امتحان کن." : "The file could not be read. Go back to Telegram and try “Send to bot chat”."); });
         // This tab only exists to deliver the file: stop parsing so the rest of the app never boots here
-        // (it would start with empty storage and default theme). Verified that the download still starts.
-        setTimeout(function () { try { window.stop(); } catch { } }, 0);
+        setTimeout(function () { try { window.stop(); } catch (e) { } }, 0);
     }
     catch (e) {
         console.warn("Incoming Telegram download bridge failed", e);
-    } })();
+    }
+})();
 // TELEGRAM CLOUD STORAGE — cross-device TEXT backup (images and voice notes become placeholders).
 // Without it, notes live only in this browser's localStorage: tied to one device and lost if Telegram
 // clears WebView storage. Cloud layout: one silent "auto" slot, up to 7 manual snapshots (optional
@@ -23541,7 +23665,7 @@ window.mkBkImportPick = function () { const fa = currentLang === "fa"; if (windo
     return; const isManual = document.createElement("input"); isManual.type = "file"; isManual.style.display = "none"; const clean = function () { try {
     isManual.remove();
 }
-catch (error) { } }; isManual.onchange = async function () { const file = isManual.files && isManual.files[0]; clean(); if (file)
+catch (error) { } }; isManual.onchange = async function () { let file = isManual.files && isManual.files[0]; clean(); if (file) { try { file = await mkGunzipFile(file); } catch (e) { try { showToast(fa ? "باز کردن فایل gzip انجام نشد." : "Couldn’t unpack the gzip file.", 5000); } catch (e2) { } return; } } if (file)
     await mkBkImportFile(file); }; isManual.addEventListener("cancel", clean); document.body.appendChild(isManual); isManual.click(); };
 // Saves an imported file as a new MANUAL snapshot in Cloud, with the same rules as a normal manual backup:
 // needs a manual count of at least 1, evicts the oldest ones beyond the limit, checks size and key budget,
@@ -28493,30 +28617,10 @@ async function robustDownloadCore(blob, filename, mime, options) { const safeNam
     // Method 0 (Telegram only): a plain blob-anchor click (Method 1 below) is exactly the thing that
     // silently fails inside Telegram's in-app browser — it fires with no error, but nothing gets saved
     if (IS_TELEGRAM) {
-    if (!(options && options.noShare))
-        try {
-            if (navigator.share && typeof File < "u") {
-                const file = new File([blob], safeName, { type: mime || blob.type || "application/octet-stream" });
-                if (!navigator.canShare || navigator.canShare({ files: [file] }))
-                    // Some Telegram WebView builds (notably several Android versions) expose
-                    // navigator.share as a function that neither resolves NOR rejects when file-sharing
-                    // isn't actually wired up natively — the call just hangs forever
-                    return await mu_withTimeout(navigator.share({ title: safeName, files: [file] }), 7e3 + Math.min(110e3, blob.size / 1048576 * 600)), "share";
-            }
-        }
-        catch (e) {
-            if (e?.name === "AbortError")
-                return "cancelled";
-            console.warn("Telegram share attempt failed, trying system-browser bridge…", e);
-        }
-    try {
-        if (await tgOpenInSystemBrowser(blob, safeName, mime || blob.type))
-            return showToast(currentLang === "fa" ? "📥 دانلود در مرورگر گوشی باز شد؛ اگر باز نشد، دوباره امتحان کن." : "📥 Download opened in your phone’s browser.", 3200), "telegram-bridge";
+        const tgR = await mkTgDownload(blob, safeName, mime || blob.type, options);
+        if (tgR)
+            return tgR;
     }
-    catch (e) {
-        console.warn("Telegram browser-bridge attempt failed", e);
-    }
-}
 // Both Telegram-specific methods were unavailable/too large — fall through to the generic chain below as a
 // last resort
 else if (IS_KNOWN_INAPP_BROWSER) {
@@ -28668,7 +28772,7 @@ async function showManualDownloadFallback(blob, filename, mime) {
     // Prefer a data: URL over a blob: URL here. blob: object URLs are exactly the scheme Telegram's in-app
     // WebView (and several other in-app browsers) are documented to silently refuse to navigate to /
     try {
-        blob.size < 15 * 1024 * 1024 && (url = await mu_withTimeout(new Promise((resolve, reject) => { const r = new FileReader; r.onload = () => resolve(r.result), r.onerror = reject, r.readAsDataURL(blob); }), 5e3));
+        /* never build a data: URL inside Telegram: a ~1 MB data URL on a link froze / rebooted phones */ blob.size < 15 * 1024 * 1024 && !IS_TELEGRAM && (url = await mu_withTimeout(new Promise((resolve, reject) => { const r = new FileReader; r.onload = () => resolve(r.result), r.onerror = reject, r.readAsDataURL(blob); }), 5e3));
     }
     catch {
         url = null;
@@ -28681,14 +28785,14 @@ async function showManualDownloadFallback(blob, filename, mime) {
     const isDataUrl = typeof url == "string" && url.indexOf("data:") === 0;
     return new Promise(resolve => {
         const isImg = /^image\//.test(mime || ""), overlay = document.createElement("div");
-        overlay.setAttribute("dir", fa ? "rtl" : "ltr"), overlay.style.cssText = 'position:fixed;inset:0;z-index:2147483647;background:rgba(3,10,20,.86);backdrop-filter:blur(6px);display:flex;align-items:center;justify-content:center;padding:20px;box-sizing:border-box;font-family:Tahoma,"Segoe UI",Arial,sans-serif;animation:markhinFadeIn .18s ease';
+        overlay.id = "mkShManual", overlay.setAttribute("dir", fa ? "rtl" : "ltr"), overlay.style.cssText = 'position:fixed;inset:0;z-index:2147483647;background:rgba(3,10,20,.86);backdrop-filter:blur(6px);display:flex;align-items:center;justify-content:center;padding:20px;box-sizing:border-box;font-family:Tahoma,"Segoe UI",Arial,sans-serif;animation:markhinFadeIn .18s ease';
         const card = document.createElement("div");
         card.style.cssText = "background:#0f172a;border:1px solid #334155;border-radius:16px;max-width:380px;width:100%;padding:22px;color:#e2e8f0;text-align:center;box-shadow:0 20px 60px rgba(0,0,0,.5);max-height:82vh;overflow:auto";
         const safeFilename = String(filename || "download").replace(/[<>&"]/g, "");
         if (card.innerHTML = `
                     <div style="font-size:32px;margin-bottom:10px">📥</div>
                     <h3 style="margin:0 0 8px;font-size:15px">${fa ? "دانلود خودکار انجام نشد" : "Automatic download didn't work"}</h3>
-                    <p style="margin:0 0 14px;font-size:12px;opacity:.7;line-height:1.9">${IS_TELEGRAM ? fa ? "روی دکمه پایین بزن. این کار یا پنجره اشتراک‌گذاری گوشی را باز می‌کند یا فایل را در مرورگر گوشی‌ات باز می‌کند تا از آنجا دانلودش کنی." : "Tap the button below. It will either open your phone’s share sheet, or open the file in your phone’s browser so you can download it from there." : fa ? "روی دکمه پایین بزن؛ اگر باز هم چیزی ذخیره نشد، انگشتت را روی دکمه نگه‌دار و «ذخیره لینک» یا «ذخیره تصویر» را بزن." : 'Tap the button below. If it still doesn’t save, press-and-hold it and choose "Save Link" or "Save Image".'}</p>
+                    <p style="margin:0 0 14px;font-size:12px;opacity:.7;line-height:1.9">${IS_TELEGRAM ? fa ? "روی دکمه پایین بزن. این کار پنجرهٔ اشتراک‌گذاری گوشی را باز می‌کند، فایل را به چت ربات خودت می‌فرستد، یا (برای فایل کوچک) در مرورگر گوشی باز می‌کند." : "Tap the button below. It will open your phone’s share sheet, send the file to your bot chat, or (for a small file) open it in your phone’s browser." : fa ? "روی دکمه پایین بزن؛ اگر باز هم چیزی ذخیره نشد، انگشتت را روی دکمه نگه‌دار و «ذخیره لینک» یا «ذخیره تصویر» را بزن." : 'Tap the button below. If it still doesn’t save, press-and-hold it and choose "Save Link" or "Save Image".'}</p>
                     ${isImg && url ? `<img src="${url}" alt="${safeFilename}" style="max-width:100%;border-radius:10px;margin-bottom:14px;border:1px solid #334155">` : ""}
                     <p style="margin:0 0 14px;font-size:11px;opacity:.55;word-break:break-all">${safeFilename}</p>
                 `, url) {
@@ -28710,7 +28814,12 @@ async function showManualDownloadFallback(blob, filename, mime) {
                 }
                 console.warn("Manual card share retry failed", err);
             } try {
-                if (await tgOpenInSystemBrowser(blob, filename, mime, TG_BRIDGE_MAX_BLOB_BYTES_LAST_RESORT)) {
+                const botR = await mkTgBotSend(blob, filename, mime);
+                if (botR) {
+                    finish(botR === "bot" ? "manual-fallback-bot" : "cancelled");
+                    return;
+                }
+                if (await tgOpenInSystemBrowser(blob, filename, mime)) {
                     finish("manual-fallback-bridge");
                     return;
                 }
@@ -28720,7 +28829,7 @@ async function showManualDownloadFallback(blob, filename, mime) {
             }
             // Both proven-in-Telegram methods failed (or the file is too large for the bridge) — fall back
             // to letting the raw link try anyway.
-            link.busy = !1, delete link.dataset.busy, link.dataset.fallbackExhausted = "1", link.href = url, link.download = safeFilename, link.target = "_blank", link.rel = "noopener", link.textContent = originalText, showToast(fa ? "اشتراک‌گذاری و باز کردن در مرورگر ممکن نشد؛ یک‌بار دیگر روی همین دکمه بزن." : "Couldn't share or open in browser; tap this button once more.", 4e3); }) : (link.href = url, link.download = safeFilename, link.target = "_blank", link.rel = "noopener", link.onclick = () => { setTimeout(() => finish("manual-fallback-tapped"), 400); }), card.appendChild(link);
+            link.busy = !1, delete link.dataset.busy, link.textContent = originalText, showToast(fa ? (mkTgBotAvailable() ? "ارسال به چت ربات انجام نشد؛ دوباره امتحان کن." : "برای ذخیرهٔ فایل سنگین در تلگرام، «📦 بکاپ رسانه» (ربات خودت) را یک‌بار فعال کن؛ بعد فایل به چت ربات می‌رود.") : (mkTgBotAvailable() ? "Sending to the bot chat failed; try again." : "To save a heavy file from Telegram, enable “📦 Media backup” (your own bot) once; the file then goes to your bot chat."), 7e3); }) : (link.href = url, link.download = safeFilename, link.target = "_blank", link.rel = "noopener", link.onclick = () => { setTimeout(() => finish("manual-fallback-tapped"), 400); }), card.appendChild(link);
         }
         else {
             const warn = document.createElement("p");
@@ -28733,6 +28842,22 @@ async function showManualDownloadFallback(blob, filename, mime) {
             URL.revokeObjectURL(url);
         }
         catch { } }, 6e4), resolve(val)); };
+        if (IS_TELEGRAM) {
+            const bb = document.createElement("button"), bbTxt = fa ? "📨 ارسال به چت ربات (بکاپ رسانه)" : "📨 Send to bot chat (Media backup)";
+            bb.type = "button", bb.textContent = bbTxt, bb.style.cssText = "display:block;width:100%;background:#7c3aed;color:#fff;border:0;padding:13px;border-radius:11px;font-weight:800;font-size:13px;margin-bottom:10px;cursor:pointer";
+            bb.onclick = async () => {
+                if (bb.dataset.busy) return;
+                bb.dataset.busy = "1", bb.textContent = fa ? "⏳ در حال ارسال…" : "⏳ Sending…";
+                try {
+                    if (!mkTgBotAvailable()) { showToast(fa ? "ارسال به چت ربات به «📦 بکاپ رسانه» نیاز دارد؛ آن را یک‌بار از تنظیمات فعال کن." : "Sending to the bot chat needs “📦 Media backup”; enable it once in settings.", 6e3); return; }
+                    const r = await mkTgBotSend(blob, filename, mime);
+                    if (r === "bot") { showToast(fa ? "📨 فایل به چت ربات رفت؛ از همان‌جا ذخیره یا فوروارد کن." : "📨 The file was sent to your bot chat; save or forward it from there.", 5200); finish("manual-fallback-bot"); return; }
+                    r !== "cancelled" && showToast(mkTgBotSend.err || (fa ? "ارسال به چت ربات انجام نشد." : "Sending to the bot chat failed."), 6e3);
+                }
+                finally { delete bb.dataset.busy, bb.textContent = bbTxt; }
+            };
+            card.appendChild(bb);
+        }
         closeBtn.onclick = () => finish(url ? "manual-fallback-closed" : "manual-fallback-failed"), card.appendChild(closeBtn), overlay.appendChild(card), document.body.appendChild(overlay);
     });
 }
@@ -28744,139 +28869,536 @@ async function showManualDownloadFallback(blob, filename, mime) {
 function mkShFa() { try { return currentLang === "fa"; } catch (e) { return true; } }
 function mkShToast(faTxt, enTxt, ms) { try { showToast(mkShFa() ? faTxt : enTxt, ms || 3600); } catch (e) { } }
 function mkShHuman(n) { n = Number(n) || 0; return n >= 1048576 ? (n / 1048576).toFixed(n >= 1e8 ? 0 : 1) + " MB" : Math.max(1, Math.round(n / 1024)) + " KB"; }
-// Telegram, file too big/unsupported for native sharing: reopen the page in the phone's real browser, where a
-// Share button (navigator.share) and a Download button wait for the file (same bridge the download uses)
-async function mkTgBridgeShare(blob, filename, mime) {
-    if (!IS_TELEGRAM || !blob || blob.size > TG_BRIDGE_MAX_BLOB_BYTES)
+// ===== Telegram delivery: Share / Download that really arrive =====
+// Inside Telegram (Android) navigator.share does not exist and a blob <a download> saves nothing. The old chain therefore ended in a
+// bridge that stuffed the WHOLE file into a URL (far over the ~1 MB Android limit) and still reported success.
+// Order now: native share sheet -> the user's own bot chat (sendDocument, up to 49 MB) -> compressed browser bridge (small files)
+// -> tiny-text share dialog -> an honest message. Nothing reports success unless it really happened.
+let mkTgLastBot = null;
+function mkTgPlat() { try { return String(TG && TG.platform || window.Telegram && window.Telegram.WebApp && window.Telegram.WebApp.platform || "").toLowerCase(); } catch (e) { return ""; } }
+function mkTgDesktop() { return /^(tdesktop|macos|weba|webk|web|unigram)/.test(mkTgPlat()); }
+function mkTgBotAvailable() { try { const M = window.MKMED; return !!(IS_TELEGRAM && M && typeof M.sendFile === "function" && (M.S && M.S.token || typeof M._cfg === "function" && M._cfg())); } catch (e) { return !1; } }
+// Returns "bot" | "cancelled" | false (reason in mkTgBotSend.err)
+async function mkTgBotSend(blob, filename, mime) {
+    mkTgBotSend.err = "";
+    if (!mkTgBotAvailable()) {
+        mkTgBotSend.err = mkShFa() ? "برای فایل سنگین، «📦 بکاپ رسانه» (ربات خودت) را یک‌بار فعال کن." : "For a heavy file, enable “📦 Media backup” (your own bot) once.";
         return !1;
+    }
+    // the bot's own password prompt sits below our sheet (z-index), so hide the sheet ONLY while that prompt is needed;
+    // during the upload itself the sheet stays visible (spinner) so the screen never looks dead / frozen
+    const M0 = window.MKMED, needPw = !(M0 && M0.S && M0.S.token && M0.S.key);
+    const hosts = (needPw ? ["mkShChoice", "mkShManual"] : []).map(id => document.getElementById(id)).filter(Boolean), prev = hosts.map(h => h.style.visibility);
+    hosts.forEach(h => { h.style.visibility = "hidden"; });
+    let r;
     try {
-        const dataUrl = await mu_withTimeout(new Promise((resolve, reject) => { const r = new FileReader; r.onload = () => resolve(r.result), r.onerror = reject, r.readAsDataURL(blob); }), 4e3), bridgeUrl = location.href.split("#")[0] + "#tgdl=" + encodeURIComponent(dataUrl) + "&tgname=" + encodeURIComponent(filename || "file") + "&tgmode=share";
-        return TG && TG.openLink ? TG.openLink(bridgeUrl, { try_instant_view: !1 }) : window.open(bridgeUrl, "_blank"), !0;
+        r = await window.MKMED.sendFile(blob, filename, mime, "📤 " + filename);
     }
     catch (e) {
-        console.warn("Telegram share bridge failed", e);
-        return !1;
+        r = { ok: !1, why: "api", msg: String(e && e.message || e) };
     }
+    hosts.forEach((h, i) => { h.style.visibility = prev[i]; });
+    if (r && r.ok)
+        return mkTgLastBot = r, "bot";
+    const fa = mkShFa(), why = r && r.why;
+    if (why === "locked")
+        return "cancelled";
+    mkTgBotSend.err = why === "big" ? fa ? "حجم فایل از ۴۹ مگابایت بیشتر است و به ربات نمی‌رسد." : "The file is over 49 MB, too large for the bot." : why === "nochat" ? fa ? "شناسهٔ تلگرام شما پیدا نشد؛ برنامه را از داخل تلگرام باز کن." : "Your Telegram user id wasn’t found; open the app from inside Telegram." : why === "nocfg" ? fa ? "«📦 بکاپ رسانه» هنوز تنظیم نشده است." : "“📦 Media backup” isn’t set up yet." : why === "empty" ? fa ? "فایل خالی است." : "The file is empty." : (fa ? "ارسال به چت ربات انجام نشد" : "Sending to the bot chat failed") + (r && r.msg ? ": " + r.msg : "");
+    return !1;
 }
-// Returns "share" | "cancelled" | "telegram-bridge" | "telegram-text" | "timeout" | false (not possible here)
-async function mkShareBlob(blob, filename, mime) {
-    const safeName = sanitizeFilename(filename || "file") || "file", type = mime || (blob && blob.type) || "application/octet-stream";
-    let timedOut = !1;
-    // 1) native share sheet with the real file (Chrome/Safari/Edge mobile + desktop, and Telegram builds that wire it)
-    try {
-        if (navigator.share && typeof File < "u") {
-            const file = new File([blob], safeName, { type: type });
-            if (!navigator.canShare || navigator.canShare({ files: [file] })) {
-                await mu_withTimeout(navigator.share({ title: safeName, files: [file] }), (IS_TELEGRAM ? 12e3 : 30e3) + Math.min(110e3, blob.size / 1048576 * 600));
-                return "share";
+function mkTgOpenBotChat() { try { const u = mkTgLastBot && mkTgLastBot.bot; if (u && TG && TG.openTelegramLink) return TG.openTelegramLink("https://t.me/" + u), !0; } catch (e) { } return !1; }
+async function mkCopyText(t) {
+    t = String(t || "");
+    try { if (navigator.clipboard && window.isSecureContext) return await navigator.clipboard.writeText(t), !0; } catch (e) { }
+    try { const a = document.createElement("textarea"); a.value = t, a.setAttribute("readonly", ""), a.style.cssText = "position:fixed;top:0;left:0;width:1px;height:1px;opacity:0", document.body.appendChild(a), a.focus(), a.select(), a.setSelectionRange(0, t.length); const ok = document.execCommand("copy"); return a.remove(), !!ok; } catch (e) { return !1; }
+}
+// Download inside Telegram. Returns a result code or false (then the generic chain continues)
+async function mkTgDownload(blob, name, type, options) {
+    if (!(options && options.noShare))
+        try {
+            if (navigator.share && typeof File < "u") {
+                const file = new File([blob], name, { type: type || "application/octet-stream" });
+                if (!navigator.canShare || navigator.canShare({ files: [file] }))
+                    return await mu_withTimeout(navigator.share({ title: name, files: [file] }), 12e3 + Math.min(110e3, blob.size / 1048576 * 600)), "share";
             }
         }
+        catch (e) {
+            if (e && e.name === "AbortError")
+                return "cancelled";
+            console.warn("Telegram share attempt failed", e);
+        }
+    // desktop / web Telegram clients: an ordinary blob download works there
+    if (mkTgDesktop())
+        try {
+            const u = URL.createObjectURL(blob), a = document.createElement("a");
+            return a.href = u, a.download = name, a.rel = "noopener", a.style.display = "none", a.dataset.muDownloadAnchor = "1", document.body.appendChild(a), a.click(), a.remove(), setTimeout(() => { try { URL.revokeObjectURL(u); } catch (e) { } }, 3e4), "blob";
+        }
+        catch (e) {
+            console.warn("Desktop Telegram blob download failed", e);
+        }
+    const b = await mkTgBotSend(blob, name, type);
+    if (b)
+        return b;
+    try {
+        if (await tgOpenInSystemBrowser(blob, name, type, "dl"))
+            return "telegram-bridge";
+    }
+    catch (e) {
+        console.warn("Telegram browser-bridge attempt failed", e);
+    }
+    return !1;
+}
+// ===== Dedicated share engines: browser and Telegram each have their own path =====
+const MK_TXT_RE = /^(text\/|application\/(json|xml))/;
+function mkIsTextLike(type, name) { return MK_TXT_RE.test(type || "") || /\.(txt|md|html?|csv|json|xml)$/i.test(name || ""); }
+// Plain text of a text-like file (HTML is reduced to its visible text); "" when the file is not text or is too big
+async function mkBlobPlainText(blob, name, type) {
+    if (!mkIsTextLike(type, name) || !blob || blob.size > 3 * 1024 * 1024)
+        return "";
+    let t = "";
+    try { t = await blob.text(); } catch (e) { return ""; }
+    if (/html/i.test(type || "") || /\.html?$/i.test(name || ""))
+        try {
+            const d = new DOMParser().parseFromString(t, "text/html"), ttl = (d.title || "").trim();
+            d.querySelectorAll("script,style,head,noscript,template,footer").forEach(x => x.remove());
+            d.querySelectorAll("br").forEach(b => b.replaceWith("\n"));
+            d.querySelectorAll("p,div,li,h1,h2,h3,h4,h5,h6,tr,blockquote,pre,hr").forEach(el => el.append("\n"));
+            t = (d.body ? d.body.textContent : "") || "";
+            t = t.replace(/\u00a0/g, " ").replace(/[ \t]+\n/g, "\n").replace(/\n{3,}/g, "\n\n").trim();
+            ttl && t.indexOf(ttl) !== 0 && (t = ttl + "\n\n" + t);
+        }
+        catch (e) { }
+    return t;
+}
+// Largest prefix of text whose URL-encoded form fits maxEnc characters
+function mkFitEncoded(text, maxEnc) {
+    text = String(text || "");
+    if (encodeURIComponent(text).length <= maxEnc)
+        return { text: text, cut: !1 };
+    let lo = 0, hi = text.length;
+    while (lo < hi) { const mid = Math.ceil((lo + hi) / 2); encodeURIComponent(text.slice(0, mid)).length <= maxEnc ? lo = mid : hi = mid - 1; }
+    return { text: text.slice(0, lo).replace(/\s+\S*$/, "") + "…", cut: !0 };
+}
+function mkActive() { try { return !navigator.userActivation || navigator.userActivation.isActive; } catch (e) { return !0; } }
+// ---- Browser: Web Share API with every fallback that does not need a second tap. share() consumes the tap, so the
+// best candidate is chosen with canShare() BEFORE the single share() call.
+// Returns "share" | "cancelled" | "unsupported" | "failed" (mkWebShare.err = DOMException name)
+async function mkWebShare(blob, name, type, text) {
+    mkWebShare.err = "";
+    if (!navigator.share)
+        return "unsupported";
+    const mk = (n, t) => { try { return new File([blob], n, { type: t }); } catch (e) { return null; } }, cands = [], base = name.replace(/\.[^.]+$/, "");
+    const f1 = mk(name, type || "application/octet-stream");
+    f1 && cands.push(f1);
+    if (mkIsTextLike(type, name) && !/\.txt$/i.test(name)) { const f2 = mk(base + ".txt", "text/plain"); f2 && cands.push(f2); }
+    let pick = null;
+    for (const f of cands)
+        try { if (!navigator.canShare || navigator.canShare({ files: [f] })) { pick = f; break; } } catch (e) { }
+    let data = null;
+    if (pick)
+        data = { title: name, files: [pick] };
+    else if (text && text.length <= 120000)
+        data = { title: name, text: text };
+    if (!data)
+        return "unsupported";
+    try {
+        await mu_withTimeout(navigator.share(data), 30e3 + Math.min(110e3, blob.size / 1048576 * 600));
+        return "share";
     }
     catch (e) {
         if (e && e.name === "AbortError")
             return "cancelled";
-        timedOut = !!(e && e.message === "timeout");
-        console.warn("Native share failed, trying fallbacks…", e);
+        mkWebShare.err = String(e && (e.name || e.message) || "");
+        return "failed";
     }
-    if (IS_TELEGRAM) {
-        // 2) Telegram: open in the real browser, which has a Share button (files up to ~3 MB)
-        if (await mkTgBridgeShare(blob, safeName, type)) {
-            mkShToast("📤 فایل در مرورگر گوشی باز شد؛ از آنجا دکمهٔ «اشتراک‌گذاری» را بزن.", "📤 The file opened in your phone’s browser; tap “Share” there.", 4800);
+}
+// ---- Telegram: chat picker (t.me/share) with the note's text. Returns true when the picker was opened.
+function mkTgTextPicker(text) {
+    try {
+        if (!(TG && TG.openTelegramLink) || !text)
+            return !1;
+        const fit = mkFitEncoded(text, 5000);
+        mkTgTextPicker.cut = fit.cut;
+        TG.openTelegramLink("https://t.me/share/url?url=" + encodeURIComponent(" ") + "&text=" + encodeURIComponent(fit.text));
+        return !0;
+    }
+    catch (e) { return !1; }
+}
+// Returns "share" | "cancelled" | "bot" | "telegram-bridge" | "telegram-text" | "timeout" | "gesture" | false (not possible here)
+// opts.prefer === "picker": try Telegram's own chat picker (text) BEFORE the bot chat (used by the Share button of the sheet)
+async function mkShareBlob(blob, filename, mime, opts) {
+    const safeName = sanitizeFilename(filename || "file") || "file", type = mime || blob && blob.type || "application/octet-stream", o = opts || {};
+    if (!IS_TELEGRAM) {
+        // browser: a stale tap cannot open the share sheet, so do not even try (the sheet's own button will)
+        if (navigator.share && !mkActive())
+            return "gesture";
+        const text = o.text != null ? o.text : await mkBlobPlainText(blob, safeName, type), r = await mkWebShare(blob, safeName, type, text);
+        return r === "share" || r === "cancelled" ? r : r === "failed" && /NotAllowed/i.test(mkWebShare.err) ? "gesture" : !1;
+    }
+    // Telegram 1) native share sheet where the client has one (iOS)
+    if (navigator.share && mkActive()) {
+        const r = await mkWebShare(blob, safeName, type, "");
+        if (r === "share" || r === "cancelled")
+            return r;
+    }
+    // 2) Telegram's chat picker with the text (small text-like content)
+    const text = o.text != null ? o.text : await mkBlobPlainText(blob, safeName, type);
+    if (o.prefer === "picker" && text && text.length <= 5000 && encodeURIComponent(text).length <= 5000 && mkTgTextPicker(text))
+        return "telegram-text";
+    // 3) the user's own bot chat: the file arrives as a normal Telegram document
+    const b = await mkTgBotSend(blob, safeName, type);
+    if (b === "bot") {
+        mkShToast("📨 فایل به چت ربات خودت ارسال شد؛ از همان‌جا ذخیره یا فوروارد کن.", "📨 The file was sent to your bot chat; save or forward it from there.", 5200);
+        return "bot";
+    }
+    if (b === "cancelled")
+        return "cancelled";
+    // 4) real browser, where a Share button and a Download button wait for the file (small files only)
+    try {
+        if (await tgOpenInSystemBrowser(blob, safeName, type, "share")) {
+            mkShToast("📤 فایل در مرورگر گوشی باز شد؛ از آنجا «اشتراک‌گذاری» را بزن.", "📤 The file opened in your phone’s browser; tap “Share” there.", 4800);
             return "telegram-bridge";
         }
-        // 3) small text-like files: Telegram's own share dialog with the content as the message
-        try {
-            if (TG && TG.openTelegramLink && /^(text\/|application\/json)/.test(type) && blob.size <= 2500) {
-                const txt = await mu_withTimeout(blob.text(), 4e3);
-                TG.openTelegramLink("https://t.me/share/url?url=" + encodeURIComponent(" ") + "&text=" + encodeURIComponent(txt));
-                return "telegram-text";
-            }
-        }
-        catch (e) {
-            console.warn("Telegram text share failed", e);
-        }
     }
-    return timedOut ? "timeout" : !1;
+    catch (e) { console.warn("Telegram browser-bridge attempt failed", e); }
+    // 5) text picker as the last resort
+    if (text && mkTgTextPicker(text))
+        return "telegram-text";
+    return !1;
 }
 window.mkShareBlob = mkShareBlob;
-function mkExportChoice(blob, filename, mime, options) {
-    const fa = mkShFa(), safeName = sanitizeFilename(filename || "download") || "download", type = mime || blob.type || "application/octet-stream";
+// Share used by the notes panel (automatic chain). A stale tap never ends in a warning: the sheet opens and its own Share button does the job.
+async function mkShareFlow(file, title) {
+    if (!IS_TELEGRAM && navigator.share && !mkActive()) {
+        mkExportChoice(file, file.name, file.type, {});
+        return "choice";
+    }
+    const r = await mkShareBlob(file, file.name, file.type);
+    if (r === "share" || r === "cancelled" || r === "bot" || r === "telegram-bridge" || r === "telegram-text")
+        return r;
+    mkExportChoice(file, file.name, file.type, r === "gesture" ? {} : { reason: r });
+    return "choice";
+}
+window.mkShareFlow = mkShareFlow;
+window.mkTgBotSend = mkTgBotSend, window.mkTgBotAvailable = mkTgBotAvailable, window.mkExportChoice = mkExportChoice;
+// Note share has two modes: "bot" = straight to the user's Media-backup bot chat, "menu" = the same Download / Share sheet every export uses.
+// Any other value keeps the old automatic chain (mkShareFlow).
+window.mkNoteDeliver = async function (file, mode) {
+    if (mode === "menu") {
+        mkExportChoice(file, file.name, file.type, {});
+        return "choice";
+    }
+    if (mode === "bot") {
+        if (mkTgBotAvailable()) {
+            const r = await mkTgBotSend(file, file.name, file.type);
+            if (r === "bot") {
+                mkShToast("📨 یادداشت به چت ربات «بکاپ رسانه» ارسال شد؛ از همان‌جا ذخیره یا فوروارد کن.", "📨 The note was sent to your Media backup bot chat; save or forward it from there.", 5200);
+                return r;
+            }
+            if (r === "cancelled")
+                return r;
+            mkShToast((mkTgBotSend.err || (mkShFa() ? "ارسال به چت ربات انجام نشد." : "Sending to the bot chat failed.")) + (mkShFa() ? " — منوی اشتراک‌گذاری باز شد." : " — the share menu was opened instead."), 5200);
+        }
+        else
+            mkShToast("ارسال به چت ربات به «📦 بکاپ رسانه» (ربات خودت) نیاز دارد؛ منوی اشتراک‌گذاری باز شد.", "Sending to a bot chat needs “📦 Media backup” (your own bot); the share menu was opened instead.", 5200);
+        mkExportChoice(file, file.name, file.type, {});
+        return "choice";
+    }
+    return mkShareFlow(file, file.name);
+};
+// The export sheet. Browser and Telegram get different buttons and different logic; nothing in it is an emoji
+// (the global emoji->icon swapper redrew emoji one frame late, which made the buttons flash), only inline SVG icons.
+const MK_SH_IC = {
+    share: '<circle cx="18" cy="5.5" r="2.6"/><circle cx="6" cy="12" r="2.6"/><circle cx="18" cy="18.5" r="2.6"/><path d="M8.3 10.8l7.4-4M8.3 13.2l7.4 4"/>',
+    down: '<path d="M12 3.5v11M7.5 10l4.5 4.5 4.5-4.5M5 20h14"/>',
+    bot: '<path d="M21 3L10.5 13.5M21 3l-6.5 18-4-7.5L3 9.5z"/>',
+    globe: '<circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c3.2 3.2 3.2 14.8 0 18M12 3c-3.2 3.2-3.2 14.8 0 18"/>',
+    copy: '<rect x="8.5" y="8.5" width="12" height="12" rx="2.2"/><path d="M15.5 8.5V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7.5a2 2 0 002 2h2.5"/>',
+    chat: '<path d="M4 5h16v11H10l-5 4v-4H4z"/>',
+    mail: '<rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 7l9 6 9-6"/>',
+    wa: '<path d="M4 20l1.3-4A8 8 0 1 1 8.2 18.8z"/><path d="M9 9c0 3 3 6 6 6l1.2-1.4-2-1-1 .7c-1-.4-2-1.4-2.4-2.4l.7-1-1-2z"/>',
+    ok: '<path d="M5 12.5l4.5 4.5L19 7.5"/>',
+    spin: '<circle cx="12" cy="12" r="8" stroke-dasharray="36 16"><animateTransform attributeName="transform" type="rotate" from="0 12 12" to="360 12 12" dur=".8s" repeatCount="indefinite"/></circle>',
+    x: '<path d="M6 6l12 12M18 6L6 18"/>'
+};
+function mkShIcon(k, size) {
+    const t = document.createElement("template");
+    t.innerHTML = '<svg viewBox="0 0 24 24" width="' + (size || 18) + '" height="' + (size || 18) + '" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false" style="flex:none;display:block">' + MK_SH_IC[k] + "</svg>";
+    return t.content.firstChild;
+}
+function mkShLabel(btn, key, text) {
+    const sp = document.createElement("span");
+    sp.textContent = text, sp.style.cssText = "color:inherit!important;-webkit-text-fill-color:currentColor!important;opacity:1!important;line-height:1.3";
+    btn.replaceChildren(mkShIcon(key), sp);
+}
+function mkExportChoice(blob0, filename, mime, options) {
+    let blob = blob0;
+    const fa = mkShFa(), safeName0 = sanitizeFilename(filename || "download") || "download", type0 = mime || blob0.type || "application/octet-stream", opts = options || {}, inTg = !!IS_TELEGRAM, dir = fa ? "rtl" : "ltr";
+    let safeName = safeName0, type = type0;
+    const gzv = opts.gz && opts.gz.blob ? opts.gz : null;
+    gzv && mkGzOn() && (blob = gzv.blob, safeName = gzv.name, type = "application/gzip");
     let host = document.getElementById("mkShChoice");
     if (!host) {
-        host = document.createElement("div"), host.id = "mkShChoice", host.setAttribute("dir", fa ? "rtl" : "ltr");
-        host.style.cssText = 'position:fixed;inset:0;z-index:2147483647;background:rgba(3,10,20,.82);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;padding:20px;box-sizing:border-box;overflow:auto;font-family:Tahoma,"Segoe UI",Arial,sans-serif;animation:markhinFadeIn .18s ease';
+        host = document.createElement("div"), host.id = "mkShChoice", host.setAttribute("dir", dir), host.setAttribute("data-mu-noemo", "1");
+        host.style.cssText = 'position:fixed;inset:0;z-index:2147483647;background:rgba(3,10,20,.82);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;padding:20px;box-sizing:border-box;overflow:auto;font-family:Tahoma,"Segoe UI",Arial,sans-serif;animation:none!important;transition:none!important';
         document.body.appendChild(host);
     }
     const card = document.createElement("div");
-    card.style.cssText = "background:#0f172a;border:1px solid #334155;border-radius:16px;max-width:380px;width:100%;padding:20px;color:#e2e8f0;text-align:center;box-shadow:0 20px 60px rgba(0,0,0,.5);box-sizing:border-box;background:#0f172a!important;color:#e2e8f0!important";
-    const ico = document.createElement("div");
-    ico.textContent = "📦", ico.style.cssText = "font-size:30px;margin-bottom:6px";
-    const ttl = document.createElement("div");
-    ttl.textContent = fa ? "خروجی آماده است" : "Your export is ready", ttl.style.cssText = "font-size:15px;font-weight:800;margin-bottom:6px;color:#f8fafc!important;opacity:1!important;-webkit-text-fill-color:#f8fafc!important";
-    const nm = document.createElement("div");
-    nm.textContent = safeName, nm.style.cssText = "font-size:12px;word-break:break-all;direction:ltr;margin-bottom:2px;color:#cbd5e1!important;opacity:1!important;-webkit-text-fill-color:#cbd5e1!important";
-    const sz = document.createElement("div");
-    sz.textContent = mkShHuman(blob.size), sz.style.cssText = "font-size:11px;margin-bottom:14px;direction:ltr;color:#94a3b8!important;opacity:1!important;-webkit-text-fill-color:#94a3b8!important";
+    card.setAttribute("data-mu-noemo", "1");
+    card.style.cssText = "background:#0f172a!important;color:#e2e8f0!important;border:1px solid #334155;border-radius:16px;max-width:380px;width:100%;padding:20px;text-align:center;box-shadow:0 20px 60px rgba(0,0,0,.5);box-sizing:border-box;animation:none!important;transition:none!important";
+    const txt = (css, t) => { const d = document.createElement("div"); d.textContent = t, d.style.cssText = css + ";opacity:1!important"; return d; };
+    const icoBox = document.createElement("div");
+    icoBox.style.cssText = "display:flex;justify-content:center;margin-bottom:8px;color:#fbbf24", icoBox.appendChild(mkShIcon("share", 34)), icoBox.firstChild.style.color = "#38bdf8";
+    card.appendChild(icoBox);
+    card.appendChild(txt("font-size:15px;font-weight:800;margin-bottom:6px;color:#f8fafc!important;-webkit-text-fill-color:#f8fafc!important", fa ? "خروجی آماده است" : "Your export is ready"));
+    const nameEl = txt("font-size:12px;word-break:break-all;direction:ltr;margin-bottom:2px;color:#cbd5e1!important;-webkit-text-fill-color:#cbd5e1!important", safeName), sizeEl = txt("font-size:11px;margin-bottom:14px;direction:ltr;color:#94a3b8!important;-webkit-text-fill-color:#94a3b8!important", mkShHuman(blob.size));
+    const paintSize = () => { nameEl.textContent = safeName, sizeEl.textContent = gzv && blob === gzv.blob ? mkShHuman(blob0.size) + " → " + mkShHuman(blob.size) + " (gzip)" : mkShHuman(blob.size); };
+    paintSize();
+    card.appendChild(nameEl), card.appendChild(sizeEl);
+    if (gzv) {
+        const gzRow = document.createElement("label"), gzCb = document.createElement("input");
+        gzRow.style.cssText = "display:flex;align-items:center;justify-content:center;gap:8px;margin:-6px 0 14px;font-size:12px;cursor:pointer;color:#cbd5e1!important;-webkit-text-fill-color:#cbd5e1!important;opacity:1!important", gzCb.type = "checkbox", gzCb.checked = blob === gzv.blob, gzCb.style.cssText = "width:16px;height:16px;margin:0;accent-color:#38bdf8";
+        gzCb.onchange = () => { mkGzSetOn(gzCb.checked), gzCb.checked ? (blob = gzv.blob, safeName = gzv.name, type = "application/gzip") : (blob = blob0, safeName = safeName0, type = type0), paintSize(); };
+        gzRow.appendChild(gzCb), gzRow.appendChild(document.createTextNode(fa ? "فشرده‌سازی gzip (فایل .gz، حجم کمتر)" : "Compress with gzip (.gz, smaller file)")), card.appendChild(gzRow);
+    }
+    // status line: reserved height, changed in place (never hidden and re-shown, so nothing blinks)
+    const note = document.createElement("div");
+    note.setAttribute("aria-live", "polite"), note.style.cssText = "display:none;font-size:11.5px;line-height:1.9;margin:0 0 12px;opacity:1!important";
+    const TONE = { ok: "#86efac", warn: "#fbbf24", info: "#cbd5e1" };
+    const say = (t, tone) => {
+        const c = TONE[tone === !0 ? "ok" : tone || "warn"] || TONE.warn;
+        if (note.textContent !== (t || ""))
+            note.textContent = t || "";
+        note.style.display = t ? "block" : "none", note.style.setProperty("color", c, "important"), note.style.setProperty("-webkit-text-fill-color", c, "important");
+    };
+    const why = r => r === "timeout" ? fa ? "پنجرهٔ اشتراک‌گذاری باز نشد؛ دوباره «اشتراک‌گذاری» را بزن یا از دانلود استفاده کن." : "The share sheet didn’t open; tap Share again or use Download." : inTg ? fa ? "تلگرام روی این دستگاه اشتراک‌گذاری مستقیم فایل را پشتیبانی نمی‌کند. از «راه‌های دیگر» پایین استفاده کن." : "Telegram on this device can’t share files directly. Use “Other ways” below." : fa ? "این مرورگر/دستگاه اشتراک‌گذاری مستقیم فایل را پشتیبانی نمی‌کند؛ از دانلود یا «راه‌های دیگر» استفاده کن." : "This browser/device can’t share files directly; use Download or “Other ways”.";
+    opts.reason !== void 0 && opts.reason !== "gesture" && say(why(opts.reason), "warn");
+    opts.reason === void 0 && inTg && !mkTgDesktop() && !navigator.share && !mkTgBotAvailable() && blob0.size > 96 * 1024 && say(fa ? "این فایل سنگین است و تلگرام روی گوشی ذخیرهٔ مستقیم را پشتیبانی نمی‌کند. «📦 بکاپ رسانه» (ربات خودت) را یک‌بار فعال کن تا دانلود و اشتراک با یک لمس به چت ربات برود." : "This file is heavy and Telegram on phones can’t save it directly. Enable “📦 Media backup” (your own bot) once so Download and Share send it to your bot chat in one tap.", "info");
     const row = document.createElement("div");
     row.style.cssText = "display:flex;gap:10px;margin-bottom:10px";
-    const btnCss = "flex:1;border:0;border-radius:11px;padding:13px 6px;min-height:46px;font:800 13px Tahoma,Arial,sans-serif;color:#fff!important;-webkit-text-fill-color:#fff!important;text-shadow:none!important;opacity:1!important;cursor:pointer";
+    const btnCss = "flex:1;display:flex;align-items:center;justify-content:center;gap:7px;border:0;border-radius:11px;padding:13px 6px;min-height:46px;font:800 13px Tahoma,Arial,sans-serif;color:#fff!important;-webkit-text-fill-color:#fff!important;text-shadow:none!important;opacity:1!important;cursor:pointer;animation:none!important;transition:none!important";
     const dl = document.createElement("button"), sh = document.createElement("button"), close = document.createElement("button");
     dl.type = sh.type = close.type = "button";
-    const dlLabel = fa ? "⬇️ دانلود" : "⬇️ Download", shLabel = fa ? "📤 اشتراک‌گذاری" : "📤 Share";
-    dl.textContent = dlLabel, sh.textContent = shLabel;
+    const dlLabel = fa ? "دانلود" : "Download", shLabel = fa ? "اشتراک‌گذاری" : "Share";
+    mkShLabel(dl, "down", dlLabel), mkShLabel(sh, "share", shLabel);
     dl.style.cssText = btnCss + ";background:#2563eb!important", sh.style.cssText = btnCss + ";background:#059669!important";
     close.textContent = fa ? "بستن" : "Close", close.style.cssText = "background:transparent;border:1px solid #475569;color:#e2e8f0!important;-webkit-text-fill-color:#e2e8f0!important;opacity:1!important;padding:10px 16px;border-radius:10px;font-size:12px;cursor:pointer;width:100%";
     const removeCard = () => { card.remove(), host.childElementCount || host.remove(); };
     close.onclick = removeCard;
-    dl.onclick = async () => {
-        if (dl.dataset.busy)
-            return;
-        dl.dataset.busy = "1", dl.textContent = "⏳";
-        try {
-            // Plain download = the old pipeline, untouched. Inside Telegram small files go straight to the system
-            // browser (a real download); larger ones keep the old behaviour (share sheet) because the bridge is capped
-            const o = Object.assign({}, options || {}, { noChoice: !0 });
-            IS_TELEGRAM && blob.size <= TG_BRIDGE_MAX_BLOB_BYTES && (o.noShare = !0);
-            const r = await robustDownloadCore(blob, safeName, type, o);
-            dl.textContent = r === "cancelled" || r === "manual-fallback-closed" ? dlLabel : fa ? "✅ دانلود شد" : "✅ Done";
-        }
-        catch (e) {
-            console.warn("Download from export sheet failed", e), dl.textContent = dlLabel, mkShToast("دانلود انجام نشد. دوباره امتحان کن یا اشتراک‌گذاری را بزن.", "Download failed. Try again or use Share.", 4200);
-        }
-        finally {
-            delete dl.dataset.busy;
-        }
+    const sentMsg = fa ? "فایل به چت ربات خودت رفت. همان‌جا نگهش دار (⋯ ← Save to Downloads) یا فوروارد کن." : "The file was sent to your bot chat. Save it (⋯ → Save to Downloads) or forward it from there.";
+    let openChat = null, plainText = null;
+    const getText = async () => plainText === null ? plainText = await mkBlobPlainText(blob0, safeName0, type0) : plainText;
+    mkIsTextLike(type0, safeName0) && blob0.size <= 300 * 1024 && getText().catch(() => { });
+    const afterBot = () => { say(sentMsg, "ok"), openChat && mkTgLastBot && mkTgLastBot.bot && (openChat.style.display = "block"); };
+    // a primary button shows a spinner while it works and its own label again afterwards
+    const run = async (btn, key, label, fn) => {
+        if (btn.dataset.busy) return;
+        btn.dataset.busy = "1", mkShLabel(btn, "spin", "…");
+        try { await fn(); }
+        finally { delete btn.dataset.busy; if (!btn.dataset.keep) mkShLabel(btn, key, label); delete btn.dataset.keep; }
     };
-    sh.onclick = async () => {
-        if (sh.dataset.busy)
-            return;
-        sh.dataset.busy = "1", sh.textContent = "⏳";
+    const done = (btn, key, label) => { btn.dataset.keep = "1", mkShLabel(btn, key, label); };
+    dl.onclick = () => run(dl, "down", dlLabel, async () => {
         try {
-            const r = await mkShareBlob(blob, safeName, type);
-            if (r === "share" || r === "telegram-bridge" || r === "telegram-text")
-                sh.textContent = fa ? "✅ ارسال شد" : "✅ Shared";
+            const r = await robustDownloadCore(blob, safeName, type, Object.assign({}, opts, { noChoice: !0, reason: void 0 }));
+            if (r === "cancelled" || r === "manual-fallback-closed")
+                return;
+            if (r === "bot" || r === "manual-fallback-bot")
+                done(dl, "ok", fa ? "به چت ربات رفت" : "Sent to bot chat"), afterBot();
+            else if (r === "telegram-bridge")
+                done(dl, "globe", fa ? "در مرورگر باز شد" : "Opened in browser"), say(fa ? "فایل در مرورگر گوشی باز شد؛ آنجا دانلود می‌شود." : "The file opened in your phone’s browser, where it downloads.", "ok");
+            else if (r === "clipboard")
+                done(dl, "copy", fa ? "کپی شد" : "Copied"), say(fa ? "ذخیرهٔ فایل ممکن نشد؛ محتوا در کلیپ‌بورد کپی شد." : "Saving wasn’t possible; the content was copied to the clipboard.", "warn");
             else {
-                sh.textContent = shLabel;
-                r === "timeout" ? mkShToast("پنجرهٔ اشتراک‌گذاری باز نشد. از دکمهٔ دانلود استفاده کن.", "The share sheet didn’t open. Use Download instead.", 4800) : r === !1 && mkShToast("این دستگاه/مرورگر اشتراک‌گذاری مستقیم فایل را پشتیبانی نمی‌کند؛ از دکمهٔ دانلود استفاده کن.", "This device/browser can’t share files directly; use Download instead.", 4800);
+                done(dl, "ok", fa ? "انجام شد" : "Done");
+                inTg && r === "blob" && say(fa ? "اگر فایل ذخیره نشد، از «راه‌های دیگر» پایین استفاده کن." : "If nothing was saved, use “Other ways” below.", "info");
             }
         }
-        catch (e) {
-            console.warn("Share from export sheet failed", e), sh.textContent = shLabel, mkShToast("اشتراک‌گذاری انجام نشد.", "Sharing failed.", 3600);
+        catch (e) { console.warn("Download from export sheet failed", e), say(fa ? "دانلود انجام نشد. دوباره امتحان کن یا اشتراک‌گذاری را بزن." : "Download failed. Try again or use Share.", "warn"); }
+    });
+    // ---- Share: browser and Telegram do different things ----
+    sh.onclick = () => run(sh, "share", shLabel, async () => {
+        try {
+            if (!inTg) {
+                // BROWSER: the Web Share API is called inside this very tap (nothing awaited before it)
+                const r = await mkWebShare(blob, safeName, type, plainText || "");
+                if (r === "share") { done(sh, "ok", fa ? "ارسال شد" : "Shared"), say("", "ok"); return; }
+                if (r === "cancelled") return;
+                const hasText = !!(await getText());
+                say(r === "unsupported" ? (fa ? "این مرورگر اشتراک‌گذاری مستقیم فایل را پشتیبانی نمی‌کند." : "This browser can’t share files directly.") + (hasText ? (fa ? " از «راه‌های دیگر» استفاده کن." : " Use “Other ways” below.") : fa ? " از دانلود استفاده کن." : " Use Download.")
+                    : (fa ? "مرورگر اشتراک‌گذاری این فایل را نپذیرفت" : "The browser refused to share this file") + (mkWebShare.err ? " (" + mkWebShare.err + ")" : "") + (hasText ? (fa ? "؛ از «راه‌های دیگر» استفاده کن." : "; use “Other ways” below.") : fa ? "؛ از دانلود استفاده کن." : "; use Download."), "warn");
+                return;
+            }
+            // TELEGRAM: native sheet (iOS) -> Telegram's chat picker (text) -> bot chat -> phone browser
+            const text = await getText(), r = await mkShareBlob(blob, safeName, type, { prefer: "picker", text: text });
+            if (r === "share") { done(sh, "ok", fa ? "ارسال شد" : "Shared"); return; }
+            if (r === "telegram-text") {
+                done(sh, "ok", fa ? "منوی تلگرام باز شد" : "Telegram menu opened");
+                say(mkTgTextPicker.cut ? (fa ? "فقط بخش اول متن در پنجرهٔ انتخاب مخاطب گذاشته شد. برای کل فایل «ارسال به چت ربات» را بزن." : "Only the first part of the text was put in Telegram’s chat picker. Use “Send to bot chat” for the whole file.") : fa ? "متن در پنجرهٔ انتخاب مخاطب تلگرام باز شد." : "The text opened in Telegram’s chat picker.", mkTgTextPicker.cut ? "warn" : "ok");
+                return;
+            }
+            if (r === "bot") { done(sh, "ok", fa ? "به چت ربات رفت" : "Sent to bot chat"), afterBot(); return; }
+            if (r === "telegram-bridge") { done(sh, "globe", fa ? "در مرورگر باز شد" : "Opened in browser"), say(fa ? "فایل در مرورگر گوشی باز شد؛ از آنجا «اشتراک‌گذاری» را بزن." : "The file opened in your phone’s browser; tap “Share” there.", "ok"); return; }
+            if (r === "cancelled") return;
+            say((mkTgBotSend.err ? mkTgBotSend.err + " — " : "") + why(r), "warn");
         }
-        finally {
-            delete sh.dataset.busy;
-        }
-    };
-    row.appendChild(dl), row.appendChild(sh);
-    card.appendChild(ico), card.appendChild(ttl), card.appendChild(nm), card.appendChild(sz), card.appendChild(row), card.appendChild(close);
+        catch (e) { console.warn("Share from export sheet failed", e), say(fa ? "اشتراک‌گذاری انجام نشد." : "Sharing failed.", "warn"); }
+    });
+    row.appendChild(sh), row.appendChild(dl);
+    card.appendChild(row);
+    // ---- Send to the Media-backup bot chat: a third primary action next to Share and Download (Telegram only: the bot needs the Telegram user id) ----
+    if (inTg) {
+        const bt = document.createElement("button"), btLabel = fa ? "ارسال به چت ربات (بکاپ رسانه)" : "Send to bot chat (Media backup)";
+        bt.type = "button", mkShLabel(bt, "bot", btLabel);
+        bt.style.cssText = btnCss + ";background:#7c3aed!important;width:100%;flex:none;margin-bottom:10px";
+        bt.onclick = () => run(bt, "bot", btLabel, async () => {
+            try {
+                if (!mkTgBotAvailable()) {
+                    say(fa ? "ارسال به چت ربات به «📦 بکاپ رسانه (عکس و ویس)» نیاز دارد. آن را یک‌بار از تنظیمات فعال کن؛ بعد هر خروجی با یک لمس به چت ربات می‌رود." : "Sending to the bot chat needs “📦 Media backup” (your own bot). Enable it once in settings; after that every export goes to the bot chat with one tap.", "warn");
+                    return;
+                }
+                const r = await mkTgBotSend(blob, safeName, type);
+                if (r === "bot") { done(bt, "ok", fa ? "به چت ربات رفت" : "Sent to bot chat"), afterBot(); return; }
+                if (r === "cancelled") return;
+                say(mkTgBotSend.err || (fa ? "ارسال به چت ربات انجام نشد." : "Sending to the bot chat failed."), "warn");
+            }
+            catch (e) { console.warn("Send to bot from export sheet failed", e), say(fa ? "ارسال به چت ربات انجام نشد." : "Sending to the bot chat failed.", "warn"); }
+        });
+        card.appendChild(bt);
+    }
+    card.appendChild(note);
+    // ---- Other ways (different set for each environment) ----
+    const extra = document.createElement("div");
+    extra.style.cssText = "border-top:1px solid #1e293b;margin:2px 0 10px;padding-top:10px";
+    extra.appendChild(txt("font-size:11px;margin-bottom:8px;color:#94a3b8!important;-webkit-text-fill-color:#94a3b8!important", fa ? "راه‌های دیگر" : "Other ways"));
+    const smallCss = "display:flex;align-items:center;justify-content:center;gap:7px;width:100%;border:1px solid #475569;background:transparent;border-radius:10px;padding:10px;margin:0 0 8px;font:600 12px Tahoma,Arial,sans-serif;color:#e2e8f0!important;-webkit-text-fill-color:#e2e8f0!important;opacity:1!important;cursor:pointer;animation:none!important;transition:none!important";
+    const mini = (key, label, fn) => { const b = document.createElement("button"); b.type = "button", mkShLabel(b, key, label), b.style.cssText = smallCss, b.onclick = async () => { if (b.dataset.busy) return; b.dataset.busy = "1"; try { await fn(b); } finally { delete b.dataset.busy; } }; extra.appendChild(b); return b; };
+    const textUrl = (base, t, cap) => base + encodeURIComponent(mkFitEncoded(t, cap).text);
+    let shown = 0;
+    if (inTg) {
+        mini("chat", fa ? "ارسال متن در تلگرام (انتخاب مخاطب)" : "Send text in Telegram (pick a chat)", async () => {
+            const t = await getText();
+            if (!t) { say(fa ? "این فایل متنی نیست؛ از «ارسال به چت ربات» استفاده کن." : "This file isn’t text; use “Send to bot chat”.", "warn"); return; }
+            mkTgTextPicker(t) ? say(mkTgTextPicker.cut ? fa ? "فقط بخش اول متن گذاشته شد." : "Only the first part of the text was used." : fa ? "پنجرهٔ انتخاب مخاطب باز شد." : "The chat picker opened.", mkTgTextPicker.cut ? "warn" : "ok") : say(fa ? "باز کردن پنجرهٔ تلگرام ممکن نشد." : "Couldn’t open Telegram’s picker.", "warn");
+        }), shown++;
+        mini("globe", fa ? "باز کردن در مرورگر" : "Open in browser", async () => {
+            const ok = await tgOpenInSystemBrowser(blob, safeName, type, "share");
+            say(ok ? fa ? "فایل در مرورگر گوشی باز شد؛ از آنجا «دانلود» یا «اشتراک‌گذاری» را بزن." : "The file opened in your phone’s browser; tap Download or Share there." : fa ? "این فایل برای انتقال به مرورگر بزرگ است (حدود ۹ کیلوبایت فشرده). از «ارسال به چت ربات» استفاده کن." : "This file is too big to pass to the browser (about 9 KB compressed). Use “Send to bot chat”.", ok ? "ok" : "warn");
+        }), shown++;
+    }
+    else {
+        // BROWSER: text-based routes that work on any desktop/phone browser even when the Web Share API is missing
+        mini("chat", fa ? "تلگرام (انتخاب مخاطب)" : "Telegram (pick a chat)", async () => {
+            const t = await getText();
+            if (!t) { say(fa ? "این فایل متنی نیست؛ از دانلود استفاده کن." : "This file isn’t text; use Download.", "warn"); return; }
+            const fitT = mkFitEncoded(t, 5000);
+            window.open("https://t.me/share/url?url=%20&text=" + encodeURIComponent(fitT.text), "_blank", "noopener");
+            fitT.cut && say(fa ? "تلگرام فقط متن کوتاه را از لینک می‌پذیرد؛ بخش اول متن فرستاده شد. برای کل فایل «دانلود» یا «اشتراک‌گذاری» را بزن." : "Telegram only accepts short text through a link; the first part was sent. Use Download or Share for the whole file.", "warn");
+        }), shown++;
+        mini("wa", fa ? "واتساپ" : "WhatsApp", async () => {
+            const t = await getText();
+            if (!t) { say(fa ? "این فایل متنی نیست؛ از دانلود استفاده کن." : "This file isn’t text; use Download.", "warn"); return; }
+            window.open(textUrl("https://wa.me/?text=", t, 6000), "_blank", "noopener");
+        }), shown++;
+        mini("mail", fa ? "ایمیل" : "E-mail", async () => {
+            const t = await getText();
+            if (!t) { say(fa ? "این فایل متنی نیست؛ از دانلود استفاده کن." : "This file isn’t text; use Download.", "warn"); return; }
+            location.href = "mailto:?subject=" + encodeURIComponent(safeName) + "&body=" + encodeURIComponent(mkFitEncoded(t, 6000).text);
+        }), shown++;
+    }
+    if (mkIsTextLike(type0, safeName0))
+        blob0.size <= 2 * 1024 * 1024 && (mini("copy", fa ? "کپی محتوا" : "Copy content", async () => {
+            const ok = await mkCopyText(await blob0.text());
+            say(ok ? fa ? "محتوا کپی شد؛ در Saved Messages یا هرجای دیگر بچسبان." : "Content copied; paste it into Saved Messages or anywhere." : fa ? "کپی انجام نشد." : "Copy failed.", ok ? "ok" : "warn");
+        }), shown++);
+    if (inTg)
+        openChat = mini("bot", fa ? "باز کردن چت ربات" : "Open bot chat", async () => { mkTgOpenBotChat(); }), openChat.style.display = "none";
+    shown && card.appendChild(extra);
+    card.appendChild(close);
     host.appendChild(card);
     // The export itself is finished at this point; the sheet lives on its own so callers (and the progress overlay) are not held up
     return "choice";
 }
 // Every export asks "Download or Share?". options.noChoice skips the sheet (used by internal fallbacks that already chose)
+// ===== gzip for text exports (JSON / CSV / TXT / MD / HTML ...) =====
+// Every text-like export is gzip-compressed (name + ".gz") before it is saved / shared. The export sheet has a checkbox to switch it off
+// (remembered in localStorage "mkGzExport"). Already-compressed formats (ZIP, DOCX, PDF, images) are left alone.
+// Import accepts .gz too (see mkGunzipFile + the capture-phase "change" listener below).
+const MK_GZ_RE = /\.(json|csv|tsv|txt|md|markdown|html?|xml|svg|ics|vcf)$/i;
+function mkGzOn() { try { return localStorage.getItem("mkGzExport") !== "0"; } catch (e) { return !0; } }
+function mkGzSetOn(v) { try { localStorage.setItem("mkGzExport", v ? "1" : "0"); } catch (e) { } }
+function mkGzCan() { return typeof CompressionStream === "function" && typeof Response === "function" && !!(Blob.prototype && Blob.prototype.stream); }
+// Returns { blob, name } (gzip variant) or null when it is not applicable / not smaller.
+async function mkGzPrep(blob, filename) {
+    try {
+        const name = sanitizeFilename(filename || "download") || "download";
+        if (!mkGzCan() || !(blob instanceof Blob) || !blob.size || blob.__mkParts || !MK_GZ_RE.test(name) || /\.(gz|gzip)$/i.test(name))
+            return null;
+        const out = await new Response(blob.stream().pipeThrough(new CompressionStream("gzip"))).blob();
+        if (!out.size || out.size >= blob.size)
+            return null;
+        return { blob: new Blob([out], { type: "application/gzip" }), name: name + ".gz", rawSize: blob.size };
+    }
+    catch (e) {
+        console.warn("gzip export skipped", e);
+        return null;
+    }
+}
+// Unpacks a .gz / .gzip file picked for import into a normal File with the inner name (backup.json.gz -> backup.json).
+async function mkGunzipFile(file) {
+    if (!file || !/\.(gz|gzip)$/i.test(file.name || ""))
+        return file;
+    if (typeof DecompressionStream !== "function")
+        throw new Error("gzip is not supported in this browser");
+    const raw = await new Response(file.stream().pipeThrough(new DecompressionStream("gzip"))).blob();
+    let name = String(file.name).replace(/\.(gz|gzip)$/i, "");
+    if (!/\.[A-Za-z0-9]{1,8}$/.test(name)) {
+        const head = (await raw.slice(0, 64).text()).replace(/^﻿/, "").trimStart();
+        name += /^[\[{]/.test(head) ? ".json" : /^</.test(head) ? ".html" : ".txt";
+    }
+    const ext = (name.match(/\.([A-Za-z0-9]+)$/) || [, ""])[1].toLowerCase(), types = { json: "application/json", html: "text/html", htm: "text/html", csv: "text/csv", txt: "text/plain", md: "text/markdown", zip: "application/zip", docx: "application/vnd.openxmlformats-officedocument.wordprocessingml.document" };
+    return new File([raw], name, { type: types[ext] || raw.type || "", lastModified: file.lastModified || Date.now() });
+}
+// Any <input type=file> that receives .gz files: unpack them first, then re-fire "change" so every existing importer works unchanged.
+document.addEventListener("change", function (ev) {
+    const t = ev.target;
+    if (!t || t.tagName !== "INPUT" || t.type !== "file" || t.__mkGzBusy)
+        return;
+    const list = Array.from(t.files || []);
+    if (!list.some(function (f) { return /\.(gz|gzip)$/i.test(f.name || ""); }))
+        return;
+    ev.stopImmediatePropagation(), ev.preventDefault();
+    (async function () {
+        t.__mkGzBusy = !0;
+        try {
+            const out = [];
+            for (const f of list)
+                out.push(await mkGunzipFile(f));
+            const dt = new DataTransfer;
+            out.forEach(function (f) { dt.items.add(f); });
+            t.files = dt.files;
+            t.dispatchEvent(new Event("change", { bubbles: !0 }));
+        }
+        catch (e) {
+            console.warn("gunzip import failed", e);
+            try { t.value = ""; } catch (e2) { }
+            try { showToast(mkShFa() ? "باز کردن فایل gzip انجام نشد. فایل خراب است یا مرورگر پشتیبانی نمی‌کند." : "Couldn’t unpack the gzip file (corrupt, or not supported by this browser).", 5000); } catch (e3) { }
+        }
+        finally {
+            t.__mkGzBusy = !1;
+        }
+    })();
+}, !0);
 async function robustDownload(blob, filename, mime, options) {
-    if (options && options.noChoice || !(blob instanceof Blob))
+    if (blob instanceof Blob && !(options && (options.noGz || options.gz))) {
+        const g = await mkGzPrep(blob, filename);
+        g && (options = Object.assign({}, options, { gz: g }));
+    }
+    if (options && options.noChoice || !(blob instanceof Blob)) {
+        if (options && options.gz && options.gz.blob && mkGzOn())
+            return robustDownloadCore(options.gz.blob, options.gz.name, "application/gzip", options);
         return robustDownloadCore(blob, filename, mime, options);
+    }
     try {
         return mkExportChoice(blob, filename, mime, options);
     }
@@ -31873,7 +32395,7 @@ document.addEventListener("DOMContentLoaded", () => { initAdvancedSystems(); });
         HX().showAdvanced(`<div class="advanced-head image-export-picker-head"><div><h3 style="margin:0">📤 ${fa ? "اشتراک‌گذاری یادداشت" : "Share Note"}</h3><p style="margin:5px 0 0;opacity:.65;font-size:11px">${fa ? "فرمتی را که می‌خواهی با آن اشتراک بگذاری انتخاب کن." : "Choose the format to share this note in."}</p></div><button class="btn-main" onclick="closeAdvancedModal()">✕</button></div>
         <div class="image-export-choice-grid">${formatButtons}</div>`);
     }
-    window.shareNote = function (id) { openShareFormatPicker(id); }, window.shareNoteAs = async function (id, format) {
+    window.shareNote = function (id) { openShareFormatPicker(id); }, window.shareNoteAs = async function (id, format, mode) {
         const item = HX().categories.find(x => x.id === id);
         if (!item)
             return;
@@ -31885,16 +32407,7 @@ document.addEventListener("DOMContentLoaded", () => { initAdvancedSystems(); });
         if (HX().isNoteLocked(item)) {
             try {
                 const blob = await HX().createEncryptedExport(item), file = new File([blob], chosenName + ".mne.json", { type: blob.type });
-                if (navigator.share && (!navigator.canShare || navigator.canShare({ files: [file] })))
-                    try {
-                        await navigator.share({ title: item.name, files: [file] });
-                        return;
-                    }
-                    catch (e) {
-                        if (e?.name === "AbortError")
-                            return;
-                    }
-                await HX().robustDownload(blob, file.name, blob.type, { noChoice: !0 }), HX().showToast(fa ? "خروجی رمزنگاری‌شده آماده شد." : "Encrypted export is ready.");
+                await (window.mkNoteDeliver ? window.mkNoteDeliver(file, mode) : window.mkShareFlow(file, item.name));
             }
             catch (e) {
                 e?.message !== "Export cancelled." && alert(fa ? "خروجی رمزنگاری‌شده انجام نشد." : "Encrypted export failed.");
@@ -31935,19 +32448,7 @@ document.addEventListener("DOMContentLoaded", () => { initAdvancedSystems(); });
             }
             if (!file)
                 return;
-            // The previous version treated any navigator.share() failure as fatal
-            let delivered = !1;
-            if (navigator.share && (!navigator.canShare || navigator.canShare({ files: [file] })))
-                try {
-                    await navigator.share({ title: item.name, files: [file] }), delivered = !0;
-                }
-                catch (shareErr) {
-                    // user cancelled the share sheet — not an error
-                    if (shareErr?.name === "AbortError")
-                        return;
-                    console.warn("navigator.share failed, falling back to download:", shareErr);
-                }
-            delivered || (await HX().robustDownload(file, file.name, file.type, { noChoice: !0 }), HX().showToast(fa ? "این فرمت به‌صورت مستقیم قابل اشتراک‌گذاری نبود؛ فایل دانلود شد." : "This format could not be shared directly; the file was downloaded instead.", 3200));
+            await (window.mkNoteDeliver ? window.mkNoteDeliver(file, mode) : window.mkShareFlow(file, item.name));
         }
         catch (e) {
             e?.name !== "AbortError" && (console.error("shareNoteAs error:", e), alert(fa ? "اشتراک‌گذاری انجام نشد. دوباره امتحان کن." : "Sharing failed. Please try again."));
@@ -35028,7 +35529,7 @@ HX().scheduleCloudBackup(!1, !0), HX().showToast(fa ? `✅ ذخیره شد — �
 // 5) PASTE-AS-PLAIN-TEXT FOR NOTE TEXT BOXES Pasting from outside (Word, a website, another app) brings
 // along the source's own inline styles — color:#000, a tiny font-size, a different font-family
 (function () { function mu3_handleTextBoxPaste(e) { const box = e.target && e.target.closest && e.target.closest('.text-box[contenteditable="true"]'); if (!box)
-    return; const cd = e.clipboardData || window.clipboardData; if (!cd)
+    return; const cd = e.clipboardData || window.clipboardData; if (!cd || (cd.files && cd.files.length))
     // No text on the clipboard (e.g. a copied screenshot/image) — let the browser's normal paste handle
     // that case untouched
     return; const text = cd.getData("text/plain"); if (text)
@@ -37221,7 +37722,7 @@ function initZoomWatch() { syncMode(), initSoftPinch(), zoomWatchDone || (zoomWa
         catch { }
     }
 }
-catch { } } function gearSvg() { return '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3.2"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>'; } function closeBtn() { return '<button class="btn-main" onclick="MK.liteHost.closeDialog()" aria-label="' + (isFa() ? "بستن" : "Close") + '">✕</button>'; } function openSettings() { var fa = isFa(), card = document.getElementById("advancedCard"), skinRow = '<div class="mu-set-row" style="flex-direction:column;align-items:stretch"><div class="mu-set-text"><div class="mu-set-title">' + (fa ? "تم ورژن جدید" : "New version theme") + '</div><div class="mu-set-desc">' + (fa ? "یکی از تم‌های برنامه را انتخاب کنید. با زدن دکمه روز/شب در صفحه یادداشت‌ها دوباره به حالت روز و شب برمی‌گردد." : "Pick one of the app themes. Tapping the day / night button on the Notes page goes back to plain day / night.") + "</div></div>" + (MK.nfsSkin ? MK.nfsSkin.chipsHtml(fa) : "") + "</div>"; MK.liteHost.showDialog('<div class="advanced-head"><h3>' + (fa ? "تنظیمات" : "Settings") + "</h3>" + closeBtn() + "</div>" + skinRow + '<div class="mu-set-row" style="flex-direction:column;align-items:stretch"><div class="mu-set-text"><div class="mu-set-title">زبان / Language</div><div class="mu-set-desc"><div dir="rtl" style="text-align:right">زبان برنامه را انتخاب کنید.</div><div dir="ltr" style="text-align:left">Choose the app language.</div></div></div><div class="mu-vs-seg" id="muLangSeg" role="group" aria-label="زبان / Language">' + [["fa", "فارسی (Persian)"], ["en", "English (انگلیسی)"]].map(function (o) { return '<button type="button" class="mu-vs-opt" data-lang="' + o[0] + '" aria-pressed="' + ((fa ? "fa" : "en") === o[0] ? "true" : "false") + `" onclick="MU_Lite.setLang('` + o[0] + `')">` + o[1] + "</button>"; }).join("") + '</div></div><div class="mu-set-row"><div class="mu-set-text"><div class="mu-set-title">' + (fa ? "زوم صفحه" : "Page zoom") + '<span class="mu-set-badge" id="muZoomBadge">' + (zoomOn() ? fa ? "روشن" : "ON" : fa ? "خاموش" : "OFF") + '</span></div><div class="mu-set-desc">' + (fa ? "وقتی روشن باشد می‌توانید با دو انگشت روی صفحه زوم کنید (از 100% تا 5 برابر). پیش‌فرض: در تلگرام خاموش، در بقیه‌ی جاها روشن. «شبکه دانش» همیشه زوم مخصوص خودش را دارد و به این گزینه وابسته نیست. داخل تلگرام هم کار می‌کند." : "When on, you can pinch-zoom the page (100% up to 5x). Default: off in Telegram, on elsewhere. The Knowledge Graph always has its own zoom and does not depend on this option. Works inside Telegram too.") + '</div><button type="button" class="btn-main" id="muZoomReset" style="margin-top:8px;font-size:11px;padding:6px 12px;' + (zoomOn() ? "" : "display:none") + '" onclick="MU_Lite.resetZoom()">↺ ' + (fa ? "بازنشانی زوم (100%)" : "Reset zoom (100%)") + '</button></div><button type="button" class="mu-switch" id="muZoomSwitch" role="switch" aria-checked="' + (zoomOn() ? "true" : "false") + '" aria-label="' + (fa ? "زوم صفحه" : "Page zoom") + '" onclick="MU_Lite.toggleZoom()"></button></div><div class="mu-set-row" style="flex-direction:column;align-items:stretch"><div class="mu-set-text"><div class="mu-set-title">' + (fa ? "سبک کادر نمایش یادداشت" : "Note viewer style") + '</div><div class="mu-set-desc">' + (fa ? "با «نمایش یادداشت» هر بار بپرسد، یا همیشه با یک سبک ثابت باز شود." : "Ask each time you press “View note”, or always open with one fixed style.") + '</div></div><div class="mu-vs-seg" id="muViewerStyleSeg" role="group">' + [["ocean", fa ? "ساده" : "Simple"], ["retro", fa ? "ویندوز 95" : "Windows 95"], ["ask", fa ? "انتخاب هر بار (پیش‌فرض)" : "Ask each time (default)"]].map(function (o) { return '<button type="button" class="mu-vs-opt" data-vs="' + o[0] + '" aria-pressed="' + (window.mu_getViewerStyle && window.mu_getViewerStyle() === o[0] ? "true" : "false") + `" onclick="MU_Lite.setViewerStyle('` + o[0] + `')">` + o[1] + "</button>"; }).join("") + "</div></div>" + (window.MU_NDot ? MU_NDot.html(fa) : "") + (window.MK_Bio ? MK_Bio.settingsHtml(fa) : "") + (window.MU_Eco ? MU_Eco.html(fa, ["all", "viewer"]) : "") + (window.mu_imgOptRowHtml ? mu_imgOptRowHtml(fa) : "") + (window.MK_EdFade ? MK_EdFade.html(fa) : "") + (window.MU_TgClock ? MU_TgClock.html(fa) : "") + (window.MU_NfsToolbar ? MU_NfsToolbar.html(fa) : "") + (window.MU_ResetSettings ? MU_ResetSettings.html(fa) : "") + "<div class='mu-morse-line' dir='ltr' role='img' aria-label='MARKHIN' style='flex:none;min-height:13px;display:flex;justify-content:center;align-items:center;gap:14px;flex-wrap:nowrap;white-space:nowrap;overflow:hidden;margin:20px 0 8px;font:700 14px/1 monospace;opacity:.55;-webkit-user-select:none;user-select:none;pointer-events:none'><span style='letter-spacing:4px'>\u2014\u2014</span><span style='letter-spacing:4px'>\u2022\u2014</span><span style='letter-spacing:4px'>\u2022\u2014\u2022</span><span style='letter-spacing:4px'>\u2014\u2022\u2014</span><span style='letter-spacing:4px'>\u2022\u2022\u2022\u2022</span><span style='letter-spacing:4px'>\u2022\u2022</span><span style='letter-spacing:4px'>\u2014\u2022</span></div>"), card && card.classList.remove("kg-wide"); } window.MU_Lite = { openSettings: openSettings, setZoom: function (on) { return setZoomState(on); }, toggleZoom: function () { return setZoomState(!zoomOn()); }, resetZoom: function () { resetZoom(); }, getZoomScale: pageScale, isZoomOn: zoomOn, setLang: function (l) { try {
+catch { } } function gearSvg() { return '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3.2"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>'; } function closeBtn() { return '<button class="btn-main" onclick="MK.liteHost.closeDialog()" aria-label="' + (isFa() ? "بستن" : "Close") + '">✕</button>'; } function openSettings() { var fa = isFa(), card = document.getElementById("advancedCard"), skinRow = '<div class="mu-set-row" style="flex-direction:column;align-items:stretch"><div class="mu-set-text"><div class="mu-set-title">' + (fa ? "تم ورژن جدید" : "New version theme") + '</div><div class="mu-set-desc">' + (fa ? "یکی از تم‌های برنامه را انتخاب کنید. با زدن دکمه روز/شب در صفحه یادداشت‌ها دوباره به حالت روز و شب برمی‌گردد." : "Pick one of the app themes. Tapping the day / night button on the Notes page goes back to plain day / night.") + "</div></div>" + (MK.nfsSkin ? MK.nfsSkin.chipsHtml(fa) : "") + "</div>"; MK.liteHost.showDialog('<div class="advanced-head"><h3>' + (fa ? "تنظیمات" : "Settings") + "</h3>" + closeBtn() + "</div>" + skinRow + '<div class="mu-set-row" style="flex-direction:column;align-items:stretch"><div class="mu-set-text"><div class="mu-set-title">زبان / Language</div><div class="mu-set-desc"><div dir="rtl" style="text-align:right">زبان برنامه را انتخاب کنید.</div><div dir="ltr" style="text-align:left">Choose the app language.</div></div></div><div class="mu-vs-seg" id="muLangSeg" role="group" aria-label="زبان / Language">' + [["fa", "فارسی (Persian)"], ["en", "English (انگلیسی)"]].map(function (o) { return '<button type="button" class="mu-vs-opt" data-lang="' + o[0] + '" aria-pressed="' + ((fa ? "fa" : "en") === o[0] ? "true" : "false") + `" onclick="MU_Lite.setLang('` + o[0] + `')">` + o[1] + "</button>"; }).join("") + '</div></div><div class="mu-set-row"><div class="mu-set-text"><div class="mu-set-title">' + (fa ? "زوم صفحه" : "Page zoom") + '<span class="mu-set-badge" id="muZoomBadge">' + (zoomOn() ? fa ? "روشن" : "ON" : fa ? "خاموش" : "OFF") + '</span></div><div class="mu-set-desc">' + (fa ? "وقتی روشن باشد می‌توانید با دو انگشت روی صفحه زوم کنید (از 100% تا 5 برابر). پیش‌فرض: در تلگرام خاموش، در بقیه‌ی جاها روشن. «شبکه دانش» همیشه زوم مخصوص خودش را دارد و به این گزینه وابسته نیست. داخل تلگرام هم کار می‌کند." : "When on, you can pinch-zoom the page (100% up to 5x). Default: off in Telegram, on elsewhere. The Knowledge Graph always has its own zoom and does not depend on this option. Works inside Telegram too.") + '</div><button type="button" class="btn-main" id="muZoomReset" style="margin-top:8px;font-size:11px;padding:6px 12px;' + (zoomOn() ? "" : "display:none") + '" onclick="MU_Lite.resetZoom()">↺ ' + (fa ? "بازنشانی زوم (100%)" : "Reset zoom (100%)") + '</button></div><button type="button" class="mu-switch" id="muZoomSwitch" role="switch" aria-checked="' + (zoomOn() ? "true" : "false") + '" aria-label="' + (fa ? "زوم صفحه" : "Page zoom") + '" onclick="MU_Lite.toggleZoom()"></button></div><div class="mu-set-row" style="flex-direction:column;align-items:stretch"><div class="mu-set-text"><div class="mu-set-title">' + (fa ? "سبک کادر نمایش یادداشت" : "Note viewer style") + '</div><div class="mu-set-desc">' + (fa ? "با «نمایش یادداشت» هر بار بپرسد، یا همیشه با یک سبک ثابت باز شود." : "Ask each time you press “View note”, or always open with one fixed style.") + '</div></div><div class="mu-vs-seg" id="muViewerStyleSeg" role="group">' + [["ocean", fa ? "ساده" : "Simple"], ["retro", fa ? "ویندوز 95" : "Windows 95"], ["ask", fa ? "انتخاب هر بار (پیش‌فرض)" : "Ask each time (default)"]].map(function (o) { return '<button type="button" class="mu-vs-opt" data-vs="' + o[0] + '" aria-pressed="' + (window.mu_getViewerStyle && window.mu_getViewerStyle() === o[0] ? "true" : "false") + `" onclick="MU_Lite.setViewerStyle('` + o[0] + `')">` + o[1] + "</button>"; }).join("") + "</div></div>" + (window.MU_NDot ? MU_NDot.html(fa) : "") + (window.MK_Bio ? MK_Bio.settingsHtml(fa) : "") + (window.MU_Eco ? MU_Eco.html(fa, ["all", "viewer"]) : "") + (window.mu_imgOptRowHtml ? mu_imgOptRowHtml(fa) : "") + (window.mk_expMediaRowHtml ? mk_expMediaRowHtml(fa) : "") + (window.MK_EdFade ? MK_EdFade.html(fa) : "") + (window.MU_TgClock ? MU_TgClock.html(fa) : "") + (window.MU_NfsToolbar ? MU_NfsToolbar.html(fa) : "") + (window.MU_ResetSettings ? MU_ResetSettings.html(fa) : "") + "<div class='mu-morse-line' dir='ltr' role='img' aria-label='MARKHIN' style='flex:none;min-height:13px;display:flex;justify-content:center;align-items:center;gap:14px;flex-wrap:nowrap;white-space:nowrap;overflow:hidden;margin:20px 0 8px;font:700 14px/1 monospace;opacity:.55;-webkit-user-select:none;user-select:none;pointer-events:none'><span style='letter-spacing:4px'>\u2014\u2014</span><span style='letter-spacing:4px'>\u2022\u2014</span><span style='letter-spacing:4px'>\u2022\u2014\u2022</span><span style='letter-spacing:4px'>\u2014\u2022\u2014</span><span style='letter-spacing:4px'>\u2022\u2022\u2022\u2022</span><span style='letter-spacing:4px'>\u2022\u2022</span><span style='letter-spacing:4px'>\u2014\u2022</span></div>"), card && card.classList.remove("kg-wide"); } window.MU_Lite = { openSettings: openSettings, setZoom: function (on) { return setZoomState(on); }, toggleZoom: function () { return setZoomState(!zoomOn()); }, resetZoom: function () { resetZoom(); }, getZoomScale: pageScale, isZoomOn: zoomOn, setLang: function (l) { try {
         if (MK.liteHost.lang() === l)
             return;
     }
@@ -47367,12 +47868,12 @@ catch { } }; var exportPickerPattern = /downloadStructured|downloadSelectedPDF|d
         try { var ae = document.activeElement; ae && ae !== document.body && ae.blur && ae.blur(); } catch (e) { }
         try { if (typeof autosaveCategory === "function") await autosaveCategory(id); } catch (e) { }
         var name = item.name || (fa ? "یادداشت" : "Note");
-        showAdvanced('<div class="advanced-head image-export-picker-head"><div><h3 style="margin:0">📤 ' + (fa ? "اشتراک‌گذاری یادداشت" : "Share note") + '</h3><p style="margin:5px 0 0;opacity:.65;font-size:11px">' + (fa ? "از این یادداشت یک فایل HTML ساخته می‌شود و منوی اشتراک‌گذاری باز می‌شود." : "An HTML file of this note is built and the share menu opens.") + '</p></div><button class="btn-main" onclick="closeAdvancedModal()">✕</button></div>'
+        showAdvanced('<div class="advanced-head image-export-picker-head"><div><h3 style="margin:0">📤 ' + (fa ? "اشتراک‌گذاری یادداشت" : "Share note") + '</h3><p style="margin:5px 0 0;opacity:.65;font-size:11px">' + (fa ? "از این یادداشت یک فایل HTML ساخته می‌شود؛ یکی از دو روش زیر را انتخاب کن." : "An HTML file of this note is built; pick one of the two ways below.") + '</p></div><button class="btn-main" onclick="closeAdvancedModal()">✕</button></div>'
             + '<div class="image-export-picker-actions"><span class="image-export-count">' + (item.locked || (typeof isNoteLocked === "function" && isNoteLocked(item)) ? "🔒 " : "") + esc(name) + '</span></div>'
-            + '<div class="image-export-choice-grid"><button type="button" class="image-export-choice" onclick="mkShareNoteHtmlGo(\'' + jsq(id) + '\')"><span class="image-export-choice-icon">🌐</span><span class="image-export-choice-name">HTML</span><span class="image-export-choice-action">' + (fa ? "اشتراک‌گذاری" : "Share") + '</span></button></div>');
+            + '<div class="image-export-choice-grid">' + '<button type="button" class="image-export-choice" onclick="mkShareNoteHtmlGo(\'' + jsq(id) + '\',\'bot\')"><span class="image-export-choice-icon">📨</span><span class="image-export-choice-name">' + (fa ? "ارسال به چت ربات" : "Send to bot chat") + '</span><span class="image-export-choice-action">' + (fa ? "بکاپ رسانه" : "Media backup") + '</span></button>' + '<button type="button" class="image-export-choice" onclick="mkShareNoteHtmlGo(\'' + jsq(id) + '\',\'menu\')"><span class="image-export-choice-icon">📤</span><span class="image-export-choice-name">' + (fa ? "منوی اشتراک‌گذاری" : "Share menu") + '</span><span class="image-export-choice-action">' + (fa ? "اشتراک‌گذاری / دانلود" : "Share / Download") + '</span></button>' + '</div>');
     };
-    window.mkShareNoteHtmlGo = function (id) {
-        try { if (typeof shareNoteAs === "function") return shareNoteAs(id, "html"); } catch (e) { console.error(e); }
+    window.mkShareNoteHtmlGo = function (id, mode) {
+        try { if (typeof shareNoteAs === "function") return shareNoteAs(id, "html", mode === "bot" || mode === "menu" ? mode : void 0); } catch (e) { console.error(e); }
         try { closeAdvancedModal(); } catch (e) { }
     };
 })();
@@ -62881,7 +63382,26 @@ var CONT = [["AS", "آسیا", "Asia"], ["EU", "اروپا", "Europe"], ["NA", "
         window.mkBgKeepOn = bgOn;
         hidden() && start();
     })();
-    window.MKMED = { S, encodeToken, autoSync, fullSync, purgeOrphans, orphanIds, activate, api, setupWith, unlockWith, pushManifest, pullManifest, ensure, scanUploads, freeSpace, refreshLocal, known, onAct, render, patchModel, afterDownload, referenced, loadState, startObservers, readCloudCfg, sha256, _cfg: readCfg };
+    /* ---------- deliver ANY file to the user's own bot chat (used by Share / Download inside Telegram) ----------
+       Telegram's in-app browser can neither share files natively on Android nor save a blob, but the bot that already carries the
+       media backup can simply send the file to the private chat: it arrives as a normal Telegram document (save / forward from there). */
+    let meCache = null;
+    async function botUser() { if (meCache) return meCache; try { const r = await api("getMe", new URLSearchParams()); meCache = r && r.username || ""; } catch { meCache = ""; } return meCache; }
+    async function sendFile(blob, name, type, caption) {
+        if (!blob || !blob.size) return { ok: !1, why: "empty" };
+        if (!S.token && !readCfg()) return { ok: !1, why: "nocfg" };
+        const cid = chatId(); if (!cid) return { ok: !1, why: "nochat" };
+        if (blob.size + OVH > MAX_UP) return { ok: !1, why: "big" };
+        if (!(S.token && S.key)) { let u = !1; try { u = await ensureUnlocked(!0); } catch { } if (!u) return { ok: !1, why: "locked" }; }
+        try {
+            const nm = String(name || "file").replace(/[\\/:*?"<>|]+/g, "_").slice(0, 120) || "file";
+            const f = new File([blob], nm, { type: type || blob.type || "application/octet-stream" });
+            const res = await api("sendDocument", form({ chat_id: String(cid), caption: String(caption || nm).slice(0, 900), document: f }), { send: !0, timeout: 240000 });
+            if (!(res && res.document)) return { ok: !1, why: "api", msg: "no document in reply" };
+            return { ok: !0, mid: res.message_id || 0, bot: await botUser() };
+        } catch (e) { return { ok: !1, why: "api", msg: errText(e) }; }
+    }
+    window.MKMED = { S, sendFile, botUser, encodeToken, autoSync, fullSync, purgeOrphans, orphanIds, activate, api, setupWith, unlockWith, pushManifest, pullManifest, ensure, scanUploads, freeSpace, refreshLocal, known, onAct, render, patchModel, afterDownload, referenced, loadState, startObservers, readCloudCfg, sha256, _cfg: readCfg };
     init();
 })();
 
