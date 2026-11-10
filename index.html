@@ -19352,6 +19352,573 @@ html body:not(#_m1):not(#_m2):not(#_m3):not(#_m4) #contentsContainer .mxe .mxe-p
 html.mk-tg #muNav .mu-nav-panel>*{opacity:1!important;transform:none!important;transition:none!important}
 html.mk-tg #muNav .mu-nav-panel{will-change:transform}
 </style>
+<script id="mkxEngine">
+/* ===== MKX: streaming, low-memory export engine (shared by every export format) =====
+ * Core ideas
+ *  - Media never becomes a giant JS string. Exporters keep running on tiny "light" HTML in which each media
+ *    reference is a short placeholder (data:<mime>;base64,MKXPH<n>Z). When a Blob is assembled, the placeholder is
+ *    replaced by the media's base64, produced in ~768 KB slices straight from the stored Blob and appended to a
+ *    Blob builder (browser-managed, disk-backed). JS heap stays flat regardless of media size.
+ *  - ZIP is written by a streaming STORE/DEFLATE writer that references Blobs instead of copying them.
+ *  - DOCX is built with tiny placeholder images; the real image Blobs are swapped into the package afterwards.
+ *  - PDF pages are rendered chunk by chunk and written by a streaming PDF writer (JPEG page Blobs by reference).
+ *  - Every run has progress, cancel, wake-lock and graceful out-of-memory/storage handling.
+ */
+(function () {
+    "use strict";
+    if (window.MKX) return;
+    var CHUNK = 3 * 262144; // 786432 bytes, multiple of 3 so base64 slices concatenate without padding
+    var FLUSH = 8 * 1048576;
+    var TOKRE = /MKXPH(\d+)Z/g;
+    var CANCEL_MSG = "Export cancelled.";
+    function fa() { try { return currentLang === "fa"; } catch (e) { return false; } }
+    function T(f, e) { return fa() ? f : e; }
+    function MED() { try { if (typeof MU_MEDIA !== "undefined" && MU_MEDIA && MU_MEDIA.get) return MU_MEDIA; } catch (e) { } try { if (typeof Media !== "undefined" && Media && Media.get) return Media; } catch (e) { } try { if (typeof MU_IndexedDB !== "undefined" && MU_IndexedDB && MU_IndexedDB.get) return MU_IndexedDB; } catch (e) { } return window.MU_MEDIA; }
+
+    /* ---------- scheduling ---------- */
+    var mc = null;
+    function yieldUI() {
+        return new Promise(function (res) {
+            if (window.scheduler && scheduler.yield) { scheduler.yield().then(res, function () { setTimeout(res, 0); }); return; }
+            try { if (!mc) { mc = new MessageChannel(); } var ch = new MessageChannel(); ch.port1.onmessage = function () { res(); }; ch.port2.postMessage(0); } catch (e) { setTimeout(res, 0); }
+        });
+    }
+    var lastYield = 0;
+    async function maybeYield() { var n = performance.now(); if (n - lastYield > 12) { await yieldUI(); lastYield = performance.now(); } }
+
+    /* ---------- job: progress, cancel, ui ---------- */
+    var cur = null, tokenSeq = 0, TOK = new Map(), objUrls = [];
+    function Job(label, silent) { this.label = label || ""; this.silent = !!silent; this.cancelled = false; this.frac = 0; this.work = 0; this.done = 0; this.note = ""; this.ui = null; this.lastPaint = 0; this.oom = false; }
+    Job.prototype.check = function () { if (this.cancelled) throw new Error(CANCEL_MSG); };
+    Job.prototype.addWork = function (n) { this.work += n; this._upd(); };
+    Job.prototype.doneWork = function (n) { this.done += n; this._upd(); };
+    Job.prototype._upd = function () { var f = this.work > 0 ? Math.min(1, this.done / this.work) : 0; if (f > this.frac) this.frac = f; this._paint(false); };
+    Job.prototype.set = function (f, note) { if (note != null) this.note = note; this._paint(false); }; // note-only (kept for callers that have no byte counts)
+    Job.prototype._paint = function (force) { var n = performance.now(); if (force || n - this.lastPaint > 80) { this.lastPaint = n; paint(this); } };
+    Job.prototype.cancel = function () { this.cancelled = true; this._paint(true); };
+
+    function paint(job) {
+        if (!job.ui && !job.silent) { try { buildUi(job); } catch (e) { job.silent = true; } }
+        if (!job.ui) return;
+        var u = job.ui, pct = Math.round(job.frac * 100);
+        u.bar.style.width = pct + "%"; u.pct.textContent = pct + "%"; u.note.textContent = job.cancelled ? T("در حال لغو…", "Cancelling…") : (job.note || "");
+        u.box.setAttribute("aria-valuenow", String(pct));
+    }
+    function buildUi(job) {
+        var d = document.createElement("div"); d.id = "mkxProgress"; d.setAttribute("dir", fa() ? "rtl" : "ltr");
+        d.style.cssText = "position:fixed;left:12px;right:12px;bottom:calc(12px + env(safe-area-inset-bottom,0px));z-index:2147483600;max-width:520px;margin:0 auto;background:#14181f;color:#f2f5f9;border:1px solid rgba(255,255,255,.14);border-radius:16px;padding:12px 14px;box-shadow:0 10px 40px rgba(0,0,0,.45);font:600 13px/1.4 system-ui,Tahoma,Arial,sans-serif;";
+        d.setAttribute("role", "progressbar"); d.setAttribute("aria-valuemin", "0"); d.setAttribute("aria-valuemax", "100"); d.setAttribute("aria-valuenow", "0");
+        var row = document.createElement("div"); row.style.cssText = "display:flex;align-items:center;gap:10px;justify-content:space-between;";
+        var title = document.createElement("span"); title.textContent = job.label || T("در حال خروجی گرفتن…", "Exporting…"); title.style.cssText = "overflow:hidden;text-overflow:ellipsis;white-space:nowrap;";
+        var pct = document.createElement("span"); pct.textContent = "0%"; pct.style.cssText = "font-variant-numeric:tabular-nums;opacity:.85;";
+        var btn = document.createElement("button"); btn.type = "button"; btn.textContent = T("لغو", "Cancel"); btn.style.cssText = "background:#2a3140;color:#fff;border:1px solid rgba(255,255,255,.2);border-radius:10px;padding:6px 14px;font:inherit;cursor:pointer;min-height:32px;";
+        btn.addEventListener("click", function () { job.cancel(); btn.disabled = true; });
+        row.appendChild(title); row.appendChild(pct); row.appendChild(btn);
+        var track = document.createElement("div"); track.style.cssText = "height:6px;border-radius:99px;background:rgba(255,255,255,.14);margin:9px 0 6px;overflow:hidden;";
+        var bar = document.createElement("div"); bar.style.cssText = "height:100%;width:0;background:#4da3ff;border-radius:99px;transition:width .12s linear;"; track.appendChild(bar);
+        var note = document.createElement("div"); note.style.cssText = "font-weight:500;font-size:12px;opacity:.75;min-height:16px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;";
+        d.appendChild(row); d.appendChild(track); d.appendChild(note); (document.body || document.documentElement).appendChild(d);
+        job.ui = { box: d, bar: bar, pct: pct, note: note };
+    }
+
+    function isOom(e) {
+        var n = String(e && e.name || ""), m = String(e && e.message || "");
+        return n === "QuotaExceededError" || n === "NotReadableError" || (n === "RangeError" && /string length|array buffer|memory/i.test(m)) || /out of memory|quota|allocation|Invalid string length/i.test(m);
+    }
+
+    /* run fn inside a job. Nested calls share the outer job. */
+    async function run(label, fn, opts) {
+        if (cur) return fn(cur);
+        var job = new Job(label, opts && opts.silent), wl = null, origAlert = window.alert;
+        cur = job;
+        try { if (navigator.wakeLock && navigator.wakeLock.request) wl = await navigator.wakeLock.request("screen").catch(function () { return null; }); } catch (e) { }
+        // The app's own catch blocks call alert(); stay silent for a user cancel and give a precise reason for memory/storage failures.
+        window.alert = function (msg) {
+            if (job.cancelled) { try { if (typeof showToast === "function") showToast(T("خروجی لغو شد.", "Export cancelled.")); } catch (e) { } return; }
+            if (job.oom) msg = T("حافظه یا فضای ذخیره‌سازی دستگاه برای این خروجی کافی نیست. چند یادداشت کمتر انتخاب کنید یا تصویر/صدا را خاموش کنید.", "Not enough memory or free storage on this device to finish this export. Try fewer notes, or turn off images/voice.");
+            return origAlert.call(window, msg);
+        };
+        try { return await fn(job); }
+        catch (e) { if (isOom(e)) job.oom = true; throw e; }
+        finally {
+            // let any alert() inside the app's own catch handlers fire before restoring
+            setTimeout(function () { window.alert = origAlert; }, 0);
+            cur = null; TOK.clear(); B64.clear();
+            objUrls.splice(0).forEach(function (u) { try { URL.revokeObjectURL(u); } catch (e) { } });
+            try { if (wl) wl.release(); } catch (e) { }
+            try { if (job.ui) job.ui.box.remove(); } catch (e) { }
+        }
+    }
+    function wrap(name, label) {
+        var orig = window[name]; if (typeof orig !== "function" || orig.__mkx) return;
+        var w = function () { var self = this, args = arguments; return run(typeof label === "function" ? label() : label, function () { return orig.apply(self, args); }); };
+        w.__mkx = 1; w.__orig = orig; window[name] = w;
+    }
+    function progress(f, note) { if (cur) cur.set(f, note); }
+    function check() { if (cur) cur.check(); }
+
+    /* ---------- Blob builder ---------- */
+    function BB(type) { this.type = type || ""; this.blob = null; this.parts = []; this.size = 0; }
+    BB.prototype.push = function (x) {
+        this.parts.push(x); this.size += (typeof x === "string" ? x.length : (x.byteLength != null ? x.byteLength : x.size || 0));
+        if (this.size >= FLUSH) this.flush();
+    };
+    BB.prototype.flush = function () {
+        if (!this.parts.length) return;
+        this.blob = new Blob(this.blob ? [this.blob].concat(this.parts) : this.parts); this.parts = []; this.size = 0;
+    };
+    BB.prototype.finish = function () {
+        var p = this.blob ? [this.blob].concat(this.parts) : this.parts; this.blob = null; this.parts = [];
+        return new Blob(p, { type: this.type });
+    };
+
+    /* ---------- streaming base64 ---------- */
+    function readSlice(blob, a, b) {
+        return new Promise(function (res, rej) {
+            var fr = new FileReader();
+            fr.onload = function () { var s = fr.result; res(s.slice(s.indexOf(",") + 1)); };
+            fr.onerror = function () { rej(fr.error || new Error("read failed")); };
+            fr.readAsDataURL(blob.slice(a, b));
+        });
+    }
+    async function pushBase64(bb, blob, onBytes) {
+        var size = blob.size, next = size ? readSlice(blob, 0, Math.min(CHUNK, size)) : null;
+        for (var off = 0; off < size; off += CHUNK) {
+            check();
+            var s = await next, n = Math.min(CHUNK, size - off);
+            var nx = off + CHUNK;
+            next = nx < size ? readSlice(blob, nx, Math.min(nx + CHUNK, size)) : null;
+            bb.push(s); onBytes && onBytes(n);
+            await maybeYield();
+        }
+    }
+
+    /* ---------- tokens / light html ---------- */
+    function newToken(blob) { var id = ++tokenSeq; TOK.set(id, blob); return "MKXPH" + id + "Z"; }
+    function mimeOf(b) { return (b && b.type) || "application/octet-stream"; }
+    async function getBlob(id) { try { var b = await MED().get(id); return b || null; } catch (e) { return null; } }
+
+    /* mode: "token" (default) -> placeholder; "url" -> blob: URL (for DOM renderers) */
+    async function lightenHtml(html, mode) {
+        var str = String(html || ""); if (!/data-mu-media\s*=/.test(str)) return str;
+        var tpl = document.createElement("template"); tpl.innerHTML = str;
+        var els = tpl.content.querySelectorAll("img[data-mu-media], audio[data-mu-media], video[data-mu-media], .file-wrapper[data-mu-media]");
+        var cache = new Map();
+        for (var i = 0; i < els.length; i++) {
+            var el = els[i], id = el.getAttribute("data-mu-media"); if (!id) continue;
+            var isFile = el.classList && el.classList.contains("file-wrapper");
+            var ck = id + (isFile ? "#f" : ""), ent = cache.get(ck);
+            if (ent === undefined) {
+                var blob = await getBlob(id);
+                if (blob && isFile) blob = blob.slice(0, blob.size, "audio/x-mkfile");
+                if (!blob) ent = null;
+                else if (mode === "url" || mode === "urlkeep") { var u = URL.createObjectURL(blob); mode === "url" && objUrls.push(u); ent = { url: u, blob: blob }; }
+                else ent = { url: "data:" + mimeOf(blob) + ";base64," + newToken(blob), blob: blob };
+                cache.set(ck, ent);
+            }
+            if (isFile) {
+                var fu = ent && ent.url;
+                if (!fu) { var cd = el.getAttribute("data-fdata") || ""; /^data:audio\/x-mkfile;/i.test(cd) && (fu = cd); }
+                if (fu) { el.setAttribute("data-fdata", fu); el.removeAttribute("data-mu-media"); }
+                continue;
+            }
+            var url = ent && ent.url;
+            if (!url) { var c = el.getAttribute("src") || ""; /^data:(image|audio|video)\//i.test(c) && (url = c); }
+            if (url) { el.setAttribute("src", url); el.removeAttribute("data-mu-media"); }
+            if ((i & 7) === 7) { check(); await maybeYield(); }
+        }
+        return tpl.innerHTML;
+    }
+    async function lightenItems(items, mode) {
+        var list = Array.isArray(items) ? items : [], out = [];
+        for (var i = 0; i < list.length; i++) {
+            var it = list[i]; check();
+            if (it && typeof it.html === "string" && /data-mu-media\s*=/.test(it.html)) out.push(Object.assign({}, it, { html: await lightenHtml(it.html, mode) }));
+            else out.push(it);
+            progress(((i + 1) / list.length) * 0.1, T("آماده‌سازی رسانه…", "Preparing media…"));
+        }
+        return out;
+    }
+
+    /* expand placeholders in a text into a Blob without ever holding the media as a string */
+    async function textBlob(text, mime) {
+        text = typeof text === "string" ? text : String(text == null ? "" : text);
+        if (text.indexOf("MKXPH") < 0) return new Blob([text], { type: mime || "" });
+        var re = new RegExp(TOKRE.source, "g"), m, total = 0, hits = [];
+        while ((m = re.exec(text))) { var b = TOK.get(Number(m[1])); if (b) { hits.push([m.index, m[0].length, b, Number(m[1])]); total += b.size; } }
+        var bb = new BB(mime), last = 0, job = cur; job && job.addWork(total);
+        for (var i = 0; i < hits.length; i++) {
+            var h = hits[i];
+            if (h[0] > last) bb.push(text.slice(last, h[0]));
+            bb.push(await b64Blob(h[3], h[2], function (n) { if (job) { job.note = T("نوشتن رسانه…", "Writing media…"); job.doneWork(n); } }));
+            last = h[0] + h[1];
+        }
+        if (last < text.length) bb.push(text.slice(last));
+        return bb.finish();
+    }
+    var B64 = new Map();
+    async function b64Blob(id, blob, onBytes) {
+        var c = B64.get(id); if (c) { onBytes && onBytes(blob.size); return c; }
+        var bb = new BB(""); await pushBase64(bb, blob, onBytes); c = bb.finish(); B64.set(id, c); return c;
+    }
+    function hasTokens(s) { return typeof s === "string" && s.indexOf("MKXPH") >= 0; }
+
+    /* ---------- CRC32 (worker, with main-thread fallback) ---------- */
+    var CRC_SRC = "var t=new Int32Array(256);for(var n=0;n<256;n++){var c=n;for(var k=0;k<8;k++)c=c&1?(c>>>1)^0xEDB88320:c>>>1;t[n]=c}" +
+        "function up(c,b){for(var i=0;i<b.length;i++)c=t[(c^b[i])&255]^(c>>>8);return c}" +
+        "self.onmessage=async function(e){var d=e.data,blob=d.blob,c=-1,S=4194304;try{for(var o=0;o<blob.size;o+=S){var b=new Uint8Array(await blob.slice(o,Math.min(o+S,blob.size)).arrayBuffer());c=up(c,b);self.postMessage({id:d.id,p:Math.min(o+S,blob.size)})}self.postMessage({id:d.id,crc:(c^-1)>>>0,done:1})}catch(err){self.postMessage({id:d.id,err:String(err&&err.message||err)})}};";
+    var crcWorker = null, crcWait = new Map(), crcId = 0, crcBroken = false;
+    function getCrcWorker() {
+        if (crcWorker || crcBroken) return crcWorker;
+        try {
+            var u = URL.createObjectURL(new Blob([CRC_SRC], { type: "application/javascript" })); crcWorker = new Worker(u); URL.revokeObjectURL(u);
+            crcWorker.onmessage = function (e) { var d = e.data, w = crcWait.get(d.id); if (!w) return; if (d.err) { crcWait.delete(d.id); w.rej(new Error(d.err)); } else if (d.done) { crcWait.delete(d.id); w.res(d.crc); } else w.prog && w.prog(d.p); };
+            crcWorker.onerror = function () { crcBroken = true; try { crcWorker.terminate(); } catch (e) { } crcWorker = null; crcWait.forEach(function (w) { w.rej(new Error("crc worker failed")); }); crcWait.clear(); };
+        } catch (e) { crcBroken = true; crcWorker = null; }
+        return crcWorker;
+    }
+    var CRCT = null;
+    function crcMain(blob, prog) {
+        if (!CRCT) { CRCT = new Int32Array(256); for (var n = 0; n < 256; n++) { var c = n; for (var k = 0; k < 8; k++) c = c & 1 ? (c >>> 1) ^ 0xEDB88320 : c >>> 1; CRCT[n] = c; } }
+        return (async function () {
+            var c = -1, S = 1048576;
+            for (var o = 0; o < blob.size; o += S) { check(); var b = new Uint8Array(await blob.slice(o, Math.min(o + S, blob.size)).arrayBuffer()); for (var i = 0; i < b.length; i++) c = CRCT[(c ^ b[i]) & 255] ^ (c >>> 8); prog && prog(Math.min(o + S, blob.size)); await maybeYield(); }
+            return (c ^ -1) >>> 0;
+        })();
+    }
+    function crc32(blob, prog) {
+        var w = getCrcWorker();
+        if (!w) return crcMain(blob, prog);
+        return new Promise(function (res, rej) {
+            var id = ++crcId; crcWait.set(id, { res: res, rej: rej, prog: prog });
+            try { w.postMessage({ id: id, blob: blob }); } catch (e) { crcWait.delete(id); crcMain(blob, prog).then(res, rej); }
+        }).catch(function (e) { if (/cancel/i.test(String(e && e.message))) throw e; return crcMain(blob, prog); });
+    }
+
+    /* ---------- streaming ZIP writer (STORE / DEFLATE, zip64 aware) ---------- */
+    var enc = new TextEncoder();
+    function dosDT(d) { var y = Math.max(1980, d.getFullYear()); return [((d.getHours() << 11) | (d.getMinutes() << 5) | (d.getSeconds() >> 1)) & 0xFFFF, (((y - 1980) << 9) | ((d.getMonth() + 1) << 5) | d.getDate()) & 0xFFFF]; }
+    var TEXTY = /\.(txt|md|json|csv|html?|xml|svg|rels|js|css|tsv|log)$/i, STORED = /\.(png|jpe?g|gif|webp|avif|mp3|m4a|aac|ogg|opus|webm|mp4|mov|zip|docx|xlsx|pptx|pdf|gz|7z|rar)$/i;
+    var CAN_DEFLATE = typeof CompressionStream === "function";
+    async function deflateBlob(blob) {
+        var rs = blob.stream().pipeThrough(new CompressionStream("deflate-raw")), rd = rs.getReader(), bb = new BB("");
+        for (; ;) { check(); var r = await rd.read(); if (r.done) break; bb.push(r.value); }
+        return bb.finish();
+    }
+    function ZipWriter(opts) {
+        this.bb = new BB("application/zip"); this.off = 0; this.cd = []; this.names = new Set(); this.force64 = !!(opts && opts.zip64); var d = dosDT(new Date()); this.t = d[0]; this.d = d[1];
+    }
+    ZipWriter.prototype._w = function (bytes) { this.bb.push(bytes); this.off += bytes.length; };
+    /* raw: write a pre-compressed (or STORE) payload */
+    ZipWriter.prototype.addRaw = function (name, method, crc, csize, usize, payload, flagsUtf8) {
+        var nm = enc.encode(name), big = this.force64 || usize >= 0xFFFFFFFF || csize >= 0xFFFFFFFF, offBig = this.off >= 0xFFFFFFFF;
+        var ex = big ? 20 : 0, h = new Uint8Array(30 + nm.length + ex), v = new DataView(h.buffer);
+        v.setUint32(0, 0x04034b50, true); v.setUint16(4, big ? 45 : 20, true); v.setUint16(6, 0x0800, true); v.setUint16(8, method, true);
+        v.setUint16(10, this.t, true); v.setUint16(12, this.d, true); v.setUint32(14, crc >>> 0, true);
+        v.setUint32(18, big ? 0xFFFFFFFF : csize, true); v.setUint32(22, big ? 0xFFFFFFFF : usize, true); v.setUint16(26, nm.length, true); v.setUint16(28, ex, true);
+        h.set(nm, 30);
+        if (big) { var p = 30 + nm.length; v.setUint16(p, 1, true); v.setUint16(p + 2, 16, true); this._u64(v, p + 4, usize); this._u64(v, p + 12, csize); }
+        var lo = this.off; this._w(h); this.bb.push(payload); this.off += csize;
+        this.cd.push({ nm: nm, method: method, crc: crc >>> 0, csize: csize, usize: usize, lo: lo, big: big, offBig: lo >= 0xFFFFFFFF });
+    };
+    ZipWriter.prototype._u64 = function (v, p, n) { v.setUint32(p, n % 4294967296, true); v.setUint32(p + 4, Math.floor(n / 4294967296), true); };
+    ZipWriter.prototype.add = async function (name, data, o) {
+        check();
+        var blob = data instanceof Blob ? data : new Blob([data]); var usize = blob.size;
+        var crc = await crc32(blob), method = 0, payload = blob, csize = usize;
+        var want = o && o.deflate != null ? o.deflate : (!STORED.test(name) && (TEXTY.test(name) || true) && usize > 64 && usize <= 32 * 1048576);
+        if (want && CAN_DEFLATE && usize > 0) {
+            try { var z = await deflateBlob(blob); if (z.size < usize) { payload = z; csize = z.size; method = 8; } } catch (e) { if (/cancel/i.test(String(e && e.message))) throw e; }
+        }
+        this.addRaw(name, method, crc, csize, usize, payload);
+        await maybeYield();
+    };
+    ZipWriter.prototype.finish = function () {
+        var cdStart = this.off, n = this.cd.length, any64 = this.force64;
+        for (var i = 0; i < n; i++) {
+            var e = this.cd[i], ex = (e.big ? 16 : 0) + (e.offBig ? 8 : 0); if (ex) ex += 4;
+            var h = new Uint8Array(46 + e.nm.length + ex), v = new DataView(h.buffer);
+            v.setUint32(0, 0x02014b50, true); v.setUint16(4, 45, true); v.setUint16(6, (e.big || e.offBig) ? 45 : 20, true); v.setUint16(8, 0x0800, true); v.setUint16(10, e.method, true);
+            v.setUint16(12, this.t, true); v.setUint16(14, this.d, true); v.setUint32(16, e.crc, true);
+            v.setUint32(20, e.big ? 0xFFFFFFFF : e.csize, true); v.setUint32(24, e.big ? 0xFFFFFFFF : e.usize, true);
+            v.setUint16(28, e.nm.length, true); v.setUint16(30, ex, true); v.setUint32(42, e.offBig ? 0xFFFFFFFF : e.lo, true);
+            h.set(e.nm, 46);
+            if (ex) { var p = 46 + e.nm.length; v.setUint16(p, 1, true); v.setUint16(p + 2, ex - 4, true); p += 4; if (e.big) { this._u64(v, p, e.usize); this._u64(v, p + 8, e.csize); p += 16; } if (e.offBig) this._u64(v, p, e.lo); any64 = any64 || e.big || e.offBig; }
+            this._w(h);
+        }
+        var cdSize = this.off - cdStart;
+        if (n > 0xFFFF || cdStart >= 0xFFFFFFFF || cdSize >= 0xFFFFFFFF) any64 = true;
+        if (any64) {
+            var z = new Uint8Array(56 + 20), v2 = new DataView(z.buffer), zo = this.off;
+            v2.setUint32(0, 0x06064b50, true); this._u64(v2, 4, 44); v2.setUint16(12, 45, true); v2.setUint16(14, 45, true); this._u64(v2, 24, n); this._u64(v2, 32, n); this._u64(v2, 40, cdSize); this._u64(v2, 48, cdStart);
+            v2.setUint32(56, 0x07064b50, true); v2.setUint32(60, 0, true); this._u64(v2, 64, zo); v2.setUint32(72, 1, true);
+            this._w(z);
+        }
+        var eo = new Uint8Array(22), v3 = new DataView(eo.buffer);
+        v3.setUint32(0, 0x06054b50, true); v3.setUint16(8, any64 ? 0xFFFF : n, true); v3.setUint16(10, any64 ? 0xFFFF : n, true);
+        v3.setUint32(12, any64 ? 0xFFFFFFFF : cdSize, true); v3.setUint32(16, any64 ? 0xFFFFFFFF : cdStart, true);
+        this._w(eo);
+        return this.bb.finish();
+    };
+    /* files: [{name, data: Blob|string|Uint8Array}] */
+    async function zip(files, opts) {
+        var zw = new ZipWriter(opts), n = files.length, job = cur;
+        var total = 0; files.forEach(function (f) { total += (f.data && (f.data.size != null ? f.data.size : f.data.length)) || 0; });
+        job && job.addWork(total || n);
+        for (var i = 0; i < n; i++) {
+            var f = files[i]; check();
+            var sz = (f.data && (f.data.size != null ? f.data.size : f.data.length)) || 0;
+            await zw.add(f.name, f.data, f.opts);
+            if (job) { job.note = T("ساخت ZIP…", "Building ZIP…"); job.doneWork(total ? sz : 1); }
+            files[i] = null; // release reference as soon as it is written
+        }
+        return zw.finish();
+    }
+
+    /* minimal zip reader (central directory) used to re-pack small generated packages (DOCX) */
+    async function readZip(blob) {
+        var tail = blob.size > 70000 ? 70000 : blob.size, buf = new Uint8Array(await blob.slice(blob.size - tail).arrayBuffer()), v = new DataView(buf.buffer), p = -1;
+        for (var i = buf.length - 22; i >= 0; i--) if (v.getUint32(i, true) === 0x06054b50) { p = i; break; }
+        if (p < 0) throw new Error("zip: no EOCD");
+        var n = v.getUint16(p + 10, true), cdSize = v.getUint32(p + 12, true), cdOff = v.getUint32(p + 16, true);
+        var cd = new Uint8Array(await blob.slice(cdOff, cdOff + cdSize).arrayBuffer()), cv = new DataView(cd.buffer), q = 0, out = [], dec = new TextDecoder();
+        for (var k = 0; k < n; k++) {
+            if (cv.getUint32(q, true) !== 0x02014b50) throw new Error("zip: bad central dir");
+            var nl = cv.getUint16(q + 28, true), el = cv.getUint16(q + 30, true), cl = cv.getUint16(q + 32, true);
+            out.push({ name: dec.decode(cd.subarray(q + 46, q + 46 + nl)), method: cv.getUint16(q + 10, true), crc: cv.getUint32(q + 16, true), csize: cv.getUint32(q + 20, true), usize: cv.getUint32(q + 24, true), lo: cv.getUint32(q + 42, true) });
+            q += 46 + nl + el + cl;
+        }
+        for (var j = 0; j < out.length; j++) {
+            var e = out[j], lh = new DataView(await blob.slice(e.lo, e.lo + 30).arrayBuffer());
+            e.ds = e.lo + 30 + lh.getUint16(26, true) + lh.getUint16(28, true);
+        }
+        return out;
+    }
+
+    /* ---------- image helpers (DOCX) ---------- */
+    async function sniffDims(blob) {
+        try {
+            var b = new Uint8Array(await blob.slice(0, 65536).arrayBuffer()), v = new DataView(b.buffer);
+            if (b[0] === 0x89 && b[1] === 0x50) return { w: v.getUint32(16), h: v.getUint32(20) };
+            if (b[0] === 0x47 && b[1] === 0x49) return { w: v.getUint16(6, true), h: v.getUint16(8, true) };
+            if (b[0] === 0x42 && b[1] === 0x4D) return { w: Math.abs(v.getInt32(18, true)), h: Math.abs(v.getInt32(22, true)) };
+            if (b[0] === 0xFF && b[1] === 0xD8) {
+                var big = b; var o = 2, exif = false;
+                for (var guard = 0; guard < 200; guard++) {
+                    if (o + 4 > big.length) { big = new Uint8Array(await blob.slice(0, Math.min(blob.size, big.length * 4)).arrayBuffer()); v = new DataView(big.buffer); if (o + 4 > big.length) return null; }
+                    if (big[o] !== 0xFF) return null; var m = big[o + 1], len = v.getUint16(o + 2);
+                    if (m === 0xE1 && big[o + 4] === 0x45 && big[o + 5] === 0x78) exif = true;
+                    if ((m >= 0xC0 && m <= 0xCF) && m !== 0xC4 && m !== 0xC8 && m !== 0xCC) return exif ? null : { h: v.getUint16(o + 5), w: v.getUint16(o + 7) };
+                    o += 2 + len;
+                }
+                return null;
+            }
+        } catch (e) { }
+        return null;
+    }
+    async function bitmapDims(blob) {
+        try { if (window.createImageBitmap) { var bm = await createImageBitmap(blob); var r = { w: bm.width, h: bm.height }; bm.close && bm.close(); return r; } } catch (e) { }
+        return await new Promise(function (res) { var u = URL.createObjectURL(blob), im = new Image(); im.onload = function () { URL.revokeObjectURL(u); res({ w: im.naturalWidth, h: im.naturalHeight }); }; im.onerror = function () { URL.revokeObjectURL(u); res(null); }; im.src = u; });
+    }
+    async function toPngBlob(blob) {
+        var bm = await createImageBitmap(blob), c = document.createElement("canvas"); c.width = bm.width; c.height = bm.height; c.getContext("2d").drawImage(bm, 0, 0); bm.close && bm.close();
+        var out = await new Promise(function (r) { c.toBlob(r, "image/png"); }); c.width = c.height = 0; return out;
+    }
+    var PNG1 = [137, 80, 78, 71, 13, 10, 26, 10, 0, 0, 0, 13, 73, 72, 68, 82, 0, 0, 0, 1, 0, 0, 0, 1, 8, 6, 0, 0, 0, 31, 21, 196, 137, 0, 0, 0, 13, 73, 68, 65, 84, 120, 156, 99, 248, 255, 255, 63, 0, 5, 254, 2, 254, 167, 53, 129, 132, 0, 0, 0, 0, 73, 69, 78, 68, 174, 66, 96, 130];
+    var docx = null;
+    function docxReset() { docx = { bySize: new Map(), byId: new Map(), seq: 0 }; }
+    /* returns {data:Uint8Array placeholder, type, w, h} for a stored media id, or null when unreadable */
+    async function docxImage(mediaId) {
+        if (!docx) docxReset();
+        var hit = docx.byId.get(mediaId); if (hit) return hit;
+        var blob = await getBlob(mediaId); if (!blob) return null;
+        var mt = (blob.type || "").toLowerCase(), type = /jpe?g/.test(mt) ? "jpg" : /png/.test(mt) ? "png" : /gif/.test(mt) ? "gif" : /bmp/.test(mt) ? "bmp" : "";
+        var dims = type ? await sniffDims(blob) : null;
+        if (!type) { try { blob = await toPngBlob(blob); type = "png"; } catch (e) { return null; } }
+        if (!dims) dims = await bitmapDims(blob);
+        if (!dims || !dims.w || !dims.h) return null;
+        var k = ++docx.seq, ph = new Uint8Array(PNG1.length + k); ph.set(PNG1, 0); // distinct length per image => unique key, no inflate needed
+        docx.bySize.set(ph.length, blob);
+        var r = { data: ph, type: type, w: dims.w, h: dims.h }; docx.byId.set(mediaId, r); return r;
+    }
+    /* swap placeholder media of a freshly generated .docx for the real Blobs, by reference */
+    async function finalizeDocx(pkg) {
+        var st = docx; docx = null;
+        if (!st || !st.bySize.size) return pkg;
+        var ents = await readZip(pkg), zw = new ZipWriter(), i;
+        for (i = 0; i < ents.length; i++) {
+            check(); var e = ents[i], real = /^word\/media\//i.test(e.name) ? st.bySize.get(e.usize) : null;
+            if (real) { var crc = await crc32(real); zw.addRaw(e.name, 0, crc, real.size, real.size, real); }
+            else zw.addRaw(e.name, e.method, e.crc, e.csize, e.usize, pkg.slice(e.ds, e.ds + e.csize));
+            progress(0.9 + 0.1 * (i + 1) / ents.length, T("بستن فایل DOCX…", "Finalising DOCX…"));
+        }
+        return zw.finish();
+    }
+
+    /* ---------- PDF writer (JPEG pages by reference) ---------- */
+    function pdfStr(s) { s = String(s == null ? "" : s); if (/^[\x20-\x7e]*$/.test(s)) return "(" + s.replace(/[\\()]/g, "\\$&") + ")"; var h = "FEFF"; for (var i = 0; i < s.length; i++) h += ("000" + s.charCodeAt(i).toString(16)).slice(-4); return "<" + h + ">"; }
+    function PdfWriter(title) { this.bb = new BB("application/pdf"); this.off = 0; this.offs = []; this.pages = []; this.title = title; this._s("%PDF-1.4\n"); }
+    PdfWriter.prototype._s = function (s) { this.bb.push(s); this.off += s.length; };
+    PdfWriter.prototype.addJpegPage = function (jpeg, wpx, hpx, mm) {
+        mm = mm || { pw: 210, ph: 297, mx: 8, my: 8, mw: 194 }; var k = 72 / 25.4, PW = mm.pw * k, PH = mm.ph * k, w = mm.mw * k, h = hpx * w / wpx, x = mm.mx * k, y = PH - mm.my * k - h;
+        var n = this.pages.length, po = 3 + n * 3, co = po + 1, io = po + 2, f = function (v) { return v.toFixed(2); };
+        var content = "q " + f(w) + " 0 0 " + f(h) + " " + f(x) + " " + f(y) + " cm /Im0 Do Q";
+        this.offs[po] = this.off; this._s(po + " 0 obj\n<< /Type /Page /Parent 2 0 R /MediaBox [0 0 " + f(PW) + " " + f(PH) + "] /Resources << /XObject << /Im0 " + io + " 0 R >> /ProcSet [/PDF /ImageC] >> /Contents " + co + " 0 R >>\nendobj\n");
+        this.offs[co] = this.off; this._s(co + " 0 obj\n<< /Length " + content.length + " >>\nstream\n" + content + "\nendstream\nendobj\n");
+        this.offs[io] = this.off; this._s(io + " 0 obj\n<< /Type /XObject /Subtype /Image /Width " + wpx + " /Height " + hpx + " /ColorSpace /DeviceRGB /BitsPerComponent 8 /Filter /DCTDecode /Length " + jpeg.size + " >>\nstream\n");
+        this.bb.push(jpeg); this.off += jpeg.size; this._s("\nendstream\nendobj\n"); this.pages.push(po);
+    };
+    PdfWriter.prototype.finish = function () {
+        var n = this.pages.length, kids = this.pages.map(function (p) { return p + " 0 R"; }).join(" ");
+        this.offs[1] = this.off; this._s("1 0 obj\n<< /Type /Catalog /Pages 2 0 R >>\nendobj\n");
+        this.offs[2] = this.off; this._s("2 0 obj\n<< /Type /Pages /Kids [" + kids + "] /Count " + n + " >>\nendobj\n");
+        var io = 3 + n * 3; this.offs[io] = this.off;
+        var d = new Date(), pad = function (x) { return ("0" + x).slice(-2); }, ds = "D:" + d.getUTCFullYear() + pad(d.getUTCMonth() + 1) + pad(d.getUTCDate()) + pad(d.getUTCHours()) + pad(d.getUTCMinutes()) + pad(d.getUTCSeconds()) + "Z";
+        this._s(io + " 0 obj\n<< " + (this.title ? "/Title " + pdfStr(this.title) + " " : "") + "/Producer (Markhin Notes) /CreationDate (" + ds + ") >>\nendobj\n");
+        var xo = this.off, total = io + 1, x = "xref\n0 " + total + "\n0000000000 65535 f \n";
+        for (var i = 1; i < total; i++) x += ("0000000000" + this.offs[i]).slice(-10) + " 00000 n \n";
+        x += "trailer\n<< /Size " + total + " /Root 1 0 R /Info " + io + " 0 R >>\nstartxref\n" + xo + "\n%%EOF\n";
+        this._s(x); return this.bb.finish();
+    };
+    /* all text in the PDF writer is ASCII, so string length == byte length */
+
+
+    /* ---------- chunked PDF renderer ---------- */
+    var dimCache = new Map();
+    async function dimsOfToken(id) {
+        if (dimCache.has(id)) return dimCache.get(id);
+        var b = TOK.get(id), d = null; if (b) { d = await sniffDims(b); if (!d) d = await bitmapDims(b); }
+        dimCache.set(id, d); return d;
+    }
+    var BLOCK = { DIV: 1, P: 1, UL: 1, OL: 1, LI: 1, BLOCKQUOTE: 1, PRE: 1, TABLE: 1, H1: 1, H2: 1, H3: 1, H4: 1, H5: 1, H6: 1, HR: 1, FIGURE: 1, SECTION: 1, ARTICLE: 1 };
+    function canCutAfter(n) { return n.nodeType === 1 ? (n.tagName === "BR" || !!BLOCK[n.tagName]) : (n.nodeType === 3 && /\n$/.test(n.nodeValue)); }
+    function splitNode(n) {
+        if (n.nodeType === 3) {
+            var lines = n.nodeValue.split(/(?<=\n)/); if (lines.length < 2) return null;
+            var out = [], per = 40; for (var i = 0; i < lines.length; i += per) out.push(document.createTextNode(lines.slice(i, i + per).join(""))); return out;
+        }
+        if (n.nodeType !== 1 || n.tagName === "TABLE" || n.tagName === "IMG") return null;
+        var kids = Array.prototype.slice.call(n.childNodes); if (kids.length < 2) return null;
+        var half = Math.ceil(kids.length / 2), parts = [kids.slice(0, half), kids.slice(half)], out2 = [], base = n.tagName === "OL" ? (parseInt(n.getAttribute("start"), 10) || 1) : 0, cnt = 0;
+        parts.forEach(function (g, gi) { var c = n.cloneNode(false); if (n.tagName === "OL" && gi > 0) c.setAttribute("start", String(base + cnt)); g.forEach(function (k) { if (k.nodeType === 1 && k.tagName === "LI") cnt++; c.appendChild(k); }); out2.push(c); });
+        return out2;
+    }
+    function nodePx(n) { var p = 0; if (n.nodeType !== 1) return 0; if (n._mkxPx) p += n._mkxPx; var im = n.querySelectorAll ? n.querySelectorAll("img") : []; for (var i = 0; i < im.length; i++) p += im[i]._mkxPx || 0; return p; }
+    function withTimeout(p, ms) { return Promise.race([p, new Promise(function (r) { setTimeout(r, ms); })]); }
+    function canvasBlob(c, q) { return new Promise(function (res, rej) { c.toBlob(function (b) { b ? res(b) : rej(new Error("toBlob failed")); }, "image/jpeg", q); }); }
+
+    /* items: already stripped/lightened (token) items. onPage(jpegBlob, w, h, itemIndex) is awaited. */
+    async function pdfRender(items, onPage, o) {
+        o = o || {}; var h2c = window.html2canvas; if (!h2c) throw new Error("PDF engine unavailable");
+        var W = 900, scale0 = Math.min(2, window.devicePixelRatio || 1.5), BUDGET = 9e6, IMGPX = 30e6, RATIO = 281 / 194;
+        var host = document.createElement("div"); host.style.cssText = "position:fixed;left:-100000px;top:0;width:900px;z-index:-1"; document.body.appendChild(host);
+        var page = null, pageW = 0, pageH = 0, job = cur;
+        async function flush(itemIdx) {
+            if (!page || !page.fill) { if (page) { page.c.width = page.c.height = 0; page = null; } return; }
+            var out = page.c, fill = page.fill;
+            if (fill < pageH) { var cr = document.createElement("canvas"); cr.width = pageW; cr.height = fill; cr.getContext("2d").drawImage(out, 0, 0); out.width = out.height = 0; out = cr; }
+            var jb = await canvasBlob(out, .92); var w = out.width, hh = out.height; out.width = out.height = 0; page = null;
+            await onPage(jb, w, hh, itemIdx);
+        }
+        async function compose(cv, itemIdx) {
+            if (!pageW) { pageW = cv.width; pageH = Math.floor(pageW * RATIO); }
+            var f = pageW / cv.width, total = Math.round(cv.height * f), y = 0; // y in page-space rows
+            while (y < total) {
+                if (!page) { var c = document.createElement("canvas"); c.width = pageW; c.height = pageH; var x = c.getContext("2d"); x.fillStyle = "#fff"; x.fillRect(0, 0, pageW, pageH); page = { c: c, x: x, fill: 0 }; }
+                var h = Math.min(pageH - page.fill, total - y);
+                page.x.drawImage(cv, 0, y / f, cv.width, h / f, 0, page.fill, pageW, h);
+                page.fill += h; y += h; if (page.fill >= pageH) await flush(itemIdx);
+            }
+        }
+        try {
+            for (var i = 0; i < items.length; i++) {
+                check(); var item = items[i], card = createImageExportCard(item);
+                card.style.cssText += ";background:#ffffff;color:#111111;border:1px solid #dddddd;border-radius:18px;padding:40px;font-family:" + (item.fontFamily || "") + ";font-size:" + (item.fontSize || 18) + "px;";
+                // swap token srcs for same-size empty SVGs so layout is exact but no image is loaded/decoded yet
+                var imgs = card.querySelectorAll("img");
+                for (var a = 0; a < imgs.length; a++) {
+                    var im = imgs[a], m = /MKXPH(\d+)Z/.exec(im.getAttribute("src") || ""); if (!m) continue;
+                    var id = Number(m[1]), blob = TOK.get(id); if (!blob) continue; var d = await dimsOfToken(id); im._mkxBlob = blob;
+                    if (d && d.w && d.h) { im._mkxPx = d.w * d.h; im.setAttribute("src", "data:image/svg+xml;utf8," + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="' + d.w + '" height="' + d.h + '"/>')); }
+                    if ((a & 15) === 15) { check(); await maybeYield(); }
+                }
+                try { document.fonts && document.fonts.ready && await document.fonts.ready; } catch (e) { }
+                var title = card.querySelector("h1"), folder = title && title.nextElementSibling && title.nextElementSibling.tagName === "DIV" && !title.nextElementSibling.classList.contains("image-export-body") ? title.nextElementSibling : null;
+                var body = card.querySelector(".image-export-body"), head = []; title && head.push(title); folder && head.push(folder);
+                var capCss = Math.max(W * RATIO, Math.min(W * RATIO * 6, BUDGET / (W * scale0 * scale0)));
+                function mkCard(first, last) {
+                    var c = card.cloneNode(false); if (first) head.forEach(function (hn) { c.appendChild(hn.cloneNode(true)); });
+                    var b = body.cloneNode(false); c.appendChild(b);
+                    c.style.borderRadius = first && last ? "18px" : first ? "18px 18px 0 0" : last ? "0 0 18px 18px" : "0";
+                    c.style.paddingTop = first ? "40px" : "0"; c.style.paddingBottom = last ? "40px" : "0";
+                    if (!first) c.style.borderTopWidth = "0"; if (!last) c.style.borderBottomWidth = "0";
+                    return { c: c, b: b };
+                }
+                // ---- plan chunks (layout only; images are empty placeholders) ----
+                var queue = Array.prototype.slice.call(body.childNodes), chunks = [], cs = [], px = 0, mc = mkCard(true, false), guard = 0;
+                host.appendChild(mc.c);
+                var sinceMeasure = 0;
+                while (queue.length) {
+                    if ((++guard & 31) === 0) { check(); await maybeYield(); }
+                    var n = queue.shift(); mc.b.appendChild(n); cs.push(n); px += nodePx(n); sinceMeasure++;
+                    var heavy = n.nodeType === 1 && (!!BLOCK[n.tagName] || n.querySelector && n.querySelector("img")), last = !queue.length;
+                    if (!heavy && sinceMeasure < 24 && !last) continue;
+                    sinceMeasure = 0;
+                    var hgt = mc.c.offsetHeight, over = hgt > capCss || (px > IMGPX && cs.length > 1);
+                    if (!over) continue;
+                    if (cs.length === 1) {
+                        var parts = hgt > capCss ? splitNode(n) : null;
+                        if (parts) { mc.b.removeChild(n); cs.pop(); px = 0; for (var q = parts.length - 1; q >= 0; q--) queue.unshift(parts[q]); continue; }
+                        chunks.push(cs); cs = []; px = 0; mc.c.remove(); mc = mkCard(false, false); host.appendChild(mc.c); continue;
+                    }
+                    // back off to the last node that still fits at a legal cut point
+                    var popped = [];
+                    while (cs.length > 1) { var t = cs[cs.length - 1]; var fits = mc.c.offsetHeight <= capCss && px <= IMGPX; if (fits && canCutAfter(t)) break; cs.pop(); mc.b.removeChild(t); px -= nodePx(t); popped.unshift(t); }
+                    if (!cs.length || (cs.length === 1 && !canCutAfter(cs[0]) && popped.length === 0)) { /* nothing to do */ }
+                    for (var p2 = popped.length - 1; p2 >= 0; p2--) queue.unshift(popped[p2]);
+                    chunks.push(cs); cs = []; px = 0; mc.c.remove(); mc = mkCard(false, false); host.appendChild(mc.c); sinceMeasure = 0;
+                }
+                if (cs.length) chunks.push(cs); mc.c.remove(); job && job.addWork(chunks.length);
+                // ---- render chunks sequentially ----
+                for (var k = 0; k < chunks.length; k++) {
+                    check(); var ch = mkCard(k === 0, k === chunks.length - 1); chunks[k].forEach(function (nn) { ch.b.appendChild(nn); }); host.appendChild(ch.c);
+                    var urls = [], cimgs = ch.c.querySelectorAll("img"), loads = [];
+                    for (var z = 0; z < cimgs.length; z++) { (function (im2) { if (!im2._mkxBlob) return; var u = URL.createObjectURL(im2._mkxBlob); urls.push(u); loads.push(new Promise(function (res) { im2.onload = im2.onerror = function () { res(); }; im2.src = u; }).then(function () { return im2.decode ? im2.decode().catch(function () { }) : 0; })); })(cimgs[z]); }
+                    await withTimeout(Promise.all(loads), 15000);
+                    var hCss = ch.c.offsetHeight, sc = Math.max(.3, Math.min(scale0, Math.sqrt(BUDGET * 1.6 / (W * hCss)), 16000 / hCss)), cv;
+                    try { cv = await h2c(ch.c, { scale: sc, backgroundColor: "#ffffff", useCORS: !0, logging: !1 }); }
+                    catch (e) { if (isOom(e)) job && (job.oom = true); if (/cancel/i.test(String(e && e.message))) throw e; cv = await h2c(ch.c, { scale: Math.max(.3, sc / 2), backgroundColor: "#ffffff", useCORS: !0, logging: !1 }); }
+                    await compose(cv, i); cv.width = cv.height = 0;
+                    ch.c.remove(); urls.forEach(function (u) { URL.revokeObjectURL(u); }); chunks[k] = null;
+                    if (job) { job.note = T("ساخت صفحه‌های PDF…", "Rendering PDF pages…"); job.doneWork(1); }
+                    await yieldUI();
+                }
+                await flush(i); // each note starts on a new page
+            }
+        } finally { try { host.remove(); } catch (e) { } if (page) { page.c.width = page.c.height = 0; } }
+    }
+    async function pdfBlob(items, resolveFn) {
+        var light = await resolveFn(items), pw = new PdfWriter(items.length === 1 ? (items[0].name || "") : "");
+        await pdfRender(light, async function (jb, w, h) { pw.addJpegPage(jb, w, h); });
+        return pw.finish();
+    }
+    async function pdfPageBlobs(items, resolveFn) {
+        var light = await resolveFn(items), out = [];
+        await pdfRender(light, async function (jb, w, h) { var pw = new PdfWriter(""); pw.addJpegPage(jb, w, h); out.push(pw.finish()); });
+        return out;
+    }
+
+    window.MKX = {
+        run: run, wrap: wrap, progress: progress, check: check, yieldUI: yieldUI, get job() { return cur; },
+        lightenHtml: lightenHtml, lightenItems: lightenItems, textBlob: textBlob, hasTokens: hasTokens, BB: BB, pushBase64: pushBase64,
+        crc32: crc32, zip: zip, ZipWriter: ZipWriter, readZip: readZip, deflateBlob: deflateBlob,
+        docxImage: docxImage, docxReset: docxReset, finalizeDocx: finalizeDocx, sniffDims: sniffDims,
+        PdfWriter: PdfWriter, pdfBlob: pdfBlob, pdfPageBlobs: pdfPageBlobs, newToken: newToken, tokenBlob: function (id) { return TOK.get(id); }, isOom: isOom, CANCEL_MSG: CANCEL_MSG,
+        urls: { track: function (u) { objUrls.push(u); } }
+    };
+})();
+
+</script>
 </head>
 <body class="theme-oceanic">
 <script id="mkThemeBoot">
@@ -24692,11 +25259,21 @@ function mu_mediaPut(blob) { return MU_IndexedDB.mediaPut(blob); }
 function mu_blobToDataUrl(blob) { return MU_IndexedDB.blobToDataUrl(blob); }
 function mu_hydrateMedia(container) { return MU_IndexedDB.hydrateMedia(container); }
 // "Text only" export switch (window.mkTextOnlyExport): when on, every export path that resolves media
-// (HTML/MD/JSON/PDF/DOCX/ZIP/share) gets the note HTML with all images/audio/video/drawings removed
+// (HTML/MD/JSON/PDF/DOCX/ZIP/share) gets the note HTML with all images/audio/video/drawings removed.
+// When it is off, images and voice notes are kept: videos and attached files are never exported
 function mu_stripMediaHtml(html) { const str = String(html || ""), tpl = document.createElement("template"); tpl.innerHTML = str; const c = tpl.content; return c.querySelectorAll(".img-drag-wrapper,.audio-wrapper,.img-toolbar,picture,img,audio,video,canvas,iframe,object,embed,source,[data-mu-media]").forEach(el => el.remove()), c.querySelectorAll(".mu-img-row").forEach(row => { row.textContent.trim() || row.remove(); }), tpl.innerHTML; }
 function mu_stripMediaItems(items) { return (Array.isArray(items) ? items : []).map(it => it && typeof it.html == "string" ? Object.assign({}, it, { html: mu_stripMediaHtml(it.html) }) : it); }
-function mu_resolveMediaSrcInHtml(html) { return window.mkTextOnlyExport ? Promise.resolve(mu_stripMediaHtml(html)) : MU_IndexedDB.resolveMediaSrcInHtml(html); }
-function mu_resolveItemsMediaForExport(items) { return window.mkTextOnlyExport ? Promise.resolve(mu_stripMediaItems(items)) : MU_IndexedDB.resolveItemsMediaForExport(items); }
+// Exports never carry videos or attached files (they are huge and crash the phone while building the export):
+// with "text only" OFF the images and the voice notes are kept and turned into real data.
+function mu_stripHeavyMediaHtml(html) { const str = String(html || ""), noImg = window.mkExportImages === !1, noVoice = window.mkExportVoice === !1; if (!noImg && !noVoice && !/video|file-wrapper|data-mkmed|<iframe|<object|<embed/i.test(str)) return str; const tpl = document.createElement("template"); tpl.innerHTML = str; const c = tpl.content, sel = [".video-wrapper,.file-wrapper,video,iframe,object,embed,[data-mkmed^='video:'],[data-mkmed^='file:']"]; return noImg && sel.push(".img-drag-wrapper,.img-toolbar,picture,img,canvas,[data-mkmed^='img:']"), noVoice && sel.push(".audio-wrapper,audio,[data-mkmed^='audio:']"), c.querySelectorAll(sel.join(",")).forEach(el => el.remove()), noImg && c.querySelectorAll(".mu-img-row").forEach(row => { row.textContent.trim() || row.remove(); }), tpl.innerHTML; }
+function mu_stripHeavyMediaItems(items) { return (Array.isArray(items) ? items : []).map(it => it && typeof it.html == "string" ? Object.assign({}, it, { html: mu_stripHeavyMediaHtml(it.html) }) : it); }
+function mu_resolveMediaSrcInHtml(html) { return window.mkTextOnlyExport ? Promise.resolve(mu_stripMediaHtml(html)) : MU_IndexedDB.resolveMediaSrcInHtml(mu_stripHeavyMediaHtml(html)); }
+function mu_resolveItemsMediaForExport(items) { return window.mkTextOnlyExport ? Promise.resolve(mu_stripMediaItems(items)) : MU_IndexedDB.resolveItemsMediaForExport(mu_stripHeavyMediaItems(items)); }
+// Streaming-export variants (see MKX): media becomes a tiny placeholder that is expanded straight into a Blob by MKX.textBlob()
+function mu_resolveItemsMediaDeferred(items) { return window.mkTextOnlyExport ? Promise.resolve(mu_stripMediaItems(items)) : MKX.lightenItems(mu_stripHeavyMediaItems(items), "token"); }
+function mu_resolveMediaSrcInHtmlDeferred(html) { return window.mkTextOnlyExport ? Promise.resolve(mu_stripMediaHtml(html)) : MKX.lightenHtml(mu_stripHeavyMediaHtml(html), "token"); }
+function mu_resolveItemsMediaUrls(items, keep) { return window.mkTextOnlyExport ? Promise.resolve(mu_stripMediaItems(items)) : MKX.lightenItems(mu_stripHeavyMediaItems(items), keep ? "urlkeep" : "url"); }
+function mu_resolveItemsMediaDocx(items) { return Promise.resolve(window.mkTextOnlyExport ? mu_stripMediaItems(items) : mu_stripHeavyMediaItems(items)); }
 function mu_migrateNoteMediaToBlobs(item) { return MU_IndexedDB.migrateNoteMediaToBlobs(item); }
 function mu_migrateAllNotesMedia() { return MU_IndexedDB.migrateAllNotesMedia(); }
 function mu_collectReferencedMediaIds() { return MU_IndexedDB.collectReferencedMediaIds(); }
@@ -26515,7 +27092,7 @@ async function clearNoteText(id) { const item = categories.find(c => c.id === id
 window.clearNoteText = clearNoteText;
 // Extract text for TXT export while preserving real line breaks and whitespace. textContent collapses
 // structural breaks between div/p elements.
-function textWithVisualSpacing(root) { const clone = root.cloneNode(!0); clone.querySelectorAll(".img-toolbar, .audio-wrapper button").forEach(el => el.remove()); const liveStyle = getComputedStyle(root), host = document.createElement("div"); host.style.cssText = "position:fixed;left:-99999px;top:0;pointer-events:none;z-index:-1;", host.style.width = (root.clientWidth || root.offsetWidth || 600) + "px", host.style.whiteSpace = liveStyle.whiteSpace || "pre-wrap", host.style.fontSize = liveStyle.fontSize, host.style.fontFamily = liveStyle.fontFamily, host.style.lineHeight = liveStyle.lineHeight, host.style.direction = liveStyle.direction, host.appendChild(clone), document.body.appendChild(host); try {
+function textWithVisualSpacing(root) { const clone = root.cloneNode(!0); clone.querySelectorAll(".img-toolbar, .audio-wrapper").forEach(el => el.remove()); const liveStyle = getComputedStyle(root), host = document.createElement("div"); host.style.cssText = "position:fixed;left:-99999px;top:0;pointer-events:none;z-index:-1;", host.style.width = (root.clientWidth || root.offsetWidth || 600) + "px", host.style.whiteSpace = liveStyle.whiteSpace || "pre-wrap", host.style.fontSize = liveStyle.fontSize, host.style.fontFamily = liveStyle.fontFamily, host.style.lineHeight = liveStyle.lineHeight, host.style.direction = liveStyle.direction, host.appendChild(clone), document.body.appendChild(host); try {
     return MK.domText ? MK.domText(clone) : clone.innerText ?? clone.textContent ?? "";
 }
 finally {
@@ -26525,7 +27102,7 @@ finally {
 function htmlToPlainText(html) {
     try {
         const container = document.createElement("div");
-        return container.innerHTML = sanitizeHtml(html || ""), window.muTableTextAll && window.muTableTextAll(container), container.querySelectorAll("br").forEach(el => el.replaceWith(`
+        return container.innerHTML = sanitizeHtml(html || ""), container.querySelectorAll(".audio-wrapper").forEach(el => el.replaceWith(document.createElement("div"))), window.muTableTextAll && window.muTableTextAll(container), container.querySelectorAll("br").forEach(el => el.replaceWith(`
 `)), container.querySelectorAll("td,th").forEach(el => el.insertAdjacentText("afterend", "	")), container.querySelectorAll("li ul, li ol").forEach(el => el.insertAdjacentText("beforebegin", `
 `)), container.querySelectorAll("p,div,li,blockquote,tr,h1,h2,h3,h4,h5,h6").forEach(el => {
             el.insertAdjacentText("afterend", `
@@ -26567,7 +27144,7 @@ async function buildMixedEncryptedExportZip(items, chosenName, format) {
         files.push({ name: mu_uniqueZipName(usedNames, "ENCRYPTED", sanitizeFilename(item.name || "note"), "mne.json"), data: createStoredEncryptedExport(item) });
     if (plain.length) {
         // JSON/MD/HTML only carry media references unless resolved into real data
-        const plainR = format === "json" || format === "md" || format === "html" ? await mu_resolveItemsMediaForExport(plain) : plain;
+        const plainR = format === "json" || format === "md" || format === "html" ? await mu_resolveItemsMediaDeferred(plain) : plain;
         if (format === "txt") {
             const content = plain.map((item, index) => `========================================
 ${index + 1}. ${item.name}${item.folder ? ` [Folder: ${item.folder}]` : ""}
@@ -26579,7 +27156,7 @@ ${mu_bidiText(getTxtContent(item.id, item).replace(/\n+$/, ""))}
         }
         else if (format === "json" || format === "csv" || format === "md" || format === "html") {
             const ext = getStructuredExtension(format), mime = getStructuredMime(format);
-            files.push({ name: `PLAIN/markhin_${format === "json" ? "backup" : format === "csv" ? "data" : "notes"}.${ext}`, data: new Blob([buildStructuredExport(format, plainR)], { type: mime }) });
+            files.push({ name: `PLAIN/markhin_${format === "json" ? "backup" : format === "csv" ? "data" : "notes"}.${ext}`, data: await MKX.textBlob(buildStructuredExport(format, plainR), mime) });
         }
         else if (format === "pdf")
             window.html2canvas && window.jspdf?.jsPDF && files.push({ name: "PLAIN/Markhin_Note_All_Notes.pdf", data: await createPDFBlob(plain) });
@@ -26691,7 +27268,7 @@ async function downloadStructuredAllWithVault(type) { const fa = currentLang ===
         const ordered = await mu_getMdOrderedItems();
         content = type === "md" ? mu_buildMdAllWithLocked(ordered) : buildStructuredExport("html", ordered);
     }
-    content = mu_appendVaultBlock(type, content, env), await robustDownload(new Blob([content], { type: getStructuredMime(type) }), `${chosenName}.${ext}`, getStructuredMime(type));
+    content = mu_appendVaultBlock(type, content, env), await robustDownload(await MKX.textBlob(content, getStructuredMime(type)), `${chosenName}.${ext}`, getStructuredMime(type));
 }
 catch (e) {
     console.error("Export with vault error:", e), alert(fa ? "دانلود خروجی انجام نشد." : "Export download failed.");
@@ -26724,7 +27301,7 @@ async function downloadFullJsonBackup(withVault) { withVault = withVault === !0;
     closeAdvancedModal();
     return;
 } try {
-    const unlockedItems = all.filter(i => !isNoteLocked(i)), resolved = unlockedItems.length ? await mu_resolveItemsMediaForExport(unlockedItems) : [], byId = new Map(resolved.map(r => [String(r.id), r])), ordered = all.map(i => isNoteLocked(i) ? i : byId.get(String(i.id)) || i), blob = new Blob([buildStructuredExport("json", ordered, { allFolders: !0, withList: !0, vaultRec: vaultEnv ? vaultEnv.vault : void 0 })], { type: getStructuredMime("json") });
+    const unlockedItems = all.filter(i => !isNoteLocked(i)), resolved = unlockedItems.length ? await mu_resolveItemsMediaDeferred(unlockedItems) : [], byId = new Map(resolved.map(r => [String(r.id), r])), ordered = all.map(i => isNoteLocked(i) ? i : byId.get(String(i.id)) || i), blob = await MKX.textBlob(buildStructuredExport("json", ordered, { allFolders: !0, withList: !0, vaultRec: vaultEnv ? vaultEnv.vault : void 0 }), getStructuredMime("json"));
     await robustDownload(blob, `${chosenName}.json`, getStructuredMime("json"));
 }
 catch (e) {
@@ -26788,6 +27365,7 @@ function computeTextStats(raw) {
 // tables = one line per row, images / audio / buttons skipped). Embedded data: URIs are cut out first so big notes stay fast
 function mu_htmlToStatText(html) {
     const tpl = document.createElement("template"); tpl.innerHTML = String(html).replace(/(\s(?:src|href|poster|data)\s*=\s*)(["'])data:[^"']*\2/gi, "$1$2$2"); const root = tpl.content;
+    root.querySelectorAll(".audio-wrapper").forEach(el => el.remove());
     root.querySelectorAll("table").forEach(t => { if (!root.contains(t))
         return; const d = document.createElement("div"); t.querySelectorAll("tr").forEach(tr => { if (tr.closest("table") !== t)
         return; const cells = [...tr.children].filter(c => /^T[DH]$/.test(c.tagName)).map(c => c.textContent.replace(/\s+/g, " ").trim()).filter(Boolean); if (cells.length) { const r = document.createElement("div"); r.textContent = cells.join(" "), d.appendChild(r); } }), t.replaceWith(d); });
@@ -26883,7 +27461,7 @@ async function renderNoteToImage(item, format) {
     const normalized = format === "jpg" ? "jpg" : "png";
     // an inserted image/drawing is stored as a reference (data-mu-media="...") pointing into IndexedDB,
     // with its live src attribute being a blob: URL that's only valid for the current page session.
-    if (item = (await mu_resolveItemsMediaForExport([item]))[0], window.html2canvas) {
+    if (item = (await mu_resolveItemsMediaUrls([item], !0))[0], window.html2canvas) {
         const host = document.createElement("div");
         host.style.cssText = "position:fixed;left:-100000px;top:0;width:1000px;background:#fff;z-index:-1;contain:layout paint;";
         const card = createImageExportCard(item);
@@ -26991,7 +27569,7 @@ async function renderNoteToImage(item, format) {
 async function renderNoteToImagePages(item, format) { const normalized = format === "jpg" ? "jpg" : "png"; if (!window.html2canvas)
     // No paging engine available without html2canvas; fall back to the single (native-canvas) renderer's
     // one image
-    return [await renderNoteToImage(item, normalized)]; item = (await mu_resolveItemsMediaForExport([item]))[0]; const hostWidthCss = 1e3, host = document.createElement("div"); host.style.cssText = `position:fixed;left:-100000px;top:0;width:${hostWidthCss}px;background:#fff;z-index:-1;contain:layout paint;overflow:hidden;`; const inner = document.createElement("div"); inner.style.cssText = "width:100%;"; const card = createImageExportCard(item); inner.appendChild(card), host.appendChild(inner), document.body.appendChild(host); try {
+    return [await renderNoteToImage(item, normalized)]; item = (await mu_resolveItemsMediaUrls([item], !0))[0]; const hostWidthCss = 1e3, host = document.createElement("div"); host.style.cssText = `position:fixed;left:-100000px;top:0;width:${hostWidthCss}px;background:#fff;z-index:-1;contain:layout paint;overflow:hidden;`; const inner = document.createElement("div"); inner.style.cssText = "width:100%;"; const card = createImageExportCard(item); inner.appendChild(card), host.appendChild(inner), document.body.appendChild(host); try {
     document.fonts?.ready && await document.fonts.ready.catch(() => { });
     const images = Array.from(card.querySelectorAll("img"));
     await Promise.all(images.map(img => new Promise(resolve => { if (img.complete)
@@ -27177,7 +27755,7 @@ catch (err) {
     console.error(err), alert(currentLang === "fa" ? "ساخت PDF این یادداشت انجام نشد." : "Could not create this PDF.");
 } }
 async function exportPDFPrint(items, chosenName) { let list = items; try {
-    list = await mu_resolveItemsMediaForExport(items);
+    list = await mu_resolveItemsMediaUrls(items, !0);
 }
 catch { }
 // The browser's own "Save as PDF" dialog uses the page title as its suggested file name — passing the name
@@ -27277,6 +27855,15 @@ async function mu_docxRunsFromInline(node, engine, fmt) {
     return runs;
 }
 async function mu_docxImageParagraph(imgEl, engine, rtl) { const { Paragraph: Paragraph, ImageRun: ImageRun, AlignmentType: AlignmentType, TextRun: TextRun } = engine, src = imgEl.getAttribute("src") || ""; try {
+    const __mid = imgEl.getAttribute("data-mu-media");
+    if (__mid) {
+        const di = await MKX.docxImage(__mid);
+        if (di) {
+            let w = di.w, h = di.h;
+            const maxW = 500;
+            return w > maxW && (h = Math.round(h * maxW / w), w = maxW), new Paragraph({ alignment: AlignmentType.CENTER, children: [new ImageRun({ type: di.type, data: di.data, transformation: { width: w, height: h } })] });
+        }
+    }
     const data = await mu_docxImageBytes(src);
     if (!data)
         throw new Error("unsupported image source");
@@ -27448,7 +28035,7 @@ async function mu_htmlToDocxBlocks(html, engine, rtl) {
 }
 // The exported .docx needs to stand on its own — resolve any data-mu-media references back into embedded
 // base64 first
-async function createDOCXBlob(items) { items = await mu_resolveItemsMediaForExport(items); const engine = await ensureDOCXEngine(), { Document: Document, Packer: Packer, Paragraph: Paragraph, TextRun: TextRun, HeadingLevel: HeadingLevel, AlignmentType: AlignmentType } = engine, children = []; for (let index = 0; index < items.length; index++) {
+async function createDOCXBlob(items) { MKX.docxReset(), items = await mu_resolveItemsMediaDocx(items); const engine = await ensureDOCXEngine(), { Document: Document, Packer: Packer, Paragraph: Paragraph, TextRun: TextRun, HeadingLevel: HeadingLevel, AlignmentType: AlignmentType } = engine, children = []; for (let index = 0; index < items.length; index++) {
     const item = items[index], rtl = mu_docxIsRTL(item);
     index > 0 && children.push(new Paragraph({ pageBreakBefore: !0, children: [new TextRun("")] })), children.push(...(() => { const nm = String(item.name || "Markhin Note"), tk = window.muExportBidi ? window.muExportBidi.kind(nm) : "", tr = tk ? tk === "rtl" : rtl; return [new Paragraph({ heading: HeadingLevel.HEADING_1, alignment: tr ? AlignmentType.RIGHT : void 0, bidirectional: tr || void 0, children: window.muExportBidi ? window.muExportBidi.docxSegments(nm, tk === "code").map(sg => new TextRun({ text: sg.t, rightToLeft: sg.rtl || void 0 })) : [new TextRun(nm)] })]; })()), item.folder && children.push(new Paragraph({ alignment: rtl ? AlignmentType.RIGHT : void 0, bidirectional: rtl || void 0, children: [new TextRun({ text: `${currentLang === "fa" ? "پوشه" : "Folder"}: ${item.folder}`, italics: !0 })] }));
     try {
@@ -27460,7 +28047,7 @@ async function createDOCXBlob(items) { items = await mu_resolveItemsMediaForExpo
         const text = getTxtContent(item.id, item);
         String(text).split(/\n/).forEach(line => children.push(new Paragraph({ alignment: rtl ? AlignmentType.RIGHT : void 0, bidirectional: rtl || void 0, children: [new TextRun(line)] })));
     }
-} const doc = new Document({ sections: [{ properties: {}, children: children }] }); return await Packer.toBlob(doc); }
+} const doc = new Document({ sections: [{ properties: {}, children: children }] }); return await MKX.finalizeDocx(await Packer.toBlob(doc)); }
 // DOCX counterpart of mu_lockedNoteTxtBlock()/mu_lockedNoteMdBlock(): a locked marker plus the encrypted
 // payload written out as paragraphs, instead of the plaintext (which would defeat the lock)
 function mu_lockedNoteDocxParagraphs(item, engine, rtl) { const { Paragraph: Paragraph, TextRun: TextRun, AlignmentType: AlignmentType } = engine, fa = currentLang === "fa", enc = item.encrypted || {}, align = rtl ? AlignmentType.RIGHT : void 0, p = (text, opts) => new Paragraph({ alignment: align, bidirectional: rtl || void 0, children: [new TextRun({ text: text, ...opts || {} })] }), out = [p(fa ? "🔒 این یادداشت رمزنگاری‌شده است و بدون رمز عبور اصلی قابل خواندن نیست." : "🔒 This note is encrypted and cannot be read without its original password.")]; return item.hint && out.push(p(fa ? `راهنما: ${item.hint}` : `Hint: ${item.hint}`, { italics: !0 })), out.push(p("")), out.push(p(fa ? "— داده رمزنگاری‌شده (برای بازیابی با رمز اصلی) —" : "— Encrypted payload (for recovery with the original password) —", { italics: !0 })), out.push(p(`ciphertext: ${enc.ciphertext || ""}`)), out.push(p(`salt: ${enc.salt || ""}`)), out.push(p(`iv: ${enc.iv || ""}`)), out; }
@@ -27485,10 +28072,10 @@ async function mu_docxChildrenAllWithLocked(allItems, engine) { const { Paragrap
 // Resolves plain notes' media and returns the full backup list in original order, with locked notes passed
 // through untouched — same idea as mu_getMdOrderedItems(), shared prep step for the DOCX "All notes"
 // export paths
-async function mu_getDocxOrderedItems() { const all = getBackupCategories(), plain = all.filter(i => !isNoteLocked(i)), resolvedPlain = plain.length ? await mu_resolveItemsMediaForExport(plain) : [], byId = new Map(resolvedPlain.map(r => [String(r.id), r])); return all.map(i => isNoteLocked(i) ? i : byId.get(String(i.id)) || i); }
+async function mu_getDocxOrderedItems() { const all = getBackupCategories(), plain = all.filter(i => !isNoteLocked(i)), resolvedPlain = plain.length ? await mu_resolveItemsMediaDocx(plain) : [], byId = new Map(resolvedPlain.map(r => [String(r.id), r])); return all.map(i => isNoteLocked(i) ? i : byId.get(String(i.id)) || i); }
 // Builds one .docx Blob over the given (already-ordered/media-resolved) items, with locked notes written
 // out via mu_lockedNoteDocxParagraphs()
-async function createDOCXBlobAllWithLocked(orderedItems) { const engine = await ensureDOCXEngine(), { Document: Document, Packer: Packer } = engine, children = await mu_docxChildrenAllWithLocked(orderedItems, engine), doc = new Document({ sections: [{ properties: {}, children: children }] }); return await Packer.toBlob(doc); }
+async function createDOCXBlobAllWithLocked(orderedItems) { MKX.docxReset(); const engine = await ensureDOCXEngine(), { Document: Document, Packer: Packer } = engine, children = await mu_docxChildrenAllWithLocked(orderedItems, engine), doc = new Document({ sections: [{ properties: {}, children: children }] }); return await MKX.finalizeDocx(await Packer.toBlob(doc)); }
 function openDOCXExportPicker() {
     const items = mu_getSingleExportCandidates();
     if (!items.length)
@@ -27872,7 +28459,27 @@ async function ensureZipEngine() { if (window.JSZip)
 catch (e) {
     throw __zipEnginePromise = null, e;
 } }
-async function buildZipRobust(files) { const JSZipCtor = await ensureZipEngine(), zip = new JSZipCtor; let added = 0, skipped = 0; for (const file of Array.isArray(files) ? files : [])
+async function buildZipRobust(files) { const list = []; let skipped0 = 0; for (const f of Array.isArray(files) ? files : [])
+    if (!f || !f.name || f.data == null)
+        skipped0++;
+    else
+        list.push({ name: String(f.name), data: f.data });
+    if (!list.length)
+        throw new Error("No exportable files could be added to ZIP"); const added0 = list.length; try {
+    const zb = await MKX.zip(list);
+    try {
+        zb.__markhinAdded = added0, zb.__markhinSkipped = skipped0;
+    }
+    catch { }
+    return zb;
+}
+catch (e) {
+    if (e && e.message === MKX.CANCEL_MSG)
+        throw e;
+    console.warn("Streaming ZIP failed; using legacy builder", e);
+    return await buildZipRobustLegacy(files);
+} }
+async function buildZipRobustLegacy(files) { const JSZipCtor = await ensureZipEngine(), zip = new JSZipCtor; let added = 0, skipped = 0; for (const file of Array.isArray(files) ? files : [])
     // A broken/unsupported export must NEVER abort the rest of the ZIP
     try {
         if (!file || !file.name || file.data == null) {
@@ -28337,7 +28944,7 @@ if (type === "html" && hasLocked) {
     closeAdvancedModal();
     return;
 } try {
-    const exportItems = type === "json" || type === "md" || type === "html" ? await mu_resolveItemsMediaForExport(items) : items, blob = new Blob([buildStructuredExport(type, exportItems)], { type: getStructuredMime(type) });
+    const exportItems = type === "json" || type === "md" || type === "html" ? await mu_resolveItemsMediaDeferred(items) : items, blob = await MKX.textBlob(buildStructuredExport(type, exportItems), getStructuredMime(type));
     await robustDownload(blob, `${chosenName2}.${ext}`, getStructuredMime(type));
 }
 catch (e) {
@@ -28474,8 +29081,9 @@ async function downloadJsonAllIndividualZip() { const fa = currentLang === "fa",
     closeAdvancedModal();
     return;
 } try {
-    const unlockedItems = all.filter(i => !isNoteLocked(i)), resolved = unlockedItems.length ? await mu_resolveItemsMediaForExport(unlockedItems) : [], byId = new Map(resolved.map(r => [String(r.id), r])), ordered = all.map(i => isNoteLocked(i) ? i : byId.get(String(i.id)) || i), usedNames = new Set, files = ordered.map((item, index) => { const single = buildStructuredExport("json", [item], { allFolders: !0 }); return { name: mu_uniqueZipName(usedNames, "NOTES", sanitizeFilename(item.name || `note_${index + 1}`), "json"), data: new Blob([single], { type: getStructuredMime("json") }) }; });
-    files.push({ name: "markhin_backup.json", data: new Blob([buildStructuredExport("json", ordered, { allFolders: !0, withList: !0 })], { type: getStructuredMime("json") }) });
+    const unlockedItems = all.filter(i => !isNoteLocked(i)), resolved = unlockedItems.length ? await mu_resolveItemsMediaDeferred(unlockedItems) : [], byId = new Map(resolved.map(r => [String(r.id), r])), ordered = all.map(i => isNoteLocked(i) ? i : byId.get(String(i.id)) || i), usedNames = new Set, files = [];
+    for (let index = 0; index < ordered.length; index++) { const item = ordered[index], single = buildStructuredExport("json", [item], { allFolders: !0 }); files.push({ name: mu_uniqueZipName(usedNames, "NOTES", sanitizeFilename(item.name || `note_${index + 1}`), "json"), data: await MKX.textBlob(single, getStructuredMime("json")) }); }
+    files.push({ name: "markhin_backup.json", data: await MKX.textBlob(buildStructuredExport("json", ordered, { allFolders: !0, withList: !0 }), getStructuredMime("json")) });
     const zip = await buildZipRobust(files);
     await robustDownload(zip, `${chosenName}.zip`, "application/zip");
 }
@@ -28528,7 +29136,7 @@ ${body}`;
 }
 // Resolves plain notes' media and returns the full backup list in original order, with locked notes passed
 // through untouched — shared prep step for all the MD "All notes" export paths below
-async function mu_getMdOrderedItems() { const all = getBackupCategories(), plain = all.filter(i => !isNoteLocked(i)), resolvedPlain = plain.length ? await mu_resolveItemsMediaForExport(plain) : [], byId = new Map(resolvedPlain.map(r => [String(r.id), r])); return all.map(i => isNoteLocked(i) ? i : byId.get(String(i.id)) || i); }
+async function mu_getMdOrderedItems() { const all = getBackupCategories(), plain = all.filter(i => !isNoteLocked(i)), resolvedPlain = plain.length ? await mu_resolveItemsMediaDeferred(plain) : [], byId = new Map(resolvedPlain.map(r => [String(r.id), r])); return all.map(i => isNoteLocked(i) ? i : byId.get(String(i.id)) || i); }
 // MD export, "All notes", when locked notes exist: same two outcomes as TXT
 function openHtmlAllExportChoice() {
     const fa = currentLang === "fa";
@@ -28551,7 +29159,7 @@ async function downloadHtmlAllCombined() { const fa = currentLang === "fa", chos
     closeAdvancedModal();
     return;
 } try {
-    const ordered = await mu_getMdOrderedItems(), blob = new Blob([buildStructuredExport("html", ordered)], { type: getStructuredMime("html") });
+    const ordered = await mu_getMdOrderedItems(), blob = await MKX.textBlob(buildStructuredExport("html", ordered), getStructuredMime("html"));
     await robustDownload(blob, `${chosenName}.html`, getStructuredMime("html"));
 }
 catch (e) {
@@ -28564,8 +29172,10 @@ async function downloadHtmlAllIndividualZip() { const fa = currentLang === "fa",
     closeAdvancedModal();
     return;
 } try {
-    const ordered = await mu_getMdOrderedItems(), usedNames = new Set, files = ordered.map((item, index) => ({ name: mu_uniqueZipName(usedNames, "NOTES", sanitizeFilename(item.name || `note_${index + 1}`), "html"), data: new Blob([buildStructuredExport("html", [item])], { type: getStructuredMime("html") }) }));
-    files.push({ name: "markhin_all_notes.html", data: new Blob([buildStructuredExport("html", ordered)], { type: getStructuredMime("html") }) });
+    const ordered = await mu_getMdOrderedItems(), usedNames = new Set, files = ordered.map((item, index) => ({ name: mu_uniqueZipName(usedNames, "NOTES", sanitizeFilename(item.name || `note_${index + 1}`), "html"), data: buildStructuredExport("html", [item]), expandMk: getStructuredMime("html") }));
+    for (const f of files)
+        f.expandMk && (f.data = await MKX.textBlob(f.data, f.expandMk), delete f.expandMk);
+    files.push({ name: "markhin_all_notes.html", data: await MKX.textBlob(buildStructuredExport("html", ordered), getStructuredMime("html")) });
     const zip = await buildZipRobust(files);
     await robustDownload(zip, `${chosenName}.zip`, "application/zip");
 }
@@ -28596,7 +29206,7 @@ async function downloadMdAllCombined() { const fa = currentLang === "fa", chosen
     closeAdvancedModal();
     return;
 } try {
-    const ordered = await mu_getMdOrderedItems(), blob = new Blob([mu_buildMdAllWithLocked(ordered)], { type: getStructuredMime("md") });
+    const ordered = await mu_getMdOrderedItems(), blob = await MKX.textBlob(mu_buildMdAllWithLocked(ordered), getStructuredMime("md"));
     await robustDownload(blob, `${chosenName}.md`, getStructuredMime("md"));
 }
 catch (e) {
@@ -28619,9 +29229,11 @@ async function downloadMdAllIndividualZip() {
 
 ${body}
 `;
-            return { name: mu_uniqueZipName(usedNames, "NOTES", sanitizeFilename(item.name || `note_${index + 1}`), "md"), data: new Blob([single], { type: getStructuredMime("md") }) };
+            return { name: mu_uniqueZipName(usedNames, "NOTES", sanitizeFilename(item.name || `note_${index + 1}`), "md"), data: single, expandMk: getStructuredMime("md") };
         });
-        files.push({ name: "markhin_all_notes.md", data: new Blob([mu_buildMdAllWithLocked(ordered)], { type: getStructuredMime("md") }) });
+        for (const f of files)
+            f.expandMk && (f.data = await MKX.textBlob(f.data, f.expandMk), delete f.expandMk);
+        files.push({ name: "markhin_all_notes.md", data: await MKX.textBlob(mu_buildMdAllWithLocked(ordered), getStructuredMime("md")) });
         const zip = await buildZipRobust(files);
         await robustDownload(zip, `${chosenName}.zip`, "application/zip");
     }
@@ -28642,7 +29254,7 @@ async function downloadStructuredSingle(id, type) { const item = await mu_getExp
         await robustDownload(blob, `${chosenName}.mne.json`, blob.type);
         return;
     }
-    const exportItem = type === "json" || type === "md" || type === "html" ? (await mu_resolveItemsMediaForExport([item]))[0] : item, blob2 = new Blob([buildStructuredExport(type, [exportItem])], { type: getStructuredMime(type) });
+    const exportItem = type === "json" || type === "md" || type === "html" ? (await mu_resolveItemsMediaDeferred([item]))[0] : item, blob2 = await MKX.textBlob(buildStructuredExport(type, [exportItem]), getStructuredMime(type));
     await robustDownload(blob2, `${chosenName}.${ext}`, getStructuredMime(type));
 }
 catch (e) {
@@ -28705,7 +29317,7 @@ function markdownEscape(text) { return String(text ?? "").replace(/\\/g, "\\\\")
 function htmlToMarkdown(html, fallbackText) {
     // Walks the sanitized note DOM and emits Markdown.
     const box = document.createElement("div");
-    box.innerHTML = sanitizeHtml(html || ""), box.querySelectorAll(".img-toolbar, .audio-wrapper button, button").forEach(el => el.remove());
+    box.innerHTML = sanitizeHtml(html || ""), box.querySelectorAll(".img-toolbar, .audio-wrapper, button").forEach(el => el.remove());
     const clean = s => String(s ?? "").replace(/\u00a0/g, " ").replace(/\u200b/g, ""), wrapMd = (inner, mark) => { const m = /^(\s*)([\s\S]*?)(\s*)$/.exec(inner); return m[2] ? m[1] + mark + m[2] + mark + m[3] : inner; }, BLOCK = new Set(["DIV", "P", "UL", "OL", "LI", "BLOCKQUOTE", "PRE", "TABLE", "THEAD", "TBODY", "TFOOT", "TR", "CAPTION"]), inline = n => {
         if (n.nodeType === 3)
             return clean(n.data);
@@ -28813,10 +29425,12 @@ async function buildExportBundle(selected = {}, chosenZipName = null) {
             return files.push({ name: name, data: data }), !0;
         }
         catch (e) {
+            if (e && e.message === MKX.CANCEL_MSG)
+                throw e;
             return skipped++, console.warn("Bundle export skipped:", name, e), !1;
         } };
         let mediaResolvedItems = null;
-        const getMediaResolvedItems = async () => (mediaResolvedItems || (mediaResolvedItems = await mu_resolveItemsMediaForExport(plainItems)), mediaResolvedItems);
+        const getMediaResolvedItems = async () => (mediaResolvedItems || (mediaResolvedItems = await mu_resolveItemsMediaDeferred(plainItems)), mediaResolvedItems);
         // Same ordering used by the standalone JSON export (downloadFullJsonBackup /
         // downloadJsonAllIndividualZip): locked notes pass through untouched (their ciphertext)
         let jsonOrderedItems = null;
@@ -28825,14 +29439,14 @@ async function buildExportBundle(selected = {}, chosenZipName = null) {
             jsonOrderedItems = getBackupCategories().map(i => isNoteLocked(i) ? i : byId.get(String(i.id)) || i);
         } return jsonOrderedItems; };
         if (selected.json && (plainItems.length || lockedItems.length)) {
-            await addExport("markhin_backup.json", async () => buildStructuredExport("json", await getJsonOrderedItems(), { allFolders: !0, withList: !0 }));
+            await addExport("markhin_backup.json", async () => await MKX.textBlob(buildStructuredExport("json", await getJsonOrderedItems(), { allFolders: !0, withList: !0 }), getStructuredMime("json")));
             // Same per-note files as "JSON export → All notes → Individual files", folded into the bundle
             // too, so selecting JSON here gives both the combined backup and one JSON file per note
             const ordered = await getJsonOrderedItems(), jsonUsedNames = new Set;
             for (const item of ordered)
-                await addExport(mu_uniqueZipName(jsonUsedNames, "NOTES_JSON", sanitizeFilename(item.name || "note"), "json"), async () => buildStructuredExport("json", [item], { allFolders: !0 }));
+                await addExport(mu_uniqueZipName(jsonUsedNames, "NOTES_JSON", sanitizeFilename(item.name || "note"), "json"), async () => await MKX.textBlob(buildStructuredExport("json", [item], { allFolders: !0 }), getStructuredMime("json")));
         }
-        if (selected.csv && (plainItems.length || lockedItems.length) && await addExport("markhin_data.csv", async () => mu_buildCsvAllWithLocked(getBackupCategories())), selected.md && (plainItems.length || lockedItems.length) && await addExport("markhin_notes.md", async () => mu_buildMdAllWithLocked(await getJsonOrderedItems())), selected.txt && (plainItems.length || lockedItems.length) && await addExport("markhin_notes.txt", async () => mu_buildTxtAllWithLocked(getBackupCategories())), selected.docx && (plainItems.length || lockedItems.length) && await addExport("Markhin_Note_All_Notes.docx", async () => createDOCXBlobAllWithLocked(await getJsonOrderedItems())), selected.vault) {
+        if (selected.csv && (plainItems.length || lockedItems.length) && await addExport("markhin_data.csv", async () => mu_buildCsvAllWithLocked(getBackupCategories())), selected.md && (plainItems.length || lockedItems.length) && await addExport("markhin_notes.md", async () => await MKX.textBlob(mu_buildMdAllWithLocked(await getJsonOrderedItems()), getStructuredMime("md"))), selected.txt && (plainItems.length || lockedItems.length) && await addExport("markhin_notes.txt", async () => mu_buildTxtAllWithLocked(getBackupCategories())), selected.docx && (plainItems.length || lockedItems.length) && await addExport("Markhin_Note_All_Notes.docx", async () => createDOCXBlobAllWithLocked(await mu_getDocxOrderedItems())), selected.vault) {
             const vEnv = await mu_getVaultEnvelope();
             await addExport("markhin_vault.json", async () => { if (!vEnv)
                 throw new Error("no vault"); return new Blob([JSON.stringify(vEnv, null, 2)], { type: getStructuredMime("json") }); });
@@ -29284,7 +29898,7 @@ async function mu_buildFullHtmlSnapshot(mode, stamp) {
     if (mode !== "clean") {
         // Time Capsule / Ghost Note live on each note (see categoriesJson above), so the snapshot needs
         // no separate metadata blob.
-        const resolvedForSnapshot = await mu_resolveItemsMediaForExport(serializeCategoriesForStorage()), categoriesJson = jsLiteral(JSON.stringify(resolvedForSnapshot)), foldersJson = jsLiteral(JSON.stringify(folders.filter(f => f !== DEFAULT_FOLDER)));
+        const resolvedForSnapshot = await mu_resolveItemsMediaDeferred(serializeCategoriesForStorage()), categoriesJson = jsLiteral(JSON.stringify(resolvedForSnapshot)), foldersJson = jsLiteral(JSON.stringify(folders.filter(f => f !== DEFAULT_FOLDER)));
         seedLines += `
                         localStorage.setItem('app_categories_v13', ${categoriesJson});
                         localStorage.setItem('app_folders_v13', ${foldersJson});
@@ -29318,7 +29932,7 @@ async function exportFullHTML(mode) { mode = mode || "data"; const fa = currentL
     closeAdvancedModal();
     return;
 } closeAdvancedModal(), exportBtn && (exportBtn.disabled = !0); try {
-    const fullHtml = await mu_buildFullHtmlSnapshot(mode, defaultStamp), blob = new Blob([fullHtml], { type: "text/html;charset=utf-8" });
+    const fullHtml = await mu_buildFullHtmlSnapshot(mode, defaultStamp), blob = await MKX.textBlob(fullHtml, "text/html;charset=utf-8");
     await robustDownload(blob, `${chosenName}.html`, "text/html;charset=utf-8"), showToast(fa ? "✅ خروجی HTML با موفقیت ذخیره شد." : "✅ HTML export saved successfully.");
 }
 catch (err) {
@@ -30728,7 +31342,7 @@ document.addEventListener("DOMContentLoaded", () => { initAdvancedSystems(); });
         }
         // This file has to stand on its own outside the app, so any data-mu-media reference is resolved
         // back into embedded base64 first
-        const tags = Array.isArray(item.tags) ? item.tags : [], lastEdited = item.lastEdited || "", stamp = new Date().toLocaleString(fa ? "fa-IR" : "en-US"), resolvedHtml = await HX().mu_resolveMediaSrcInHtml(item.html || ""), html = `<!doctype html>
+        const tags = Array.isArray(item.tags) ? item.tags : [], lastEdited = item.lastEdited || "", stamp = new Date().toLocaleString(fa ? "fa-IR" : "en-US"), resolvedHtml = await window.mu_resolveMediaSrcInHtmlDeferred(item.html || ""), html = `<!doctype html>
 <html lang="${fa ? "fa" : "en"}" dir="${fa ? "rtl" : "ltr"}">
 <head>
 <meta charset="utf-8">
@@ -30778,11 +31392,11 @@ document.addEventListener("DOMContentLoaded", () => { initAdvancedSystems(); });
 </main>
 </body>
 </html>`;
-        HX().robustDownload(new Blob([html], { type: "text/html;charset=utf-8" }), chosenName + ".html", "text/html").then(() => HX().showToast(fa ? "فایل HTML آماده شد." : "HTML file is ready.")).catch(() => alert(fa ? "دانلود فایل HTML انجام نشد. دوباره امتحان کن." : "The HTML download failed. Please try again."));
+        MKX.run(fa ? "ساخت HTML…" : "Building HTML…", async () => await MKX.textBlob(html, "text/html;charset=utf-8")).then(hb => HX().robustDownload(hb, chosenName + ".html", "text/html")).then(() => HX().showToast(fa ? "فایل HTML آماده شد." : "HTML file is ready.")).catch(() => alert(fa ? "دانلود فایل HTML انجام نشد. دوباره امتحان کن." : "The HTML download failed. Please try again."));
     };
     // Builds a standalone shareable HTML document for one note. white-space:pre-wrap on the article
     // mirrors the editor's .text-box style
-    async function buildShareableHtml(item) { const fa = HX().currentLang === "fa", resolvedHtml = await HX().mu_resolveMediaSrcInHtml(item.html || ""); return '<!doctype html><html lang="' + (fa ? "fa" : "en") + '" dir="' + (fa ? "rtl" : "ltr") + '"><meta charset="utf-8"><title>' + HX().escapeHtml(item.name) + "</title><style>body{margin:0;padding:24px;background:#fff;color:#111;font-family:Arial,sans-serif}article{line-height:1.8;white-space:pre-wrap;overflow-wrap:anywhere;direction:ltr;unicode-bidi:plaintext;text-align:start}article div,article p,article li,article blockquote,article pre,article a{unicode-bidi:plaintext}article ul,article ol{padding-inline:0;list-style-position:inside}" + (window.MK && MK.table ? MK.table.exportCss(["article"]) : "") + "" + window.mu_tableViewCss("article") + "</style><article>" + HX().mu_wrapTablesHtml((h => window.muExportBidi ? window.muExportBidi.html(h) : h)(HX().sanitizeHtml(resolvedHtml || HX().escapeHtml(item.text || "")))) + "</article>"; }
+    async function buildShareableHtml(item) { const fa = HX().currentLang === "fa", resolvedHtml = await window.mu_resolveMediaSrcInHtmlDeferred(item.html || ""); return '<!doctype html><html lang="' + (fa ? "fa" : "en") + '" dir="' + (fa ? "rtl" : "ltr") + '"><meta charset="utf-8"><title>' + HX().escapeHtml(item.name) + "</title><style>body{margin:0;padding:24px;background:#fff;color:#111;font-family:Arial,sans-serif}article{line-height:1.8;white-space:pre-wrap;overflow-wrap:anywhere;direction:ltr;unicode-bidi:plaintext;text-align:start}article div,article p,article li,article blockquote,article pre,article a{unicode-bidi:plaintext}article ul,article ol{padding-inline:0;list-style-position:inside}" + (window.MK && MK.table ? MK.table.exportCss(["article"]) : "") + "" + window.mu_tableViewCss("article") + "</style><article>" + HX().mu_wrapTablesHtml((h => window.muExportBidi ? window.muExportBidi.html(h) : h)(HX().sanitizeHtml(resolvedHtml || HX().escapeHtml(item.text || "")))) + "</article>"; }
     function openShareFormatPicker(id) {
         const item = HX().categories.find(x => x.id === id);
         if (!item)
@@ -30838,13 +31452,12 @@ document.addEventListener("DOMContentLoaded", () => { initAdvancedSystems(); });
             if (format === "txt")
                 file = new File([HX().getTxtContent(id, item)], chosenName + ".txt", { type: "text/plain" });
             else if (format === "md") {
-                const resolvedHtml = await HX().mu_resolveMediaSrcInHtml(item.html || "");
-                file = new File(["# " + HX().markdownEscape(item.name) + `
+                file = await MKX.run(fa ? "ساخت Markdown…" : "Building Markdown…", async () => { const resolvedHtml = await window.mu_resolveMediaSrcInHtmlDeferred(item.html || ""); return new File([await MKX.textBlob("# " + HX().markdownEscape(item.name) + `
 
-` + HX().htmlToMarkdown(resolvedHtml, item.text)], chosenName + ".md", { type: "text/markdown" });
+` + HX().htmlToMarkdown(resolvedHtml, item.text), "text/markdown")], chosenName + ".md", { type: "text/markdown" }); });
             }
             else if (format === "html")
-                file = new File([await buildShareableHtml(item)], chosenName + ".html", { type: "text/html" });
+                file = await MKX.run(fa ? "ساخت HTML…" : "Building HTML…", async () => new File([await MKX.textBlob(await buildShareableHtml(item), "text/html")], chosenName + ".html", { type: "text/html" }));
             else if (format === "pdf") {
                 if (!window.html2canvas || !window.jspdf?.jsPDF) {
                     alert(fa ? "موتور PDF در دسترس نیست. اتصال اینترنت را بررسی کن." : "PDF engine unavailable. Check your internet connection.");
@@ -30921,6 +31534,8 @@ document.addEventListener("DOMContentLoaded", () => { initAdvancedSystems(); });
     finally {
         host.remove();
     } })(); };
+    window.createPDFBlob = function (items) { return MKX.pdfBlob(items, mu_resolveItemsMediaDeferred); };
+    window.createPDFPageBlobs = function (items) { return MKX.pdfPageBlobs(items, mu_resolveItemsMediaDeferred); };
     // Drag & drop files anywhere; images go to the open note, text/markdown imports as notes
     const dz = document.createElement("div");
     dz.className = "markhin-drop-zone", dz.textContent = HX().currentLang === "fa" ? "فایل را رها کن تا وارد Markhin Note شود" : "Drop files to import into Markhin Note", document.body.appendChild(dz), ["dragenter", "dragover"].forEach(ev => document.addEventListener(ev, e => { e.dataTransfer?.types?.length && (e.preventDefault(), M2.dragDepth++, dz.classList.add("show")); })), document.addEventListener("dragleave", e => { M2.dragDepth = Math.max(0, M2.dragDepth - 1), M2.dragDepth || dz.classList.remove("show"); }), document.addEventListener("drop", async (e) => { e.preventDefault(), M2.dragDepth = 0, dz.classList.remove("show"); const files = [...e.dataTransfer?.files || []]; if (!files.length)
@@ -33989,28 +34604,24 @@ HX().scheduleCloudBackup(!1, !0), HX().showToast(fa ? `✅ ذخیره شد — �
         else if (s.nodeType === 1)
             return !0; return !1; }
     function domText(root) {
-        // cur: the line being written already has content
-        var out = "", cur = !1;
-        function nl() {
-            out += `
-`, cur = !1;
-        }
+        // parts[] + join: building the text with `out +=` and reading `out.charAt(out.length-1)` after every node
+        // flattened the rope string each time (quadratic): a 20k-line note froze the app for many seconds
+        var parts = [], cur = !1;
+        function nl() { parts.push("\n"), cur = !1; }
         function brk() { cur && nl(); }
         function walk(node) {
             for (var c = node.firstChild; c; c = c.nextSibling) {
                 var t = c.nodeType;
                 if (t === 3) {
-                    var v = c.nodeValue.replace(ZW, "");
-                    if (!v)
-                        continue;
-                    out += v, cur = out.charAt(out.length - 1) !== `
-`;
+                    var v = c.nodeValue;
+                    if (v.indexOf("​") > -1 || v.indexOf("﻿") > -1) v = v.replace(ZW, "");
+                    if (!v) continue;
+                    parts.push(v), cur = v.charCodeAt(v.length - 1) !== 10;
                 }
                 else if (t === 1) {
                     var tag = c.nodeName;
                     if (tag === "BR") {
                         if (cur && !hasLater(c))
-                            // lone <br> after text only holds the caret: not an extra line
                             continue;
                         nl();
                         continue;
@@ -34020,13 +34631,13 @@ HX().scheduleCloudBackup(!1, !0), HX().showToast(fa ? `✅ ذخیره شد — �
                     var cls = typeof c.className == "string" ? c.className : "";
                     if (cls && TOOL_CLS.test(cls))
                         continue;
-                    if (tag === "TABLE" && window.muTableText) { brk(); var tt = window.muTableText(c); if (tt) { out += tt; cur = !0; brk(); } continue; }
+                    if (tag === "TABLE" && window.muTableText) { brk(); var tt = window.muTableText(c); if (tt) { parts.push(tt), cur = !0, brk(); } continue; }
                     var blk = BLOCK.test(tag) || cls && BLOCK_CLS.test(cls);
-                    blk && brk(), walk(c), (tag === "TD" || tag === "TH") && c.nextElementSibling && /^(TD|TH)$/.test(c.nextElementSibling.nodeName) && (out += "	", cur = !0), blk && brk();
+                    blk && brk(), walk(c), (tag === "TD" || tag === "TH") && c.nextElementSibling && /^(TD|TH)$/.test(c.nextElementSibling.nodeName) && (parts.push("\t"), cur = !0), blk && brk();
                 }
             }
         }
-        return walk(root), out.replace(/\n+$/, "");
+        return walk(root), parts.join("").replace(/\n+$/, "");
     }
     
     // Table-safe plain text (TXT / CSV "Text" / saved item.text). One logical table -> one block of text where
@@ -36270,7 +36881,7 @@ function cancel() { timer && (clearTimeout(timer), timer = null); } document.add
 
 <script id="muEmoJs">
 (function () { if (window.__muEmo)
-    return; window.__muEmo = 1; var D = { trash: ["#ff5d73", '<path d="M4 7h16M9 7V4.5h6V7"/><path ~ d="M6 7l1 13h10l1-13z"/><path d="M10 11v5M14 11v5"/>'], warn: ["#ffb020", '<path ~ d="M12 3.5l9.5 16.5h-19z"/><path d="M12 10v4.5M12 17.4v.1"/>'], lock: ["#ffb020", '<rect ~ x="5" y="10.5" width="14" height="10" rx="2.5"/><path d="M8 10.5V8a4 4 0 0 1 8 0v2.5M12 14.5v2.5"/>'], unlock: ["#3ecf8e", '<rect ~ x="5" y="10.5" width="14" height="10" rx="2.5"/><path d="M8 10.5V8a4 4 0 0 1 7.5-2M12 14.5v2.5"/>'], key: ["#ffb020", '<circle ~ cx="8" cy="15.5" r="3.8"/><path d="M10.8 12.8L20 3.5M16.5 7l3 3"/>'], hourglass: ["#ff9f43", '<path d="M6.5 3.5h11M6.5 20.5h11"/><path ~ d="M8 3.5c0 4.5 4 5 4 8.5 0-3.5 4-4 4-8.5z"/><path d="M8 20.5c0-4.5 4-5 4-8.5 0 3.5 4 4 4 8.5z"/>'], check: ["#3ecf8e", '<circle ~ cx="12" cy="12" r="9"/><path d="M7.8 12.4l2.9 2.9 5.5-6"/>'], cross: ["#ff5d73", '<circle ~ cx="12" cy="12" r="9"/><path d="M9 9l6 6M15 9l-6 6"/>'], plus: ["#3ecf8e", '<circle ~ cx="12" cy="12" r="9"/><path d="M12 8v8M8 12h8"/>'], minus: ["#ff9f43", '<circle ~ cx="12" cy="12" r="9"/><path d="M8 12h8"/>'], gear: ["#8fa3bf", '<circle ~ cx="12" cy="12" r="3"/><circle cx="12" cy="12" r="6.2"/><path d="M12 2.8v2.6M12 18.6v2.6M2.8 12h2.6M18.6 12h2.6M5.5 5.5l1.9 1.9M16.6 16.6l1.9 1.9M18.5 5.5l-1.9 1.9M7.4 16.6l-1.9 1.9"/>'], cloud: ["#4cc3ff", '<path ~ d="M7 18.5h10.2a4 4 0 0 0 .6-7.95A6 6 0 0 0 6.3 9.7 4.4 4.4 0 0 0 7 18.5z"/>'], folder: ["#ffb020", '<path ~ d="M3 7.5a2 2 0 0 1 2-2h4l2 2.5h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>'], folders: ["#ffb020", '<path d="M7 5h4l1.5 2H19a2 2 0 0 1 2 2v8"/><path ~ d="M3 9a2 2 0 0 1 2-2h3.5l1.5 2H17a2 2 0 0 1 2 2v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>'], upload: ["#4cc3ff", '<path ~ stroke="none" d="M4 14h16v4a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2z"/><path d="M4 14v4a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-4M12 15V4M8 8l4-4 4 4"/>'], download: ["#3ecf8e", '<path ~ stroke="none" d="M4 14h16v4a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2z"/><path d="M4 14v4a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-4M12 4v11M8 11l4 4 4-4"/>'], down: ["#4cc3ff", '<path d="M12 4v15M6 13l6 6 6-6"/>'], up: ["#4cc3ff", '<path d="M12 20V5M6 11l6-6 6 6"/>'], updown: ["#8fa3bf", '<path d="M12 4v16M8 8l4-4 4 4M8 16l4 4 4-4"/>'], undo: ["#8fa3bf", '<path d="M9 7L4 12l5 5"/><path d="M4 12h10a6 6 0 0 1 6 6v1"/>'], package: ["#d9944a", '<path ~ d="M3.5 7.5L12 3.5l8.5 4v9L12 20.5l-8.5-4z"/><path d="M3.5 7.5L12 11.5l8.5-4M12 11.5v9"/>'], pin: ["#ff5d73", '<path ~ d="M9 3.8h6l-.9 5.3 2.9 3.1v1.9H7v-1.9l2.9-3.1L9 3.8z"/><path d="M12 14.1v6.1"/>', .9], star: ["#ffc61a", '<path ~ d="M12 3.6l2.5 5.2 5.7.8-4.1 4 1 5.7L12 16.6l-5.1 2.7 1-5.7-4.1-4 5.7-.8L12 3.6z"/>', .9], page: ["#6aa9ff", '<path ~ d="M6 3h8l4 4v13a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1z"/><path d="M14 3v4h4M8.5 12h7M8.5 15.5h7"/>'], memo: ["#ffc61a", '<rect ~ x="4" y="3.5" width="13" height="17" rx="2"/><path d="M7.5 8h6M7.5 11.5h4"/><path d="M14 19l.5-2.5 5-5 2 2-5 5z"/>'], clip: ["#6aa9ff", '<rect ~ x="5" y="4.5" width="14" height="16.5" rx="2"/><rect x="9" y="2.8" width="6" height="3.6" rx="1.2"/><path d="M8.5 11h7M8.5 14.5h7"/>'], paperclip: ["#a08cff", '<path d="M20 11.5l-7.8 7.8a4.6 4.6 0 0 1-6.5-6.5l8-8a3 3 0 0 1 4.3 4.3l-8 8a1.4 1.4 0 0 1-2-2l7.3-7.3"/>'], picture: ["#3ecf8e", '<rect ~ x="3.5" y="4.5" width="17" height="15" rx="2.2"/><circle cx="9" cy="10" r="1.6"/><path d="M4 17l5-4.5 3.5 3 3-2.5 4.5 4"/>'], book: ["#6aa9ff", '<path ~ d="M12 6.5C10 4.8 7 4.3 3.5 4.7v13c3.5-.4 6.5.1 8.5 1.8 2-1.7 5-2.2 8.5-1.8v-13C17 4.3 14 4.8 12 6.5z"/><path d="M12 6.5v13"/>'], books: ["#6aa9ff", '<rect ~ x="3.5" y="3.5" width="4.5" height="17" rx="1"/><rect x="9" y="3.5" width="4.5" height="17" rx="1"/><path ~ d="M15 6l4-1 3 14.5-4 1z"/>'], cal: ["#ff7a59", '<rect ~ x="3.5" y="5" width="17" height="15.5" rx="2.5"/><path d="M3.5 10h17M8 3v4M16 3v4"/>'], chart: ["#4cc3ff", '<path d="M4 20h16"/><rect ~ x="5.5" y="11" width="3.5" height="9" rx=".8"/><rect ~ x="10.3" y="5" width="3.5" height="15" rx=".8"/><rect ~ x="15" y="8.5" width="3.5" height="11.5" rx=".8"/>'], tri: ["#ffb020", '<path ~ d="M4 20V4l16 16z"/><path d="M4 12h3M4 8h2M8 20v-3M12 20v-2"/>'], ruler: ["#ffb020", '<rect ~ x="2.5" y="8" width="19" height="8" rx="1.5"/><path d="M6 8v3M10 8v4M14 8v3M18 8v4"/>'], antenna: ["#4cc3ff", '<path d="M5 19a9 9 0 0 1 0-13M8 16a5 5 0 0 1 0-7"/><circle ~ cx="14" cy="10" r="2"/><path d="M14 12v8M10.5 20h7"/>'], floppy: ["#6aa9ff", '<path ~ d="M4 5a1 1 0 0 1 1-1h11l4 4v11a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1z"/><rect x="7.5" y="4" width="7" height="5"/><rect x="7.5" y="13.5" width="9" height="6.5"/>'], ghost: ["#b8a5ff", '<path ~ d="M5 20V11a7 7 0 0 1 14 0v9l-2.3-2-2.4 2-2.3-2-2.3 2-2.4-2z"/><circle cx="9.5" cy="11" r="1" fill="@"/><circle cx="14.5" cy="11" r="1" fill="@"/>'], masks: ["#ff7ab6", '<path ~ d="M3.5 5h11v7a5.5 5.5 0 0 1-11 0z"/><path d="M7 8.5v1M11 8.5v1M6.5 13c1.2 1 3.3 1 4.5 0"/><path d="M14.5 8.5h6v6.5a4.5 4.5 0 0 1-8 2.8"/>'], robot: ["#4cc3ff", '<rect ~ x="4.5" y="8" width="15" height="11.5" rx="3"/><path d="M12 4.8V8"/><circle cx="12" cy="3.8" r="1.1"/><circle cx="9" cy="13" r="1.2" fill="@"/><circle cx="15" cy="13" r="1.2" fill="@"/><path d="M9.5 16.5h5"/>'], brain: ["#ff7ab6", '<path ~ d="M9.5 4A3.5 3.5 0 0 0 6 7.2 3.4 3.4 0 0 0 4.5 10c0 1 .4 1.8 1 2.4A3.6 3.6 0 0 0 7 19a3 3 0 0 0 5-1V5.5A2.5 2.5 0 0 0 9.5 4z"/><path ~ d="M14.5 4A3.5 3.5 0 0 1 18 7.2 3.4 3.4 0 0 1 19.5 10c0 1-.4 1.8-1 2.4A3.6 3.6 0 0 1 17 19a3 3 0 0 1-5-1V5.5A2.5 2.5 0 0 1 14.5 4z"/>'], dna: ["#3ecf8e", '<path d="M8 3c0 5 8 5 8 9s-8 4-8 9M16 3c0 5-8 5-8 9s8 4 8 9M9 6.5h6M9 17.5h6M8.5 12h7"/>'], compass: ["#4cc3ff", '<circle ~ cx="12" cy="12" r="9"/><path ~ d="M15.5 8.5l-2 5-5 2 2-5z"/>'], toolbox: ["#ff7a59", '<rect ~ x="3" y="8" width="18" height="12" rx="2"/><path d="M9 8V6a1.5 1.5 0 0 1 1.5-1.5h3A1.5 1.5 0 0 1 15 6v2M3 13h18M11 12v3h2v-3"/>'], puzzle: ["#a08cff", '<path ~ d="M5 8h4a2.2 2.2 0 1 1 4.5 0H18v4.5a2.2 2.2 0 1 1 0 4.5V21H5z"/>'], abacus: ["#d9944a", '<rect x="3.5" y="4" width="17" height="16" rx="2"/><path d="M3.5 9.5h17M3.5 14.5h17"/><circle ~ cx="8" cy="7" r="1.3"/><circle ~ cx="14" cy="12" r="1.3"/><circle ~ cx="10" cy="17" r="1.3"/>'], soap: ["#4cc3ff", '<rect ~ x="4" y="11" width="16" height="8" rx="3"/><circle cx="8" cy="6.5" r="2"/><circle cx="14" cy="5" r="1.4"/><circle cx="17.5" cy="8" r="1"/>'], broom: ["#d9944a", '<path d="M15.5 3.5l-4.5 7.5"/><path ~ d="M8 11l6 3.5-3.5 6-7-1z"/>'], ban: ["#ff5d73", '<circle ~ cx="12" cy="12" r="9"/><path d="M5.7 5.7l12.6 12.6"/>'], stop: ["#ff5d73", '<path ~ d="M8.5 3h7L21 8.5v7L15.5 21h-7L3 15.5v-7z"/><path d="M8.5 12h7"/>'], cone: ["#ffb020", '<rect ~ x="3" y="8" width="18" height="6" rx="1"/><path d="M5 14v6M19 14v6M8 8l3 6M13 8l3 6"/>'], shield: ["#4cc3ff", '<path ~ d="M12 3l7.5 3v6c0 4.5-3.2 8-7.5 9.5C7.7 20 4.5 16.5 4.5 12V6z"/><path d="M8.8 12l2.4 2.4 4-4.4"/>'], scales: ["#ffb020", '<path d="M12 4v16M7 20h10M4.5 7h15"/><path ~ d="M4.5 7L2 14a3 3 0 0 0 5 0zM19.5 7L17 14a3 3 0 0 0 5 0z"/>'], bolt: ["#ffc61a", '<path ~ d="M13 2.5L5 13.5h6l-1 8 8-11h-6z"/>'], fire: ["#ff7a30", '<path ~ d="M12 21c4 0 6.5-2.7 6.5-6 0-3.5-2.5-5.2-3.5-8-1.7 1.3-2.8 3-3 5-1-.8-1.5-2-1.5-3.5C8 10 5.5 12 5.5 15c0 3.3 2.5 6 6.5 6z"/>'], boom: ["#ff7a30", '<path ~ d="M12 2.5l2 5 5-2-2 5 5 2-5 2 2 5-5-2-2 5-2-5-5 2 2-5-5-2 5-2-2-5 5 2z"/>'], bulb: ["#ffc61a", '<path ~ d="M12 3.5a6 6 0 0 0-3.5 10.8c.6.5 1 1.2 1 2.2h5c0-1 .4-1.7 1-2.2A6 6 0 0 0 12 3.5z"/><path d="M9.5 19h5M10.5 21.5h3"/>'], target: ["#ff5d73", '<circle cx="12" cy="12" r="9"/><circle ~ cx="12" cy="12" r="5"/><circle cx="12" cy="12" r="1.2" fill="@"/>'], palette: ["#ff7ab6", '<path ~ d="M12 3.5a8.5 8.5 0 1 0 0 17c1.4 0 2-1 1.5-2.2-.5-1.2.3-2.300 1.7-2.300H17a3.500 3.500 0 0 0 3.500-3.500C20.500 7 16.700 3.500 12 3.500z"/><circle cx="8" cy="11" r="1" fill="@"/><circle cx="11" cy="7.5" r="1" fill="@"/><circle cx="15.5" cy="8.5" r="1" fill="@"/>'], music: ["#a08cff", '<path d="M9 18V5.5l10-2V16"/><circle ~ cx="6.5" cy="18" r="2.5"/><circle ~ cx="16.5" cy="16" r="2.5"/>'], mic: ["#ff7ab6", '<rect ~ x="9" y="3" width="6" height="11" rx="3"/><path d="M5.5 11.5a6.500 6.500 0 0 0 13 0M12 18v3M8.5 21h7"/>'], stopsq: ["#ff5d73", '<rect ~ x="5" y="5" width="14" height="14" rx="2.500"/>'], trophy: ["#ffc61a", '<path ~ d="M7.5 4h9v5.5a4.5 4.5 0 0 1-9 0z"/><path d="M7.5 6h-3v1.500a3 3 0 0 0 3 3M16.5 6h3v1.500a3 3 0 0 1-3 3M12 14v4M8.5 20.5h7M10 18h4"/>'], link: ["#4cc3ff", '<path d="M10 14a4 4 0 0 0 5.700 0l3-3a4 4 0 0 0-5.700-5.700l-1 1"/><path d="M14 10a4 4 0 0 0-5.700 0l-3 3a4 4 0 0 0 5.700 5.700l1-1"/>'], cycle: ["#3ecf8e", '<path d="M20 11a8 8 0 0 0-14-4.500L4 9M4 4v5h5"/><path d="M4 13a8 8 0 0 0 14 4.500L20 15M20 20v-5h-5"/>'], shuffle: ["#3ecf8e", '<path d="M3.5 7h3.500c4 0 5 10 9 10h4M3.500 17H7c1.500 0 2.600-1.800 3.500-3.500M13.500 10.500C14.400 8.800 15.300 7 17 7h3.500M17.500 4l3 3-3 3M17.500 14l3 3-3 3"/>'], hash: ["#4cc3ff", '<path d="M9 4L7 20M17 4l-2 16M4 9h16M3 15h16"/>'], abc: ["#4cc3ff", '<path d="M3.5 19l4.500-12 4.500 12M5.200 14.500h5.600"/><circle ~ cx="17" cy="15.500" r="3"/><path d="M20 12.500V19"/>'], search: ["#4cc3ff", '<circle ~ cx="10.500" cy="10.500" r="6.500"/><path d="M15.500 15.500L21 21"/>'], globe: ["#4cc3ff", '<circle ~ cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c3 3 3 15 0 18M12 3c-3 3-3 15 0 18"/>'], night: ["#8a7dff", '<path ~ d="M20 14.500A8.500 8.500 0 1 1 9.500 4a6.500 6.500 0 0 0 10.500 10.500z"/><path d="M17 3.500v3M15.500 5h3"/>'], swirl: ["#4cc3ff", '<path d="M12 12h.01M12 8.500a3.500 3.500 0 1 1-3.500 3.500M12 4.500a7.500 7.500 0 1 1-7.500 7.500"/>'], eye: ["#a08cff", '<path ~ d="M2.500 12S6 5.500 12 5.500 21.500 12 21.500 12 18 18.500 12 18.500 2.500 12 2.500 12z"/><circle cx="12" cy="12" r="2.800" fill="@"/>'], eyeoff: ["#a08cff", '<path d="M3 3l18 18"/><path d="M10.500 5.700A9.500 9.500 0 0 1 12 5.500c6 0 9.500 6.500 9.500 6.500a15 15 0 0 1-2.800 3.700M6.600 7.200A15 15 0 0 0 2.500 12S6 18.500 12 18.500c1.300 0 2.500-.3 3.500-.8"/><path d="M9.900 9.900a3 3 0 0 0 4.200 4.200"/>'], tag: ["#ff9f43", '<path ~ d="M3.500 12.500v-8a1 1 0 0 1 1-1h8l8 8-9 9z"/><circle cx="8" cy="8" r="1.300" fill="@"/>'], scissors: ["#ff5d73", '<circle cx="6" cy="6.5" r="2.5"/><circle cx="6" cy="17.5" r="2.5"/><path d="M8 8l12 9M8 16l12-9"/>'], pencil: ["#ffc61a", '<path ~ d="M4 20l1-4.500L16.500 4a2.100 2.100 0 0 1 3 3L8 18.500z"/><path d="M14.500 6l3.500 3.500"/>'], question: ["#ff9f43", '<circle ~ cx="12" cy="12" r="9"/><path d="M9.500 9.500a2.500 2.500 0 1 1 3.500 2.300c-.7.400-1 .9-1 1.700M12 16.800v.1"/>'], info: ["#4cc3ff", '<circle ~ cx="12" cy="12" r="9"/><path d="M12 11v6M12 7.300v.1"/>'], card: ["#6aa9ff", '<rect ~ x="3" y="5.500" width="18" height="13" rx="2.500"/><path d="M3 10h18M6.500 15h4"/>'], dollar: ["#3ecf8e", '<circle ~ cx="12" cy="12" r="9"/><path d="M14.800 9.200c-.3-1.200-1.400-1.900-2.800-1.900-1.600 0-2.800.8-2.800 2.100 0 3 5.800 1.400 5.800 4.500 0 1.300-1.200 2.200-3 2.200-1.500 0-2.700-.7-3-2M12 5.800v1.500M12 16.700v1.500"/>'], spider: ["#8fa3bf", '<ellipse ~ cx="12" cy="13" rx="3.500" ry="4.500"/><circle cx="12" cy="8" r="2"/><path d="M8.500 11L4 8M8.500 13.500L3.500 14M9 16l-3 4M15.500 11L20 8M15.500 13.500l5 .5M15 16l3 4"/>'], clock: ["#8fa3bf", '<circle ~ cx="12" cy="12" r="9"/><path d="M12 7v5l3.500 2"/>'], smile: ["#ffc61a", '<circle ~ cx="12" cy="12" r="9"/><circle cx="9" cy="10" r="1" fill="@"/><circle cx="15" cy="10" r="1" fill="@"/><path d="M8 14.500a5 5 0 0 0 8 0"/>'], circle: ["#8fa3bf", '<circle ~ cx="12" cy="12" r="8"/>'], green: ["#3ecf8e", '<circle cx="12" cy="12" r="8" fill="@"/>'], square: ["#8fa3bf", '<rect ~ x="4.500" y="4.500" width="15" height="15" rx="3"/>'], window: ["#4cc3ff", '<rect ~ x="4" y="3.500" width="16" height="17" rx="2"/><path d="M12 3.500v17M4 12h16"/>'], compress: ["#8fa3bf", '<path d="M4 7h16M4 17h16M12 4v6M9 8l3 3 3-3M12 20v-6M9 16l3-3 3 3"/>'], tools: ["#8fa3bf", '<path ~ d="M14.500 6a4 4 0 0 0 5 5.200l-9 9a2 2 0 0 1-3-3l9-9A4 4 0 0 0 14.500 6z"/>'] }, M = { "🗑": "trash", "🗑️": "trash", "⚠": "warn", "⚠️": "warn", "🔒": "lock", "🔒️": "lock", "🔐": "lock", "🔐️": "lock", "🔓": "unlock", "🔓️": "unlock", "🔑": "key", "🔑️": "key", "⏳": "hourglass", "⏳️": "hourglass", "⌛": "hourglass", "⌛️": "hourglass", "✅": "check", "✅️": "check", "❌": "cross", "❌️": "cross", "➕": "plus", "➕️": "plus", "➖": "minus", "➖️": "minus", "⚙": "gear", "⚙️": "gear", "☁": "cloud", "☁️": "cloud", "📁": "folder", "📁️": "folder", "🗂": "folders", "🗂️": "folders", "📤": "upload", "📤️": "upload", "📥": "download", "📥️": "download", "⬇": "down", "⬇️": "down", "⬆": "up", "⬆️": "up", "📦": "package", "📦️": "package", "📌": "pin", "📌️": "pin", "⭐": "star", "⭐️": "star", "📄": "page", "📄️": "page", "📝": "memo", "📝️": "memo", "📋": "clip", "📋️": "clip", "📎": "paperclip", "📎️": "paperclip", "🖼": "picture", "🖼️": "picture", "📖": "book", "📖️": "book", "📚": "books", "📚️": "books", "??": "cal", "📅️": "cal", "🗓": "cal", "🗓️": "cal", "📊": "chart", "📊️": "chart", "📐": "tri", "📐️": "tri", "📏": "ruler", "📏️": "ruler", "📡": "antenna", "📡️": "antenna", "💾": "floppy", "💾️": "floppy", "👻": "ghost", "👻️": "ghost", "🎭": "masks", "🎭️": "masks", "🤖": "robot", "🤖️": "robot", "🧠": "brain", "🧠️": "brain", "🧬": "dna", "🧬️": "dna", "🧭": "compass", "🧭️": "compass", "🧰": "toolbox", "🧰️": "toolbox", "🧩": "puzzle", "🧩️": "puzzle", "🧮": "abacus", "🧮️": "abacus", "🧼": "soap", "🧼️": "soap", "🧹": "broom", "🧹️": "broom", "🚫": "ban", "🚫️": "ban", "🛑": "stop", "🛑️": "stop", "🚧": "cone", "🚧️": "cone", "🛡": "shield", "🛡️": "shield", "⚖": "scales", "⚖️": "scales", "⚡": "bolt", "⚡️": "bolt", "🔥": "fire", "🔥️": "fire", "💥": "boom", "💥️": "boom", "💡": "bulb", "💡️": "bulb", "🎯": "target", "🎯️": "target", "🎨": "palette", "🎨️": "palette", "🎵": "music", "🎵️": "music", "🎙": "mic", "🎙️": "mic", "⏹": "stopsq", "⏹️": "stopsq", "🏆": "trophy", "🏆️": "trophy", "🔗": "link", "🔗️": "link", "🔄": "cycle", "🔄️": "cycle", "🔁": "cycle", "🔁️": "cycle", "🔀": "shuffle", "🔀️": "shuffle", "🔢": "hash", "🔢️": "hash", "🔤": "abc", "🔤️": "abc", "🔠": "abc", "🔠️": "abc", "🔎": "search", "🔎️": "search", "🔍": "search", "🔍️": "search", "🌐": "globe", "🌐️": "globe", "🌍": "globe", "🌍️": "globe", "??": "night", "🌌️": "night", "🌀": "swirl", "🌀️": "swirl", "👁": "eye", "👁️": "eye", "🙈": "eyeoff", "🙈️": "eyeoff", "🏷": "tag", "🏷️": "tag", "✂": "scissors", "✂️": "scissors", "✏": "pencil", "✏️": "pencil", "✍": "pencil", "✍️": "pencil", "❓": "question", "❓️": "question", ℹ: "info", "ℹ️": "info", "💳": "card", "💳️": "card", "💲": "dollar", "💲️": "dollar", "🕷": "spider", "🕷️": "spider", "🕒": "clock", "🕒️": "clock", "🕘": "clock", "🕘️": "clock", "🕰": "clock", "🕰️": "clock", "😀": "smile", "😀️": "smile", "⚪": "circle", "⚪️": "circle", "🟢": "green", "🟢️": "green", "⬜": "square", "⬜️": "square", "🪟": "window", "🪟️": "window", "🗜": "compress", "🗜️": "compress", "🛠": "tools", "🛠️": "tools", "✔️": "check", "↕️": "updown", "↩️": "undo" }, keys = Object.keys(M).sort(function (a, b) { return b.length - a.length; }).map(function (k) { return k.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"); }).join("|"), RE = new RegExp(keys, "g"), RT = new RegExp(keys), SKIP = "[contenteditable],textarea,input,select,option,script,style,svg,.mu-emo,.text-box,.mu-viewer-body,.note-item-meta,[data-mu-noemo]", st = document.createElement("style"); st.id = "muEmoRules", (document.head || document.documentElement).appendChild(st); var done = {}; function svg(k) { var t = D[k], c = t[0]; return '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="' + c + '" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">' + t[1].replace(/@/g, c).replace(/~/g, ' fill="' + c + '" fill-opacity="' + (t[2] || .22) + '"') + "</svg>"; } function rule(k) { done[k] || (done[k] = 1, st.appendChild(document.createTextNode('.mu-emo[data-k="' + k + '"]{background-image:url("data:image/svg+xml,' + encodeURIComponent(svg(k)) + '")}'))); } window.mu_emoUri = function (k) { return "data:image/svg+xml," + encodeURIComponent(svg(k)); }; function fix(n) { var p = n.parentNode; if (!(!p || p.closest && p.closest(SKIP))) {
+    return; window.__muEmo = 1; var D = { trash: ["#ff5d73", '<path d="M4 7h16M9 7V4.5h6V7"/><path ~ d="M6 7l1 13h10l1-13z"/><path d="M10 11v5M14 11v5"/>'], warn: ["#ffb020", '<path ~ d="M12 3.5l9.5 16.5h-19z"/><path d="M12 10v4.5M12 17.4v.1"/>'], lock: ["#ffb020", '<rect ~ x="5" y="10.5" width="14" height="10" rx="2.5"/><path d="M8 10.5V8a4 4 0 0 1 8 0v2.5M12 14.5v2.5"/>'], unlock: ["#3ecf8e", '<rect ~ x="5" y="10.5" width="14" height="10" rx="2.5"/><path d="M8 10.5V8a4 4 0 0 1 7.5-2M12 14.5v2.5"/>'], key: ["#ffb020", '<circle ~ cx="8" cy="15.5" r="3.8"/><path d="M10.8 12.8L20 3.5M16.5 7l3 3"/>'], hourglass: ["#ff9f43", '<path d="M6.5 3.5h11M6.5 20.5h11"/><path ~ d="M8 3.5c0 4.5 4 5 4 8.5 0-3.5 4-4 4-8.5z"/><path d="M8 20.5c0-4.5 4-5 4-8.5 0 3.5 4 4 4 8.5z"/>'], check: ["#3ecf8e", '<circle ~ cx="12" cy="12" r="9"/><path d="M7.8 12.4l2.9 2.9 5.5-6"/>'], cross: ["#ff5d73", '<circle ~ cx="12" cy="12" r="9"/><path d="M9 9l6 6M15 9l-6 6"/>'], plus: ["#3ecf8e", '<circle ~ cx="12" cy="12" r="9"/><path d="M12 8v8M8 12h8"/>'], minus: ["#ff9f43", '<circle ~ cx="12" cy="12" r="9"/><path d="M8 12h8"/>'], gear: ["#8fa3bf", '<circle ~ cx="12" cy="12" r="3"/><circle cx="12" cy="12" r="6.2"/><path d="M12 2.8v2.6M12 18.6v2.6M2.8 12h2.6M18.6 12h2.6M5.5 5.5l1.9 1.9M16.6 16.6l1.9 1.9M18.5 5.5l-1.9 1.9M7.4 16.6l-1.9 1.9"/>'], cloud: ["#4cc3ff", '<path ~ d="M7 18.5h10.2a4 4 0 0 0 .6-7.95A6 6 0 0 0 6.3 9.7 4.4 4.4 0 0 0 7 18.5z"/>'], folder: ["#ffb020", '<path ~ d="M3 7.5a2 2 0 0 1 2-2h4l2 2.5h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>'], folders: ["#ffb020", '<path d="M7 5h4l1.5 2H19a2 2 0 0 1 2 2v8"/><path ~ d="M3 9a2 2 0 0 1 2-2h3.5l1.5 2H17a2 2 0 0 1 2 2v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>'], upload: ["#4cc3ff", '<path ~ stroke="none" d="M4 14h16v4a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2z"/><path d="M4 14v4a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-4M12 15V4M8 8l4-4 4 4"/>'], download: ["#3ecf8e", '<path ~ stroke="none" d="M4 14h16v4a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2z"/><path d="M4 14v4a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-4M12 4v11M8 11l4 4 4-4"/>'], down: ["#4cc3ff", '<path d="M12 4v15M6 13l6 6 6-6"/>'], up: ["#4cc3ff", '<path d="M12 20V5M6 11l6-6 6 6"/>'], updown: ["#8fa3bf", '<path d="M12 4v16M8 8l4-4 4 4M8 16l4 4 4-4"/>'], undo: ["#8fa3bf", '<path d="M9 7L4 12l5 5"/><path d="M4 12h10a6 6 0 0 1 6 6v1"/>'], package: ["#d9944a", '<path ~ d="M3.5 7.5L12 3.5l8.5 4v9L12 20.5l-8.5-4z"/><path d="M3.5 7.5L12 11.5l8.5-4M12 11.5v9"/>'], pin: ["#ff5d73", '<path ~ d="M9 3.8h6l-.9 5.3 2.9 3.1v1.9H7v-1.9l2.9-3.1L9 3.8z"/><path d="M12 14.1v6.1"/>', .9], star: ["#ffc61a", '<path ~ d="M12 3.6l2.5 5.2 5.7.8-4.1 4 1 5.7L12 16.6l-5.1 2.7 1-5.7-4.1-4 5.7-.8L12 3.6z"/>', .9], page: ["#6aa9ff", '<path ~ d="M6 3h8l4 4v13a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1z"/><path d="M14 3v4h4M8.5 12h7M8.5 15.5h7"/>'], memo: ["#ffc61a", '<rect ~ x="4" y="3.5" width="13" height="17" rx="2"/><path d="M7.5 8h6M7.5 11.5h4"/><path d="M14 19l.5-2.5 5-5 2 2-5 5z"/>'], clip: ["#6aa9ff", '<rect ~ x="5" y="4.5" width="14" height="16.5" rx="2"/><rect x="9" y="2.8" width="6" height="3.6" rx="1.2"/><path d="M8.5 11h7M8.5 14.5h7"/>'], paperclip: ["#a08cff", '<path d="M20 11.5l-7.8 7.8a4.6 4.6 0 0 1-6.5-6.5l8-8a3 3 0 0 1 4.3 4.3l-8 8a1.4 1.4 0 0 1-2-2l7.3-7.3"/>'], picture: ["#3ecf8e", '<rect ~ x="3.5" y="4.5" width="17" height="15" rx="2.2"/><circle cx="9" cy="10" r="1.6"/><path d="M4 17l5-4.5 3.5 3 3-2.5 4.5 4"/>'], book: ["#6aa9ff", '<path ~ d="M12 6.5C10 4.8 7 4.3 3.5 4.7v13c3.5-.4 6.5.1 8.5 1.8 2-1.7 5-2.2 8.5-1.8v-13C17 4.3 14 4.8 12 6.5z"/><path d="M12 6.5v13"/>'], books: ["#6aa9ff", '<rect ~ x="3.5" y="3.5" width="4.5" height="17" rx="1"/><rect x="9" y="3.5" width="4.5" height="17" rx="1"/><path ~ d="M15 6l4-1 3 14.5-4 1z"/>'], cal: ["#ff7a59", '<rect ~ x="3.5" y="5" width="17" height="15.5" rx="2.5"/><path d="M3.5 10h17M8 3v4M16 3v4"/>'], chart: ["#4cc3ff", '<path d="M4 20h16"/><rect ~ x="5.5" y="11" width="3.5" height="9" rx=".8"/><rect ~ x="10.3" y="5" width="3.5" height="15" rx=".8"/><rect ~ x="15" y="8.5" width="3.5" height="11.5" rx=".8"/>'], tri: ["#ffb020", '<path ~ d="M4 20V4l16 16z"/><path d="M4 12h3M4 8h2M8 20v-3M12 20v-2"/>'], ruler: ["#ffb020", '<rect ~ x="2.5" y="8" width="19" height="8" rx="1.5"/><path d="M6 8v3M10 8v4M14 8v3M18 8v4"/>'], antenna: ["#4cc3ff", '<path d="M5 19a9 9 0 0 1 0-13M8 16a5 5 0 0 1 0-7"/><circle ~ cx="14" cy="10" r="2"/><path d="M14 12v8M10.5 20h7"/>'], floppy: ["#6aa9ff", '<path ~ d="M4 5a1 1 0 0 1 1-1h11l4 4v11a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1z"/><rect x="7.5" y="4" width="7" height="5"/><rect x="7.5" y="13.5" width="9" height="6.5"/>'], ghost: ["#b8a5ff", '<path ~ d="M5 20V11a7 7 0 0 1 14 0v9l-2.3-2-2.4 2-2.3-2-2.3 2-2.4-2z"/><circle cx="9.5" cy="11" r="1" fill="@"/><circle cx="14.5" cy="11" r="1" fill="@"/>'], masks: ["#ff7ab6", '<path ~ d="M3.5 5h11v7a5.5 5.5 0 0 1-11 0z"/><path d="M7 8.5v1M11 8.5v1M6.5 13c1.2 1 3.3 1 4.5 0"/><path d="M14.5 8.5h6v6.5a4.5 4.5 0 0 1-8 2.8"/>'], robot: ["#4cc3ff", '<rect ~ x="4.5" y="8" width="15" height="11.5" rx="3"/><path d="M12 4.8V8"/><circle cx="12" cy="3.8" r="1.1"/><circle cx="9" cy="13" r="1.2" fill="@"/><circle cx="15" cy="13" r="1.2" fill="@"/><path d="M9.5 16.5h5"/>'], brain: ["#ff7ab6", '<path ~ d="M9.5 4A3.5 3.5 0 0 0 6 7.2 3.4 3.4 0 0 0 4.5 10c0 1 .4 1.8 1 2.4A3.6 3.6 0 0 0 7 19a3 3 0 0 0 5-1V5.5A2.5 2.5 0 0 0 9.5 4z"/><path ~ d="M14.5 4A3.5 3.5 0 0 1 18 7.2 3.4 3.4 0 0 1 19.5 10c0 1-.4 1.8-1 2.4A3.6 3.6 0 0 1 17 19a3 3 0 0 1-5-1V5.5A2.5 2.5 0 0 1 14.5 4z"/>'], dna: ["#3ecf8e", '<path d="M8 3c0 5 8 5 8 9s-8 4-8 9M16 3c0 5-8 5-8 9s8 4 8 9M9 6.5h6M9 17.5h6M8.5 12h7"/>'], compass: ["#4cc3ff", '<circle ~ cx="12" cy="12" r="9"/><path ~ d="M15.5 8.5l-2 5-5 2 2-5z"/>'], toolbox: ["#ff7a59", '<rect ~ x="3" y="8" width="18" height="12" rx="2"/><path d="M9 8V6a1.5 1.5 0 0 1 1.5-1.5h3A1.5 1.5 0 0 1 15 6v2M3 13h18M11 12v3h2v-3"/>'], puzzle: ["#a08cff", '<path ~ d="M5 8h4a2.2 2.2 0 1 1 4.5 0H18v4.5a2.2 2.2 0 1 1 0 4.5V21H5z"/>'], abacus: ["#d9944a", '<rect x="3.5" y="4" width="17" height="16" rx="2"/><path d="M3.5 9.5h17M3.5 14.5h17"/><circle ~ cx="8" cy="7" r="1.3"/><circle ~ cx="14" cy="12" r="1.3"/><circle ~ cx="10" cy="17" r="1.3"/>'], soap: ["#4cc3ff", '<rect ~ x="4" y="11" width="16" height="8" rx="3"/><circle cx="8" cy="6.5" r="2"/><circle cx="14" cy="5" r="1.4"/><circle cx="17.5" cy="8" r="1"/>'], broom: ["#d9944a", '<path d="M15.5 3.5l-4.5 7.5"/><path ~ d="M8 11l6 3.5-3.5 6-7-1z"/>'], ban: ["#ff5d73", '<circle ~ cx="12" cy="12" r="9"/><path d="M5.7 5.7l12.6 12.6"/>'], stop: ["#ff5d73", '<path ~ d="M8.5 3h7L21 8.5v7L15.5 21h-7L3 15.5v-7z"/><path d="M8.5 12h7"/>'], cone: ["#ffb020", '<rect ~ x="3" y="8" width="18" height="6" rx="1"/><path d="M5 14v6M19 14v6M8 8l3 6M13 8l3 6"/>'], shield: ["#4cc3ff", '<path ~ d="M12 3l7.5 3v6c0 4.5-3.2 8-7.5 9.5C7.7 20 4.5 16.5 4.5 12V6z"/><path d="M8.8 12l2.4 2.4 4-4.4"/>'], scales: ["#ffb020", '<path d="M12 4v16M7 20h10M4.5 7h15"/><path ~ d="M4.5 7L2 14a3 3 0 0 0 5 0zM19.5 7L17 14a3 3 0 0 0 5 0z"/>'], bolt: ["#ffc61a", '<path ~ d="M13 2.5L5 13.5h6l-1 8 8-11h-6z"/>'], fire: ["#ff7a30", '<path ~ d="M12 21c4 0 6.5-2.7 6.5-6 0-3.5-2.5-5.2-3.5-8-1.7 1.3-2.8 3-3 5-1-.8-1.5-2-1.5-3.5C8 10 5.5 12 5.5 15c0 3.3 2.5 6 6.5 6z"/>'], boom: ["#ff7a30", '<path ~ d="M12 2.5l2 5 5-2-2 5 5 2-5 2 2 5-5-2-2 5-2-5-5 2 2-5-5-2 5-2-2-5 5 2z"/>'], bulb: ["#ffc61a", '<path ~ d="M12 3.5a6 6 0 0 0-3.5 10.8c.6.5 1 1.2 1 2.2h5c0-1 .4-1.7 1-2.2A6 6 0 0 0 12 3.5z"/><path d="M9.5 19h5M10.5 21.5h3"/>'], target: ["#ff5d73", '<circle cx="12" cy="12" r="9"/><circle ~ cx="12" cy="12" r="5"/><circle cx="12" cy="12" r="1.2" fill="@"/>'], palette: ["#ff7ab6", '<path ~ d="M12 3.5a8.5 8.5 0 1 0 0 17c1.4 0 2-1 1.5-2.2-.5-1.2.3-2.300 1.7-2.300H17a3.500 3.500 0 0 0 3.500-3.500C20.500 7 16.700 3.500 12 3.500z"/><circle cx="8" cy="11" r="1" fill="@"/><circle cx="11" cy="7.5" r="1" fill="@"/><circle cx="15.5" cy="8.5" r="1" fill="@"/>'], music: ["#a08cff", '<path d="M9 18V5.5l10-2V16"/><circle ~ cx="6.5" cy="18" r="2.5"/><circle ~ cx="16.5" cy="16" r="2.5"/>'], mic: ["#ff7ab6", '<rect ~ x="9" y="3" width="6" height="11" rx="3"/><path d="M5.5 11.5a6.500 6.500 0 0 0 13 0M12 18v3M8.5 21h7"/>'], stopsq: ["#ff5d73", '<rect ~ x="5" y="5" width="14" height="14" rx="2.500"/>'], trophy: ["#ffc61a", '<path ~ d="M7.5 4h9v5.5a4.5 4.5 0 0 1-9 0z"/><path d="M7.5 6h-3v1.500a3 3 0 0 0 3 3M16.5 6h3v1.500a3 3 0 0 1-3 3M12 14v4M8.5 20.5h7M10 18h4"/>'], link: ["#4cc3ff", '<path d="M10 14a4 4 0 0 0 5.700 0l3-3a4 4 0 0 0-5.700-5.700l-1 1"/><path d="M14 10a4 4 0 0 0-5.700 0l-3 3a4 4 0 0 0 5.700 5.700l1-1"/>'], cycle: ["#3ecf8e", '<path d="M20 11a8 8 0 0 0-14-4.500L4 9M4 4v5h5"/><path d="M4 13a8 8 0 0 0 14 4.500L20 15M20 20v-5h-5"/>'], shuffle: ["#3ecf8e", '<path d="M3.5 7h3.500c4 0 5 10 9 10h4M3.500 17H7c1.500 0 2.600-1.800 3.500-3.500M13.500 10.500C14.400 8.800 15.300 7 17 7h3.500M17.500 4l3 3-3 3M17.500 14l3 3-3 3"/>'], hash: ["#4cc3ff", '<path d="M9 4L7 20M17 4l-2 16M4 9h16M3 15h16"/>'], abc: ["#4cc3ff", '<path d="M3.5 19l4.500-12 4.500 12M5.200 14.500h5.600"/><circle ~ cx="17" cy="15.500" r="3"/><path d="M20 12.500V19"/>'], search: ["#4cc3ff", '<circle ~ cx="10.500" cy="10.500" r="6.500"/><path d="M15.500 15.500L21 21"/>'], globe: ["#4cc3ff", '<circle ~ cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c3 3 3 15 0 18M12 3c-3 3-3 15 0 18"/>'], night: ["#8a7dff", '<path ~ d="M20 14.500A8.500 8.500 0 1 1 9.500 4a6.500 6.500 0 0 0 10.500 10.500z"/><path d="M17 3.500v3M15.500 5h3"/>'], swirl: ["#4cc3ff", '<path d="M12 12h.01M12 8.500a3.500 3.500 0 1 1-3.500 3.500M12 4.500a7.500 7.500 0 1 1-7.500 7.500"/>'], eye: ["#a08cff", '<path ~ d="M2.500 12S6 5.500 12 5.500 21.500 12 21.500 12 18 18.500 12 18.500 2.500 12 2.500 12z"/><circle cx="12" cy="12" r="2.800" fill="@"/>'], eyeoff: ["#a08cff", '<path d="M3 3l18 18"/><path d="M10.500 5.700A9.500 9.500 0 0 1 12 5.500c6 0 9.500 6.500 9.500 6.500a15 15 0 0 1-2.800 3.700M6.600 7.200A15 15 0 0 0 2.500 12S6 18.500 12 18.500c1.300 0 2.500-.3 3.500-.8"/><path d="M9.900 9.900a3 3 0 0 0 4.200 4.200"/>'], tag: ["#ff9f43", '<path ~ d="M3.500 12.500v-8a1 1 0 0 1 1-1h8l8 8-9 9z"/><circle cx="8" cy="8" r="1.300" fill="@"/>'], scissors: ["#ff5d73", '<circle cx="6" cy="6.5" r="2.5"/><circle cx="6" cy="17.5" r="2.5"/><path d="M8 8l12 9M8 16l12-9"/>'], pencil: ["#ffc61a", '<path ~ d="M4 20l1-4.500L16.500 4a2.100 2.100 0 0 1 3 3L8 18.500z"/><path d="M14.500 6l3.500 3.500"/>'], question: ["#ff9f43", '<circle ~ cx="12" cy="12" r="9"/><path d="M9.500 9.500a2.500 2.500 0 1 1 3.500 2.300c-.7.400-1 .9-1 1.700M12 16.800v.1"/>'], info: ["#4cc3ff", '<circle ~ cx="12" cy="12" r="9"/><path d="M12 11v6M12 7.300v.1"/>'], card: ["#6aa9ff", '<rect ~ x="3" y="5.500" width="18" height="13" rx="2.500"/><path d="M3 10h18M6.500 15h4"/>'], dollar: ["#3ecf8e", '<circle ~ cx="12" cy="12" r="9"/><path d="M14.800 9.200c-.3-1.200-1.400-1.900-2.800-1.900-1.600 0-2.800.8-2.800 2.100 0 3 5.800 1.400 5.800 4.500 0 1.300-1.200 2.200-3 2.200-1.500 0-2.700-.7-3-2M12 5.800v1.500M12 16.700v1.500"/>'], spider: ["#8fa3bf", '<ellipse ~ cx="12" cy="13" rx="3.500" ry="4.500"/><circle cx="12" cy="8" r="2"/><path d="M8.500 11L4 8M8.500 13.500L3.500 14M9 16l-3 4M15.500 11L20 8M15.500 13.500l5 .5M15 16l3 4"/>'], clock: ["#8fa3bf", '<circle ~ cx="12" cy="12" r="9"/><path d="M12 7v5l3.500 2"/>'], smile: ["#ffc61a", '<circle ~ cx="12" cy="12" r="9"/><circle cx="9" cy="10" r="1" fill="@"/><circle cx="15" cy="10" r="1" fill="@"/><path d="M8 14.500a5 5 0 0 0 8 0"/>'], circle: ["#8fa3bf", '<circle ~ cx="12" cy="12" r="8"/>'], green: ["#3ecf8e", '<circle cx="12" cy="12" r="8" fill="@"/>'], square: ["#8fa3bf", '<rect ~ x="4.500" y="4.500" width="15" height="15" rx="3"/>'], window: ["#4cc3ff", '<rect ~ x="4" y="3.500" width="16" height="17" rx="2"/><path d="M12 3.500v17M4 12h16"/>'], compress: ["#8fa3bf", '<path d="M4 7h16M4 17h16M12 4v6M9 8l3 3 3-3M12 20v-6M9 16l3-3 3 3"/>'], tools: ["#8fa3bf", '<path ~ d="M14.500 6a4 4 0 0 0 5 5.200l-9 9a2 2 0 0 1-3-3l9-9A4 4 0 0 0 14.500 6z"/>'] }, M = { "🗑": "trash", "🗑️": "trash", "⚠": "warn", "⚠️": "warn", "🔒": "lock", "🔒️": "lock", "🔐": "lock", "🔐️": "lock", "🔓": "unlock", "🔓️": "unlock", "🔑": "key", "🔑️": "key", "⏳": "hourglass", "⏳️": "hourglass", "⌛": "hourglass", "⌛️": "hourglass", "✅": "check", "✅️": "check", "❌": "cross", "❌️": "cross", "➕": "plus", "➕️": "plus", "➖": "minus", "➖️": "minus", "⚙": "gear", "⚙️": "gear", "☁": "cloud", "☁️": "cloud", "📁": "folder", "📁️": "folder", "🗂": "folders", "🗂️": "folders", "📤": "upload", "📤️": "upload", "📥": "download", "📥️": "download", "⬇": "down", "⬇️": "down", "⬆": "up", "⬆️": "up", "📦": "package", "📦️": "package", "📌": "pin", "📌️": "pin", "⭐": "star", "⭐️": "star", "📄": "page", "📄️": "page", "📝": "memo", "📝️": "memo", "📋": "clip", "📋️": "clip", "📎": "paperclip", "📎️": "paperclip", "🖼": "picture", "🖼️": "picture", "📖": "book", "📖️": "book", "📚": "books", "📚️": "books", "📅": "cal", "📅️": "cal", "🗓": "cal", "🗓️": "cal", "📊": "chart", "📊️": "chart", "📐": "tri", "📐️": "tri", "📏": "ruler", "📏️": "ruler", "📡": "antenna", "📡️": "antenna", "💾": "floppy", "💾️": "floppy", "👻": "ghost", "👻️": "ghost", "🎭": "masks", "🎭️": "masks", "🤖": "robot", "🤖️": "robot", "🧠": "brain", "🧠️": "brain", "🧬": "dna", "🧬️": "dna", "🧭": "compass", "🧭️": "compass", "🧰": "toolbox", "🧰️": "toolbox", "🧩": "puzzle", "🧩️": "puzzle", "🧮": "abacus", "🧮️": "abacus", "🧼": "soap", "🧼️": "soap", "🧹": "broom", "🧹️": "broom", "🚫": "ban", "🚫️": "ban", "🛑": "stop", "🛑️": "stop", "🚧": "cone", "🚧️": "cone", "🛡": "shield", "🛡️": "shield", "⚖": "scales", "⚖️": "scales", "⚡": "bolt", "⚡️": "bolt", "🔥": "fire", "🔥️": "fire", "💥": "boom", "💥️": "boom", "💡": "bulb", "💡️": "bulb", "🎯": "target", "🎯️": "target", "🎨": "palette", "🎨️": "palette", "🎵": "music", "🎵️": "music", "🎙": "mic", "🎙️": "mic", "⏹": "stopsq", "⏹️": "stopsq", "🏆": "trophy", "🏆️": "trophy", "🔗": "link", "🔗️": "link", "🔄": "cycle", "🔄️": "cycle", "🔁": "cycle", "🔁️": "cycle", "🔀": "shuffle", "🔀️": "shuffle", "🔢": "hash", "🔢️": "hash", "🔤": "abc", "🔤️": "abc", "🔠": "abc", "🔠️": "abc", "🔎": "search", "🔎️": "search", "🔍": "search", "🔍️": "search", "🌐": "globe", "🌐️": "globe", "🌍": "globe", "🌍️": "globe", "??": "night", "🌌️": "night", "🌀": "swirl", "🌀️": "swirl", "👁": "eye", "👁️": "eye", "🙈": "eyeoff", "🙈️": "eyeoff", "🏷": "tag", "🏷️": "tag", "✂": "scissors", "✂️": "scissors", "✏": "pencil", "✏️": "pencil", "✍": "pencil", "✍️": "pencil", "❓": "question", "❓️": "question", ℹ: "info", "ℹ️": "info", "💳": "card", "💳️": "card", "💲": "dollar", "💲️": "dollar", "🕷": "spider", "🕷️": "spider", "🕒": "clock", "🕒️": "clock", "🕘": "clock", "🕘️": "clock", "🕰": "clock", "🕰️": "clock", "😀": "smile", "😀️": "smile", "⚪": "circle", "⚪️": "circle", "🟢": "green", "🟢️": "green", "⬜": "square", "⬜️": "square", "🪟": "window", "🪟️": "window", "🗜": "compress", "🗜️": "compress", "🛠": "tools", "🛠️": "tools", "✔️": "check", "↕️": "updown", "↩️": "undo" }, keys = Object.keys(M).sort(function (a, b) { return b.length - a.length; }).map(function (k) { return k.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"); }).join("|"), RE = new RegExp(keys, "g"), RT = new RegExp(keys), SKIP = "[contenteditable],textarea,input,select,option,script,style,svg,.mu-emo,.text-box,.mu-viewer-body,.note-item-meta,[data-mu-noemo]", st = document.createElement("style"); st.id = "muEmoRules", (document.head || document.documentElement).appendChild(st); var done = {}; function svg(k) { var t = D[k], c = t[0]; return '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="' + c + '" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">' + t[1].replace(/@/g, c).replace(/~/g, ' fill="' + c + '" fill-opacity="' + (t[2] || .22) + '"') + "</svg>"; } function rule(k) { done[k] || (done[k] = 1, st.appendChild(document.createTextNode('.mu-emo[data-k="' + k + '"]{background-image:url("data:image/svg+xml,' + encodeURIComponent(svg(k)) + '")}'))); } window.mu_emoUri = function (k) { return "data:image/svg+xml," + encodeURIComponent(svg(k)); }; function fix(n) { var p = n.parentNode; if (!(!p || p.closest && p.closest(SKIP))) {
     var t2 = n.nodeValue;
     if (!(!t2 || !RT.test(t2))) {
         var f = document.createDocumentFragment(), last = 0, m;
@@ -46265,13 +46876,13 @@ catch { } sched(); })();
 
 <script id="mkTextOnlyExportJs">
 // default ON: exports are text-only unless the user unticks it
-(function () { window.mkTextOnlyExport = !0; function sync() { document.querySelectorAll(".mk-textonly-chk").forEach(function (c) { c.checked = !!window.mkTextOnlyExport; }); } window.mkSetTextOnly = function (v) { window.mkTextOnlyExport = !!v, sync(); try {
-    typeof showToast == "function" && showToast(v ? currentLang === "fa" ? "📝 خروجی فقط متن فعال شد (بدون مدیا)" : "📝 Text-only export ON (no media)" : currentLang === "fa" ? "خروجی با مدیا" : "Export with media", 2500);
+(function () { window.mkTextOnlyExport = !0, window.mkExportImages = !0, window.mkExportVoice = !0; function sync() { document.querySelectorAll(".mk-textonly-chk").forEach(function (c) { c.checked = !!window.mkTextOnlyExport; }), document.querySelectorAll(".mk-exp-chk").forEach(function (c) { c.checked = c.getAttribute("data-k") === "img" ? window.mkExportImages !== !1 : window.mkExportVoice !== !1; }), document.querySelectorAll(".mk-media-opts").forEach(function (d) { d.style.display = window.mkTextOnlyExport ? "none" : "flex"; }); } window.mkSetExpMedia = function (el) { var k = el.getAttribute("data-k"), v = !!el.checked; k === "img" ? window.mkExportImages = v : window.mkExportVoice = v, sync(); }; function mkOpts(fa) { function chip(k, label) { return '<label class="mk-textonly-row mk-media-opt" style="color:#000;display:flex;align-items:center;gap:8px;margin:0;padding:8px 12px;border:1px dashed rgba(120,170,255,.55);border-radius:12px;font-size:13px;cursor:pointer;flex:1 1 120px"><input type="checkbox" class="mk-exp-chk" data-k="' + k + '" checked onchange="mkSetExpMedia(this)"><span>' + label + "</span></label>"; } return '<div class="mk-media-opts" style="display:none;gap:8px;margin:-4px 0 12px;flex-wrap:wrap">' + chip("img", fa ? "🖼️ تصویر" : "🖼️ Images") + chip("voice", fa ? "🎙️ ویس" : "🎙️ Voice notes") + "</div>"; } window.mkSetTextOnly = function (v) { window.mkTextOnlyExport = !!v, sync(); try {
+    typeof showToast == "function" && showToast(v ? currentLang === "fa" ? "📝 خروجی فقط متن فعال شد" : "📝 Text-only export ON" : currentLang === "fa" ? "🖼️ خروجی با رسانه (بدون ویدیو و فایل)" : "🖼️ Export with media (no video or files)", 2500);
 }
 catch { } }; var exportPickerPattern = /downloadStructured|downloadSelectedPDF|downloadSelectedDOCX|downloadAllDOCX|openHtmlExportPicker|zipExportPickerGrid|startSelectedZipExport|downloadMd|downloadHtml|downloadJson|downloadDocx|exportFullHTML|downloadTxt/; function install() { var orig = window.showAdvanced; if (!(typeof orig != "function" || orig.__mkTO)) {
     var w = function (html) { var h = html; try {
         if (typeof h == "string" && exportPickerPattern.test(h) && h.indexOf("mk-textonly-chk") < 0) {
-            var fa = typeof currentLang < "u" && currentLang === "fa", row = '<label class="mk-textonly-row" style="color:#000;display:flex;align-items:center;gap:8px;margin:0 0 12px;padding:9px 12px;border:1px dashed rgba(120,170,255,.55);border-radius:12px;font-size:13px;cursor:pointer"><input type="checkbox" class="mk-textonly-chk" checked onchange="mkSetTextOnly(this.checked)"><span>' + (fa ? "📝 فقط متن (بدون عکس، صدا و مدیا)" : "📝 Text only (no images, audio or media)") + "</span></label>", i = h.search(/<div class="(?:image-export-picker-actions|image-export-choice-grid|zip-export-picker-actions)/);
+            var fa = typeof currentLang < "u" && currentLang === "fa", row = '<label class="mk-textonly-row" style="color:#000;display:flex;align-items:center;gap:8px;margin:0 0 12px;padding:9px 12px;border:1px dashed rgba(120,170,255,.55);border-radius:12px;font-size:13px;cursor:pointer"><input type="checkbox" class="mk-textonly-chk" checked onchange="mkSetTextOnly(this.checked)"><span>' + (fa ? "📝 فقط متن (بدون عکس)<small style='display:block;opacity:.72;font-size:11px;font-weight:400;margin-top:3px;line-height:1.7'>تیک رو بردار تا بتونی تصویر و ویس رو انتخاب کنی. ویدیو و فایل هیچ‌وقت وارد خروجی نمی‌شن.</small>" : "📝 Text only (no images)<small style='display:block;opacity:.72;font-size:11px;font-weight:400;margin-top:3px;line-height:1.7'>Untick to choose images and/or voice notes. Videos and files are never exported.</small>") + "</span></label>" + mkOpts(fa), i = h.search(/<div class="(?:image-export-picker-actions|image-export-choice-grid|zip-export-picker-actions)/);
             h = i >= 0 ? h.slice(0, i) + row + h.slice(i) : h + row;
         }
     }
@@ -55448,7 +56059,7 @@ html.mu-nfs-open.mu-nfs-dark:not(#_dn):not(#_zb) #advancedModal #advancedCard.mk
     function later(ms) { if (t) clearTimeout(t); t = setTimeout(flush, ms || 120); }
     function queue(n) { if (n && n.nodeType === 1) { pend.add(n); later(); } }
     function start() {
-        new MutationObserver(function (ms) { for (var i = 0; i < ms.length; i++) { var m = ms[i]; if (m.type === "childList") m.addedNodes.forEach(queue); else if (m.type === "attributes" && m.attributeName === "class" && m.target === document.documentElement && (m.oldValue || "").replace(/\s*\bmk-cg-m\b/, "").trim() === (document.documentElement.className || "").replace(/\s*\bmk-cg-m\b/, "").trim()) continue;
+        new MutationObserver(function (ms) { for (var i = 0; i < ms.length; i++) { var m = ms[i]; if (m.type === "childList") { if (m.addedNodes.length > 40 || m.target && m.target.closest && m.target.closest(".text-box,.mu-viewer-body,[contenteditable=true]")) continue; m.addedNodes.forEach(queue); } else if (m.type === "attributes" && m.attributeName === "class" && m.target === document.documentElement && (m.oldValue || "").replace(/\s*\bmk-cg-m\b/, "").trim() === (document.documentElement.className || "").replace(/\s*\bmk-cg-m\b/, "").trim()) continue;
                 else if (m.target === document.documentElement || m.target === document.body || m.target.id === "advancedModal" || m.target.id === "advancedCard" || m.target.id === "muNotesFs") { full = 1; later(); } } })
             .observe(document.documentElement, { childList: true, subtree: true, attributes: true, attributeOldValue: true, attributeFilter: ["class", "data-theme", "data-nfs-theme", "data-mxe-theme"] });
         ["pointerover", "pointerup", "focusin"].forEach(function (ev) { document.addEventListener(ev, function (e) { var b = e.target && e.target.closest && e.target.closest("button,.btn-main,[role=button]"); if (b) { setTimeout(function () { check(b); }, 120); setTimeout(function () { check(b); }, 450); } }, true); });
@@ -62981,6 +63592,62 @@ html body .mu-viewer.is-editing .mu-viewer-body .audio-wrapper>button.img-btn.im
 })();
 </script>
 
+<script id="mkVideoNoKbJs">
+(function () {
+    "use strict";
+    /* Tapping a video (play, controls, anywhere on it, single or double tap) must never pop the on-screen
+       keyboard up. The video sits inside the editable note, so the browser moves the caret/focus into the note
+       and the keyboard follows. Three layers: (1) the note is marked inputmode=none BEFORE that focus happens
+       and stays so for the whole interaction (every touch/mouse/click event on the video renews it),
+       (2) if the note still gets focus right after a video tap, the focus is dropped again,
+       (3) double-tap word-selection on the video is blocked. Tapping the text itself gives the keyboard back.
+       If the keyboard is already up it is left alone. */
+    var HOSTSEL = '[contenteditable="true"]', guard = null;
+    function kbUp() { try { if (typeof window.mkKbUp === "function") return !!window.mkKbUp(); var v = window.visualViewport; return !!(v && window.innerHeight - v.height - (v.offsetTop || 0) > 120); } catch (e) { return false; } }
+    function hostOf(n) { return n && n.closest ? n.closest(HOSTSEL) : null; }
+    function quiet(h) {
+        if (!h) return;
+        if (!h.__mkVq) { h.__mkVq = 1; h.__mkVqPrev = h.getAttribute("inputmode"); h.setAttribute("inputmode", "none"); }
+        clearTimeout(h.__mkVqT);
+        h.__mkVqT = setTimeout(function () { if (document.activeElement !== h) loud(h); }, 2500);
+    }
+    function loud(h) {
+        if (!h || !h.__mkVq) return;
+        h.__mkVq = 0; clearTimeout(h.__mkVqT);
+        var p = h.__mkVqPrev; h.__mkVqPrev = null;
+        p == null ? h.removeAttribute("inputmode") : h.setAttribute("inputmode", p);
+    }
+    function onVideo(e) {
+        var t = e.target; if (!t || !t.closest) return;
+        var w = t.closest(".video-wrapper"); if (!w) return;
+        var h = hostOf(w); if (!h) return;
+        if (h.__mkVq || !kbUp()) { quiet(h); guard = { h: h, until: Date.now() + 2000 }; }
+        if (e.type === "dblclick" && !t.closest("button")) e.preventDefault();
+    }
+    function onText(e) {
+        var t = e.target; if (!t || !t.closest || t.closest(".video-wrapper")) return;
+        var h = hostOf(t); if (!h) return;
+        guard = null;
+        if (h.__mkVq) {
+            // the person taps the text itself: they want the keyboard back
+            loud(h);
+            try { var sl = window.getSelection(); if (document.activeElement === h && !(sl && !sl.isCollapsed && h.contains(sl.anchorNode))) h.blur(); } catch (x) { }
+        }
+    }
+    ["pointerdown", "touchstart", "mousedown"].forEach(function (n) { document.addEventListener(n, function (e) { onVideo(e); onText(e); }, true); });
+    ["pointerup", "touchend", "mouseup", "click", "dblclick"].forEach(function (n) { document.addEventListener(n, onVideo, true); });
+    document.addEventListener("focusin", function (e) {
+        if (guard && Date.now() < guard.until && e.target === guard.h) { try { guard.h.blur(); } catch (x) { } }
+    }, true);
+    document.addEventListener("focusout", function (e) { var h = e.target; h && h.__mkVq && loud(h); }, true);
+    var st = document.createElement("style");
+    st.id = "mkVideoNoKbCss";
+    st.textContent = "html body .video-wrapper{-webkit-user-select:none!important;user-select:none!important;-webkit-touch-callout:none}";
+    (document.head || document.documentElement).appendChild(st);
+})();
+</script>
+
+
 
 <script id="mkVideoFixJs">
 (function () {
@@ -63139,17 +63806,106 @@ html body .audio-wrapper.video-wrapper.mk-vplaying>button.img-btn.img-btn.img-bt
 </script>
 
 <script id="mkBigPasteJs">
-/* ===== Big paste: pasting a very large text used to freeze the app. The browser's execCommand("insertText") is
-   very slow on thousands of lines, and the table detectors parse the whole clipboard on top of it. For large plain
-   text we insert the lines straight into the DOM in ONE pass (same <div>-per-line structure the editor makes) and
-   fire a single "input" event so autosave / bidi / history run once. Smaller pastes keep the normal path. ===== */
+/* ===== Big paste engine v2 (note editor + note viewer/edit panel) =====
+   Why the old version froze for many seconds: (1) the lines were separated with <br> inside ONE block, so the browser
+   ran bidi + line layout over a single paragraph of thousands of lines (quadratic: ~10 s for 16k Persian lines);
+   (2) the viewer edit panel pasted through execCommand("insertText"), which is just as slow; (3) autosave rebuilt the
+   note text with a quadratic string concat; (4) the contrast guard queued every pasted node.
+   Now every line is its own block (<div>, the same structure the editor makes on Enter), all lines are inserted in
+   ONE DocumentFragment pass, the rest of the caret's line is carried to the end of the last pasted line, and a single
+   "input" event fires so autosave / bidi / history run once. ===== */
 (function () {
-    var MIN_CHARS = 20000, MIN_LINES = 800;
-    function boxOf(n) { var el = n && (n.nodeType === 1 ? n : n.parentElement); return el && el.closest ? el.closest('.text-box[contenteditable="true"]') : null; }
+    if (window.__mkBigPaste2) return; window.__mkBigPaste2 = 1;
+    var MIN_CHARS = 6000, MIN_LINES = 120;
+    var HOST = '.text-box[contenteditable="true"],.mu-viewer-body[contenteditable="true"]';
+    var BLOCKRE = /^(DIV|P|LI|UL|OL|BLOCKQUOTE|PRE|H[1-6]|TABLE|HR|FIGURE|SECTION|ARTICLE)$/;
+    var MEDIA = ".img-drag-wrapper,.audio-wrapper,.mu-img-row,.video-wrapper,.drawing-box,.img-top-divider";
+    function boxOf(n) { var el = n && (n.nodeType === 1 ? n : n.parentElement); return el && el.closest ? el.closest(HOST) : null; }
     function fixSpaces(box, t) {
         var ws = ""; try { ws = getComputedStyle(box).whiteSpace || ""; } catch (e) { }
         if (/^pre/.test(ws)) return t;
-        return t.replace(/^ +| +$| {2,}/gm, function (m) { return m.length === 1 ? "\u00a0" : " " + new Array(m.length).join("\u00a0"); });
+        return t.replace(/^ +| +$| {2,}/gm, function (m) { return m.length === 1 ? " " : " " + new Array(m.length).join(" "); });
+    }
+    function lineDivs(lines, from, to, state) {
+        var frag = document.createDocumentFragment(), d = document;
+        for (var i = from; i < to; i++) {
+            var dv = d.createElement("div"), ln = lines[i];
+            if (ln) { var tx = d.createTextNode(ln); dv.appendChild(tx); state.last = tx; state.lastLen = ln.length; state.lastDiv = dv; }
+            else { dv.appendChild(d.createElement("br")); state.last = null; state.lastDiv = dv; }
+            frag.appendChild(dv);
+        }
+        return frag;
+    }
+    function place(box, range, lines) {
+        var d = document, sel = window.getSelection(), st = { last: null, lastLen: 0, lastDiv: null };
+        var sc = range.startContainer, block = sc; while (block && block.parentNode !== box) block = block.parentNode;
+        if (block === box || sc === box) block = null;
+        var isEl = block && block.nodeType === 1, bn = isEl ? block.nodeName : "";
+        var simple = isEl && /^(DIV|P)$/.test(bn) && !block.matches(MEDIA) && !block.querySelector(MEDIA + ",table") && !block.closest("blockquote");
+        var inline = !block || block.nodeType === 3 || (isEl && !BLOCKRE.test(bn) && !block.matches(MEDIA));
+        var insertAfter = null, firstText = null, tail = null, removeBr = null, mode;
+        if (simple) {
+            mode = "simple";
+            var tr = d.createRange(); tr.setStart(range.startContainer, range.startOffset);
+            block.lastChild ? tr.setEndAfter(block.lastChild) : tr.setEnd(block, 0);
+            tail = tr.extractContents();
+            if (lines[0]) { firstText = d.createTextNode(lines[0]); range.insertNode(firstText); }
+        } else if (inline) {
+            mode = "inline";
+            // the rest of the caret's line (up to the next <br> / block) moves behind the last pasted line
+            var anchor = range.startContainer, off = range.startOffset, scan;
+            if (anchor === box) scan = box.childNodes[off] || null; else { var top = anchor; while (top && top.parentNode !== box) top = top.parentNode; scan = top ? top.nextSibling : null; }
+            var n = scan; while (n) { if (n.nodeType === 1 && (n.nodeName === "BR" || BLOCKRE.test(n.nodeName) || n.matches(MEDIA))) break; n = n.nextSibling; }
+            var tr2 = d.createRange(); tr2.setStart(anchor, off); n ? tr2.setEndBefore(n) : tr2.setEnd(box, box.childNodes.length);
+            tail = tr2.extractContents();
+            if (n && n.nodeName === "BR") removeBr = n;
+            if (lines[0]) { firstText = d.createTextNode(lines[0]); range.insertNode(firstText); }
+        } else {
+            // inside a list / quote / next to media: keep lines inside that container, separated with <br>
+            mode = "br";
+            var f2 = d.createDocumentFragment();
+            lines.forEach(function (l, i) { if (i) f2.appendChild(d.createElement("br")); if (l) { var t = d.createTextNode(l); f2.appendChild(t); st.last = t; st.lastLen = l.length; } });
+            range.insertNode(f2);
+            return { st: st, mode: mode, lastDiv: null };
+        }
+        // lines[1..] become one <div> each; the first is built now, the rest may be appended in slices
+        var ref = firstText || null, parent, before;
+        if (firstText) { parent = firstText.parentNode; before = firstText.nextSibling; }
+        else { parent = range.startContainer.nodeType === 1 ? range.startContainer : range.startContainer.parentNode; before = range.startContainer.nodeType === 1 ? range.startContainer.childNodes[range.startOffset] || null : null; if (range.startContainer.nodeType === 3) { before = range.startContainer.nextSibling; } }
+        if (mode === "simple") { parent = block.parentNode; before = block.nextSibling; }
+        if (removeBr && removeBr.parentNode) { if (before === removeBr) before = removeBr.nextSibling; removeBr.parentNode.removeChild(removeBr); }
+        return { st: st, mode: mode, parent: parent, before: before, tail: tail, removeBr: removeBr, block: block };
+    }
+    function finish(box, sel, st, tailDiv) {
+        var d = document;
+        try {
+            var r2 = d.createRange();
+            if (st.last && st.last.nodeType === 3) r2.setStart(st.last, st.lastLen); else if (st.lastDiv) r2.setStart(st.lastDiv, 0); else r2.setStartAfter(box.lastChild || box);
+            r2.collapse(true); sel.removeAllRanges(); sel.addRange(r2);
+        } catch (x) { }
+        try { box.dispatchEvent(new InputEvent("input", { bubbles: true, inputType: "insertFromPaste" })); } catch (x) { }
+        try { var el = st.last && st.last.parentElement || st.lastDiv; el && el.scrollIntoView && el.scrollIntoView({ block: "nearest" }); } catch (x) { }
+    }
+    function insertLines(box, text) {
+        var sel = window.getSelection(); if (!sel || !sel.rangeCount) return false;
+        var range = sel.getRangeAt(0); if (!box.contains(range.commonAncestorContainer)) return false;
+        var lines = text.split("\n"), d = document;
+        range.collapsed || range.deleteContents();
+        if (lines.length === 1) { var tn = d.createTextNode(lines[0]); range.insertNode(tn); var r1 = d.createRange(); r1.setStart(tn, tn.nodeValue.length); r1.collapse(true); sel.removeAllRanges(); sel.addRange(r1); box.dispatchEvent(new InputEvent("input", { bubbles: true, inputType: "insertFromPaste" })); return true; }
+        var P = place(box, range, lines), st = P.st;
+        if (P.mode === "br") { finish(box, sel, st); return true; }
+        var frag = lineDivs(lines, 1, lines.length, st);
+        attachTail(P, st, frag);
+        P.parent.insertBefore(frag, P.before);
+        finish(box, sel, st);
+        return true;
+    }
+    function attachTail(P, st, frag) {
+        // the rest of the caret's original line goes at the end of the LAST pasted line
+        var lastDiv = frag.lastChild; if (!lastDiv) return;
+        if (P.tail && P.tail.firstChild) { if (lastDiv.firstChild && lastDiv.firstChild.nodeName === "BR") lastDiv.removeChild(lastDiv.firstChild); lastDiv.appendChild(P.tail); }
+        if (!lastDiv.firstChild) lastDiv.appendChild(document.createElement("br"));
+        st.lastDiv = lastDiv;
     }
     function onPaste(e) {
         try {
@@ -63158,49 +63914,21 @@ html body .audio-wrapper.video-wrapper.mk-vplaying>button.img-btn.img-btn.img-bt
             var text = cd.getData("text/plain"); if (!text) return;
             var big = text.length >= MIN_CHARS; if (!big) { var n = 0, p = -1; while ((p = text.indexOf("\n", p + 1)) >= 0 && ++n < MIN_LINES); big = n >= MIN_LINES; }
             if (!big) return;
+            // rich/table clipboards (html with <table>) keep their own, specialised path
+            var html = ""; try { html = cd.getData("text/html") || ""; } catch (x) { }
+            if (html && /<table[\s>]/i.test(html)) return;
             var sel = window.getSelection(); if (!sel || !sel.rangeCount) return;
             var range = sel.getRangeAt(0); if (!box.contains(range.commonAncestorContainer)) return;
             e.preventDefault(); e.stopImmediatePropagation();
             text = text.replace(/\u0000/g, "").replace(/\r\n?/g, "\n"); text = fixSpaces(box, text);
             try { box.spellcheck = false; box.setAttribute("spellcheck", "false"); } catch (x) { }
-            var lines = text.split("\n"), last = null, lastLen = 0, d = document;
-            range.collapsed || range.deleteContents();
-            // the line that holds the caret: a direct child <div>/<p> of the box
-            var block = range.startContainer; while (block && block.parentNode !== box) block = block.parentNode;
-            if (block === range.startContainer && block === box) block = null;
-            var simple = block && block.nodeType === 1 && /^(DIV|P)$/.test(block.nodeName) && !block.querySelector(".img-drag-wrapper,.audio-wrapper,table") && !block.closest("blockquote");
-            if (lines.length === 1) {
-                var tn = d.createTextNode(lines[0]); range.insertNode(tn); last = tn; lastLen = tn.nodeValue.length;
-            } else if (simple) {
-                var tail = null, tr = d.createRange(); tr.setStart(range.startContainer, range.startOffset);
-                block.lastChild ? tr.setEndAfter(block.lastChild) : tr.setEnd(block, 0);
-                tail = tr.extractContents();
-                if (lines[0]) { var t0 = d.createTextNode(lines[0]); range.insertNode(t0); }
-                var frag = d.createDocumentFragment(), lastDiv = null;
-                for (var i = 1; i < lines.length; i++) {
-                    var dv = d.createElement("div"), ln = lines[i];
-                    if (ln) { var tx = d.createTextNode(ln); dv.appendChild(tx); if (i === lines.length - 1) { last = tx; lastLen = ln.length; } } else if (i < lines.length - 1) dv.appendChild(d.createElement("br"));
-                    frag.appendChild(dv); lastDiv = dv;
-                }
-                if (tail && tail.firstChild) lastDiv.appendChild(tail);
-                else if (!lastDiv.firstChild) lastDiv.appendChild(d.createElement("br"));
-                block.parentNode.insertBefore(frag, block.nextSibling);
-                if (!last) { last = lastDiv; lastLen = 0; }
-            } else {
-                // caret directly in the box / inside a list or quote: lines are separated with <br>
-                var f2 = d.createDocumentFragment();
-                lines.forEach(function (l, i) { if (i) f2.appendChild(d.createElement("br")); if (l) { var t = d.createTextNode(l); f2.appendChild(t); last = t; lastLen = l.length; } });
-                range.insertNode(f2);
-            }
-            try { var r2 = d.createRange(); if (last && last.nodeType === 3) r2.setStart(last, lastLen); else if (last) r2.setStart(last, 0); else r2.setStartAfter(box.lastChild || box); r2.collapse(true); sel.removeAllRanges(); sel.addRange(r2); } catch (x) { }
-            box.dispatchEvent(new InputEvent("input", { bubbles: true, inputType: "insertFromPaste" }));
-            try { var el = last && (last.nodeType === 1 ? last : last.parentElement); el && el.scrollIntoView && el.scrollIntoView({ block: "nearest" }); } catch (x) { }
+            insertLines(box, text);
         } catch (err) { console.warn("big paste fast path failed, falling back", err); }
     }
     // window capture runs before every document-level paste listener
     window.addEventListener("paste", onPaste, true);
-    // a huge note: the browser's own spell-checker alone makes typing lag, so it is turned off for it
-    document.addEventListener("focusin", function (e) { var b = boxOf(e.target); if (b && b.spellcheck !== false && b.textContent.length > 100000) { try { b.spellcheck = false; b.setAttribute("spellcheck", "false"); } catch (x) { } } }, true);
+    // huge note: the browser's own spell-checker makes typing lag, so it is turned off for it
+    document.addEventListener("focusin", function (e) { var b = boxOf(e.target); if (!b) return; if (b.spellcheck !== false && b.textContent.length > 100000) { try { b.spellcheck = false; b.setAttribute("spellcheck", "false"); } catch (x) { } } }, true);
 })();
 </script>
 
@@ -63395,5 +64123,9 @@ html body .text-box code.mk-ml,html body .mu-viewer-body code.mk-ml,html body .m
 })();
 </script>
 
+
+<script id="mkxWrap">
+(function(){var N=["buildMixedEncryptedExportZip", "downloadFullJsonBackup", "downloadStructuredAll", "downloadStructuredAllWithVault", "downloadStructuredSingle", "downloadJsonAllIndividualZip", "downloadHtmlAllCombined", "downloadHtmlAllIndividualZip", "downloadMdAllCombined", "downloadMdAllIndividualZip", "buildExportBundle", "exportFullHTML", "downloadSelectedDOCX", "downloadDocxAllCombined", "downloadDocxAllIndividualZip", "exportAllDOCX", "downloadSelectedPDF", "downloadSelectedImage", "shareNote"];function go(){var fa=false;try{fa=currentLang==="fa"}catch(e){}N.forEach(function(n){try{MKX.wrap(n,function(){var f=false;try{f=currentLang==="fa"}catch(e){}return f?"در حال خروجی گرفتن…":"Exporting…"})}catch(e){}})}if(document.readyState==="loading")document.addEventListener("DOMContentLoaded",function(){setTimeout(go,0)});else setTimeout(go,0)})();
+</script>
 </body>
 </html>
