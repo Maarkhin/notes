@@ -63368,9 +63368,9 @@ var CONT = [["AS", "آسیا", "Asia"], ["EU", "اروپا", "Europe"], ["NA", "
     }
     function stopObservers() { io && io.disconnect(), mo && mo.disconnect(); io = mo = null; clearInterval(upT); upT = 0; stopPoll(); }
     let upT = 0;
-    async function scanUploads(all) {
+    async function scanUploads(all, ignoreSince) {
         if (!isOn()) return 0; S.kid || await syncKid(); await refreshLocal(!1);
-        const refs = refsAll(), since = +(readCfg() || {}).since || 0, okR = r => !!(r && r.fid && !isBad(r) && (all ? (!S.kid || r.k === S.kid) : (!r.k || !S.kid || r.k === S.kid)));
+        const refs = refsAll(), since = ignoreSince ? 0 : +(readCfg() || {}).since || 0, okR = r => !!(r && r.fid && !isBad(r) && (all ? (!S.kid || r.k === S.kid) : (!r.k || !S.kid || r.k === S.kid)));
         let n = 0, dropped = !1;
         if (S.qUp.length) S.qUp = S.qUp.filter(id => refs.has(id));
         { let fch = !1; for (const id in S.fail) if (!refs.has(id)) { delete S.fail[id]; fch = !0; } fch && persist(); }
@@ -63489,11 +63489,11 @@ var CONT = [["AS", "آسیا", "Asia"], ["EU", "اروپا", "Europe"], ["NA", "
             if (!S.token || !S.key) return { locked: !0 };
             S.paused = !1; await loadState();
             report(L("⏳ رسانه‌ها: خواندن فهرست از Cloud…", "⏳ Media: reading the list from Cloud…"));
-            await refreshLocal(!0); await pullManifest(); hasBad() && await repairBad(!1, !0);
+            await refreshLocal(!0); const pullOk = await pullManifest(); hasBad() && await repairBad(!1, !0);
             for (const id of Object.keys(S.fail)) { const f = S.fail[id]; f && f.k !== "big" && delete S.fail[id]; }
             const refs = referenced();
             report(L("⏳ رسانه‌ها: بررسی فایل‌های این دستگاه…", "⏳ Media: checking this device's files…"));
-            const nUp = opts.downloadOnly ? 0 : await scanUploads(!1);   // downloadOnly: "Receive media backup" never uploads
+            const nUp = opts.downloadOnly ? 0 : await scanUploads(!1, !0);   // downloadOnly: "Receive media backup" never uploads
             let room = capBytes() - S.usage, nDown = 0, capped = !1;
             const ids = [...new Set([...Object.keys(S.remote), ...Object.keys(S.recs)])].filter(id => refs.has(id) && !S.localKeys.has(id) && !S.waiters.has(id)).sort((a, b) => idTime(b) - idTime(a));
             for (const id of ids) {
@@ -63510,7 +63510,8 @@ var CONT = [["AS", "آسیا", "Asia"], ["EU", "اروپا", "Europe"], ["NA", "
                 report(L(`⏳ رسانه‌ها: ${n(left)} فایل باقی مانده…`, `⏳ Media: ${left} file(s) left…`));
                 await sleep(500);
             }
-            return { up: nUp, down: nDown, capped, timedOut, err: Object.keys(S.fail).length };
+            let missing = 0; for (const id of refs) if (!S.localKeys.has(id) && !known(id)) missing++;
+            return { up: nUp, down: nDown, capped, timedOut, err: Object.keys(S.fail).length, missing, pullFail: !pullOk, left: S.qUp.length + S.qDown.length };
         } catch (e) { console.warn("mkmed fullSync", e); return { failed: !0 }; }
     }
         function startUploadScan() { if (upT) return; upT = setInterval(() => { if (S.token && S.key && !S.paused) { autoOn() && (scanUploads(!1), autoSync()); cleanOn() && purgeOrphans(!0); if (!S.busy && (S.qUp.length || S.qDown.length) && Date.now() >= netHold) pump(); } }, 12000); hookSave(); setTimeout(() => { if (S.token && S.key && !S.paused && autoOn()) { scanUploads(!1); autoSyncSoon(500); } }, 1500); }
@@ -63820,6 +63821,8 @@ var CONT = [["AS", "آسیا", "Asia"], ["EU", "اروپا", "Europe"], ["NA", "
             if (r && r.locked) { done(L("بکاپ رسانه‌ای قفل است؛ رمز را در تب «رسانه» وارد کن.", "Media backup is locked; enter the password in the Media tab."), !1, 4500); openTab(); }
             else if (!r || r.failed) done(L("دریافت بکاپ رسانه‌ای ناموفق بود. دوباره امتحان کن.", "Receiving the media backup failed. Please try again."), !1, 4500);
             else if (r.skipped) { done(L("بکاپ رسانه‌ای هنوز فعال نیست؛ از تب «رسانه» فعالش کن.", "Media backup is not active yet; turn it on in the Media tab."), !1, 4000); openTab(); }
+            else if (r.pullFail && !(r.up || r.down)) done(L("⚠️ خواندن فهرست رسانه از Cloud ناموفق بود؛ اینترنت/پروکسی را بررسی کن و دوباره امتحان کن.", "⚠️ Could not read the media list from Cloud; check the connection/proxy and try again."), !1, 6000);
+            else if (!(r.up || r.down) && (r.missing || r.err || r.left)) done(L(`⚠️ همگام نیست: ${r.missing || 0} فایل در فهرست ابری نیست (روی دستگاه مبدأ آپلود نشده)، ${r.err || 0} خطا، ${r.left || 0} در صف. روی دستگاهی که عکس‌ها را دارد «ارسال همه» را بزن.`, `⚠️ Not in sync: ${r.missing || 0} file(s) are not in the Cloud list (never uploaded from the source device), ${r.err || 0} error(s), ${r.left || 0} queued. On the device that has the photos, tap "Upload all".`), !1, 8000);
             else done((r.up || r.down) ? L(`✅ همگام‌سازی رسانه: ${r.up || 0} ارسال، ${r.down || 0} دریافت` + (r.err ? ` (${r.err} خطا)` : "") + (r.capped ? " (سقف حجم پر شد)" : "") + (r.timedOut ? " (بقیه در پس‌زمینه ادامه دارد)" : "") + ".", `✅ Media synced: ${r.up || 0} sent, ${r.down || 0} received` + (r.err ? ` (${r.err} error(s))` : "") + (r.capped ? " (size limit reached)" : "") + (r.timedOut ? " (the rest continues in the background)" : "") + ".") : L("✅ رسانه‌ها از قبل همگام است.", "✅ Media is already in sync."), !r.err || !!(r.up || r.down), 4000);
         } catch (e) { console.warn("mkMediaReceive", e); done(L("دریافت بکاپ رسانه‌ای ناموفق بود.", "Receiving the media backup failed."), !1, 4500); }
         finally { window.__mkMediaRecvBusy = !1; }
