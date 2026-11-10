@@ -25701,18 +25701,21 @@ function mu_stripHeavyMediaItems(items) { return (Array.isArray(items) ? items :
 // (asking for the media password if it was lost), and otherwise the person decides: cancel (recommended) or continue without them.
 const MU_EXPG = { memo: null };
 function mu_collectExportMediaIds(items) {
-    const ids = new Set(), re = /<(\w+)\b[^>]*?\bdata-mu-media\s*=\s*["']([^"']+)["'][^>]*>/gi;
+    const ids = new Set(), re1 = /<(\w+)\b[^>]*?\bdata-mu-media\s*=\s*["']([^"']+)["'][^>]*>/gi, re2 = /<(\w+)\b[^>]*?\bdata-mkmed\s*=\s*["'](img|audio|video|file):([^"']+)["'][^>]*>/gi;
+    const wantKind = k => k === "file" ? window.mkExportFiles === !0 : k === "img" ? window.mkExportImages !== !1 : k === "audio" ? window.mkExportVoice !== !1 : k === "video" ? window.mkExportVideo === !0 : !1;
     for (const it of Array.isArray(items) ? items : []) {
         const h = it && typeof it.html == "string" ? it.html : "";
-        if (h.indexOf("data-mu-media") < 0) continue;
-        re.lastIndex = 0;
+        if (h.indexOf("data-mu-media") < 0 && h.indexOf("data-mkmed") < 0) continue;
         let m;
-        while ((m = re.exec(h))) {
-            const tag = m[1].toLowerCase(), full = m[0], file = /file-wrapper/.test(full);
-            const want = file ? window.mkExportFiles === !0 : tag === "img" ? window.mkExportImages !== !1 : tag === "audio" ? window.mkExportVoice !== !1 : tag === "video" ? window.mkExportVideo === !0 : !1;
-            if (!want || /\b(src|data-fdata)\s*=\s*["']data:/i.test(full)) continue;
+        re1.lastIndex = 0;
+        while ((m = re1.exec(h))) {
+            const tag = m[1].toLowerCase(), full = m[0], kind = /file-wrapper/.test(full) ? "file" : tag === "img" ? "img" : tag === "audio" ? "audio" : tag === "video" ? "video" : "";
+            if (!wantKind(kind) || /\b(src|data-fdata)\s*=\s*["']data:/i.test(full)) continue;
             ids.add(m[2]);
         }
+        // media-sync placeholders (data-mkmed="img:<id>"): the file lives in the bot until it is downloaded to this device
+        re2.lastIndex = 0;
+        while ((m = re2.exec(h))) wantKind(m[2]) && ids.add(m[3]);
     }
     return [...ids];
 }
@@ -25724,44 +25727,72 @@ async function mu_missingMedia(ids) {
     }
     return miss;
 }
+// Placeholders whose file is now on this device become ordinary data-mu-media elements, which every export path already knows how to read
+function mu_rewriteMkmed(items, have) {
+    return (Array.isArray(items) ? items : []).map(it => {
+        if (!it || typeof it.html != "string" || it.html.indexOf("data-mkmed") < 0) return it;
+        const tpl = document.createElement("template");
+        tpl.innerHTML = it.html;
+        let changed = !1;
+        tpl.content.querySelectorAll("[data-mkmed]").forEach(el => {
+            const p = (el.getAttribute("data-mkmed") || "").split(":"), kind = p[0], id = p.slice(1).join(":");
+            if (!id || !have.has(id) || !/^(img|audio|video|file)$/.test(kind)) return;
+            let n;
+            if (kind === "file") {
+                n = document.createElement("div"), n.className = "file-wrapper";
+                ["data-fname", "data-fsize", "data-ftype"].forEach(a => { el.hasAttribute(a) && n.setAttribute(a, el.getAttribute(a)); });
+            }
+            else { n = document.createElement(kind === "img" ? "img" : kind); kind !== "img" && n.setAttribute("controls", ""); }
+            n.setAttribute("data-mu-media", id), el.replaceWith(n), changed = !0;
+        });
+        return changed ? Object.assign({}, it, { html: tpl.innerHTML }) : it;
+    });
+}
+// Resolves to the items to export (placeholders already on this device turned into real media); rejects with the silent-cancel error when the person cancels
 async function mu_exportMediaGuard(items) {
-    if (window.mkTextOnlyExport) return;
+    if (window.mkTextOnlyExport) return items;
     const ids = mu_collectExportMediaIds(items);
-    if (!ids.length) return;
+    if (!ids.length) return items;
     let miss = await mu_missingMedia(ids);
-    if (!miss.length) return;
-    const key = miss.slice().sort().join("|"), memo = MU_EXPG.memo;
-    if (memo && memo.key === key && Date.now() - memo.at < 120000) { if (memo.ok) return; throw new Error(MKX.CANCEL_MSG); }
-    const fa = currentLang === "fa", M = window.MKMED, say = (f, e) => { try { typeof showToast == "function" && showToast(fa ? f : e, 4000); } catch (x) { } };
-    try {
-        if (M && typeof M._cfg == "function" && M._cfg()) {
-            if (!(M.S && M.S.token && M.S.key) && typeof M.ensureUnlocked == "function") {
-                say("برای تکمیل خروجی، رمز «بکاپ رسانه» لازم است.", "The “Media backup” password is needed to complete the export.");
-                await M.ensureUnlocked(!0);
+    if (miss.length) {
+        const key = miss.slice().sort().join("|"), memo = MU_EXPG.memo;
+        if (memo && memo.key === key && Date.now() - memo.at < 120000) { if (!memo.ok) throw new Error(MKX.CANCEL_MSG); }
+        else {
+            const fa = currentLang === "fa", M = window.MKMED, say = (f, e) => { try { typeof showToast == "function" && showToast(fa ? f : e, 4000); } catch (x) { } };
+            try {
+                if (M && typeof M._cfg == "function" && M._cfg()) {
+                    if (!(M.S && M.S.token && M.S.key) && typeof M.ensureUnlocked == "function") {
+                        say("برای تکمیل خروجی، رمز «بکاپ رسانه» لازم است.", "The “Media backup” password is needed to complete the export.");
+                        await M.ensureUnlocked(!0);
+                    }
+                    if (M.S && M.S.token && M.S.key && typeof M.ensure == "function") {
+                        say("در حال دریافت رسانه‌های ناقص از ربات…", "Fetching the missing media from the bot…");
+                        await Promise.race([Promise.all(miss.map(id => M.ensure(id, { prio: !0 }))), new Promise(r => setTimeout(r, 90000))]);
+                        miss = await mu_missingMedia(miss);
+                    }
+                }
             }
-            if (M.S && M.S.token && M.S.key && typeof M.ensure == "function") {
-                say("در حال دریافت رسانه‌های ناقص از ربات…", "Fetching the missing media from the bot…");
-                await Promise.race([Promise.all(miss.map(id => M.ensure(id, { prio: !0 }))), new Promise(r => setTimeout(r, 90000))]);
-                miss = await mu_missingMedia(miss);
+            catch (e) { console.warn("export media recovery failed", e); }
+            if (miss.length) {
+                const n = miss.length, ok = confirm(fa
+                    ? n + " عکس/ویس این خروجی روی این دستگاه نیست و دریافت نشد (رمز یا توکن رسانه در دسترس نیست، یا فایل در ربات پیدا نشد).\n\nاگر ادامه بدهی، خروجی بدون این رسانه‌ها و ناقص ساخته می‌شود.\n\nOK = ادامه بدون این رسانه‌ها\nCancel = لغو خروجی (پیشنهادی؛ اول «بکاپ رسانه» را باز کن و رسانه‌ها را دریافت کن)"
+                    : n + " photo(s)/voice note(s) in this export are not on this device and could not be fetched (media password/token unavailable, or the file is not in the bot).\n\nIf you continue, the export will be built WITHOUT them and will be incomplete.\n\nOK = continue without them\nCancel = cancel the export (recommended: open “Media backup” and download them first)");
+                MU_EXPG.memo = { key: key, at: Date.now(), ok: ok };
+                if (!ok) throw new Error(MKX.CANCEL_MSG);
+                say("ادامه بدون " + n + " رسانهٔ ناقص؛ خروجی کامل نیست.", "Continuing without " + n + " missing media; the export is incomplete.");
             }
+            else MU_EXPG.memo = null;
         }
     }
-    catch (e) { console.warn("export media recovery failed", e); }
-    if (!miss.length) return;
-    const n = miss.length, ok = confirm(fa
-        ? n + " عکس/ویس این خروجی روی این دستگاه نیست و دریافت نشد (رمز یا توکن رسانه در دسترس نیست، یا فایل در ربات پیدا نشد).\n\nاگر ادامه بدهی، خروجی بدون این رسانه‌ها و ناقص ساخته می‌شود.\n\nOK = ادامه بدون این رسانه‌ها\nCancel = لغو خروجی (پیشنهادی؛ اول «بکاپ رسانه» را باز کن و رسانه‌ها را دریافت کن)"
-        : n + " photo(s)/voice note(s) in this export are not on this device and could not be fetched (media password/token unavailable, or the file is not in the bot).\n\nIf you continue, the export will be built WITHOUT them and will be incomplete.\n\nOK = continue without them\nCancel = cancel the export (recommended: open “Media backup” and download them first)");
-    MU_EXPG.memo = { key: key, at: Date.now(), ok: ok };
-    if (!ok) throw new Error(MKX.CANCEL_MSG);
-    say("ادامه بدون " + n + " رسانهٔ ناقص؛ خروجی کامل نیست.", "Continuing without " + n + " missing media; the export is incomplete.");
+    return mu_rewriteMkmed(items, new Set(ids.filter(id => !miss.includes(id))));
 }
-function mu_resolveMediaSrcInHtml(html) { return window.mkTextOnlyExport ? Promise.resolve(mu_stripMediaHtml(html)) : mu_exportMediaGuard([{ html: html }]).then(() => MU_IndexedDB.resolveMediaSrcInHtml(mu_stripHeavyMediaHtml(html))); }
-function mu_resolveItemsMediaForExport(items) { return window.mkTextOnlyExport ? Promise.resolve(mu_stripMediaItems(items)) : mu_exportMediaGuard(items).then(() => MU_IndexedDB.resolveItemsMediaForExport(mu_stripHeavyMediaItems(items))); }
+function mu_resolveMediaSrcInHtml(html) { return window.mkTextOnlyExport ? Promise.resolve(mu_stripMediaHtml(html)) : mu_exportMediaGuard([{ html: html }]).then(it => MU_IndexedDB.resolveMediaSrcInHtml(mu_stripHeavyMediaHtml(it[0].html))); }
+function mu_resolveItemsMediaForExport(items) { return window.mkTextOnlyExport ? Promise.resolve(mu_stripMediaItems(items)) : mu_exportMediaGuard(items).then(it => MU_IndexedDB.resolveItemsMediaForExport(mu_stripHeavyMediaItems(it))); }
 // Streaming-export variants (see MKX): media becomes a tiny placeholder that is expanded straight into a Blob by MKX.textBlob()
-function mu_resolveItemsMediaDeferred(items) { return window.mkTextOnlyExport ? Promise.resolve(mu_stripMediaItems(items)) : mu_exportMediaGuard(items).then(() => MKX.lightenItems(mu_stripHeavyMediaItems(items), "token")); }
-function mu_resolveMediaSrcInHtmlDeferred(html) { return window.mkTextOnlyExport ? Promise.resolve(mu_stripMediaHtml(html)) : mu_exportMediaGuard([{ html: html }]).then(() => MKX.lightenHtml(mu_stripHeavyMediaHtml(html), "token")); }
-function mu_resolveItemsMediaUrls(items, keep) { return window.mkTextOnlyExport ? Promise.resolve(mu_stripMediaItems(items)) : mu_exportMediaGuard(items).then(() => MKX.lightenItems(mu_stripHeavyMediaItems(items), keep ? "urlkeep" : "url")); }
-function mu_resolveItemsMediaDocx(items) { return Promise.resolve(window.mkTextOnlyExport ? mu_stripMediaItems(items) : mu_stripHeavyMediaItems(items)); }
+function mu_resolveItemsMediaDeferred(items) { return window.mkTextOnlyExport ? Promise.resolve(mu_stripMediaItems(items)) : mu_exportMediaGuard(items).then(it => MKX.lightenItems(mu_stripHeavyMediaItems(it), "token")); }
+function mu_resolveMediaSrcInHtmlDeferred(html) { return window.mkTextOnlyExport ? Promise.resolve(mu_stripMediaHtml(html)) : mu_exportMediaGuard([{ html: html }]).then(it => MKX.lightenHtml(mu_stripHeavyMediaHtml(it[0].html), "token")); }
+function mu_resolveItemsMediaUrls(items, keep) { return window.mkTextOnlyExport ? Promise.resolve(mu_stripMediaItems(items)) : mu_exportMediaGuard(items).then(it => MKX.lightenItems(mu_stripHeavyMediaItems(it), keep ? "urlkeep" : "url")); }
+function mu_resolveItemsMediaDocx(items) { return window.mkTextOnlyExport ? Promise.resolve(mu_stripMediaItems(items)) : mu_exportMediaGuard(items).then(it => mu_stripHeavyMediaItems(it)); }
 function mu_migrateNoteMediaToBlobs(item) { return MU_IndexedDB.migrateNoteMediaToBlobs(item); }
 function mu_migrateAllNotesMedia() { return MU_IndexedDB.migrateAllNotesMedia(); }
 function mu_collectReferencedMediaIds() { return MU_IndexedDB.collectReferencedMediaIds(); }
@@ -29161,12 +29192,17 @@ async function mkBlobPlainText(blob, name, type) {
     return t;
 }
 // Largest prefix of text whose URL-encoded form fits maxEnc characters
+// encodeURIComponent throws URIError on a lone surrogate (an emoji cut in half). These helpers never throw and never cut a pair.
+function mkWellFormed(s) { return String(s == null ? "" : s).replace(/[\uD800-\uDBFF](?![\uDC00-\uDFFF])|(?:[^\uD800-\uDBFF]|^)[\uDC00-\uDFFF]/g, m => m.length > 1 ? m[0] + "�" : "�"); }
+function mkEncLen(s) { s = String(s); if (/[\uD800-\uDBFF]$/.test(s)) s = s.slice(0, -1); try { return encodeURIComponent(s).length; } catch (e) { try { return encodeURIComponent(mkWellFormed(s)).length; } catch (e2) { return 1 / 0; } } }
+function mkSafeCut(s, n) { return n > 0 && n < s.length && /[\uD800-\uDBFF]/.test(s.charAt(n - 1)) ? n - 1 : n; }
 function mkFitEncoded(text, maxEnc) {
-    text = String(text || "");
-    if (encodeURIComponent(text).length <= maxEnc)
+    text = mkWellFormed(text);
+    if (mkEncLen(text) <= maxEnc)
         return { text: text, cut: !1 };
     let lo = 0, hi = text.length;
-    while (lo < hi) { const mid = Math.ceil((lo + hi) / 2); encodeURIComponent(text.slice(0, mid)).length <= maxEnc ? lo = mid : hi = mid - 1; }
+    while (lo < hi) { const mid = Math.ceil((lo + hi) / 2); mkEncLen(text.slice(0, mid)) <= maxEnc ? lo = mid : hi = mid - 1; }
+    lo = mkSafeCut(text, lo);
     return { text: text.slice(0, lo).replace(/\s+\S*$/, "") + "…", cut: !0 };
 }
 function mkActive() { try { return !navigator.userActivation || navigator.userActivation.isActive; } catch (e) { return !0; } }
@@ -29207,13 +29243,13 @@ async function mkWebShare(blob, name, type, text) {
 // and a small panel opens the chat picker part after part, one tap each. Nothing is silently truncated.
 function mkSplitForTg(text, maxEnc, maxRaw) {
     maxEnc = maxEnc || 4700, maxRaw = maxRaw || 3800;
-    let rest = String(text || "").replace(/\r\n?/g, "\n").trim();
+    let rest = mkWellFormed(text).replace(/\r\n?/g, "\n").trim();
     const parts = [];
     while (rest.length) {
-        if (rest.length <= maxRaw && encodeURIComponent(rest).length <= maxEnc) { parts.push(rest); break; }
+        if (rest.length <= maxRaw && mkEncLen(rest) <= maxEnc) { parts.push(rest); break; }
         let lo = 1, hi = Math.min(rest.length, maxRaw);
-        while (lo < hi) { const mid = Math.ceil((lo + hi) / 2); encodeURIComponent(rest.slice(0, mid)).length <= maxEnc ? lo = mid : hi = mid - 1; }
-        let cut = lo;
+        while (lo < hi) { const mid = Math.ceil((lo + hi) / 2); mkEncLen(rest.slice(0, mid)) <= maxEnc ? lo = mid : hi = mid - 1; }
+        let cut = mkSafeCut(rest, lo);
         const floor = Math.floor(cut * 0.55), win = rest.slice(floor, cut);
         for (const re of [/\n[ \t]*\n/g, /\n/g, /[.!?\u061f\u061b\u2026]\s/g, /\s/g]) {
             let m, last = -1;
@@ -29326,7 +29362,7 @@ async function mkShareBlob(blob, filename, mime, opts) {
     }
     // 2) Telegram's chat picker with the text (small text-like content)
     const text = o.text != null ? o.text : await mkBlobPlainText(blob, safeName, type);
-    if (o.prefer === "picker" && text && text.length <= 5000 && encodeURIComponent(text).length <= 5000 && mkTgTextPicker(text))
+    if (o.prefer === "picker" && text && text.length <= 5000 && mkEncLen(text) <= 5000 && mkTgTextPicker(text))
         return "telegram-text";
     // 3) the user's own bot chat: the file arrives as a normal Telegram document
     const b = await mkTgBotSend(blob, safeName, type);
@@ -33606,7 +33642,7 @@ const total = keys.length, cap = HX().MAX_CHUNKS_PER_BACKUP, LIM = 1024, budget 
         } return result && __mkCloudPassCache.set(id, password || ""), result; }
         // Cloud Backup panel: every emoji is drawn as an inline SVG icon (panel text is built in many
         // places: rows, previews, progress bars).
-        const MK_CLOUD_ICONS = (function () { const C = '<circle cx="12" cy="12" r="10"/>'; return { "☁": '<path d="M18 10h-1.26A8 8 0 1 0 9 20h9a5 5 0 0 0 0-10z"/>', "❓": C + '<path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/>', "⚠": '<path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/>', "🛡": '<path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>', "??": '<path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/>', "⚪": '<circle cx="12" cy="12" r="8"/>', "🔄": '<path d="M21 12a9 9 0 1 1-3-6.7"/><polyline points="21 3 21 9 15 9"/>', "⚙": '<line x1="4" y1="21" x2="4" y2="14"/><line x1="4" y1="10" x2="4" y2="3"/><line x1="12" y1="21" x2="12" y2="12"/><line x1="12" y1="8" x2="12" y2="3"/><line x1="20" y1="21" x2="20" y2="16"/><line x1="20" y1="12" x2="20" y2="3"/><line x1="1" y1="14" x2="7" y2="14"/><line x1="9" y1="8" x2="15" y2="8"/><line x1="17" y1="16" x2="23" y2="16"/>', "💾": '<path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/>', "📖": '<path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/>', "📤": '<path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/>', "📥": '<path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/>', "👁": '<path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/>', "🗑": '<polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/>', "🔒": '<rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/>', "🔓": '<rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 9.9-1"/>', "📌": '<line x1="12" y1="17" x2="12" y2="22"/><path d="M5 17h14v-1.76a2 2 0 0 0-1.11-1.79l-1.78-.9A2 2 0 0 1 15 10.76V6h1a2 2 0 0 0 0-4H8a2 2 0 0 0 0 4h1v4.76a2 2 0 0 1-1.11 1.79l-1.78.9A2 2 0 0 0 5 15.24z"/>', ℹ: C + '<line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/>', "✅": '<path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/>', "❌": C + '<line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/>', "📦": '<path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/>', "✏": '<path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/>', "♻": '<polyline points="1 4 1 10 7 10"/><polyline points="23 20 23 14 17 14"/><path d="M20.49 9A9 9 0 0 0 5.64 5.64L1 10m22 4l-4.64 4.36A9 9 0 0 1 3.51 15"/>', "🩺": '<polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/>', "⏳": '<path d="M5 22h14"/><path d="M5 2h14"/><path d="M17 22v-4.17a2 2 0 0 0-.59-1.42L12 12l-4.41 4.41A2 2 0 0 0 7 17.83V22"/><path d="M7 2v4.17a2 2 0 0 0 .59 1.42L12 12l4.41-4.41A2 2 0 0 0 17 6.17V2"/>' }; })(), MK_CLOUD_ICO_RE = /(?:☁|🩺|❓|⚠|🛡|🔗|⚪|🔄|⚙|💾|📖|📤|📥|👁|🗑|🔒|🔓|📌|ℹ|✅|❌|📦|⏳|✏|♻)️?/g;
+        const MK_CLOUD_ICONS = (function () { const C = '<circle cx="12" cy="12" r="10"/>'; return { "☁": '<path d="M18 10h-1.26A8 8 0 1 0 9 20h9a5 5 0 0 0 0-10z"/>', "❓": C + '<path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/>', "⚠": '<path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/>', "🛡": '<path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>', "🔗": '<path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/>', "⚪": '<circle cx="12" cy="12" r="8"/>', "🔄": '<path d="M21 12a9 9 0 1 1-3-6.7"/><polyline points="21 3 21 9 15 9"/>', "⚙": '<line x1="4" y1="21" x2="4" y2="14"/><line x1="4" y1="10" x2="4" y2="3"/><line x1="12" y1="21" x2="12" y2="12"/><line x1="12" y1="8" x2="12" y2="3"/><line x1="20" y1="21" x2="20" y2="16"/><line x1="20" y1="12" x2="20" y2="3"/><line x1="1" y1="14" x2="7" y2="14"/><line x1="9" y1="8" x2="15" y2="8"/><line x1="17" y1="16" x2="23" y2="16"/>', "💾": '<path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/>', "📖": '<path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/>', "📤": '<path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/>', "📥": '<path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/>', "👁": '<path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/>', "🗑": '<polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/>', "🔒": '<rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/>', "🔓": '<rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 9.9-1"/>', "📌": '<line x1="12" y1="17" x2="12" y2="22"/><path d="M5 17h14v-1.76a2 2 0 0 0-1.11-1.79l-1.78-.9A2 2 0 0 1 15 10.76V6h1a2 2 0 0 0 0-4H8a2 2 0 0 0 0 4h1v4.76a2 2 0 0 1-1.11 1.79l-1.78.9A2 2 0 0 0 5 15.24z"/>', ℹ: C + '<line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/>', "✅": '<path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/>', "❌": C + '<line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/>', "📦": '<path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/>', "✏": '<path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/>', "♻": '<polyline points="1 4 1 10 7 10"/><polyline points="23 20 23 14 17 14"/><path d="M20.49 9A9 9 0 0 0 5.64 5.64L1 10m22 4l-4.64 4.36A9 9 0 0 1 3.51 15"/>', "🩺": '<polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/>', "⏳": '<path d="M5 22h14"/><path d="M5 2h14"/><path d="M17 22v-4.17a2 2 0 0 0-.59-1.42L12 12l-4.41 4.41A2 2 0 0 0 7 17.83V22"/><path d="M7 2v4.17a2 2 0 0 0 .59 1.42L12 12l4.41-4.41A2 2 0 0 0 17 6.17V2"/>' }; })(), MK_CLOUD_ICO_RE = /(?:☁|🩺|❓|⚠|🛡|🔗|⚪|🔄|⚙|💾|📖|📤|📥|👁|🗑|🔒|🔓|📌|ℹ|✅|❌|📦|⏳|✏|♻)️?/g;
         function mkCloudIconSvg(ch) { const key = ch.replace(/️/g, ""), inner = MK_CLOUD_ICONS[key]; return inner ? `<svg class="mk-ico" width="1.15em" height="1.15em" viewBox="0 0 24 24" fill="none" stroke="${key === "⚠" ? "#ffc107" : "currentColor"}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="flex:none;vertical-align:-0.2em">${inner}</svg>` : null; }
         function mkCloudIconify(root) { if (!root)
             return; const w = document.createTreeWalker(root, NodeFilter.SHOW_TEXT, null), nodes = []; for (let n = w.nextNode(); n; n = w.nextNode())
@@ -36294,7 +36330,7 @@ HX().scheduleCloudBackup(!1, !0), HX().showToast(fa ? `✅ ذخیره شد — �
         return;
     } var box = boxOf(t); if (box) {
         var it = e2.inputType || "";
-        /^(insertFromPaste|insertFromDrop|history|deleteByCut|insertReplacementText)/.test(it) ? refreshBoxAll(box) : refreshBoxCaret(box);
+        var F = window.__mkBpFast; if (F && F.box === box && it === "insertFromPaste") { markEl(box); F.fb && F.fb !== box && F.fb.isConnected && markEl(F.fb); refreshBoxCaret(box); } else /^(insertFromPaste|insertFromDrop|history|deleteByCut|insertReplacementText)/.test(it) ? refreshBoxAll(box) : refreshBoxCaret(box);
     } }
     function onFocusIn(e2) { var t = e2.target; if (isTextField(t)) {
         refreshField(t);
@@ -36688,11 +36724,11 @@ catch { } } document.addEventListener("input", function (e2) { var el = e2.targe
 </script>
 
 <script id="muPerfLayerJs">
-(function () { var b = document.body, t = null; function busy(e) { if (b) { var tg = e && e.target; if (tg && tg.closest) { try { if (tg.closest(".advanced-modal,.mu-viewer,.mu-img-lightbox,#muNotesFs")) return; } catch (_) { } }
+(function () { var b = document.body, t = null; function busy(e) { if (b) { if ((function(){try{var b=document.querySelector('.text-box[contenteditable="true"],.mu-viewer-body[contenteditable="true"]');return !!(b&&b.childElementCount>1500);}catch(e){return false;}})()) { if (b.classList.contains("mu-busy")) b.classList.remove("mu-busy"); return; } var tg = e && e.target; if (tg && tg.closest) { try { if (tg.closest(".advanced-modal,.mu-viewer,.mu-img-lightbox,#muNotesFs")) return; } catch (_) { } }
     // Decorative layers stay frozen for 300 ms after the last interaction.
     var d = 300;
     b.classList.contains("mu-busy") || b.classList.add("mu-busy"), clearTimeout(t), t = setTimeout(function () { b.classList.remove("mu-busy"); }, d);
-} } var o = { passive: !0, capture: !0 }; document.addEventListener("pointerdown", busy, o), document.addEventListener("touchstart", busy, o), document.addEventListener("scroll", busy, o), document.addEventListener("wheel", busy, o), document.addEventListener("visibilitychange", function () { b && b.classList.toggle("mu-busy", document.hidden); }); })();
+} } var o = { passive: !0, capture: !0 }; document.addEventListener("pointerdown", busy, o), document.addEventListener("touchstart", busy, o), document.addEventListener("scroll", busy, o), document.addEventListener("wheel", busy, o), document.addEventListener("visibilitychange", function () { b && b.classList.toggle("mu-busy", document.hidden && !(function(){try{var b=document.querySelector('.text-box[contenteditable="true"],.mu-viewer-body[contenteditable="true"]');return !!(b&&b.childElementCount>1500);}catch(e){return false;}})()); }); })();
 </script>
 
 
@@ -39726,7 +39762,7 @@ catch { } };
     // style, so it really turns off, and pasted text never keeps a stale highlight.
     window.__mkHl = window.__mkHl || { mode: null, start: null, last: null, comp: !1, busy: !1, init: !1 };
     function mkHlCaretToggle(t, s) { var H = window.__mkHl, cur = H.mode !== null ? H.mode : !!hlOf(s.anchorNode, t); H.mode = !cur; var r = s.getRangeAt(0); H.last = { n: r.startContainer, o: r.startOffset }; H.start = null; try { D2.dispatchEvent(new Event("selectionchange")); } catch (_e) { } }
-    function mkHlNormalize(t) { try { var els = t.querySelectorAll("span[style],font[style],font[color]"); for (var i = 0; i < els.length; i++) { var el = els[i], st = el.style; if (!st) continue; var bg = st.backgroundColor || st.background, hadBg = !!bg && !/^(transparent|rgba\(0, 0, 0, 0\)|initial|inherit|none)$/i.test(bg); if (!hadBg && !(el.closest && el.closest(".mk-hl"))) continue; hadBg && !el.classList.contains("mk-hl") && el.classList.add("mk-hl"); st.removeProperty("background"); st.removeProperty("background-color"); st.removeProperty("color"); st.removeProperty("-webkit-text-fill-color"); el.getAttribute("style") || el.removeAttribute("style"); el.tagName === "FONT" && el.removeAttribute("color"); } } catch (_e) { } }
+    function mkHlNormalize(t) { try { var els = t.querySelectorAll("span[style],font[style],font[color]"); for (var i = 0; i < els.length; i++) { var el = els[i], st = el.style; if (!st) continue; var bg = st.backgroundColor || st.background, hadBg = !!bg && !/^(transparent|rgba\(0, 0, 0, 0\)|initial|inherit|none)$/i.test(bg); if (!hadBg && !(el.closest && el.closest(".mk-hl"))) continue; hadBg && !window.__mkNoHlConv && !el.classList.contains("mk-hl") && el.classList.add("mk-hl"); st.removeProperty("background"); st.removeProperty("background-color"); st.removeProperty("color"); st.removeProperty("-webkit-text-fill-color"); el.getAttribute("style") || el.removeAttribute("style"); el.tagName === "FONT" && el.removeAttribute("color"); } } catch (_e) { } }
     (function () { var H = window.__mkHl; if (H.init) return; H.init = !0;
         function boxOf(n) { var el = n && (n.nodeType === 1 ? n : n.parentElement); return el && el.closest ? el.closest('.text-box[contenteditable="true"]') : null; }
         function snap() { var s = window.getSelection(); if (!s.rangeCount) return; var t = boxOf(s.anchorNode); if (!t) return; var r = s.getRangeAt(0).cloneRange(); r.collapse(!0); H.start = { t: t, r: r }; }
@@ -57498,7 +57534,7 @@ html.mu-nfs-open.mu-nfs-dark:not(#_dn):not(#_zb) #advancedModal #advancedCard.mk
         for (var j = 0; j < list.length; j++) { if (list[j].closest && list[j].closest(SKIP)) continue; check(list[j]); } }
     var pend = new Set(), t = 0, full = 0;
     var ms = document.createElement("style"); ms.textContent = "html.mk-cg-m *,html.mk-cg-m *:before,html.mk-cg-m *:after{transition:none!important}"; (document.head || document.documentElement).appendChild(ms);
-    function flush() { var R = document.documentElement; R.classList.add("mk-cg-m"); try { flush2(); } finally { R.classList.remove("mk-cg-m"); } }
+    function flush() { var R = document.documentElement; if ((function(){try{var b=document.querySelector('.text-box[contenteditable="true"],.mu-viewer-body[contenteditable="true"]');return !!(b&&b.childElementCount>1500);}catch(e){return false;}})()) { flush2(); return; } R.classList.add("mk-cg-m"); try { flush2(); } finally { R.classList.remove("mk-cg-m"); } }
     function flush2() { t = 0; var items = Array.from(pend); pend.clear(); var f = full; full = 0;
         if (f) { scan(document.getElementById("advancedModal") || document.body); document.querySelectorAll("button,.btn-main").forEach(function (b, i) { if (i < CAP && !b.closest(SKIP)) check(b); }); }
         items.forEach(function (n) { if (n.isConnected) scan(n); }); }
@@ -63885,10 +63921,12 @@ var CONT = [["AS", "آسیا", "Asia"], ["EU", "اروپا", "Europe"], ["NA", "
     var DEFAULT_API = "";   /* <- paste your Worker URL here (https://markhin-backup.<you>.workers.dev), or set it inside the panel */
     var GATE_SALT = "mksv1|", GATE_HASH = "e826187223a4772aa1deee468d1a630909296703976a009be8bcf15d3e200e1e";
     var MAX = Math.floor(3.5 * 1024 * 1024 * 1024), MAX_TOTAL = Math.floor(3.6 * 1024 * 1024 * 1024), PART = 1024 * 1024, HOLD_MS = 5000, PAR = 3;
-    var LS_TOK = "mksv_tok", LS_API = "mksv_api", LS_USER = "mksv_user";
-    var MAGIC_GZ = "MKSV1\n", MAGIC_RAW = "MKSV0\n", MAGIC_ENC = "MKSV2\n", ENC_HDR = 38, ENC_CHUNK = 1024 * 1024, ENC_ITER = 600000;
+    var LS_TOK = "mksv_tok", LS_API = "mksv_api", LS_USER = "mksv_user", LS_GZ = "mksv_gz";   /* LS_GZ: "0" = gzip off; anything else (default) = on */
+    var MAGIC_GZ = "MKSV1\n", MAGIC_RAW = "MKSV0\n", MAGIC_ENC = "MKSV2\n", MAGIC_Z3 = "MKSV3\n", GZ_SAMPLE = 256 * 1024, GZ_MAX_BLOB = 256 * 1024 * 1024, ENC_HDR = 38, ENC_CHUNK = 1024 * 1024, ENC_ITER = 600000;
     var LS_SKIP = /^(mksv_|mkmed_|mk_cloud|mu_mirror_ts_v1$|app_categories_v13$)|cloud|linked|device|token|session|__/i;
     var DB_SKIP = /cache|^mkmed/i;
+    var KV_SKIP = /^(app_categories_v13(_gz)?|mkmed_state_v1)$/;   /* notes travel in the header; the media-sync state belongs to THIS device's bot/key, so it is neither saved nor overwritten */
+    var GZ_SKIP_TYPE = /^(image\/(jpe?g|png|webp|gif|avif|heic|heif)|audio\/(mpeg|mp3|mp4|aac|ogg|opus|webm|x-m4a|m4a)|video\/|application\/(zip|gzip|x-gzip|x-7z-compressed|x-rar-compressed))/i;   /* already compressed: never worth another pass */
 
     /* ---------- tiny utils ---------- */
     var g = function (k) { try { return localStorage.getItem(k); } catch (e) { return null; } };
@@ -63975,7 +64013,7 @@ var CONT = [["AS", "آسیا", "Asia"], ["EU", "اروپا", "Europe"], ["NA", "
                 var sn = db.objectStoreNames[i];
                 var recs = await new Promise(function (res, rej) {
                     var arr = [], os = db.transaction(sn, "readonly").objectStore(sn), cur = os.openCursor();
-                    cur.onsuccess = function () { var c = cur.result; if (!c) return res({ arr: arr, kp: os.keyPath, ai: os.autoIncrement }); if (!(isMainDb(name) && sn === "kv" && /^app_categories_v13(_gz)?$/.test(c.key))) arr.push([enc(c.key), enc(c.value)]); c.continue(); };
+                    cur.onsuccess = function () { var c = cur.result; if (!c) return res({ arr: arr, kp: os.keyPath, ai: os.autoIncrement }); if (!(isMainDb(name) && sn === "kv" && KV_SKIP.test(c.key))) arr.push([enc(c.key), enc(c.value)]); c.continue(); };
                     cur.onerror = function () { rej(cur.error); };
                 });
                 out.stores.push({ name: sn, keyPath: recs.kp, ai: recs.ai, recs: recs.arr });
@@ -63991,6 +64029,39 @@ var CONT = [["AS", "آسیا", "Asia"], ["EU", "اروپا", "Europe"], ["NA", "
     async function gunzip(u8) {
         var ds = new DecompressionStream("gzip"), w = ds.writable.getWriter(); w.write(u8).catch(function () { }); w.close().catch(function () { });
         return new Uint8Array(await new Response(ds.readable).arrayBuffer());
+    }
+    /* ---------- gzip for the media blobs (the JSON header was always gzipped; the blobs used to be stored as they are) ---------- */
+    function gzSupported() { try { return typeof CompressionStream !== "undefined" && typeof DecompressionStream !== "undefined" && typeof Blob !== "undefined" && typeof Blob.prototype.stream === "function"; } catch (e) { return false; } }
+    function gzOn() { return g(LS_GZ) !== "0" && gzSupported(); }
+    async function gzBlob(blob) { return await new Response(blob.stream().pipeThrough(new CompressionStream("gzip"))).blob(); }
+    async function gunzipBlob(blob, type) { var out = await new Response(blob.stream().pipeThrough(new DecompressionStream("gzip"))).blob(); return type ? out.slice(0, out.size, type) : out; }
+    /* gzip a blob only when it really gets smaller: known-compressed types are skipped outright, big unknown ones are probed on their first 256 KB */
+    async function gzMaybe(blob) {
+        if (!blob.size || blob.size > GZ_MAX_BLOB || GZ_SKIP_TYPE.test(blob.type || "")) return { blob: blob, z: 0 };
+        try {
+            if (blob.size > GZ_SAMPLE * 2) { var t = await gzBlob(blob.slice(0, GZ_SAMPLE)); if (t.size > GZ_SAMPLE * 0.9) return { blob: blob, z: 0 }; }
+            var c = await gzBlob(blob);
+            if (c.size < blob.size * 0.95) return { blob: c, z: 1 };
+        } catch (e) { }
+        return { blob: blob, z: 0 };
+    }
+    /* container = magic + u32 header length + (gzipped) JSON header + blobs.
+       gzip on : every compressible blob is stored gzipped (header.blobs[i] = {o, n, z:1, r:rawSize}) and the file starts with MKSV3
+       gzip off: the old MKSV1 / MKSV0 layout, byte for byte as before (old files stay readable either way) */
+    async function packContainer(header, blobs, useGz, prog) {
+        var out = [], ents = [], off = 0, anyZ = false, rawTotal = 0;
+        for (var i = 0; i < blobs.length; i++) {
+            if (S.cancel) throw cancelledErr();
+            var b = blobs[i], r = useGz ? await gzMaybe(b) : { blob: b, z: 0 }, e = { o: off, n: r.blob.size };
+            if (r.z) { e.z = 1; e.r = b.size; anyZ = true; }
+            ents.push(e); out.push(r.blob); off += r.blob.size; rawTotal += b.size;
+            if (prog && useGz && blobs.length > 1 && i % 4 === 0) { try { prog("فشرده‌سازی مدیاها… " + fa(i + 1) + " از " + fa(blobs.length), (i + 1) / blobs.length * 100); } catch (x) { } }
+        }
+        header.blobs = ents;
+        var raw = new TextEncoder().encode(JSON.stringify(header)), z = await gzip(raw), hdr = z || raw, len = new Uint8Array(4);
+        new DataView(len.buffer).setUint32(0, hdr.length, true);
+        var magic = !z ? MAGIC_RAW : anyZ ? MAGIC_Z3 : MAGIC_GZ;
+        return { blob: new Blob([new TextEncoder().encode(magic), len, hdr].concat(out), { type: "application/octet-stream" }), raw: rawTotal, stored: off };
     }
     /* =====================================================================================
        CLIENT-SIDE ENCRYPTION  (AES-256-GCM; the key comes from a passphrase that never leaves this device)
@@ -64084,7 +64155,7 @@ var CONT = [["AS", "آسیا", "Asia"], ["EU", "اروپا", "Europe"], ["NA", "
         } catch (e) { }
         var folders = G("folders"); return { notes: nCount, media: mCount, mediaBytes: mBytes, folders: Array.isArray(folders) ? folders.length : 0 };
     }
-    async function buildSnapshot(prog) {
+    async function buildSnapshot(prog, noGz) {
         prog("آماده‌سازی داده‌ها…", 0);
         try { var f = G("mu_flushStorage"); if (typeof f === "function") await f(); } catch (e) { }
         var ser = G("mu_serializeCategoriesFast"), notesStr;
@@ -64093,34 +64164,38 @@ var CONT = [["AS", "آسیا", "Asia"], ["EU", "اروپا", "Europe"], ["NA", "
         try { for (var i = 0; i < localStorage.length; i++) { var k = localStorage.key(i); if (k && !LS_SKIP.test(k)) ls[k] = localStorage.getItem(k); } } catch (e) { }
         var dbs = [], names = await listDbs();
         for (var j = 0; j < names.length; j++) { if (DB_SKIP.test(names[j])) continue; try { dbs.push(await dumpDb(names[j], enc)); } catch (e) { console.warn("mksv dump skipped", names[j], e); } }
-        var st = await localStats(), off = 0;
+        var st = await localStats();
         var header = { v: 1, app: "markhin", createdAt: Date.now(), notes: notesStr, ls: ls, dbs: dbs, counts: { notes: st.notes, media: st.media, folders: st.folders, mediaBytes: st.mediaBytes } };
-        header.blobs = blobs.map(function (b) { var o = { o: off, n: b.size }; off += b.size; return o; });
         prog("فشرده‌سازی…", 0);
-        var raw = new TextEncoder().encode(JSON.stringify(header)), z = await gzip(raw), magic = z ? MAGIC_GZ : MAGIC_RAW, hdr = z || raw, len = new Uint8Array(4);
-        new DataView(len.buffer).setUint32(0, hdr.length, true);
-        var blob = new Blob([new TextEncoder().encode(magic), len, hdr].concat(blobs), { type: "application/octet-stream" });
-        return { blob: blob, counts: header.counts };
+        var pk = await packContainer(header, blobs, gzOn() && !noGz, prog);
+        return { blob: pk.blob, counts: header.counts, raw: pk.raw, stored: pk.stored };
     }
     async function parseSnapshot(blob) {
         if (await isEnc(blob)) blob = await decryptBlob(blob);
         var head = new Uint8Array(await blob.slice(0, 10).arrayBuffer()), magic = new TextDecoder().decode(head.subarray(0, 6));
-        if (magic !== MAGIC_GZ && magic !== MAGIC_RAW) throw new Error("این فایل بکاپ مرکین نیست یا خراب است.");
+        if (magic !== MAGIC_GZ && magic !== MAGIC_RAW && magic !== MAGIC_Z3) throw new Error("این فایل بکاپ مرکین نیست یا خراب است.");
+        if (magic === MAGIC_Z3 && !gzSupported()) throw new Error("این بکاپ با gzip فشرده شده و مرورگر فعلی از بازکردن gzip پشتیبانی نمی‌کند؛ مرورگر را به‌روز کن یا روی مرورگر دیگری باز کن.");
         var hl = new DataView(head.buffer).getUint32(6, true);
         if (hl <= 0 || 10 + hl > blob.size) throw new Error("هدر بکاپ خراب است.");
         var hb = new Uint8Array(await blob.slice(10, 10 + hl).arrayBuffer());
-        if (magic === MAGIC_GZ) hb = await gunzip(hb);
+        if (magic === MAGIC_GZ || magic === MAGIC_Z3) hb = await gunzip(hb);
         var header = JSON.parse(new TextDecoder().decode(hb));
         if (!header || header.v !== 1 || !Array.isArray(header.dbs)) throw new Error("نسخهٔ بکاپ پشتیبانی نمی‌شود.");
         return { header: header, area: blob.slice(10 + hl) };
+    }
+    /* a gzipped media blob: unpack it and check its length against what was recorded when the backup was made */
+    async function unz(blob, ent, type) {
+        var out; try { out = await gunzipBlob(blob, type); } catch (e) { throw new Error("مدیای فشرده‌شدهٔ داخل بکاپ خوانده نشد؛ فایل بکاپ خراب است."); }
+        if (ent.r != null && out.size !== ent.r) throw new Error("مدیای فشرده‌شدهٔ داخل بکاپ ناقص یا خراب است.");
+        return out;
     }
     async function decVal(v, snap) {
         if (v === null || typeof v !== "object") return v;
         if (v.$u) return undefined;
         if (v.$d != null) return new Date(v.$d);
         var bl = snap.header.blobs;
-        if (v.$b != null) { var r = bl[v.$b]; return snap.area.slice(r.o, r.o + r.n, v.t || ""); }
-        if (v.$a != null) { var q = bl[v.$a], buf = await snap.area.slice(q.o, q.o + q.n).arrayBuffer(); return v.c === "ArrayBuffer" ? buf : new (window[v.c] || Uint8Array)(buf); }
+        if (v.$b != null) { var r = bl[v.$b], rb = snap.area.slice(r.o, r.o + r.n, v.t || ""); return r.z ? await unz(rb, r, v.t || "") : rb; }
+        if (v.$a != null) { var q = bl[v.$a], qb = snap.area.slice(q.o, q.o + q.n), buf = await (q.z ? await unz(qb, q, "") : qb).arrayBuffer(); return v.c === "ArrayBuffer" ? buf : new (window[v.c] || Uint8Array)(buf); }
         if (Array.isArray(v)) { var a = []; for (var i = 0; i < v.length; i++) a.push(await decVal(v[i], snap)); return a; }
         var o = {}; for (var k in v) o[k] = await decVal(v[k], snap); return o;
     }
@@ -64149,17 +64224,48 @@ var CONT = [["AS", "آسیا", "Asia"], ["EU", "اروپا", "Europe"], ["NA", "
     }
     /* one note + its own media = a mini snapshot in the SAME container format, so parseSnapshot/restoreAdd work on it unchanged */
     async function buildNotePack(note) {
-        var keys = Array.from(mediaKeys(note.html)), blobs = [], enc = makeEnc(blobs), recs = [], off = 0, mname = curDbName();
+        var keys = Array.from(mediaKeys(note.html)), blobs = [], enc = makeEnc(blobs), recs = [], absent = [], mname = curDbName();
         if (keys.length) {
             var db = await idbOpen(mname);
-            try { if (db.objectStoreNames.contains("media")) for (var i = 0; i < keys.length; i++) { var v = await new Promise(function (res) { var r = db.transaction("media", "readonly").objectStore("media").get(keys[i]); r.onsuccess = function () { res(r.result); }; r.onerror = function () { res(undefined); }; }); if (v !== undefined) recs.push([keys[i], enc(v)]); } } finally { db.close(); }
+            try { if (db.objectStoreNames.contains("media")) for (var i = 0; i < keys.length; i++) { var v = await new Promise(function (res) { var r = db.transaction("media", "readonly").objectStore("media").get(keys[i]); r.onsuccess = function () { res(r.result); }; r.onerror = function () { res(undefined); }; }); if (v !== undefined) recs.push([keys[i], enc(v)]); else absent.push(keys[i]); } else absent = keys.slice(); } finally { db.close(); }
         }
         var folders = []; try { var nf = G("mu_noteFolders"); folders = typeof nf === "function" ? nf(note) : (note.folder ? [note.folder] : []); } catch (e) { }
         var header = { v: 1, app: "markhin", kind: "note", createdAt: Date.now(), notes: JSON.stringify([note]), ls: { app_folders_v13: JSON.stringify(folders) }, dbs: [{ name: mname, stores: [{ name: "media", keyPath: null, ai: false, recs: recs }] }], counts: { notes: 1, media: recs.length, folders: folders.length, mediaBytes: 0 } };
-        header.blobs = blobs.map(function (b) { var o = { o: off, n: b.size }; off += b.size; return o; });
-        var raw = new TextEncoder().encode(JSON.stringify(header)), z = await gzip(raw), hdr = z || raw, len = new Uint8Array(4);
-        new DataView(len.buffer).setUint32(0, hdr.length, true);
-        return { blob: new Blob([new TextEncoder().encode(z ? MAGIC_GZ : MAGIC_RAW), len, hdr].concat(blobs), { type: "application/octet-stream" }), media: recs.length, folders: folders };
+        var pk = await packContainer(header, blobs, gzOn()), lk = !!(note.encrypted && note.encrypted.ciphertext && !note.encrypted.mm);
+        return { blob: pk.blob, media: recs.length, folders: folders, raw: pk.raw, stored: pk.stored, absent: absent, oldLocked: lk };
+    }
+
+    /* Media a note points to but that is not in this device's store (evicted by media sync, or still only in the bot) used to be left out of the
+       backup silently. Same idea as the export's media guard: fetch them back first, then say so for whatever can't be fetched. */
+    async function localMediaKeys() {
+        var have = new Set();
+        try { var db = await idbOpen(curDbName()); try { if (db.objectStoreNames.contains("media")) have = new Set(await new Promise(function (res) { var r = db.transaction("media", "readonly").objectStore("media").getAllKeys(); r.onsuccess = function () { res(r.result || []); }; r.onerror = function () { res([]); }; })); } finally { db.close(); } } catch (e) { }
+        return have;
+    }
+    function waitFor(p, ms) {   /* resolves when p settles, after ms, or when the person cancels */
+        return new Promise(function (res) { var t = setInterval(function () { if (S.cancel) done(); }, 400), to = setTimeout(done, ms); function done() { clearInterval(t); clearTimeout(to); res(); } Promise.resolve(p).then(done, done); });
+    }
+    async function recoverMedia(list) {
+        var ids = new Set(); list.forEach(function (n) { mediaKeys(n.note && n.note.html).forEach(function (k) { ids.add(k); }); });
+        if (!ids.size) return [];
+        var have = await localMediaKeys(), miss = Array.from(ids).filter(function (k) { return !have.has(k); });
+        if (!miss.length) return [];
+        var M = window.MKMED;
+        try {
+            if (M && typeof M._cfg === "function" && M._cfg()) {
+                if (!(M.S && M.S.token && M.S.key) && typeof M.ensureUnlocked === "function") {
+                    setProg("برای تکمیل بکاپ، رمز «بکاپ رسانه» لازم است…", 0, true);
+                    if (S.host) S.host.style.zIndex = "99999";   /* the media-password dialog sits below this panel otherwise */
+                    try { await M.ensureUnlocked(true); } finally { if (S.host) S.host.style.zIndex = ""; }
+                }
+                if (M.S && M.S.token && M.S.key && typeof M.ensure === "function") {
+                    setProg("دریافت " + fa(miss.length) + " رسانهٔ ناقص از ربات…", 0, true);
+                    await waitFor(Promise.all(miss.map(function (id) { return M.ensure(id, { prio: true }); })), Math.min(15 * 60 * 1000, 90000 + miss.length * 4000));
+                    have = await localMediaKeys(); miss = miss.filter(function (k) { return !have.has(k); });
+                }
+            }
+        } catch (e) { console.warn("mksv media recovery", e); }
+        return miss;
     }
 
     async function upl(blob, path, body, onBytes) {
@@ -64200,6 +64306,12 @@ var CONT = [["AS", "آسیا", "Asia"], ["EU", "اروپا", "Europe"], ["NA", "
     async function addNotes(bid, list) {
         var info = S.items.filter(function (x) { return x.id === bid; })[0], used = info ? info.size : 0, ok = 0, skipped = [], total = list.length, doneN = 0, next = 0, inflight = 0, prog = {}, failed = null;
         await getPass(true);   /* ask for the encryption passphrase once, before the parallel uploads start */
+        var gzRaw = 0, gzOut = 0, oldLocked = 0, lost = await recoverMedia(list);
+        if (S.cancel) throw cancelledErr();
+        if (lost.length) {
+            var go = await ask({ title: "رسانهٔ ناقص", text: fa(lost.length) + " عکس/ویس/فایلِ این یادداشت‌ها روی این دستگاه نیست و از ربات هم دریافت نشد (رمز «بکاپ رسانه» در دسترس نیست، یا فایل در ربات پیدا نشد). اگر ادامه بدهی، این رسانه‌ها در بکاپ نمی‌آیند. پیشنهاد: لغو کن، اول در «بکاپ رسانه» همه را دریافت کن و بعد دوباره بکاپ بگیر.", ok: "ادامه بدون آن‌ها", danger: 1 });
+            if (!go) throw cancelledErr();
+        }
         var paint = function () {
             var ks = Object.keys(prog), part = 0, bytes = 0; ks.forEach(function (k) { part += prog[k].f; bytes += prog[k].b; });
             setProg("📝 " + fa(doneN) + " از " + fa(total) + " یادداشت ذخیره شد" + (ks.length ? "\nدر حال ارسال: " + fa(ks.length) + " یادداشت · " + fmtSize(bytes) : ""), (doneN + part) / total * 100, true, used);
@@ -64207,7 +64319,8 @@ var CONT = [["AS", "آسیا", "Asia"], ["EU", "اروپا", "Europe"], ["NA", "
         async function one(i) {
             var n = list[i], key = "n" + i; prog[key] = { f: 0, b: 0 }; paint();
             try {
-                var pk = await buildNotePack(n.note), old = ((info && info.items) || []).filter(function (x) { return x.noteId === n.id; })[0], base = used - (old ? old.size : 0) + inflight;
+                var pk = await buildNotePack(n.note); gzRaw += pk.raw; gzOut += pk.stored; if (pk.oldLocked) oldLocked++;
+                var old = ((info && info.items) || []).filter(function (x) { return x.noteId === n.id; })[0], base = used - (old ? old.size : 0) + inflight;
                 if (base + pk.blob.size > MAX || othersTotal(bid) + base + pk.blob.size > MAX_TOTAL) { skipped.push(n.title + " (" + fmtSize(pk.blob.size) + ")"); return; }
                 inflight += pk.blob.size;
                 var res;
@@ -64222,14 +64335,14 @@ var CONT = [["AS", "آسیا", "Asia"], ["EU", "اروپا", "Europe"], ["NA", "
         await Promise.all(new Array(Math.min(3, total)).fill(0).map(worker));   /* 3 notes at a time */
         if (S.cancel) throw Object.assign(new Error("لغو شد."), { cancelled: 1 });
         if (failed) throw failed;
-        return { ok: ok, skipped: skipped, used: used };
+        return { ok: ok, skipped: skipped, used: used, lost: lost.length, gzRaw: gzRaw, gzOut: gzOut, oldLocked: oldLocked };
     }
     async function restoreItems(it, list) {
         var tot = { added: 0, dup: 0, media: 0, folders: 0 };
         for (var i = 0; i < list.length; i++) {
             if (S.cancel) throw Object.assign(new Error("لغو شد."), { cancelled: 1 });
             var x = list[i]; setProg("بازیابی " + fa(i + 1) + " از " + fa(list.length) + " — «" + x.title + "» (" + fmtSize(x.size) + ")", i / list.length * 100, true);
-            var sn = await parseSnapshot(await downloadBlob({ size: x.size }, "/backups/" + it.id + "/items/" + x.id)), r = await restoreAdd(sn);
+            var sn = await parseSnapshot(await downloadBlob({ size: x.size, partSize: x.partSize }, "/backups/" + it.id + "/items/" + x.id)), r = await restoreAdd(sn);
             tot.added += r.added; tot.dup += r.dup; tot.media += r.media; tot.folders += r.folders;
         }
         return tot;
@@ -64272,7 +64385,7 @@ var CONT = [["AS", "آسیا", "Asia"], ["EU", "اروپا", "Europe"], ["NA", "
     /* =====================================================================================
        RESTORE  (add = merge notes in, replace = overwrite everything on this device)
        ===================================================================================== */
-    var MEDIA_RE = /data-mu-media="([^"]+)"|data-mkmed="(?:img|audio|video|file):([^"]+)"/g;
+    var MEDIA_RE = /data-mu-media\s*=\s*["']([^"']+)["']|data-mkmed\s*=\s*["'](?:img|audio|video|file):([^"']+)["']/g;
     async function restoreAdd(snap) {
         var cats = G("categories"); if (!Array.isArray(cats)) throw new Error("لیست یادداشت‌های برنامه در دسترس نیست.");
         var incoming; try { incoming = JSON.parse(snap.header.notes || "[]"); } catch (e) { throw new Error("یادداشت‌های داخل بکاپ خوانده نشد."); }
@@ -64343,6 +64456,10 @@ var CONT = [["AS", "آسیا", "Asia"], ["EU", "اروپا", "Europe"], ["NA", "
         return { main: main, map: map, skipped: skipped };
     }
     /* one database = ONE transaction over all its stores: either everything is replaced or nothing is */
+    async function readKv(dbName, key) {
+        var db = await idbOpen(dbName);
+        try { return await new Promise(function (res) { try { var r = db.transaction("kv", "readonly").objectStore("kv").get(key); r.onsuccess = function () { res(r.result); }; r.onerror = function () { res(undefined); }; } catch (e) { res(undefined); } }); } finally { db.close(); }
+    }
     async function writeDb(snap, dd, target, isMain) {
         var work = [];
         for (var si = 0; si < dd.stores.length; si++) {      /* decode first: a damaged backup fails here, before this database is touched */
@@ -64353,6 +64470,7 @@ var CONT = [["AS", "آسیا", "Asia"], ["EU", "اروپا", "Europe"], ["NA", "
         }
         var names = work.map(function (w) { return w.name; }); if (isMain && names.indexOf("kv") < 0) names.push("kv");
         if (!names.length) return;
+        var keepState; if (isMain) { try { keepState = await readKv(target, "mkmed_state_v1"); } catch (e) { } }
         setProg("بازنویسی «" + target + "»…", 50);
         var db = await idbOpen(target);
         try {
@@ -64363,8 +64481,9 @@ var CONT = [["AS", "آسیا", "Asia"], ["EU", "اروپا", "Europe"], ["NA", "
                 try {
                     work.forEach(function (w) {
                         var os = tx.objectStore(w.name), inline = os.keyPath != null; os.clear();
-                        w.recs.forEach(function (r) { inline ? os.put(r[1]) : os.put(r[1], r[0]); });
+                        w.recs.forEach(function (r) { if (isMain && w.name === "kv" && r[0] === "mkmed_state_v1") return; inline ? os.put(r[1]) : os.put(r[1], r[0]); });
                     });
+                    if (isMain && keepState !== undefined) tx.objectStore("kv").put(keepState, "mkmed_state_v1");
                     /* notes: always written as the plain legacy record; the app's gz record is removed so it can't win on next load */
                     if (isMain) { var kv = tx.objectStore("kv"); kv.put(snap.header.notes || "[]", "app_categories_v13"); kv.delete("app_categories_v13_gz"); }
                 } catch (e) { failed = e; try { tx.abort(); } catch (x) { } }
@@ -64388,14 +64507,27 @@ var CONT = [["AS", "آسیا", "Asia"], ["EU", "اروپا", "Europe"], ["NA", "
         applyLs(snap);
     }
     /* rb = a snapshot of the device taken just before; if anything fails half-way it is written back automatically */
+    /* While a full restore is writing, the app must not save its (old, in-memory) notes over the restored data - its autosave also fires on
+       pagehide / visibility change. Its save functions are muted until the page reloads, or until a failed restore has been rolled back. */
+    function muteSaves(on) {
+        try {
+            if (on) {
+                if (S.muted) return; S.muted = {}; window.__mkSvNoop = function () { return true; };
+                ["mu_doSaveFlush", "saveToLocalStorage"].forEach(function (n) { var f = G(n); if (typeof f === "function") { S.muted[n] = f; try { (0, eval)(n + "=window.__mkSvNoop"); } catch (e) { delete S.muted[n]; } } });
+            } else if (S.muted) {
+                Object.keys(S.muted).forEach(function (n) { window.__mkSvTmp = S.muted[n]; try { (0, eval)(n + "=window.__mkSvTmp"); } catch (e) { } });
+                delete window.__mkSvTmp; S.muted = null;
+            }
+        } catch (e) { }
+    }
     async function restoreReplace(snap, rb) {
         var plan = await planRestore(snap);          /* throws before any change if the structure doesn't match */
-        window.__mkSvRestoring = 1; SET("mu_savePending", false);
+        window.__mkSvRestoring = 1; muteSaves(true); SET("mu_savePending", false);
         try { await applyReplace(snap, plan); }
         catch (e) {
             var rolled = false;
             if (rb) { try { setProg("خطا؛ برگرداندن وضعیت قبلی…", 0); var old = await parseSnapshot(rb.blob); await applyReplace(old, await planRestore(old)); rolled = true; } catch (e2) { console.warn("mksv rollback", e2); } }
-            window.__mkSvRestoring = 0;
+            window.__mkSvRestoring = 0; muteSaves(false);
             var er = new Error(((e && e.message) || String(e)) + (rolled ? "\nوضعیت قبلی این دستگاه به‌طور کامل برگردانده شد." : "\nبرگرداندن خودکار هم ناموفق بود؛ اگر نسخهٔ ایمنی روی سرور گرفته‌ای از همان استفاده کن."));
             er.rolledBack = rolled; throw er;
         }
@@ -64466,6 +64598,7 @@ details summary{cursor:pointer;color:#cfc9ff;font-weight:600;padding:4px 0}\
         document.documentElement.appendChild(host); S.host = host; S.root = sh;
         sh.addEventListener("click", onClick);
         sh.addEventListener("change", function (e) { var t = e.target; if (!t || !t.dataset || t.dataset.dsel == null) return; var c = t.closest(".item"), bid = c && c.dataset.id, it = bid && S.items.filter(function (x) { return x.id === bid; })[0]; if (!it) return; var set = dsSet(bid); t.checked ? set.add(t.dataset.dsel) : set.delete(t.dataset.dsel); var b = c.querySelector('[data-a="dsDel"]'); if (b) b.textContent = dsLabel(it); });
+        sh.addEventListener("change", function (e) { var t = e.target; if (!t || !t.dataset || t.dataset.gz == null) return; s(LS_GZ, t.checked ? null : "0"); toast(t.checked ? "🗜 فشرده‌سازی gzip روشن شد." : "فشرده‌سازی gzip خاموش شد؛ بکاپ‌های بعدی بدون فشرده‌سازی مدیا ذخیره می‌شوند."); });
         sh.addEventListener("input", function (e) { var t = e.target; if (t && t.id === "q") { S.q = t.value; var l = $("#list"); l && (l.innerHTML = listHtml()); } });
         sh.addEventListener("change", function (e) { var t = e.target; if (t && t.id === "so") { S.sort = t.value; var l = $("#list"); l && (l.innerHTML = listHtml()); } });
         sh.addEventListener("change", function (e) { var t = e.target, P = S.pick; if (t && P && t.dataset && t.dataset.nid != null) { t.checked ? P.sel.add(t.dataset.nid) : P.sel.delete(t.dataset.nid); var bx = $("#pkSum"); bx && (bx.innerHTML = pickSumHtml()); } });
@@ -64580,7 +64713,8 @@ details summary{cursor:pointer;color:#cfc9ff;font-weight:600;padding:4px 0}\
     }
     function mainView() {
         return '<div class="card" id="stats">' + statsHtml() + '</div>' +
-            '<div class="card"><h3>➕ بکاپ جدید</h3><div class="row"><button class="btn pri grow" data-a="newPick">🗂 انتخاب یادداشت‌ها</button><button class="btn grow" data-a="newAll">⚡ همهٔ یادداشت‌ها</button></div><div class="muted" style="margin-top:8px">هر یادداشت جداگانه (همراه عکس، ویس و فایل‌های خودش) ذخیره می‌شود. سقف هر بکاپ ۳.۵ گیگابایت و سقف مجموع همهٔ بکاپ‌ها ۳.۶ گیگابایت است و پیش از شروع و هنگام افزودن هر یادداشت، حجم و فضای باقی‌مانده نشان داده می‌شود.</div></div>' +
+            '<div class="card"><h3>➕ بکاپ جدید</h3><div class="row"><button class="btn pri grow" data-a="newPick">🗂 انتخاب یادداشت‌ها</button><button class="btn grow" data-a="newAll">⚡ همهٔ یادداشت‌ها</button></div><div class="muted" style="margin-top:8px">هر یادداشت جداگانه (همراه عکس، ویس و فایل‌های خودش) ذخیره می‌شود. سقف هر بکاپ ۳.۵ گیگابایت و سقف مجموع همهٔ بکاپ‌ها ۳.۶ گیگابایت است و پیش از شروع و هنگام افزودن هر یادداشت، حجم و فضای باقی‌مانده نشان داده می‌شود.</div>' +
+            '<label class="chk" style="margin:12px 0 2px"><input type="checkbox" data-gz' + (gzOn() ? " checked" : "") + (gzSupported() ? "" : " disabled") + '><span>🗜 فشرده‌سازی gzip بکاپ‌ها (پیش‌فرض روشن)</span></label><div class="muted">' + (gzSupported() ? "متن یادداشت‌ها و فایل‌های قابل‌فشرده‌سازی کوچک‌تر ذخیره می‌شوند؛ عکس/ویس/ویدیوی از قبل فشرده دوباره فشرده نمی‌شوند. بکاپ‌های قدیمی هم‌چنان قابل بازیابی‌اند." : "این مرورگر از gzip پشتیبانی نمی‌کند.") + '</div></div>' +
             '<div class="card"><h3>🗂 بکاپ‌ها</h3><div class="row" style="margin-bottom:10px"><input class="fa grow" id="q" placeholder="جستجو…" value="' + esc(S.q) + '"><select id="so" style="width:auto"><option value="new"' + (S.sort === "new" ? " selected" : "") + '>جدیدترین</option><option value="old"' + (S.sort === "old" ? " selected" : "") + '>قدیمی‌ترین</option><option value="big"' + (S.sort === "big" ? " selected" : "") + '>بزرگ‌ترین</option><option value="name"' + (S.sort === "name" ? " selected" : "") + '>نام</option></select><button class="btn sm" data-a="refresh">↻</button></div><div id="list">' + listHtml() + '</div></div>' +
             '<details class="card"><summary>⚙️ حساب و تنظیمات</summary><div class="row" style="margin:10px 0"><button class="btn sm" data-a="pw">🔑 تغییر رمز</button><button class="btn sm" data-a="logoutAll">🚪 خروج از همهٔ دستگاه‌ها</button><button class="btn sm" data-a="logout">خروج از حساب</button><button class="btn sm dng" data-a="delAcc">حذف حساب و همهٔ بکاپ‌ها</button></div><label>آدرس سرور</label><input id="api" value="' + esc(apiBase()) + '"><div class="row" style="margin-top:10px"><button class="btn sm" data-a="saveApi">ذخیره</button></div><div id="apiMsg" class="muted"></div></details>';
     }
@@ -64742,7 +64876,7 @@ details summary{cursor:pointer;color:#cfc9ff;font-weight:600;padding:4px 0}\
                 var bid = target;
                 if (!bid) { setProg("ساخت بکاپ…", 0); var c = await api("/backups", { method: "POST", body: { name: name, note: note } }); bid = c.item.id; S.items.unshift(c.item); }
                 var r = await addNotes(bid, list); await refresh(true);
-                S.report = { err: r.skipped.length && !r.ok, text: "✅ " + fa(r.ok) + " یادداشت در بکاپ ذخیره شد.\n" + usageLine(r.used) + (r.skipped.length ? "\n⚠️ جا نشد (سقف ۳.۵GB برای هر بکاپ / ۳.۶GB برای کل): " + r.skipped.join("، ") : "") };
+                S.report = { err: r.skipped.length && !r.ok, text: "✅ " + fa(r.ok) + " یادداشت در بکاپ ذخیره شد.\n" + usageLine(r.used) + (r.gzRaw > r.gzOut ? "\n🗜 فشرده‌سازی gzip: حجم مدیاها از " + fmtSize(r.gzRaw) + " به " + fmtSize(r.gzOut) + " رسید (" + fa(Math.round((1 - r.gzOut / r.gzRaw) * 100)) + "٪ کمتر)" : "") + (r.lost ? "\n⚠️ " + fa(r.lost) + " رسانه روی دستگاه نبود و در بکاپ نیست." : "") + (r.oldLocked ? "\n🔒 " + fa(r.oldLocked) + " یادداشتِ قفل‌دارِ قدیمی بدون مدیای جدا ذخیره شد؛ یک‌بار قفلشان را باز کن تا مدیایشان داخل خود یادداشت برود، بعد دوباره بکاپ بگیر." : "") + (r.skipped.length ? "\n⚠️ جا نشد (سقف ۳.۵GB برای هر بکاپ / ۳.۶GB برای کل): " + r.skipped.join("، ") : "") };
             });
         },
         fullBackup: async function () {
@@ -64836,7 +64970,7 @@ details summary{cursor:pointer;color:#cfc9ff;font-weight:600;padding:4px 0}\
             withBusy(async function () {
                 var blob = await downloadBlob(it); setProg("بررسی بکاپ…", 100); var sn = await parseSnapshot(blob);
                 await planRestore(sn);   /* structure check first: if it fails nothing on the device is touched */
-                setProg("ساخت نسخهٔ بازگشت روی همین دستگاه…", 0); var rb = await buildSnapshot(setProg);   /* always taken, used for automatic rollback */
+                setProg("ساخت نسخهٔ بازگشت روی همین دستگاه…", 0); var rb = await buildSnapshot(setProg, !o.check);   /* always taken, used for automatic rollback (gzipped only when it is also uploaded) */
                 if (o.check) { await uploadBlob(rb.blob, rb.counts, "🛟 نسخهٔ ایمنی " + stamp(), "خودکار، قبل از جایگزینی با «" + it.name + "»", "safety"); }
                 setProg("جایگزینی داده‌ها…", 0); var plan = await restoreReplace(sn, rb); setProg("انجام شد؛ بارگذاری مجدد…", 100); toast("✅ جایگزینی انجام شد." + (plan.skipped.length ? " (" + fa(plan.skipped.length) + " پایگاه داده که روی این دستگاه نبود رد شد)" : "")); await sleep(900); location.reload();
             });
@@ -65276,112 +65410,211 @@ html body .audio-wrapper.video-wrapper.mk-vplaying>button.img-btn.img-btn.img-bt
 })();
 </script>
 
+<style id="mkBigPasteCss">/* Big paste v4: content-visibility:auto removed (it made style recalc 10x slower on 50k lines) */</style>
 <script id="mkBigPasteJs">
-/* ===== Big paste engine v2 (note editor + note viewer/edit panel) =====
-   Why the old version froze for many seconds: (1) the lines were separated with <br> inside ONE block, so the browser
-   ran bidi + line layout over a single paragraph of thousands of lines (quadratic: ~10 s for 16k Persian lines);
-   (2) the viewer edit panel pasted through execCommand("insertText"), which is just as slow; (3) autosave rebuilt the
-   note text with a quadratic string concat; (4) the contrast guard queued every pasted node.
-   Now every line is its own block (<div>, the same structure the editor makes on Enter), all lines are inserted in
-   ONE DocumentFragment pass, the rest of the caret's line is carried to the end of the last pasted line, and a single
-   "input" event fires so autosave / bidi / history run once. ===== */
+/* ===== Big paste engine v3 (note editor + note viewer/edit panel) =====
+   v2 already made every line its own <div> and inserted them in one fragment, but 50k lines still froze the page because
+   everything happened in ONE task: ~100k nodes inserted at once, then every MutationObserver / input handler of the app
+   walked all of them, then the browser shaped and laid out ~3M characters.
+   v3:
+   1) the first ~250 lines are inserted synchronously (the paste appears instantly);
+   2) the rest is inserted in time-sliced chunks (frame budget adapts to how long the previous frame really took, so the
+      observers' work is spread out too) - the page never freezes and scrolling / tapping stays alive;
+   3) the rest of the caret's original line stays in the DOM the whole time (in its own block after the pasted lines), so
+      nothing can get lost if the note is saved half way; the last pasted line is merged into it at the end;
+   4) every chunk is direction-marked (data-mu-d) while it is still detached, so the app's final "mark the whole box"
+      pass finds everything already set and has almost nothing to do;
+   5) ONE "input" event fires at the very end (autosave / history / bidi / preview run once, not once per chunk);
+   6) lines below the 260th use content-visibility:auto (see mkBigPasteCss) so off-screen text is never shaped / laid out;
+   7) while the paste is streaming in, typing / paste / cut / drop inside that box is blocked and a small progress pill shows. ===== */
 (function () {
-    if (window.__mkBigPaste2) return; window.__mkBigPaste2 = 1;
-    var MIN_CHARS = 6000, MIN_LINES = 120;
+    if (window.__mkBigPaste3) return; window.__mkBigPaste3 = 1; window.__mkBigPaste2 = 1;
+    var MIN_CHARS = 6000, MIN_LINES = 120, FIRST_LINES = 250, STEP = 300;
     var HOST = '.text-box[contenteditable="true"],.mu-viewer-body[contenteditable="true"]';
     var BLOCKRE = /^(DIV|P|LI|UL|OL|BLOCKQUOTE|PRE|H[1-6]|TABLE|HR|FIGURE|SECTION|ARTICLE)$/;
     var MEDIA = ".img-drag-wrapper,.audio-wrapper,.mu-img-row,.video-wrapper,.drawing-box,.img-top-divider";
+    var job = null, toast = null, toastTn = null;
+
     function boxOf(n) { var el = n && (n.nodeType === 1 ? n : n.parentElement); return el && el.closest ? el.closest(HOST) : null; }
     function fixSpaces(box, t) {
         var ws = ""; try { ws = getComputedStyle(box).whiteSpace || ""; } catch (e) { }
         if (/^pre/.test(ws)) return t;
-        return t.replace(/^ +| +$| {2,}/gm, function (m) { return m.length === 1 ? " " : " " + new Array(m.length).join(" "); });
+        return t.replace(/^ +| +$| {2,}/gm, function (m) { return m.length === 1 ? " " : " " + new Array(m.length).join(" "); });
     }
-    function lineDivs(lines, from, to, state) {
-        var frag = document.createDocumentFragment(), d = document;
-        for (var i = from; i < to; i++) {
-            var dv = d.createElement("div"), ln = lines[i];
-            if (ln) { var tx = d.createTextNode(ln); dv.appendChild(tx); state.last = tx; state.lastLen = ln.length; state.lastDiv = dv; }
-            else { dv.appendChild(d.createElement("br")); state.last = null; state.lastDiv = dv; }
-            frag.appendChild(dv);
+    function now() { return window.performance && performance.now ? performance.now() : Date.now(); }
+    function isFa() { try { return document.documentElement.getAttribute("dir") === "rtl" || /^fa/i.test(document.documentElement.lang || ""); } catch (e) { return false; } }
+
+    /* ---------- progress pill ---------- */
+    function showToast() {
+        if (toast) return;
+        try {
+            toast = document.createElement("div"); toast.setAttribute("data-mu-nobidi", "1"); toast.setAttribute("dir", "auto");
+            toast.style.cssText = "position:fixed;left:50%;bottom:calc(env(safe-area-inset-bottom,0px) + 84px);transform:translateX(-50%);z-index:2147483000;padding:8px 16px;border-radius:999px;background:rgba(20,24,36,.92);color:#fff;font:600 13px/1.4 system-ui,sans-serif;pointer-events:none;box-shadow:0 6px 20px rgba(0,0,0,.35)";
+            toastTn = document.createTextNode(""); toast.appendChild(toastTn); (document.body || document.documentElement).appendChild(toast);
+        } catch (e) { toast = toastTn = null; }
+    }
+    function setToast(p) {
+        if (!toast) return;
+        var fa = isFa(), s = String(p);
+        if (fa) s = s.replace(/\d/g, function (c) { return "۰۱۲۳۴۵۶۷۸۹".charAt(+c); });
+        toastTn.nodeValue = fa ? "در حال چسباندن… " + s + "٪" : "Pasting… " + s + "%";
+    }
+    function hideToast() { try { toast && toast.parentNode && toast.parentNode.removeChild(toast); } catch (e) { } toast = toastTn = null; }
+
+    /* ---------- building the lines ---------- */
+    // lines[from..to) -> one fragment of <div>s, direction-marked while detached (the app's own marker, if present)
+    function buildDivs(lines, from, to) {
+        var d = document, holder = d.createElement("div"), i, dv, ln;
+        for (i = from; i < to; i++) {
+            dv = d.createElement("div"); ln = lines[i];
+            if (ln) dv.appendChild(d.createTextNode(ln)); else dv.appendChild(d.createElement("br"));
+            holder.appendChild(dv);
+        }
+        try { if (typeof window.muBidiMark === "function") window.muBidiMark(holder); } catch (e) { }
+        var frag = d.createDocumentFragment();
+        while (holder.firstChild) frag.appendChild(holder.firstChild);
+        return frag;
+    }
+    // lines[from..to) -> text nodes separated by <br> (used inside lists / quotes / next to media)
+    function buildBr(J, from, to) {
+        var d = document, frag = d.createDocumentFragment(), i, ln, t;
+        for (i = from; i < to; i++) {
+            if (i) frag.appendChild(d.createElement("br"));
+            ln = J.lines[i];
+            if (ln) { t = d.createTextNode(ln); frag.appendChild(t); J.lastText = t; } else J.lastText = null;
         }
         return frag;
     }
-    function place(box, range, lines) {
-        var d = document, sel = window.getSelection(), st = { last: null, lastLen: 0, lastDiv: null };
-        var sc = range.startContainer, block = sc; while (block && block.parentNode !== box) block = block.parentNode;
+    function mkHolder(tail) {
+        var d = document, th = d.createElement("div");
+        if (tail && tail.firstChild) th.appendChild(tail);
+        if (!th.firstChild || (th.childNodes.length === 1 && th.firstChild.nodeType === 3 && !th.firstChild.nodeValue)) { th.textContent = ""; th.appendChild(d.createElement("br")); }
+        return th;
+    }
+
+    /* ---------- set-up: split the caret's line, create the "tail" holder ---------- */
+    function begin(box, range, lines) {
+        var d = document, sc = range.startContainer, block = sc;
+        while (block && block.parentNode !== box) block = block.parentNode;
         if (block === box || sc === box) block = null;
         var isEl = block && block.nodeType === 1, bn = isEl ? block.nodeName : "";
         var simple = isEl && /^(DIV|P)$/.test(bn) && !block.matches(MEDIA) && !block.querySelector(MEDIA + ",table") && !block.closest("blockquote");
         var inline = !block || block.nodeType === 3 || (isEl && !BLOCKRE.test(bn) && !block.matches(MEDIA));
-        var insertAfter = null, firstText = null, tail = null, removeBr = null, mode;
+        var J = { box: box, lines: lines, i: 1, last: lines.length - 1, mode: "div", parent: null, ref: null, th: null, marker: null, lastText: null, budget: 8, prev: 0 };
+        var tail, first = null, th;
         if (simple) {
-            mode = "simple";
             var tr = d.createRange(); tr.setStart(range.startContainer, range.startOffset);
             block.lastChild ? tr.setEndAfter(block.lastChild) : tr.setEnd(block, 0);
             tail = tr.extractContents();
-            if (lines[0]) { firstText = d.createTextNode(lines[0]); range.insertNode(firstText); }
+            if (lines[0]) { first = d.createTextNode(lines[0]); range.insertNode(first); }
+            if (!block.firstChild) block.appendChild(d.createElement("br"));
+            th = mkHolder(tail); block.parentNode.insertBefore(th, block.nextSibling); J.fb = block;
         } else if (inline) {
-            mode = "inline";
-            // the rest of the caret's line (up to the next <br> / block) moves behind the last pasted line
             var anchor = range.startContainer, off = range.startOffset, scan;
             if (anchor === box) scan = box.childNodes[off] || null; else { var top = anchor; while (top && top.parentNode !== box) top = top.parentNode; scan = top ? top.nextSibling : null; }
             var n = scan; while (n) { if (n.nodeType === 1 && (n.nodeName === "BR" || BLOCKRE.test(n.nodeName) || n.matches(MEDIA))) break; n = n.nextSibling; }
             var tr2 = d.createRange(); tr2.setStart(anchor, off); n ? tr2.setEndBefore(n) : tr2.setEnd(box, box.childNodes.length);
             tail = tr2.extractContents();
-            if (n && n.nodeName === "BR") removeBr = n;
-            if (lines[0]) { firstText = d.createTextNode(lines[0]); range.insertNode(firstText); }
+            var removeBr = n && n.nodeName === "BR" ? n : null;
+            if (lines[0]) { first = d.createTextNode(lines[0]); range.insertNode(first); }
+            th = mkHolder(tail);
+            if (first) first.parentNode.insertBefore(th, first.nextSibling); else range.insertNode(th);
+            if (removeBr && removeBr.parentNode) removeBr.parentNode.removeChild(removeBr);
+            J.fb = th.parentNode;
         } else {
-            // inside a list / quote / next to media: keep lines inside that container, separated with <br>
-            mode = "br";
-            var f2 = d.createDocumentFragment();
-            lines.forEach(function (l, i) { if (i) f2.appendChild(d.createElement("br")); if (l) { var t = d.createTextNode(l); f2.appendChild(t); st.last = t; st.lastLen = l.length; } });
-            range.insertNode(f2);
-            return { st: st, mode: mode, lastDiv: null };
+            // inside a list / quote / next to media: keep every line inside that container, separated with <br>
+            J.mode = "br"; J.i = 0; J.last = lines.length;
+            J.marker = d.createTextNode(""); range.insertNode(J.marker);
+            return J;
         }
-        // lines[1..] become one <div> each; the first is built now, the rest may be appended in slices
-        var ref = firstText || null, parent, before;
-        if (firstText) { parent = firstText.parentNode; before = firstText.nextSibling; }
-        else { parent = range.startContainer.nodeType === 1 ? range.startContainer : range.startContainer.parentNode; before = range.startContainer.nodeType === 1 ? range.startContainer.childNodes[range.startOffset] || null : null; if (range.startContainer.nodeType === 3) { before = range.startContainer.nextSibling; } }
-        if (mode === "simple") { parent = block.parentNode; before = block.nextSibling; }
-        if (removeBr && removeBr.parentNode) { if (before === removeBr) before = removeBr.nextSibling; removeBr.parentNode.removeChild(removeBr); }
-        return { st: st, mode: mode, parent: parent, before: before, tail: tail, removeBr: removeBr, block: block };
+        J.th = th; J.ref = th; J.parent = th.parentNode;
+        return J;
     }
-    function finish(box, sel, st, tailDiv) {
-        var d = document;
-        try {
-            var r2 = d.createRange();
-            if (st.last && st.last.nodeType === 3) r2.setStart(st.last, st.lastLen); else if (st.lastDiv) r2.setStart(st.lastDiv, 0); else r2.setStartAfter(box.lastChild || box);
-            r2.collapse(true); sel.removeAllRanges(); sel.addRange(r2);
-        } catch (x) { }
-        try { box.dispatchEvent(new InputEvent("input", { bubbles: true, inputType: "insertFromPaste" })); } catch (x) { }
-        try { var el = st.last && st.last.parentElement || st.lastDiv; el && el.scrollIntoView && el.scrollIntoView({ block: "nearest" }); } catch (x) { }
+
+    /* ---------- the time-sliced pump ---------- */
+    function insertSome(J, n) {
+        if (J.mode === "br") { var m = J.marker; if (!m.parentNode) return false; m.parentNode.insertBefore(buildBr(J, J.i, J.i + n), m); }
+        else { if (!J.ref.parentNode || J.ref.parentNode !== J.parent) return false; J.parent.insertBefore(buildDivs(J.lines, J.i, J.i + n), J.ref); }
+        J.i += n; return true;
     }
+    function run(J, limitLines, budgetMs) {
+        var t0 = now(), done = 0;
+        while (J.i < J.last) {
+            var n = Math.min(STEP, J.last - J.i);
+            if (limitLines && done + n > limitLines) n = limitLines - done;
+            if (n <= 0) break;
+            if (!insertSome(J, n)) return false;
+            done += n;
+            if (limitLines ? done >= limitLines : now() - t0 > budgetMs) break;
+        }
+        return true;
+    }
+    function schedule(fn) {
+        var fired = false;
+        function go() { if (fired) return; fired = true; fn(); }
+        if (document.hidden) { setTimeout(go, 0); return; }
+        requestAnimationFrame(go); setTimeout(go, 120);
+    }
+    function pump() {
+        var J = job; if (!J) return;
+        if (!J.box.isConnected) { abort(J); return; }
+        var t = now();
+        // the gap between two pumps = our slice + the app's observers + rendering: keep it near a frame
+        if (J.prev) { var gap = t - J.prev; J.budget = gap > 45 ? Math.max(3, J.budget * 0.7) : Math.min(14, J.budget * 1.2); }
+        J.prev = t;
+        if (!run(J, 0, J.budget)) { abort(J); return; }
+        if (J.i < J.last) { setToast(Math.min(99, Math.floor(J.i / J.last * 100))); schedule(pump); } else { setToast(99); schedule(function () { if (job !== J) return; if (!J.box.isConnected) { abort(J); return; } finish(J); }); }
+    }
+    function abort(J) { if (job === J) job = null; hideToast(); }
+
+    function finish(J) {
+        var d = document, sel = window.getSelection(), node, off, scrollEl = null;
+        var last = J.lines[J.lines.length - 1];
+        if (J.mode === "br") {
+            if (last && J.lastText && J.lastText.parentNode) { node = J.lastText; off = J.lastText.nodeValue.length; scrollEl = node.parentNode; }
+            else { var p = J.marker.parentNode; node = p; off = Array.prototype.indexOf.call(p.childNodes, J.marker); scrollEl = p; }
+            if (J.marker.parentNode) J.marker.parentNode.removeChild(J.marker);
+        } else {
+            var th = J.th, onlyBr = th.childNodes.length === 1 && th.firstChild.nodeName === "BR";
+            if (last) {
+                var tn = d.createTextNode(last);
+                if (onlyBr) th.removeChild(th.firstChild);
+                th.insertBefore(tn, th.firstChild); node = tn; off = last.length;
+            } else { node = th; off = 0; }
+            scrollEl = th;
+            try { if (typeof window.muBidiMark === "function") window.muBidiMark(th); } catch (e) { }
+        }
+        try { var r2 = d.createRange(); r2.setStart(node, off); r2.collapse(true); sel.removeAllRanges(); sel.addRange(r2); } catch (e) { }
+        if (job === J) job = null; hideToast();
+        // ONE input event for the whole paste
+        try { if (J.mode !== "br") window.__mkBpFast = { box: J.box, fb: J.fb || null }; J.box.dispatchEvent(new InputEvent("input", { bubbles: true, inputType: "insertFromPaste" })); } catch (e) { } finally { window.__mkBpFast = null; }
+        try { scrollEl && scrollEl.scrollIntoView && scrollEl.scrollIntoView({ block: "nearest" }); } catch (e) { }
+    }
+
     function insertLines(box, text) {
         var sel = window.getSelection(); if (!sel || !sel.rangeCount) return false;
         var range = sel.getRangeAt(0); if (!box.contains(range.commonAncestorContainer)) return false;
         var lines = text.split("\n"), d = document;
         range.collapsed || range.deleteContents();
-        if (lines.length === 1) { var tn = d.createTextNode(lines[0]); range.insertNode(tn); var r1 = d.createRange(); r1.setStart(tn, tn.nodeValue.length); r1.collapse(true); sel.removeAllRanges(); sel.addRange(r1); box.dispatchEvent(new InputEvent("input", { bubbles: true, inputType: "insertFromPaste" })); return true; }
-        var P = place(box, range, lines), st = P.st;
-        if (P.mode === "br") { finish(box, sel, st); return true; }
-        var frag = lineDivs(lines, 1, lines.length, st);
-        attachTail(P, st, frag);
-        P.parent.insertBefore(frag, P.before);
-        finish(box, sel, st);
+        if (lines.length === 1) {
+            var tn = d.createTextNode(lines[0]); range.insertNode(tn);
+            var r1 = d.createRange(); r1.setStart(tn, tn.nodeValue.length); r1.collapse(true); sel.removeAllRanges(); sel.addRange(r1);
+            box.dispatchEvent(new InputEvent("input", { bubbles: true, inputType: "insertFromPaste" })); return true;
+        }
+        var J = begin(box, range, lines);
+        job = J;
+        // first screenful right now
+        if (!run(J, FIRST_LINES, 0)) { abort(J); return true; }
+        if (J.i < J.last) { showToast(); setToast(Math.min(99, Math.floor(J.i / J.last * 100))); schedule(pump); }
+        else finish(J);
         return true;
     }
-    function attachTail(P, st, frag) {
-        // the rest of the caret's original line goes at the end of the LAST pasted line
-        var lastDiv = frag.lastChild; if (!lastDiv) return;
-        if (P.tail && P.tail.firstChild) { if (lastDiv.firstChild && lastDiv.firstChild.nodeName === "BR") lastDiv.removeChild(lastDiv.firstChild); lastDiv.appendChild(P.tail); }
-        if (!lastDiv.firstChild) lastDiv.appendChild(document.createElement("br"));
-        st.lastDiv = lastDiv;
-    }
+
     function onPaste(e) {
         try {
             var cd = e.clipboardData; if (!cd || (cd.files && cd.files.length)) return;
             var box = boxOf(e.target); if (!box) return;
+            if (job && job.box === box) { e.preventDefault(); e.stopImmediatePropagation(); return; }
             var text = cd.getData("text/plain"); if (!text) return;
             var big = text.length >= MIN_CHARS; if (!big) { var n = 0, p = -1; while ((p = text.indexOf("\n", p + 1)) >= 0 && ++n < MIN_LINES); big = n >= MIN_LINES; }
             if (!big) return;
@@ -65394,8 +65627,23 @@ html body .audio-wrapper.video-wrapper.mk-vplaying>button.img-btn.img-btn.img-bt
             text = text.replace(/\u0000/g, "").replace(/\r\n?/g, "\n"); text = fixSpaces(box, text);
             try { box.spellcheck = false; box.setAttribute("spellcheck", "false"); } catch (x) { }
             insertLines(box, text);
-        } catch (err) { console.warn("big paste fast path failed, falling back", err); }
+        } catch (err) { console.warn("big paste fast path failed, falling back", err); abort(job); }
     }
+
+    /* While the lines are streaming in, edits inside that box would land in a half-built document: block them.
+       Navigation keys, select-all and copy still work. */
+    function guard(e) {
+        if (!job) return;
+        var t = e.target, el = t && (t.nodeType === 1 ? t : t.parentElement);
+        if (!el || !job.box.contains(el)) return;
+        if (e.type === "keydown") {
+            var k = e.key || "", mod = e.ctrlKey || e.metaKey;
+            if (mod && /^[acAC]$/.test(k)) return;
+            if (/^(Arrow|Page|Home$|End$|Shift$|Control$|Alt$|Meta$|Escape$|Tab$|F\d)/.test(k)) return;
+        }
+        e.preventDefault(); e.stopImmediatePropagation();
+    }
+    ["beforeinput", "paste", "cut", "drop", "keydown"].forEach(function (n) { window.addEventListener(n, guard, true); });
     // window capture runs before every document-level paste listener
     window.addEventListener("paste", onPaste, true);
     // huge note: the browser's own spell-checker makes typing lag, so it is turned off for it
@@ -65407,16 +65655,23 @@ html body .audio-wrapper.video-wrapper.mk-vplaying>button.img-btn.img-btn.img-bt
 html body .text-box code.mk-ml,html body .mu-viewer-body code.mk-ml,html body .mu-note-body code.mk-ml{display:block;white-space:pre-wrap;padding:8px 10px;margin:4px 0;text-align:start;unicode-bidi:plaintext;word-break:break-word}
 </style>
 <script id="mkFenceCopyJs">
-/* ===== `text` / ```text``` : typing the closing backtick(s) turns the text between into ONE copyable chip, even when it
-   spans many lines (the old rule only worked inside a single line). Tap the chip = copy the whole text, line breaks included.
-   - single backtick across lines: the opening ` must be at the start of its line and the closing ` at the end of its line
+/* ===== `text` / ```text``` : typing the closing / opening backtick turns the text between into ONE copyable chip.
+   v2 - works in BOTH typing orders (opening first, or closing first and the opening typed afterwards), for long texts,
+   multi-line texts, Persian / RTL texts (invisible marks such as ZWNJ / RLM / LRM / ZWSP never break the match),
+   text that is split over several DOM nodes (bold, highlight, links, line breaks, blocks) and in the viewer edit mode.
+   - same line: any position;  - several lines: the opening ` must be first on its line and the closing ` last on its line
      (so stray backticks in pasted code never swallow text);  - ``` ... ``` works anywhere. ===== */
 (function () {
-    var ZW = "\u200b", busy = false, SKIP = "code,pre,a,.mk-cb,.img-toolbar,button,[contenteditable=\"false\"]";
-    function boxOf(n) { var el = n && (n.nodeType === 1 ? n : n.parentElement); return el && el.closest ? el.closest('.text-box[contenteditable="true"]') : null; }
+    if (window.__mkFenceV2) return; window.__mkFenceV2 = 1;
+    var ZW = "\u200b", busy = false;
+    var BOXSEL = '.text-box[contenteditable="true"], .mu-viewer-body[contenteditable="true"]';
+    var SKIP = 'code,pre,a,.mk-cb,.img-toolbar,button,[contenteditable="false"]';
+    var BLK = /^(DIV|P|LI|UL|OL|H[1-6]|BLOCKQUOTE|PRE|TR|TD|TH|TABLE|SECTION|ARTICLE)$/;
+    // blank = whitespace + invisible marks (ZWSP, ZWNJ, ZWJ, LRM, RLM, bidi controls, word joiner, BOM)
+    var NOTBLANK = /[^\s\u200b-\u200f\u202a-\u202e\u2060-\u2069\ufeff]/, BLANK = /^[\s\u200b-\u200f\u202a-\u202e\u2060-\u2069\ufeff]*$/;
+    function boxOf(n) { var el = n && (n.nodeType === 1 ? n : n.parentElement); return el && el.closest ? el.closest(BOXSEL) : null; }
     function skipped(n) { var p = n.parentElement; return !!(p && p.closest && p.closest(SKIP)); }
     function blockOf(box, n) { while (n && n.parentNode !== box) n = n.parentNode; return n && n !== box ? n : null; }
-    var BLK = /^(DIV|P|LI|UL|OL|H[1-6]|BLOCKQUOTE|PRE|TR|TABLE)$/;
     function textOf(frag) {
         // own walker (works on detached nodes): <br> and block boundaries become line breaks
         var out = "", cur = false;
@@ -65433,15 +65688,88 @@ html body .text-box code.mk-ml,html body .mu-viewer-body code.mk-ml,html body .m
         walk(frag);
         return out.replace(/\u00a0/g, " ");
     }
-    function lineStartOnly(block, node, off, box) {
-        // nothing but blanks between the start of the line and (node, off)
-        var r = document.createRange(); r.setStart(block || box, 0); r.setEnd(node, off);
-        return !/\S/.test(r.toString().replace(/\u200b/g, ""));
+    // ---- linear model of the editor: one string, line breaks (<br> / block boundaries) = "\n".
+    // backticks that live inside existing chips / code / links are masked (\uE001) so they are never used as fences.
+    function lin(box) {
+        var s = "", nodes = [], st = [], starts = new Map();
+        function brk() { if (s.length && s.charAt(s.length - 1) !== "\n") s += "\n"; }
+        (function walk(el) {
+            for (var c = el.firstChild; c; c = c.nextSibling) {
+                if (c.nodeType === 3) {
+                    var v = c.nodeValue; if (skipped(c)) v = v.replace(/`/g, "\uE001");
+                    starts.set(c, s.length); nodes.push(c); st.push(s.length); s += v;
+                } else if (c.nodeType === 1) {
+                    if (c.nodeName === "BR") { s += "\n"; continue; }
+                    if (/^(SCRIPT|STYLE)$/.test(c.nodeName)) continue;
+                    var b = BLK.test(c.nodeName); b && brk(); walk(c); b && brk();
+                }
+            }
+        })(box);
+        return { s: s, nodes: nodes, st: st, starts: starts };
     }
-    function lineEndOnly(block, node, off, box) {
-        var r = document.createRange(); r.setStart(node, off); r.setEnd(block || box, (block || box).childNodes.length);
-        return !/\S/.test(r.toString().replace(/\u200b/g, ""));
+    function charPos(L, i) {
+        var a = L.st, lo = 0, hi = a.length - 1, m;
+        while (lo < hi) { m = (lo + hi + 1) >> 1; if (a[m] <= i) lo = m; else hi = m - 1; }
+        return { n: L.nodes[lo], o: i - a[lo] };
     }
+    function lineStart(S, i) { return i > 0 ? S.lastIndexOf("\n", i - 1) + 1 : 0; }
+    function lineEnd(S, i) { var b = S.indexOf("\n", i); return b < 0 ? S.length : b; }
+    // can the backticks at a < b (indexes in S) be an opening / closing pair?
+    function okPair(S, a, b) {
+        var inner = S.slice(a + 1, b);
+        if (!NOTBLANK.test(inner)) return false;
+        if (inner.indexOf("\n") < 0) return true;                       // same line: anywhere
+        return BLANK.test(S.slice(lineStart(S, a), a)) && BLANK.test(S.slice(b + 1, lineEnd(S, b)));   // several lines
+    }
+    function single(S, i) { return S.charAt(i - 1) !== "`" && S.charAt(i + 1) !== "`"; }
+
+    // ---- single backtick, either order
+    function handle(box) {
+        if (busy) return;
+        var sel = window.getSelection(); if (!sel.rangeCount || !sel.isCollapsed) return;
+        var tn = sel.anchorNode, c2 = sel.anchorOffset;
+        if (!tn || tn.nodeType !== 3 || !box.contains(tn) || skipped(tn)) return;
+        var v = tn.nodeValue, e1 = c2;
+        while (e1 > 0 && /[\u200b\u200e\u200f]/.test(v.charAt(e1 - 1))) e1--;     // keyboards may add invisible marks after the backtick
+        if (e1 < 1 || v.charAt(e1 - 1) !== "`") return;
+        var L = lin(box), S = L.s, t = L.starts.get(tn) + e1 - 1;
+        if (!single(S, t)) return;                                        // `` / ``` are handled below
+        var pair = null, p, n, tries;
+        // 1) the typed backtick CLOSES an earlier one
+        for (p = t > 0 ? S.lastIndexOf("`", t - 1) : -1, tries = 0; p >= 0 && tries < 12 && !pair; p = p > 0 ? S.lastIndexOf("`", p - 1) : -1, tries++)
+            if (single(S, p) && okPair(S, p, t)) pair = [p, t];
+        // 2) the typed backtick OPENS: its closing ` was typed first, further on
+        if (!pair) for (n = S.indexOf("`", t + 1), tries = 0; n >= 0 && tries < 12 && !pair; n = S.indexOf("`", n + 1), tries++)
+            if (single(S, n) && okPair(S, t, n)) pair = [t, n];
+        if (!pair) return;
+        var A = charPos(L, pair[0]), B = charPos(L, pair[1]);
+        var inner = document.createRange(); inner.setStart(A.n, A.o + 1); inner.setEnd(B.n, B.o);
+        var raw = textOf(inner.cloneContents()).replace(/^\n+|\n+$/g, "");
+        if (!/\S/.test(raw)) return;
+        var endN = pair[1] === t ? tn : B.n, endO = pair[1] === t ? c2 : B.o + 1;
+        busy = true;
+        try {
+            var r = document.createRange(); r.setStart(A.n, A.o); r.setEnd(endN, endO);
+            var startBlock = blockOf(box, A.n), endBlock = blockOf(box, endN);
+            r.deleteContents();
+            var code = document.createElement("code"), lines = raw.split("\n");
+            lines.forEach(function (l, i) { if (i) code.appendChild(document.createElement("br")); if (l) code.appendChild(document.createTextNode(l)); });
+            if (lines.length > 1) code.className = "mk-ml";
+            r.insertNode(code);
+            var zw = document.createTextNode(ZW); code.parentNode.insertBefore(zw, code.nextSibling);
+            if (endBlock && endBlock !== startBlock && endBlock.nodeType === 1 && endBlock.parentNode === box && BLANK.test(endBlock.textContent) && !endBlock.querySelector("img,table,audio,video,canvas,.mk-cb")) endBlock.remove();
+            var r2 = document.createRange(); r2.setStart(zw, 1); r2.collapse(true); sel.removeAllRanges(); sel.addRange(r2);
+            box.dispatchEvent(new InputEvent("input", { bubbles: true, inputType: "insertReplacementText" }));
+        } catch (err) { console.warn("backtick chip failed", err); }
+        busy = false;
+    }
+    function onIns(e) {
+        if (busy || typeof e.inputType !== "string" || e.inputType.indexOf("insert") !== 0) return;
+        if (/^insertFrom(Paste|Drop)/.test(e.inputType)) return;          // pasted text never turns into a chip by itself
+        var box = boxOf(e.target); if (box) handle(box);
+    }
+
+    // ---- ``` ... ``` (anywhere, any number of lines)
     function onInput(e) {
         if (busy || typeof e.inputType !== "string" || e.inputType.indexOf("insert") !== 0) return;
         var box = boxOf(e.target); if (!box) return;
@@ -65450,28 +65778,20 @@ html body .text-box code.mk-ml,html body .mu-viewer-body code.mk-ml,html body .m
         if (!tn || tn.nodeType !== 3 || !box.contains(tn) || skipped(tn)) return;
         var v = tn.nodeValue; if (c2 < 1 || v.charAt(c2 - 1) !== "`") return;
         var run = 0; while (c2 - 1 - run >= 0 && v.charAt(c2 - 1 - run) === "`") run++;
-        if (run === 2) return;                       // might still become ```
-        var k = run >= 3 ? 3 : 1, F = k === 3 ? "```" : "`", closeStart = c2 - k;
-        if (k === 3 && run > 3) return;
-        // find the opening fence: same text node first, then earlier text nodes (bounded scan)
+        if (run !== 3) return;
+        var F = "```", k = 3, closeStart = c2 - k;
         var on = null, op = -1, p = closeStart - k >= 0 ? v.lastIndexOf(F, closeStart - k) : -1;
         if (p >= 0) { on = tn; op = p; }
         else {
-            var w = document.createTreeWalker(box, NodeFilter.SHOW_TEXT, null), n, prev = [], found = false;
+            var w = document.createTreeWalker(box, NodeFilter.SHOW_TEXT, null), n, prev = [];
             while ((n = w.nextNode())) { if (n === tn) break; if (!skipped(n)) prev.push(n); }
             var scanned = 0;
             for (var j = prev.length - 1; j >= 0 && scanned < 400000; j--) { var s = prev[j].nodeValue; scanned += s.length; var q = s.lastIndexOf(F); if (q >= 0) { on = prev[j]; op = q; break; } }
         }
         if (!on) return;
         var inner = document.createRange(); inner.setStart(on, op + k); inner.setEnd(tn, closeStart);
-        var sameNodeNoNL = on === tn && !/[\n\r]/.test(inner.toString());
-        if (sameNodeNoNL && k === 1) return;         // the existing single-line rule handles it
-        if (k === 1) {
-            // across lines/nodes: opening ` first on its line, closing ` last on its line
-            if (!lineStartOnly(blockOf(box, on), on, op, box) || !lineEndOnly(blockOf(box, tn), tn, c2, box)) return;
-        }
         var raw = textOf(inner.cloneContents());
-        if (k === 3 && on !== tn && /^[A-Za-z][A-Za-z0-9+#.-]{0,14}$/.test(on.nodeValue.slice(op + 3).trim()) && raw.indexOf("\n") > 0) raw = raw.replace(/^[^\n]*\n/, "");
+        if (on !== tn && /^[A-Za-z][A-Za-z0-9+#.-]{0,14}$/.test(on.nodeValue.slice(op + 3).trim()) && raw.indexOf("\n") > 0) raw = raw.replace(/^[^\n]*\n/, "");
         raw = raw.replace(/^\n+|\n+$/g, "");
         if (!/\S/.test(raw)) return;
         busy = true;
@@ -65484,39 +65804,102 @@ html body .text-box code.mk-ml,html body .mu-viewer-body code.mk-ml,html body .m
             if (lines.length > 1) code.className = "mk-ml";
             r.insertNode(code);
             var zw = document.createTextNode(ZW); code.parentNode.insertBefore(zw, code.nextSibling);
-            if (endBlock && endBlock !== startBlock && endBlock.parentNode === box && !endBlock.textContent.replace(/\u200b/g, "") && !endBlock.querySelector("img,table,audio,video,canvas,.mk-cb")) endBlock.remove();
+            if (endBlock && endBlock !== startBlock && endBlock.nodeType === 1 && endBlock.parentNode === box && BLANK.test(endBlock.textContent) && !endBlock.querySelector("img,table,audio,video,canvas,.mk-cb")) endBlock.remove();
             var r2 = document.createRange(); r2.setStart(zw, 1); r2.collapse(true); sel.removeAllRanges(); sel.addRange(r2);
             box.dispatchEvent(new InputEvent("input", { bubbles: true, inputType: "insertReplacementText" }));
         } catch (err) { console.warn("fence chip failed", err); }
         busy = false;
     }
-    // registered after the app's own handlers, so the single-line rule always runs first
-    // OPENING backtick typed last: the closing ` was typed first (text`), then ` is typed in front of the text
-    // -> same result as typing them in the other order (one copyable chip). Same text node, same line only.
-    function onOpen(e) {
-        if (busy || typeof e.inputType !== "string" || e.inputType.indexOf("insert") !== 0) return;
-        var box = boxOf(e.target); if (!box) return;
-        var sel = window.getSelection(); if (!sel.rangeCount || !sel.isCollapsed) return;
-        var tn = sel.anchorNode, c2 = sel.anchorOffset;
-        if (!tn || tn.nodeType !== 3 || !box.contains(tn) || skipped(tn)) return;
-        var v = tn.nodeValue; if (c2 < 1 || v.charAt(c2 - 1) !== "`") return;
-        if (v.charAt(c2 - 2) === "`" || v.charAt(c2) === "`") return;
-        if (c2 >= 2 && v.lastIndexOf("`", c2 - 2) >= 0) return;   // it closes an earlier ` instead
-        var q = v.indexOf("`", c2); if (q < 0 || v.charAt(q + 1) === "`") return;
-        var inner = v.slice(c2, q).replace(/\u200b/g, ""); if (!/\S/.test(inner) || /[\n\r]/.test(inner)) return;
-        busy = true;
-        try {
-            var code = document.createElement("code"); code.textContent = inner;
-            var zw = document.createTextNode(ZW + v.slice(q + 1));
-            tn.nodeValue = v.slice(0, c2 - 1);
-            tn.parentNode.insertBefore(code, tn.nextSibling); code.parentNode.insertBefore(zw, code.nextSibling);
-            var r3 = document.createRange(); r3.setStart(zw, 1); r3.collapse(true); sel.removeAllRanges(); sel.addRange(r3);
-            box.dispatchEvent(new InputEvent("input", { bubbles: true, inputType: "insertReplacementText" }));
-        } catch (err) { console.warn("backtick chip failed", err); }
-        busy = false;
-    }
-    document.addEventListener("input", onOpen, true);
+    // registered after the app's own handlers, so the old same-node single-line rule still runs first
+    document.addEventListener("input", onIns, true);
     document.addEventListener("input", onInput, true);
+    // Persian / Android keyboards finish a composition after the backtick: check again once it has ended
+    document.addEventListener("compositionend", function (e) { var box = boxOf(e.target); if (box) setTimeout(function () { handle(box); }, 0); }, true);
+})();
+</script>
+
+<script id="mkPasteNoHlJs">
+/* ===== Pasted text must never be highlighted =====
+   Two causes are handled:
+   1) the caret sits inside / right after a highlighted (.mk-hl) run -> the browser puts the pasted text into that run;
+   2) the clipboard carries a background colour (copied from a web page, a chat, a dark theme ...) which the editor used to
+      convert into a highlight.
+   After every paste the pasted range is cleaned: highlight spans are split so the pasted part is outside them, and any
+   background styles inside it are removed. Typing and the highlight tool itself are untouched. */
+(function () {
+    if (window.__mkPasteNoHl) return; window.__mkPasteNoHl = 1;
+    var BOXSEL = '.text-box[contenteditable="true"], .mu-viewer-body[contenteditable="true"]';
+    function boxOf(n) { var el = n && (n.nodeType === 1 ? n : n.parentElement); return el && el.closest ? el.closest(BOXSEL) : null; }
+    function charOff(box, node, off) { var r = document.createRange(); r.selectNodeContents(box); r.setEnd(node, off); return r.toString().length; }
+    function byChars(box, pos) {
+        var w = document.createTreeWalker(box, NodeFilter.SHOW_TEXT, null), n, acc = 0, last = null;
+        while ((n = w.nextNode())) { var l = n.nodeValue.length; if (pos <= acc + l) return [n, pos - acc]; acc += l; last = n; }
+        return last ? [last, last.nodeValue.length] : [box, 0];
+    }
+    function hasContent(frag) { return frag.textContent.replace(/\u200b/g, "") !== "" || !!frag.querySelector("br,img,canvas,audio,video,table"); }
+    // take the part of every .mk-hl that lies inside rg out of its highlight (the rest of the highlight stays)
+    function unHl(box, rg) {
+        var all = box.querySelectorAll(".mk-hl"), list = [], changed = false, i;
+        for (i = 0; i < all.length; i++) { try { if (rg.intersectsNode(all[i])) list.push(all[i]); } catch (x) { } }
+        list.forEach(function (h) {
+            if (!h.parentNode) return;
+            var whole = document.createRange(); whole.selectNodeContents(h);
+            var inter = document.createRange();
+            if (rg.compareBoundaryPoints(Range.START_TO_START, whole) >= 0) inter.setStart(rg.startContainer, rg.startOffset); else inter.setStart(whole.startContainer, whole.startOffset);
+            if (rg.compareBoundaryPoints(Range.END_TO_END, whole) <= 0) inter.setEnd(rg.endContainer, rg.endOffset); else inter.setEnd(whole.endContainer, whole.endOffset);
+            if (inter.collapsed) return;
+            var bef = document.createRange(); bef.setStart(whole.startContainer, whole.startOffset); bef.setEnd(inter.startContainer, inter.startOffset);
+            var aft = document.createRange(); aft.setStart(inter.endContainer, inter.endOffset); aft.setEnd(whole.endContainer, whole.endOffset);
+            var fa = aft.collapsed ? null : aft.extractContents();      // the later part first, so earlier offsets stay valid
+            var fb = bef.collapsed ? null : bef.extractContents();
+            if (fb && hasContent(fb)) { var h1 = h.cloneNode(false); h1.appendChild(fb); h.parentNode.insertBefore(h1, h); }
+            if (fa && hasContent(fa)) { var h2 = h.cloneNode(false); h2.appendChild(fa); h.parentNode.insertBefore(h2, h.nextSibling); }
+            while (h.firstChild) h.parentNode.insertBefore(h.firstChild, h);
+            h.parentNode.removeChild(h); changed = true;
+        });
+        return changed;
+    }
+    function stripBg(box, rg) {
+        var els = box.querySelectorAll("[style]"), changed = false;
+        for (var i = 0; i < els.length; i++) {
+            var el = els[i], st = el.style; if (!st) continue;
+            var bg = st.backgroundColor || st.background; if (!bg) continue;
+            try { if (!rg.intersectsNode(el)) continue; } catch (x) { continue; }
+            st.removeProperty("background"); st.removeProperty("background-color"); st.removeProperty("background-image");
+            el.getAttribute("style") || el.removeAttribute("style"); changed = true;
+        }
+        return changed;
+    }
+    function run(job) {
+        var box = job.box; if (!box.isConnected) return;
+        var sel = window.getSelection(); if (!sel.rangeCount) return;
+        var c = sel.getRangeAt(0); if (!box.contains(c.startContainer) || !box.contains(c.endContainer)) return;
+        if (!box.querySelector(".mk-hl, [style]")) return;
+        var endChars = charOff(box, c.endContainer, c.endOffset), caretChars = endChars;
+        if (endChars <= job.start) return;
+        var a = byChars(box, job.start), b = byChars(box, endChars), rg = document.createRange();
+        try { rg.setStart(a[0], a[1]); rg.setEnd(b[0], b[1]); } catch (x) { return; }
+        if (rg.collapsed) return;
+        var ch = false;
+        try { ch = stripBg(box, rg) || ch; ch = unHl(box, rg) || ch; } catch (err) { console.warn("paste highlight cleanup failed", err); }
+        if (!ch) return;
+        try { var p = byChars(box, caretChars), r2 = document.createRange(); r2.setStart(p[0], p[1]); r2.collapse(true); sel.removeAllRanges(); sel.addRange(r2); } catch (x) { }
+        try { box.dispatchEvent(new Event("input", { bubbles: true })); } catch (x) { }
+    }
+    // window + capture: runs before the app's own paste handlers
+    window.addEventListener("paste", function (e) {
+        try {
+            var box = boxOf(e.target); if (!box) return;
+            var cd = e.clipboardData; if (cd && cd.files && cd.files.length) return;      // pasted image / file
+            // the editor converts background styles into highlights only for a moment after typing: not after a paste
+            window.__mkNoHlConv = true; clearTimeout(window.__mkNoHlT); window.__mkNoHlT = setTimeout(function () { window.__mkNoHlConv = false; }, 2500);
+            if (window.__mkHl) window.__mkHl.mode = null;                                 // highlight "mode" must not carry over to pasted text
+            var sel = window.getSelection(); if (!sel || !sel.rangeCount) return;
+            var r0 = sel.getRangeAt(0); if (!box.contains(r0.startContainer)) return;
+            var job = { box: box, start: charOff(box, r0.startContainer, r0.startOffset) };
+            [0, 120, 500, 1500].forEach(function (ms) { setTimeout(function () { try { run(job); } catch (err) { } }, ms); });
+        } catch (err) { }
+    }, true);
 })();
 </script>
 
