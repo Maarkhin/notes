@@ -29717,25 +29717,6 @@ function mkExportChoice(blob0, filename, mime, options) {
             else if (r !== "cancelled") say(mkTgBotSend.err || (fa ? "ارسال به چت ربات انجام نشد." : "Sending to the bot chat failed."), "warn");
         }), shown++;
         const needTxt = async fn => { const t = await getText(); if (!t) { say(fa ? "این فایل متنی نیست؛ برای اشتراک فایل از «ارسال به ربات» استفاده کن." : "This file isn’t text; use “Send to bot” to share the file.", "warn"); return; } await fn(t); };
-        mini("wa", fa ? "واتساپ (متن)" : "WhatsApp (text)", () => needTxt(t => { const u = textUrl("https://wa.me/?text=", t, 6000); TG && TG.openLink ? TG.openLink(u) : window.open(u, "_blank", "noopener"); })), shown++;
-        mini("mail", fa ? "ایمیل (متن)" : "E-mail (text)", () => needTxt(t => { const u = "mailto:?subject=" + encodeURIComponent(safeName) + "&body=" + encodeURIComponent(mkFitEncoded(t, 6000).text); TG && TG.openLink ? TG.openLink(u) : location.href = u; })), shown++;
-        mini("chat", fa ? "پیامک (متن)" : "SMS (text)", () => needTxt(async t => {
-            // Telegram's openLink() only accepts http(s)/tg links, so sms: was silently ignored. Fire the scheme through a real <a> click
-            // (the webview hands it to the OS), then detect whether the page really lost focus; if not, fall back to copying the text.
-            const fit = mkFitEncoded(t, 1500).text, ios = /iPad|iPhone|iPod/i.test(navigator.userAgent || ""), u = "sms:" + (ios ? "&" : "?") + "body=" + encodeURIComponent(fit);
-            let left = false;
-            const mark = () => { left = true; }, onVis = () => { document.hidden && (left = true); };
-            window.addEventListener("blur", mark), window.addEventListener("pagehide", mark), document.addEventListener("visibilitychange", onVis);
-            try { const a = document.createElement("a"); a.href = u, a.rel = "noopener", a.style.display = "none", document.body.appendChild(a), a.click(), setTimeout(() => a.remove(), 0); }
-            catch (e0) { try { location.href = u; } catch (e1) { } }
-            await new Promise(r => setTimeout(r, 1400));
-            window.removeEventListener("blur", mark), window.removeEventListener("pagehide", mark), document.removeEventListener("visibilitychange", onVis);
-            if (!left) {
-                let ok = false;
-                try { ok = await mkCopyText(fit); } catch (e2) { }
-                say(ok ? (fa ? "برنامهٔ پیامک باز نشد (تلگرام این لینک را نمی‌پذیرد). متن کپی شد؛ پیامک را باز کن و بچسبان." : "The SMS app didn’t open (Telegram blocks this link). The text was copied; open Messages and paste it.") : (fa ? "برنامهٔ پیامک باز نشد و کپی هم انجام نشد." : "The SMS app didn’t open and copying failed."), "warn");
-            }
-        })), shown++;
         mini("globe", fa ? "باز کردن در مرورگر" : "Open in browser", async () => {
             const ok = await tgOpenInSystemBrowser(blob, safeName, type, "share");
             say(ok ? fa ? "فایل در مرورگر گوشی باز شد؛ از آنجا «دانلود» یا «اشتراک‌گذاری» را بزن." : "The file opened in your phone’s browser; tap Download or Share there." : fa ? "این فایل برای انتقال به مرورگر بزرگ است (حدود ۹ کیلوبایت فشرده). از «ارسال به چت ربات» استفاده کن." : "This file is too big to pass to the browser (about 9 KB compressed). Use “Send to bot chat”.", ok ? "ok" : "warn");
@@ -29747,16 +29728,6 @@ function mkExportChoice(blob0, filename, mime, options) {
             const t = await getText();
             if (!t) { say(fa ? "این فایل متنی نیست؛ از دانلود استفاده کن." : "This file isn’t text; use Download.", "warn"); return; }
             mkTgTextFlow(t, safeName0, fa);
-        }), shown++;
-        mini("wa", fa ? "واتساپ" : "WhatsApp", async () => {
-            const t = await getText();
-            if (!t) { say(fa ? "این فایل متنی نیست؛ از دانلود استفاده کن." : "This file isn’t text; use Download.", "warn"); return; }
-            window.open(textUrl("https://wa.me/?text=", t, 6000), "_blank", "noopener");
-        }), shown++;
-        mini("mail", fa ? "ایمیل" : "E-mail", async () => {
-            const t = await getText();
-            if (!t) { say(fa ? "این فایل متنی نیست؛ از دانلود استفاده کن." : "This file isn’t text; use Download.", "warn"); return; }
-            location.href = "mailto:?subject=" + encodeURIComponent(safeName) + "&body=" + encodeURIComponent(mkFitEncoded(t, 6000).text);
         }), shown++;
     }
     if (mkIsTextLike(type0, safeName0))
@@ -29777,6 +29748,27 @@ function mkExportChoice(blob0, filename, mime, options) {
         foot.appendChild(note), foot.appendChild(close), card.appendChild(body), card.appendChild(foot);
     }
     host.appendChild(card);
+    // No jump: the card used to be vertically centred with margin:auto, so every height change (status line appearing, the bot-chat button, the highlighted
+    // "other ways" box) moved it up or down. After the first layout its top edge is pinned (leaving some room to grow) and later growth only extends downward.
+    {
+        const pin = () => {
+            if (!card.isConnected) { window.removeEventListener("resize", onRz); return; }
+            try {
+                card.style.margin = "auto", card.style.maxHeight = "";
+                const cs = getComputedStyle(host), padT = parseFloat(cs.paddingTop) || 0, padB = parseFloat(cs.paddingBottom) || 0;
+                const hr = host.getBoundingClientRect(), cr = card.getBoundingClientRect();
+                const room = host.clientHeight - padT - padB;
+                let top = Math.round(cr.top - hr.top - padT);
+                top = Math.max(0, Math.min(top, room - Math.round(cr.height) - 170));
+                card.style.margin = top + "px auto 0";
+                card.style.maxHeight = Math.max(240, room - top) + "px";
+            } catch (e) { }
+        };
+        let rzT = 0;
+        const onRz = () => { clearTimeout(rzT), rzT = setTimeout(pin, 120); };
+        window.addEventListener("resize", onRz);
+        requestAnimationFrame(pin);
+    }
     // The export itself is finished at this point; the sheet lives on its own so callers (and the progress overlay) are not held up
     return "choice";
 }
