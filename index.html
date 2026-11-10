@@ -56589,7 +56589,7 @@ html body #contentsContainer .mxe .mc-title-input{opacity:.8!important}</style>
   function actPaste() {
     var T = L(); restore(); setTimeout(hide, 60);
     if (navigator.clipboard && navigator.clipboard.readText) {
-      navigator.clipboard.readText().then(function (t) { if (!t) return; quiet(function () { restore(true); try { D.execCommand("insertText", false, t); } catch (e) { } }); }, function () { toast(T.noPaste); });
+      navigator.clipboard.readText().then(function (t) { if (!t) return; quiet(function () { restore(true); try { if (window.mkBigPaste && window.mkBigPaste.paste(t)) return; D.execCommand("insertText", false, t); } catch (e) { } }); }, function () { toast(T.noPaste); });
     } else { var ok = false; try { ok = D.execCommand("paste"); } catch (e) { } ok || toast(T.noPaste); }
   }
   function actAll() { if (!ctx) return; ctx.caret = false; bar.classList.remove("cmode"); if (ctx.title) { var ti = ctx.tb; restore(); try { ti.setSelectionRange(0, ti.value.length); } catch (e) { } saved = { s: 0, e: ti.value.length }; ctx.s = 0; ctx.e = ti.value.length; lastKey = ""; setTimeout(place, 30); return; } restore(); var s = window.getSelection(), r = D.createRange(); r.selectNodeContents(ctx.tb); s.removeAllRanges(); s.addRange(r); saved = r.cloneRange(); lastKey = ""; setTimeout(function () { var c = current(); c && (ctx = c, saved = c.range.cloneRange(), place()); }, 30); }
@@ -65410,9 +65410,14 @@ html body .audio-wrapper.video-wrapper.mk-vplaying>button.img-btn.img-btn.img-bt
 })();
 </script>
 
-<style id="mkBigPasteCss">/* Big paste v4: content-visibility:auto removed (it made style recalc 10x slower on 50k lines) */</style>
+<style id="mkBigPasteCss">/* Big paste v6 (v4: content-visibility:auto removed (it made style recalc 10x slower on 50k lines)) */</style>
 <script id="mkBigPasteJs">
-/* ===== Big paste engine v3 (note editor + note viewer/edit panel) =====
+/* ===== Big paste engine v6 (note editor + note viewer/edit panel) =====
+   v6 (rapid repeated pastes): a paste that arrives while the previous one is still streaming in is no longer thrown away -
+   its text is JOINED to the running job (or queued) so every paste lands, in order, with ONE pill, ONE input event and no
+   extra freeze; the final "input" event is debounced so ten quick pastes cost the app's autosave / history ONE pass; the
+   app's own "Paste" button (clipboard.readText + insertText, which used to freeze on big text) now goes through this engine.
+   (older notes follow)
    v2 already made every line its own <div> and inserted them in one fragment, but 50k lines still froze the page because
    everything happened in ONE task: ~100k nodes inserted at once, then every MutationObserver / input handler of the app
    walked all of them, then the browser shaped and laid out ~3M characters.
@@ -65428,12 +65433,12 @@ html body .audio-wrapper.video-wrapper.mk-vplaying>button.img-btn.img-btn.img-bt
    6) lines below the 260th use content-visibility:auto (see mkBigPasteCss) so off-screen text is never shaped / laid out;
    7) while the paste is streaming in, typing / paste / cut / drop inside that box is blocked and a small progress pill shows. ===== */
 (function () {
-    if (window.__mkBigPaste3) return; window.__mkBigPaste3 = 1; window.__mkBigPaste2 = 1;
+    if (window.__mkBigPaste3) return; window.__mkBigPaste3 = 1; window.__mkBigPaste2 = 1; window.__mkBigPaste6 = 1;
     var MIN_CHARS = 6000, MIN_LINES = 120, FIRST_LINES = 250, STEP = 300;
     var HOST = '.text-box[contenteditable="true"],.mu-viewer-body[contenteditable="true"]';
     var BLOCKRE = /^(DIV|P|LI|UL|OL|BLOCKQUOTE|PRE|H[1-6]|TABLE|HR|FIGURE|SECTION|ARTICLE)$/;
     var MEDIA = ".img-drag-wrapper,.audio-wrapper,.mu-img-row,.video-wrapper,.drawing-box,.img-top-divider";
-    var job = null, toast = null, toastTn = null;
+    var job = null, toast = null, toastTn = null, pend = null, pendT = 0, queue = [];
 
     function boxOf(n) { var el = n && (n.nodeType === 1 ? n : n.parentElement); return el && el.closest ? el.closest(HOST) : null; }
     function fixSpaces(box, t) {
@@ -65563,9 +65568,9 @@ html body .audio-wrapper.video-wrapper.mk-vplaying>button.img-btn.img-btn.img-bt
         if (J.prev) { var gap = t - J.prev; J.budget = gap > 45 ? Math.max(3, J.budget * 0.7) : Math.min(14, J.budget * 1.2); }
         J.prev = t;
         if (!run(J, 0, J.budget)) { abort(J); return; }
-        if (J.i < J.last) { setToast(Math.min(99, Math.floor(J.i / J.last * 100))); schedule(pump); } else { setToast(99); schedule(function () { if (job !== J) return; if (!J.box.isConnected) { abort(J); return; } finish(J); }); }
+        if (J.i < J.last) { setToast(Math.min(99, Math.floor(J.i / J.last * 100))); schedule(pump); } else { setToast(99); schedule(function () { if (job !== J) return; if (!J.box.isConnected) { abort(J); return; } if (J.i < J.last) { pump(); return; } finish(J); }); }
     }
-    function abort(J) { if (job === J) job = null; hideToast(); }
+    function abort(J) { if (job === J) { job = null; queue.length = 0; } hideToast(); }
 
     function finish(J) {
         var d = document, sel = window.getSelection(), node, off, scrollEl = null;
@@ -65586,10 +65591,80 @@ html body .audio-wrapper.video-wrapper.mk-vplaying>button.img-btn.img-btn.img-bt
         }
         try { var r2 = d.createRange(); r2.setStart(node, off); r2.collapse(true); sel.removeAllRanges(); sel.addRange(r2); } catch (e) { }
         if (job === J) job = null; hideToast();
-        // ONE input event for the whole paste
-        try { if (J.mode !== "br") window.__mkBpFast = { box: J.box, fb: J.fb || null }; J.box.dispatchEvent(new InputEvent("input", { bubbles: true, inputType: "insertFromPaste" })); } catch (e) { } finally { window.__mkBpFast = null; }
+        // ONE input event for the whole burst of pastes (debounced, see deferInput)
+        deferInput(J.box, J.mode === "br" ? null : (J.fb || null), J.mode === "br");
         try { scrollEl && scrollEl.scrollIntoView && scrollEl.scrollIntoView({ block: "nearest" }); } catch (e) { }
+        if (queue.length) setTimeout(drain, 0);
     }
+
+    /* ---------- one debounced "input" event for a burst of pastes ---------- */
+    function deferInput(box, fb, br) {
+        if (pend && pend.box !== box) flushInput();
+        if (!pend) pend = { box: box, fbs: [], br: false, t0: now() };
+        if (fb && pend.fbs.indexOf(fb) < 0) pend.fbs.push(fb);
+        if (br) pend.br = true;
+        clearTimeout(pendT);
+        pendT = setTimeout(flushInput, Math.max(0, Math.min(150, 700 - (now() - pend.t0))));
+    }
+    function flushInput() {
+        var p = pend; clearTimeout(pendT); pend = null; if (!p || !p.box.isConnected) return;
+        try {
+            for (var i = 1; i < p.fbs.length; i++) { try { p.fbs[i].isConnected && typeof window.muBidiMark === "function" && window.muBidiMark(p.fbs[i]); } catch (e) { } }
+            if (!p.br) window.__mkBpFast = { box: p.box, fb: p.fbs[0] || null };
+            p.box.dispatchEvent(new InputEvent("input", { bubbles: true, inputType: "insertFromPaste" }));
+        } catch (e) { } finally { window.__mkBpFast = null; }
+    }
+    // anything that could read / save / close the note flushes the pending input event first
+    function flushOn(e) {
+        if (!pend) return;
+        if (e.type === "keydown") { var k = e.key || ""; if ((e.ctrlKey || e.metaKey) && /^[vV]$/.test(k)) return; if (/^(Shift|Control|Alt|Meta)$/.test(k)) return; }
+        else if (e.type === "input") { if (!e.isTrusted || !boxOf(e.target) || e.target.closest && e.target.closest("#mkSelBars")) return; }
+        else { try { if (e.target && e.target.closest && e.target.closest("#mkSelBars")) return; } catch (x) { } }
+        flushInput();
+    }
+    ["pointerdown", "touchstart", "mousedown", "click", "keydown", "input"].forEach(function (n) { window.addEventListener(n, flushOn, true); });
+    window.addEventListener("pagehide", flushInput, true); window.addEventListener("blur", flushInput, true);
+    document.addEventListener("visibilitychange", function () { if (document.hidden) flushInput(); }, true);
+
+    /* ---------- a paste that arrives while the previous one is still streaming in ---------- */
+    function norm(box, text) { text = text.replace(/\u0000/g, "").replace(/\r\n?/g, "\n"); return fixSpaces(box, text); }
+    function joinJob(box, text) {
+        var J = job; if (!J || J.box !== box) return false;
+        text = norm(box, text); if (!text) return true;
+        var add = text.split("\n"), L = J.lines.length - 1;
+        if (J.mode === "br" && J.i >= J.lines.length) { queue.push({ box: box, text: text }); return true; }   // every line already inserted: run it right after
+        J.lines[L] = (J.lines[L] || "") + add[0];
+        for (var i = 1; i < add.length; i++) J.lines.push(add[i]);
+        J.last = J.mode === "br" ? J.lines.length : J.lines.length - 1;
+        return true;
+    }
+    function drain() {
+        if (job || !queue.length) return;
+        var q = queue.shift();
+        if (!q.box.isConnected) { queue.length = 0; return; }
+        try { if (!insertLines(q.box, q.text)) document.execCommand("insertText", false, q.text); } catch (e) { }
+        if (!job && queue.length) setTimeout(drain, 0);
+    }
+    function isBig(text) {
+        if (text.length >= MIN_CHARS) return true;
+        var n = 0, p = -1; while ((p = text.indexOf("\n", p + 1)) >= 0 && ++n < MIN_LINES); return n >= MIN_LINES;
+    }
+    function startPaste(box, text) {
+        text = norm(box, text);
+        try { box.spellcheck = false; box.setAttribute("spellcheck", "false"); } catch (x) { }
+        return insertLines(box, text);
+    }
+    // used by the app's own Paste button (clipboard.readText): returns true when the engine took the text
+    window.mkBigPaste = { paste: function (text) {
+        try {
+            text = String(text || ""); if (!text) return false;
+            var sel = window.getSelection(); if (!sel || !sel.rangeCount) return false;
+            var box = boxOf(sel.getRangeAt(0).commonAncestorContainer); if (!box) return false;
+            if (job && job.box === box) return joinJob(box, text);
+            if (!isBig(text)) return false;
+            return startPaste(box, text) !== false;
+        } catch (e) { return false; }
+    } };
 
     function insertLines(box, text) {
         var sel = window.getSelection(); if (!sel || !sel.rangeCount) return false;
@@ -65612,21 +65687,24 @@ html body .audio-wrapper.video-wrapper.mk-vplaying>button.img-btn.img-btn.img-bt
 
     function onPaste(e) {
         try {
-            var cd = e.clipboardData; if (!cd || (cd.files && cd.files.length)) return;
+            var cd = e.clipboardData; if (!cd) return;
             var box = boxOf(e.target); if (!box) return;
-            if (job && job.box === box) { e.preventDefault(); e.stopImmediatePropagation(); return; }
-            var text = cd.getData("text/plain"); if (!text) return;
-            var big = text.length >= MIN_CHARS; if (!big) { var n = 0, p = -1; while ((p = text.indexOf("\n", p + 1)) >= 0 && ++n < MIN_LINES); big = n >= MIN_LINES; }
-            if (!big) return;
+            var busy = !!(job && job.box === box);
+            if (cd.files && cd.files.length) { if (busy) { e.preventDefault(); e.stopImmediatePropagation(); } return; }
+            var text = cd.getData("text/plain");
+            if (busy) {                                   // previous paste still streaming in: join it, never drop it
+                e.preventDefault(); e.stopImmediatePropagation();
+                if (text) joinJob(box, text);
+                return;
+            }
+            if (!text || !isBig(text)) return;
             // rich/table clipboards (html with <table>) keep their own, specialised path
             var html = ""; try { html = cd.getData("text/html") || ""; } catch (x) { }
             if (html && /<table[\s>]/i.test(html)) return;
             var sel = window.getSelection(); if (!sel || !sel.rangeCount) return;
             var range = sel.getRangeAt(0); if (!box.contains(range.commonAncestorContainer)) return;
             e.preventDefault(); e.stopImmediatePropagation();
-            text = text.replace(/\u0000/g, "").replace(/\r\n?/g, "\n"); text = fixSpaces(box, text);
-            try { box.spellcheck = false; box.setAttribute("spellcheck", "false"); } catch (x) { }
-            insertLines(box, text);
+            startPaste(box, text);
         } catch (err) { console.warn("big paste fast path failed, falling back", err); abort(job); }
     }
 
@@ -65643,7 +65721,7 @@ html body .audio-wrapper.video-wrapper.mk-vplaying>button.img-btn.img-btn.img-bt
         }
         e.preventDefault(); e.stopImmediatePropagation();
     }
-    ["beforeinput", "paste", "cut", "drop", "keydown"].forEach(function (n) { window.addEventListener(n, guard, true); });
+    ["beforeinput", "cut", "drop", "keydown"].forEach(function (n) { window.addEventListener(n, guard, true); });
     // window capture runs before every document-level paste listener
     window.addEventListener("paste", onPaste, true);
     // huge note: the browser's own spell-checker makes typing lag, so it is turned off for it
