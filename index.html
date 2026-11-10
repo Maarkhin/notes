@@ -21487,12 +21487,12 @@ async function tgOpenInSystemBrowser(blob, filename, mime, mode) {
 }
 // If this page was just reopened by the bridge above (a normal browser tab outside Telegram), deliver the waiting file.
 (function () {
-    const hash = location.hash || "", mOld = /[#&]tgdl=([^&]+)/.exec(hash), mNew = /[#&]tgb=([^&]+)/.exec(hash);
-    if (!mOld && !mNew)
+    const hash = location.hash || "", mOld = /[#&]tgdl=([^&]+)/.exec(hash), mNew = /[#&]tgb=([^&]+)/.exec(hash), mF = /[#&]tgf=([^&]+)/.exec(hash);
+    if (!mOld && !mNew && !mF)
         return;
     try {
         const arg = k => { const m = new RegExp("[#&]" + k + "=([^&]*)").exec(hash); try { return m ? decodeURIComponent(m[1]) : ""; } catch (e) { return m ? m[1] : ""; } };
-        const name = arg("tgname") || "download", mime0 = arg("tgmime"), isGz = /[#&]tgz=1/.test(hash), shareMode = /[#&]tgmode=share/.test(hash), payload = mNew ? mNew[1] : mOld[1];
+        const name = arg("tgname") || "download", mime0 = arg("tgmime"), isGz = /[#&]tgz=1/.test(hash), shareMode = /[#&]tgmode=share/.test(hash), payload = (mNew || mOld || mF)[1];
         const fa = /^(fa|prs|pes)(\b|-|_)/i.test(navigator.language || "");
         try {
             history.replaceState(null, "", location.pathname + location.search);
@@ -21506,6 +21506,12 @@ async function tgOpenInSystemBrowser(blob, filename, mime, mode) {
         say(fa ? "در حال آماده‌سازی «" + name + "»…" : "Preparing “" + name + "”…");
         const unb64 = s => { s = s.replace(/-/g, "+").replace(/_/g, "/"); while (s.length % 4) s += "="; const b = atob(s), u = new Uint8Array(b.length); for (let i = 0; i < b.length; i++) u[i] = b.charCodeAt(i); return u; };
         const build = async () => {
+            if (mF) {
+                // file waiting in the user's bot: fetch it here (the Telegram WebView cannot save it, this browser can)
+                const resp = await fetch(decodeURIComponent(mF[1]));
+                if (!resp.ok) throw new Error("HTTP " + resp.status);
+                return new Blob([await resp.arrayBuffer()], { type: mime0 || "application/octet-stream" });
+            }
             if (mNew) {
                 let u = unb64(payload);
                 if (isGz)
@@ -25689,12 +25695,72 @@ function mu_stripMediaItems(items) { return (Array.isArray(items) ? items : []).
 // they are huge and can crash the phone while building the export).
 function mu_stripHeavyMediaHtml(html) { const str = String(html || ""), noImg = window.mkExportImages === !1, noVoice = window.mkExportVoice === !1, noVideo = window.mkExportVideo !== !0, noFile = window.mkExportFiles !== !0; if (!noImg && !noVoice && !noVideo && !noFile && !/<iframe|<object|<embed/i.test(str)) return str; if (!noImg && !noVoice && !/video|file-wrapper|data-mkmed|<iframe|<object|<embed/i.test(str)) return str; const tpl = document.createElement("template"); tpl.innerHTML = str; const c = tpl.content, sel = ["iframe,object,embed"]; return noVideo && sel.push(".video-wrapper,video,[data-mkmed^='video:']"), noFile && sel.push(".file-wrapper,[data-mkmed^='file:']"), noImg && sel.push(".img-drag-wrapper,.img-toolbar,picture,img,canvas,[data-mkmed^='img:']"), noVoice && sel.push(".audio-wrapper,audio,[data-mkmed^='audio:']"), c.querySelectorAll(sel.join(",")).forEach(el => el.remove()), noImg && c.querySelectorAll(".mu-img-row").forEach(row => { row.textContent.trim() || row.remove(); }), tpl.innerHTML; }
 function mu_stripHeavyMediaItems(items) { return (Array.isArray(items) ? items : []).map(it => it && typeof it.html == "string" ? Object.assign({}, it, { html: mu_stripHeavyMediaHtml(it.html) }) : it); }
-function mu_resolveMediaSrcInHtml(html) { return window.mkTextOnlyExport ? Promise.resolve(mu_stripMediaHtml(html)) : MU_IndexedDB.resolveMediaSrcInHtml(mu_stripHeavyMediaHtml(html)); }
-function mu_resolveItemsMediaForExport(items) { return window.mkTextOnlyExport ? Promise.resolve(mu_stripMediaItems(items)) : MU_IndexedDB.resolveItemsMediaForExport(mu_stripHeavyMediaItems(items)); }
+// ===== Export guard: never hand over a silently incomplete export =====
+// An export used to skip every photo / voice note whose file is not on this device (media password or token gone from memory, file never
+// downloaded) and still report success. Now the missing files are counted first, recovered through the media backup when possible
+// (asking for the media password if it was lost), and otherwise the person decides: cancel (recommended) or continue without them.
+const MU_EXPG = { memo: null };
+function mu_collectExportMediaIds(items) {
+    const ids = new Set(), re = /<(\w+)\b[^>]*?\bdata-mu-media\s*=\s*["']([^"']+)["'][^>]*>/gi;
+    for (const it of Array.isArray(items) ? items : []) {
+        const h = it && typeof it.html == "string" ? it.html : "";
+        if (h.indexOf("data-mu-media") < 0) continue;
+        re.lastIndex = 0;
+        let m;
+        while ((m = re.exec(h))) {
+            const tag = m[1].toLowerCase(), full = m[0], file = /file-wrapper/.test(full);
+            const want = file ? window.mkExportFiles === !0 : tag === "img" ? window.mkExportImages !== !1 : tag === "audio" ? window.mkExportVoice !== !1 : tag === "video" ? window.mkExportVideo === !0 : !1;
+            if (!want || /\b(src|data-fdata)\s*=\s*["']data:/i.test(full)) continue;
+            ids.add(m[2]);
+        }
+    }
+    return [...ids];
+}
+async function mu_missingMedia(ids) {
+    const miss = [];
+    for (let i = 0; i < ids.length; i += 12) {
+        const part = ids.slice(i, i + 12), r = await Promise.all(part.map(id => { try { return Promise.resolve(MU_MEDIA.get(id)).then(b => !!b, () => !1); } catch (e) { return Promise.resolve(!1); } }));
+        r.forEach((ok, k) => { ok || miss.push(part[k]); });
+    }
+    return miss;
+}
+async function mu_exportMediaGuard(items) {
+    if (window.mkTextOnlyExport) return;
+    const ids = mu_collectExportMediaIds(items);
+    if (!ids.length) return;
+    let miss = await mu_missingMedia(ids);
+    if (!miss.length) return;
+    const key = miss.slice().sort().join("|"), memo = MU_EXPG.memo;
+    if (memo && memo.key === key && Date.now() - memo.at < 120000) { if (memo.ok) return; throw new Error(MKX.CANCEL_MSG); }
+    const fa = currentLang === "fa", M = window.MKMED, say = (f, e) => { try { typeof showToast == "function" && showToast(fa ? f : e, 4000); } catch (x) { } };
+    try {
+        if (M && typeof M._cfg == "function" && M._cfg()) {
+            if (!(M.S && M.S.token && M.S.key) && typeof M.ensureUnlocked == "function") {
+                say("برای تکمیل خروجی، رمز «بکاپ رسانه» لازم است.", "The “Media backup” password is needed to complete the export.");
+                await M.ensureUnlocked(!0);
+            }
+            if (M.S && M.S.token && M.S.key && typeof M.ensure == "function") {
+                say("در حال دریافت رسانه‌های ناقص از ربات…", "Fetching the missing media from the bot…");
+                await Promise.race([Promise.all(miss.map(id => M.ensure(id, { prio: !0 }))), new Promise(r => setTimeout(r, 90000))]);
+                miss = await mu_missingMedia(miss);
+            }
+        }
+    }
+    catch (e) { console.warn("export media recovery failed", e); }
+    if (!miss.length) return;
+    const n = miss.length, ok = confirm(fa
+        ? n + " عکس/ویس این خروجی روی این دستگاه نیست و دریافت نشد (رمز یا توکن رسانه در دسترس نیست، یا فایل در ربات پیدا نشد).\n\nاگر ادامه بدهی، خروجی بدون این رسانه‌ها و ناقص ساخته می‌شود.\n\nOK = ادامه بدون این رسانه‌ها\nCancel = لغو خروجی (پیشنهادی؛ اول «بکاپ رسانه» را باز کن و رسانه‌ها را دریافت کن)"
+        : n + " photo(s)/voice note(s) in this export are not on this device and could not be fetched (media password/token unavailable, or the file is not in the bot).\n\nIf you continue, the export will be built WITHOUT them and will be incomplete.\n\nOK = continue without them\nCancel = cancel the export (recommended: open “Media backup” and download them first)");
+    MU_EXPG.memo = { key: key, at: Date.now(), ok: ok };
+    if (!ok) throw new Error(MKX.CANCEL_MSG);
+    say("ادامه بدون " + n + " رسانهٔ ناقص؛ خروجی کامل نیست.", "Continuing without " + n + " missing media; the export is incomplete.");
+}
+function mu_resolveMediaSrcInHtml(html) { return window.mkTextOnlyExport ? Promise.resolve(mu_stripMediaHtml(html)) : mu_exportMediaGuard([{ html: html }]).then(() => MU_IndexedDB.resolveMediaSrcInHtml(mu_stripHeavyMediaHtml(html))); }
+function mu_resolveItemsMediaForExport(items) { return window.mkTextOnlyExport ? Promise.resolve(mu_stripMediaItems(items)) : mu_exportMediaGuard(items).then(() => MU_IndexedDB.resolveItemsMediaForExport(mu_stripHeavyMediaItems(items))); }
 // Streaming-export variants (see MKX): media becomes a tiny placeholder that is expanded straight into a Blob by MKX.textBlob()
-function mu_resolveItemsMediaDeferred(items) { return window.mkTextOnlyExport ? Promise.resolve(mu_stripMediaItems(items)) : MKX.lightenItems(mu_stripHeavyMediaItems(items), "token"); }
-function mu_resolveMediaSrcInHtmlDeferred(html) { return window.mkTextOnlyExport ? Promise.resolve(mu_stripMediaHtml(html)) : MKX.lightenHtml(mu_stripHeavyMediaHtml(html), "token"); }
-function mu_resolveItemsMediaUrls(items, keep) { return window.mkTextOnlyExport ? Promise.resolve(mu_stripMediaItems(items)) : MKX.lightenItems(mu_stripHeavyMediaItems(items), keep ? "urlkeep" : "url"); }
+function mu_resolveItemsMediaDeferred(items) { return window.mkTextOnlyExport ? Promise.resolve(mu_stripMediaItems(items)) : mu_exportMediaGuard(items).then(() => MKX.lightenItems(mu_stripHeavyMediaItems(items), "token")); }
+function mu_resolveMediaSrcInHtmlDeferred(html) { return window.mkTextOnlyExport ? Promise.resolve(mu_stripMediaHtml(html)) : mu_exportMediaGuard([{ html: html }]).then(() => MKX.lightenHtml(mu_stripHeavyMediaHtml(html), "token")); }
+function mu_resolveItemsMediaUrls(items, keep) { return window.mkTextOnlyExport ? Promise.resolve(mu_stripMediaItems(items)) : mu_exportMediaGuard(items).then(() => MKX.lightenItems(mu_stripHeavyMediaItems(items), keep ? "urlkeep" : "url")); }
 function mu_resolveItemsMediaDocx(items) { return Promise.resolve(window.mkTextOnlyExport ? mu_stripMediaItems(items) : mu_stripHeavyMediaItems(items)); }
 function mu_migrateNoteMediaToBlobs(item) { return MU_IndexedDB.migrateNoteMediaToBlobs(item); }
 function mu_migrateAllNotesMedia() { return MU_IndexedDB.migrateAllNotesMedia(); }
@@ -28953,6 +29019,125 @@ async function mkTgDownload(blob, name, type, options) {
 // Download button of the export sheet inside Telegram: only real download routes (native share sheet, desktop blob, phone-browser bridge).
 // It never falls back to the bot chat; that is the job of the "Send to bot chat" button.
 const mkTgDownloadOnly = (blob, name, type) => mkTgDownload(blob, name, type, { noBot: !0 });
+// ===== Smart Telegram download (v3) =====
+// Telegram's Android WebView cannot save a blob, so the app needs a route that really ends in a saved file:
+//  1) native share sheet (iOS)   2) desktop/web client blob   3) Telegram's OWN downloader (WebApp.downloadFile, Bot API 8.0+) fed with a link
+//  to the file the user's bot just received (<= ~19 MB)   4) the file as a normal document in the bot chat (<= 49 MB)
+//  5) bigger files cut into 45 MB parts in the bot chat   6) tiny files through the phone browser.  Nothing reports success unless it happened.
+const MK_TG_NATIVE_MAX = 19 * 1024 * 1024, MK_TG_PART = 45 * 1024 * 1024, MK_TG_BOT_MAX = 48 * 1024 * 1024;
+function mkTgNativeCan() { try { return !!(IS_TELEGRAM && TG && typeof TG.downloadFile === "function" && (typeof TG.isVersionAtLeast !== "function" || TG.isVersionAtLeast("8.0"))); } catch (e) { return !1; } }
+// Returns "native" | "cancelled" | false (reason in mkTgNativeDownload.err). `known` = result of an earlier mkTgBotSend (skips the second upload)
+async function mkTgNativeDownload(blob, name, type, known) {
+    mkTgNativeDownload.err = "";
+    const fa = mkShFa();
+    if (!mkTgNativeCan()) { mkTgNativeDownload.err = fa ? "این نسخهٔ تلگرام دانلود بومی را پشتیبانی نمی‌کند (نیاز به نسخهٔ ۸ یا بالاتر)." : "This Telegram version has no native download (needs version 8+)."; return !1; }
+    if (blob.size > MK_TG_NATIVE_MAX) { mkTgNativeDownload.err = fa ? "برای دانلود بومی فایل باید کمتر از ۱۹ مگابایت باشد (محدودیت ربات تلگرام)." : "Native download needs a file under 19 MB (Telegram bot limit)."; return !1; }
+    let r = known;
+    if (!r || !r.fid) {
+        const s = await mkTgBotSend(blob, name, type);
+        if (s === "cancelled") return "cancelled";
+        if (s !== "bot") { mkTgNativeDownload.err = mkTgBotSend.err; return !1; }
+        r = mkTgLastBot;
+    }
+    const M = window.MKMED;
+    if (!r || !r.fid || !M || typeof M.botFileUrl !== "function") { mkTgNativeDownload.err = fa ? "لینک فایل ساخته نشد." : "Could not build the file link."; return !1; }
+    let info;
+    try { info = await mu_withTimeout(M.botFileUrl(r.fid), 30000); }
+    catch (e) { mkTgNativeDownload.err = fa ? "لینک دانلود از ربات گرفته نشد." : "Could not get the download link from the bot."; return !1; }
+    return await new Promise(res => {
+        let fin = !1;
+        const end = v => { if (!fin) { fin = !0, res(v); } };
+        try { TG.downloadFile({ url: info.url, file_name: name }, ok => end(ok ? "native" : "cancelled")); }
+        catch (e) { mkTgNativeDownload.err = String(e && e.message || e); end(!1); return; }
+        // old clients never call back: the dialog is on screen, so count it as handed over
+        setTimeout(() => end("native"), 120000);
+    });
+}
+// Large file -> numbered parts in the bot chat. Returns "bot-parts" | "cancelled" | false
+async function mkTgBotSendParts(blob, name, type, onProgress) {
+    const n = Math.ceil(blob.size / MK_TG_PART);
+    if (n > 40) { mkTgBotSend.err = mkShFa() ? "فایل بیش از حد بزرگ است." : "The file is too large."; return !1; }
+    for (let i = 0; i < n; i++) {
+        const part = blob.slice(i * MK_TG_PART, Math.min(blob.size, (i + 1) * MK_TG_PART)), pn = name + ".part" + String(i + 1).padStart(3, "0"), r = await mkTgBotSend(part, pn, "application/octet-stream");
+        if (r === "cancelled") return "cancelled";
+        if (r !== "bot") return !1;
+        try { onProgress && onProgress(i + 1, n); } catch (e) { }
+    }
+    return "bot-parts";
+}
+// The one-tap chain. Returns "share" | "blob" | "native" | "bot" | "bot-parts" | "telegram-bridge" | "cancelled" | false.
+// `say(text, tone)` reports the step in progress. Every step falls through to the next one when it fails.
+async function mkTgSmartDownload(blob, name, type, say) {
+    const fa = mkShFa(), st = (f, e) => { try { say && say(fa ? f : e, "info"); } catch (x) { } };
+    mkTgSmartDownload.err = "";
+    // 1) native share sheet where the client has one (iOS) / desktop & web clients: a plain blob download works
+    if (navigator.share && mkActive()) {
+        const r = await mkWebShare(blob, name, type, "");
+        if (r === "share" || r === "cancelled") return r;
+    }
+    if (mkTgDesktop()) {
+        const r = await mkTgDownload(blob, name, type, { noBot: !0, noShare: !0 });
+        if (r) return r;
+    }
+    let botTried = !1;
+    const sentNow = () => !!(mkTgLastBot && mkTgLastBot.size === blob.size && mkTgLastBot.fid && Date.now() - (mkTgLastBot.at || 0) < 600000);
+    if (mkTgBotAvailable()) {
+        botTried = !0;
+        // 2) Telegram's own downloader, fed by the bot (small / medium files)
+        if (mkTgNativeCan() && blob.size <= MK_TG_NATIVE_MAX) {
+            st("در حال ساخت لینک دانلود از ربات خودت…", "Building a download link through your bot…");
+            const r = await mkTgNativeDownload(blob, name, type);
+            if (r === "native" || r === "cancelled") return r === "cancelled" ? (sentNow() ? "bot" : "cancelled") : "native";
+            if (mkTgNativeDownload.err) mkTgSmartDownload.err = mkTgNativeDownload.err;
+            if (sentNow()) return "bot";
+        }
+        // 3) the file as a document in the bot chat, or 4) in parts when it is too big for one message
+        if (blob.size <= MK_TG_BOT_MAX) {
+            st("در حال ارسال فایل به چت ربات…", "Sending the file to your bot chat…");
+            const r = await mkTgBotSend(blob, name, type);
+            if (r === "bot" || r === "cancelled") return r;
+            mkTgSmartDownload.err = mkTgBotSend.err;
+        }
+        else {
+            st("فایل بزرگ است؛ در چند بخش به چت ربات می‌رود…", "Large file: sending it to the bot chat in parts…");
+            const r = await mkTgBotSendParts(blob, name, type, (i, n) => st("بخش " + i + " از " + n + " ارسال شد…", "Part " + i + " of " + n + " sent…"));
+            if (r) return r;
+            mkTgSmartDownload.err = mkTgBotSend.err;
+        }
+    }
+    // 5) tiny files: the phone browser, where a normal download works
+    st("در حال باز کردن در مرورگر گوشی…", "Opening in your phone’s browser…");
+    try { if (await tgOpenInSystemBrowser(blob, name, type, "dl")) return "telegram-bridge"; } catch (e) { console.warn("Smart download bridge failed", e); }
+    if (!botTried) mkTgSmartDownload.err = mkTgBotSend.err || (fa ? "برای فایل سنگین «📦 بکاپ رسانه» (ربات خودت) را یک‌بار فعال کن." : "For a heavy file, enable “📦 Media backup” (your own bot) once.");
+    return !1;
+}
+window.mkTgSmartDownload = mkTgSmartDownload, window.mkTgNativeDownload = mkTgNativeDownload;
+// Share the file AS A FILE from Telegram on Android: the WebView has no system share sheet, the phone browser does.
+// Tiny files travel inside the link (existing bridge); bigger ones (<= 19 MB) go through the user's bot: the browser tab downloads them from
+// the bot's file link and shows a Share button (Web Share API with the real file) next to Download. Returns "telegram-bridge" | "cancelled" | false.
+async function mkTgShareViaBrowser(blob, name, type) {
+    mkTgShareViaBrowser.err = "";
+    const fa = mkShFa();
+    try { if (blob.size <= 96 * 1024 && await tgOpenInSystemBrowser(blob, name, type, "share")) return "telegram-bridge"; } catch (e) { }
+    if (!mkTgBotAvailable()) { mkTgShareViaBrowser.err = fa ? "برای فایل سنگین «📦 بکاپ رسانه» (ربات خودت) را یک‌بار فعال کن." : "For a heavy file, enable “📦 Media backup” (your own bot) once."; return !1; }
+    if (blob.size > MK_TG_NATIVE_MAX) { mkTgShareViaBrowser.err = fa ? "برای اشتراک از مرورگر فایل باید کمتر از ۱۹ مگابایت باشد." : "Sharing through the browser needs a file under 19 MB."; return !1; }
+    let r = mkTgLastBot && mkTgLastBot.size === blob.size && mkTgLastBot.fid && Date.now() - (mkTgLastBot.at || 0) < 600000 ? mkTgLastBot : null;
+    if (!r) {
+        const s = await mkTgBotSend(blob, name, type);
+        if (s === "cancelled") return "cancelled";
+        if (s !== "bot") { mkTgShareViaBrowser.err = mkTgBotSend.err; return !1; }
+        r = mkTgLastBot;
+    }
+    let info;
+    try { info = await mu_withTimeout(window.MKMED.botFileUrl(r.fid), 30000); }
+    catch (e) { mkTgShareViaBrowser.err = fa ? "لینک فایل از ربات گرفته نشد." : "Could not get the file link from the bot."; return !1; }
+    const u = location.href.split("#")[0] + "#tgf=" + encodeURIComponent(info.url) + "&tgname=" + encodeURIComponent(name) + "&tgmime=" + encodeURIComponent(type || "") + "&tgmode=share";
+    try { TG && TG.openLink ? TG.openLink(u, { try_instant_view: !1 }) : window.open(u, "_blank"); return "telegram-bridge"; }
+    catch (e) { mkTgShareViaBrowser.err = String(e && e.message || e); return !1; }
+}
+window.mkTgShareViaBrowser = mkTgShareViaBrowser;
+
+
 // ===== Dedicated share engines: browser and Telegram each have their own path =====
 const MK_TXT_RE = /^(text\/|application\/(json|xml))/;
 function mkIsTextLike(type, name) { return MK_TXT_RE.test(type || "") || /\.(txt|md|html?|csv|json|xml)$/i.test(name || ""); }
@@ -29216,6 +29401,7 @@ const MK_SH_IC = {
     mail: '<rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 7l9 6 9-6"/>',
     wa: '<path d="M4 20l1.3-4A8 8 0 1 1 8.2 18.8z"/><path d="M9 9c0 3 3 6 6 6l1.2-1.4-2-1-1 .7c-1-.4-2-1.4-2.4-2.4l.7-1-1-2z"/>',
     ok: '<path d="M5 12.5l4.5 4.5L19 7.5"/>',
+    bolt: '<path d="M13 2.5L5 13.5h6l-1 8 8-11h-6z"/>',
     spin: '<circle cx="12" cy="12" r="8" stroke-dasharray="36 16"><animateTransform attributeName="transform" type="rotate" from="0 12 12" to="360 12 12" dur=".8s" repeatCount="indefinite"/></circle>',
     x: '<path d="M6 6l12 12M18 6L6 18"/>'
 };
@@ -29235,6 +29421,17 @@ function mkExportChoice(blob0, filename, mime, options) {
     let safeName = safeName0, type = type0;
     const gzv = opts.gz && opts.gz.blob ? opts.gz : null;
     gzv && mkGzOn() && (blob = gzv.blob, safeName = gzv.name, type = "application/gzip");
+    // press feedback of the sheet: one steady look (no tap flash, no transitions, no theme colour leaking into labels while pressed)
+    if (!document.getElementById("mkShCss")) {
+        const st = document.createElement("style");
+        st.id = "mkShCss";
+        st.textContent = "#mkShChoice,#mkShChoice *,#mkShManual,#mkShManual *{-webkit-tap-highlight-color:transparent!important;transition:none!important;animation:none!important;-webkit-touch-callout:none;-webkit-user-select:none;user-select:none}"
+            + "#mkShChoice button{outline:none!important;box-shadow:none!important;-webkit-appearance:none;appearance:none;touch-action:manipulation}"
+            + "#mkShChoice button *{color:inherit!important;-webkit-text-fill-color:currentColor!important;opacity:1!important}"
+            + "#mkShChoice button:active,#mkShChoice button:focus,#mkShChoice button:hover{filter:brightness(.86)!important;color:inherit!important;-webkit-text-fill-color:currentColor!important}"
+            + "#mkShChoice input,#mkShChoice label{-webkit-user-select:auto;user-select:auto}";
+        document.head.appendChild(st);
+    }
     let host = document.getElementById("mkShChoice");
     if (!host) {
         host = document.createElement("div"), host.id = "mkShChoice", host.setAttribute("dir", dir), host.setAttribute("data-mu-noemo", "1");
@@ -29346,8 +29543,34 @@ function mkExportChoice(blob0, filename, mime, options) {
                 if (r0 === "share") { done(sh, "ok", fa ? "ارسال شد" : "Shared"); return; }
                 if (r0 === "cancelled") return;
             }
+            // the file itself, through the phone browser's real system share sheet
+            say(fa ? "در حال آماده‌سازی فایل برای منوی اشتراک گوشی…" : "Preparing the file for the phone’s share sheet…", "info");
+            const rbr = await mkTgShareViaBrowser(blob, safeName, type);
+            if (rbr === "cancelled") { say("", "ok"); return; }
+            if (rbr) {
+                done(sh, "globe", fa ? "در مرورگر باز شد" : "Opened in browser");
+                say(fa ? "فایل در مرورگر گوشی باز شد؛ آنجا «اشتراک‌گذاری» را بزن تا منوی اشتراک اندروید باز شود و فایل را به هر برنامه‌ای بفرستی." : "The file opened in your phone’s browser; tap “Share” there to open the system share sheet and send the file to any app.", "ok");
+                return;
+            }
+            say("", "ok");
             const text = await getText();
+            // a long text means many numbered parts: when the bot is available, ONE document in the bot chat is faster and keeps the formatting
+            if (text && text.length > 12000 && mkTgBotAvailable()) {
+                say(fa ? "متن بلند است؛ به‌جای قسمت‌قسمت، یک‌جا به چت ربات می‌رود…" : "Long text: sending it as one file to the bot chat instead of many parts…", "info");
+                const rl = await mkTgBotSend(blob, safeName, type);
+                if (rl === "bot") { done(sh, "ok", fa ? "به چت ربات رفت" : "Sent to bot chat"), afterBot(); return; }
+                if (rl === "cancelled") return;
+            }
             if (text) {
+                // many numbered parts is a dead end for the user: show the menu of other routes instead of opening a 200-part panel
+                const nParts = mkSplitForTg(text).length;
+                if (nParts > 4) {
+                    try { extra.style.cssText += ";border:1px solid #38bdf8;border-radius:12px;padding:10px;margin-bottom:10px"; extra.scrollIntoView({ block: "nearest" }); } catch (e2) { }
+                    say((fa ? "این فایل در تلگرام " + nParts + " قسمت متنی می‌شود و اشتراک مستقیم ندارد. " : "This file would be " + nParts + " text parts in Telegram and cannot be shared directly. ")
+                        + (mkTgBotAvailable() ? (mkTgBotSend.err ? mkTgBotSend.err + " " : "") + (fa ? "یکی از راه‌های پایین را بزن (ارسال به ربات و باز کردن چت، یا دانلود)." : "Pick a route below (send to bot and open chat, or download).")
+                            : (fa ? "برای فرستادن فایل «📦 بکاپ رسانه» (ربات خودت) را یک‌بار فعال کن؛ یا از «ارسال متن در تلگرام» پایین (قسمت‌قسمت) استفاده کن." : "Enable “📦 Media backup” (your own bot) once to send the file; or use “Send text in Telegram” below (in parts).")), "warn");
+                    return;
+                }
                 mkTgTextFlow(text, safeName0, fa);
                 return;
             }
@@ -29356,10 +29579,41 @@ function mkExportChoice(blob0, filename, mime, options) {
                 say(fa ? "فایل در مرورگر گوشی باز شد؛ از آنجا «اشتراک‌گذاری» را بزن." : "The file opened in your phone’s browser; tap “Share” there.", "ok");
                 return;
             }
+            if (mkTgBotAvailable()) {
+                say(fa ? "در حال ارسال فایل به چت ربات تا از آنجا فوروارد کنی…" : "Sending the file to your bot chat so you can forward it from there…", "info");
+                const rb = await mkTgBotSend(blob, safeName, type);
+                if (rb === "bot") { done(sh, "ok", fa ? "به چت ربات رفت" : "Sent to bot chat"), afterBot(); return; }
+                if (rb === "cancelled") return;
+                say(mkTgBotSend.err || (fa ? "ارسال به چت ربات انجام نشد." : "Sending to the bot chat failed."), "warn");
+                return;
+            }
             say(fa ? "تلگرام روی این دستگاه اشتراک‌گذاری مستقیم فایل را پشتیبانی نمی‌کند و این فایل متنی نیست. برای فرستادن فایل از دکمهٔ بنفش «ارسال به چت ربات» استفاده کن." : "Telegram can’t share this file directly on this device and it isn’t text. Use the purple “Send to bot chat” button to send the file.", "warn");
         }
         catch (e) { console.warn("Share from export sheet failed", e), say(fa ? "اشتراک‌گذاری انجام نشد." : "Sharing failed.", "warn"); }
     });
+    if (inTg) {
+        const sm = document.createElement("button"), smLabel = fa ? "دانلود هوشمند (بهترین راه خودکار)" : "Smart download (best route, automatic)";
+        sm.type = "button", mkShLabel(sm, "bolt", smLabel);
+        sm.style.cssText = btnCss + ";background:linear-gradient(135deg,#f59e0b,#ef4444)!important;width:100%;flex:none;margin-bottom:10px";
+        sm.onclick = () => run(sm, "bolt", smLabel, async () => {
+            try {
+                const r = await mkTgSmartDownload(blob, safeName, type, say);
+                if (r === "cancelled") { say("", "ok"); return; }
+                if (r === !1) {
+                    try { extra.style.cssText += ";border:1px solid #38bdf8;border-radius:12px;padding:10px;margin-bottom:10px"; extra.scrollIntoView({ block: "nearest" }); } catch (e2) { }
+                    say((mkTgSmartDownload.err || (fa ? "هیچ مسیر مستقیمی روی این دستگاه جواب نداد." : "No direct route worked on this device.")) + (fa ? " از «راه‌های دیگر» پایین استفاده کن." : " Use “Other ways” below."), "warn");
+                    return;
+                }
+                if (r === "native") done(sm, "ok", fa ? "دانلود شروع شد" : "Download started"), say(fa ? "پنجرهٔ دانلود تلگرام باز شد؛ تأیید کن تا فایل در گوشی ذخیره شود. یک نسخه هم در چت ربات می‌ماند." : "Telegram’s download dialog is open; confirm to save the file. A copy also stays in the bot chat.", "ok");
+                else if (r === "bot") done(sm, "ok", fa ? "به چت ربات رفت" : "Sent to bot chat"), afterBot();
+                else if (r === "bot-parts") done(sm, "ok", fa ? "بخش‌ها ارسال شد" : "Parts sent"), say(fa ? "فایل در چند بخش (.part001 …) به چت ربات رفت. همه را ذخیره کن و کنار هم بگذار: ویندوز copy /b name.part* name ، لینوکس/مک cat name.part* > name" : "The file went to the bot chat in parts (.part001 …). Save them all and join: Windows copy /b name.part* name, Linux/Mac cat name.part* > name", "ok");
+                else if (r === "telegram-bridge") done(sm, "globe", fa ? "در مرورگر باز شد" : "Opened in browser"), say(fa ? "فایل در مرورگر گوشی باز شد؛ آنجا دانلود می‌شود." : "The file opened in your phone’s browser, where it downloads.", "ok");
+                else done(sm, "ok", fa ? "انجام شد" : "Done"), r === "blob" && say(fa ? "اگر فایل ذخیره نشد، دوباره دانلود هوشمند را بزن یا از «راه‌های دیگر» استفاده کن." : "If nothing was saved, try Smart download again or use “Other ways”.", "info");
+            }
+            catch (e) { console.warn("Smart download failed", e), say(fa ? "دانلود هوشمند انجام نشد." : "Smart download failed.", "warn"); }
+        });
+        card.appendChild(sm);
+    }
     row.appendChild(sh), row.appendChild(dl);
     card.appendChild(row);
     // ---- Send to the Media-backup bot chat: a third primary action next to Share and Download (Telegram only: the bot needs the Telegram user id) ----
@@ -29397,6 +29651,39 @@ function mkExportChoice(blob0, filename, mime, options) {
             if (!t) { say(fa ? "این فایل متنی نیست؛ از «ارسال به چت ربات» استفاده کن." : "This file isn’t text; use “Send to bot chat”.", "warn"); return; }
             mkTgTextFlow(t, safeName0, fa) || say(fa ? "باز کردن پنجرهٔ تلگرام ممکن نشد." : "Couldn’t open Telegram’s picker.", "warn");
         }), shown++;
+        mini("down", fa ? "دانلود بومی تلگرام (از لینک ربات، تا ۱۹ مگابایت)" : "Telegram native download (via bot link, up to 19 MB)", async () => {
+            if (!mkTgBotAvailable()) { say(fa ? "این راه به «📦 بکاپ رسانه» (ربات خودت) نیاز دارد." : "This route needs “📦 Media backup” (your own bot).", "warn"); return; }
+            say(fa ? "در حال ساخت لینک دانلود…" : "Building the download link…", "info");
+            const r = await mkTgNativeDownload(blob, safeName, type);
+            if (r === "native") say(fa ? "پنجرهٔ دانلود تلگرام باز شد؛ تأیید کن." : "Telegram’s download dialog is open; confirm it.", "ok");
+            else if (r === "cancelled") say("", "ok");
+            else say(mkTgNativeDownload.err || (fa ? "دانلود بومی انجام نشد." : "Native download failed."), "warn");
+        }), shown++;
+        if (blob.size > MK_TG_BOT_MAX)
+            mini("bot", fa ? "ارسال در چند بخش به چت ربات (فایل بزرگ)" : "Send to bot chat in parts (large file)", async () => {
+                if (!mkTgBotAvailable()) { say(fa ? "این راه به «📦 بکاپ رسانه» (ربات خودت) نیاز دارد." : "This route needs “📦 Media backup” (your own bot).", "warn"); return; }
+                const r = await mkTgBotSendParts(blob, safeName, type, (i, n) => say((fa ? "بخش " : "Part ") + i + (fa ? " از " : " of ") + n + (fa ? " ارسال شد…" : " sent…"), "info"));
+                if (r === "bot-parts") say(fa ? "همهٔ بخش‌ها به چت ربات رفت (.part001 …). ذخیره کن و با copy /b یا cat کنار هم بگذار." : "All parts are in the bot chat (.part001 …). Save and join them with copy /b or cat.", "ok");
+                else if (r !== "cancelled") say(mkTgBotSend.err || (fa ? "ارسال بخش‌ها انجام نشد." : "Sending the parts failed."), "warn");
+            }), shown++;
+        mini("share", fa ? "اشتراک فایل با منوی اشتراک گوشی (از مرورگر)" : "Share the file with the phone’s share sheet (via browser)", async () => {
+            say(fa ? "در حال آماده‌سازی…" : "Preparing…", "info");
+            const r = await mkTgShareViaBrowser(blob, safeName, type);
+            if (r === "telegram-bridge") say(fa ? "فایل در مرورگر باز شد؛ آنجا «اشتراک‌گذاری» را بزن." : "The file opened in the browser; tap “Share” there.", "ok");
+            else if (r === "cancelled") say("", "ok");
+            else say(mkTgShareViaBrowser.err || (fa ? "انجام نشد." : "Failed."), "warn");
+        }), shown++;
+        mini("bot", fa ? "ارسال به ربات و باز کردن چت (برای فوروارد)" : "Send to bot and open its chat (to forward)", async () => {
+            if (!mkTgBotAvailable()) { say(fa ? "این راه به «📦 بکاپ رسانه» (ربات خودت) نیاز دارد." : "This route needs “📦 Media backup” (your own bot).", "warn"); return; }
+            say(fa ? "در حال ارسال به چت ربات…" : "Sending to the bot chat…", "info");
+            const r = await mkTgBotSend(blob, safeName, type);
+            if (r === "bot") { afterBot(), mkTgOpenBotChat(); }
+            else if (r !== "cancelled") say(mkTgBotSend.err || (fa ? "ارسال به چت ربات انجام نشد." : "Sending to the bot chat failed."), "warn");
+        }), shown++;
+        const needTxt = async fn => { const t = await getText(); if (!t) { say(fa ? "این فایل متنی نیست؛ برای اشتراک فایل از «ارسال به ربات» استفاده کن." : "This file isn’t text; use “Send to bot” to share the file.", "warn"); return; } fn(t); };
+        mini("wa", fa ? "واتساپ (متن)" : "WhatsApp (text)", () => needTxt(t => { const u = textUrl("https://wa.me/?text=", t, 6000); TG && TG.openLink ? TG.openLink(u) : window.open(u, "_blank", "noopener"); })), shown++;
+        mini("mail", fa ? "ایمیل (متن)" : "E-mail (text)", () => needTxt(t => { const u = "mailto:?subject=" + encodeURIComponent(safeName) + "&body=" + encodeURIComponent(mkFitEncoded(t, 6000).text); TG && TG.openLink ? TG.openLink(u) : location.href = u; })), shown++;
+        mini("chat", fa ? "پیامک (متن)" : "SMS (text)", () => needTxt(t => { const u = "sms:?&body=" + encodeURIComponent(mkFitEncoded(t, 1500).text); TG && TG.openLink ? TG.openLink(u) : location.href = u; })), shown++;
         mini("globe", fa ? "باز کردن در مرورگر" : "Open in browser", async () => {
             const ok = await tgOpenInSystemBrowser(blob, safeName, type, "share");
             say(ok ? fa ? "فایل در مرورگر گوشی باز شد؛ از آنجا «دانلود» یا «اشتراک‌گذاری» را بزن." : "The file opened in your phone’s browser; tap Download or Share there." : fa ? "این فایل برای انتقال به مرورگر بزرگ است (حدود ۹ کیلوبایت فشرده). از «ارسال به چت ربات» استفاده کن." : "This file is too big to pass to the browser (about 9 KB compressed). Use “Send to bot chat”.", ok ? "ok" : "warn");
@@ -33319,7 +33606,7 @@ const total = keys.length, cap = HX().MAX_CHUNKS_PER_BACKUP, LIM = 1024, budget 
         } return result && __mkCloudPassCache.set(id, password || ""), result; }
         // Cloud Backup panel: every emoji is drawn as an inline SVG icon (panel text is built in many
         // places: rows, previews, progress bars).
-        const MK_CLOUD_ICONS = (function () { const C = '<circle cx="12" cy="12" r="10"/>'; return { "☁": '<path d="M18 10h-1.26A8 8 0 1 0 9 20h9a5 5 0 0 0 0-10z"/>', "❓": C + '<path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/>', "⚠": '<path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/>', "🛡": '<path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>', "🔗": '<path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/>', "⚪": '<circle cx="12" cy="12" r="8"/>', "🔄": '<path d="M21 12a9 9 0 1 1-3-6.7"/><polyline points="21 3 21 9 15 9"/>', "⚙": '<line x1="4" y1="21" x2="4" y2="14"/><line x1="4" y1="10" x2="4" y2="3"/><line x1="12" y1="21" x2="12" y2="12"/><line x1="12" y1="8" x2="12" y2="3"/><line x1="20" y1="21" x2="20" y2="16"/><line x1="20" y1="12" x2="20" y2="3"/><line x1="1" y1="14" x2="7" y2="14"/><line x1="9" y1="8" x2="15" y2="8"/><line x1="17" y1="16" x2="23" y2="16"/>', "💾": '<path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/>', "📖": '<path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/>', "📤": '<path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/>', "📥": '<path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/>', "👁": '<path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/>', "🗑": '<polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/>', "🔒": '<rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/>', "🔓": '<rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 9.9-1"/>', "📌": '<line x1="12" y1="17" x2="12" y2="22"/><path d="M5 17h14v-1.76a2 2 0 0 0-1.11-1.79l-1.78-.9A2 2 0 0 1 15 10.76V6h1a2 2 0 0 0 0-4H8a2 2 0 0 0 0 4h1v4.76a2 2 0 0 1-1.11 1.79l-1.78.9A2 2 0 0 0 5 15.24z"/>', ℹ: C + '<line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/>', "✅": '<path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/>', "❌": C + '<line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/>', "📦": '<path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/>', "✏": '<path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/>', "♻": '<polyline points="1 4 1 10 7 10"/><polyline points="23 20 23 14 17 14"/><path d="M20.49 9A9 9 0 0 0 5.64 5.64L1 10m22 4l-4.64 4.36A9 9 0 0 1 3.51 15"/>', "🩺": '<polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/>', "⏳": '<path d="M5 22h14"/><path d="M5 2h14"/><path d="M17 22v-4.17a2 2 0 0 0-.59-1.42L12 12l-4.41 4.41A2 2 0 0 0 7 17.83V22"/><path d="M7 2v4.17a2 2 0 0 0 .59 1.42L12 12l4.41-4.41A2 2 0 0 0 17 6.17V2"/>' }; })(), MK_CLOUD_ICO_RE = /(?:☁|🩺|❓|⚠|🛡|🔗|⚪|🔄|⚙|💾|📖|📤|📥|👁|🗑|🔒|🔓|📌|ℹ|✅|❌|📦|⏳|✏|♻)️?/g;
+        const MK_CLOUD_ICONS = (function () { const C = '<circle cx="12" cy="12" r="10"/>'; return { "☁": '<path d="M18 10h-1.26A8 8 0 1 0 9 20h9a5 5 0 0 0 0-10z"/>', "❓": C + '<path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/>', "⚠": '<path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/>', "🛡": '<path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>', "??": '<path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/>', "⚪": '<circle cx="12" cy="12" r="8"/>', "🔄": '<path d="M21 12a9 9 0 1 1-3-6.7"/><polyline points="21 3 21 9 15 9"/>', "⚙": '<line x1="4" y1="21" x2="4" y2="14"/><line x1="4" y1="10" x2="4" y2="3"/><line x1="12" y1="21" x2="12" y2="12"/><line x1="12" y1="8" x2="12" y2="3"/><line x1="20" y1="21" x2="20" y2="16"/><line x1="20" y1="12" x2="20" y2="3"/><line x1="1" y1="14" x2="7" y2="14"/><line x1="9" y1="8" x2="15" y2="8"/><line x1="17" y1="16" x2="23" y2="16"/>', "💾": '<path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/>', "📖": '<path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/>', "📤": '<path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/>', "📥": '<path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/>', "👁": '<path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/>', "🗑": '<polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/>', "🔒": '<rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/>', "🔓": '<rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 9.9-1"/>', "📌": '<line x1="12" y1="17" x2="12" y2="22"/><path d="M5 17h14v-1.76a2 2 0 0 0-1.11-1.79l-1.78-.9A2 2 0 0 1 15 10.76V6h1a2 2 0 0 0 0-4H8a2 2 0 0 0 0 4h1v4.76a2 2 0 0 1-1.11 1.79l-1.78.9A2 2 0 0 0 5 15.24z"/>', ℹ: C + '<line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/>', "✅": '<path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/>', "❌": C + '<line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/>', "📦": '<path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/>', "✏": '<path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/>', "♻": '<polyline points="1 4 1 10 7 10"/><polyline points="23 20 23 14 17 14"/><path d="M20.49 9A9 9 0 0 0 5.64 5.64L1 10m22 4l-4.64 4.36A9 9 0 0 1 3.51 15"/>', "🩺": '<polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/>', "⏳": '<path d="M5 22h14"/><path d="M5 2h14"/><path d="M17 22v-4.17a2 2 0 0 0-.59-1.42L12 12l-4.41 4.41A2 2 0 0 0 7 17.83V22"/><path d="M7 2v4.17a2 2 0 0 0 .59 1.42L12 12l4.41-4.41A2 2 0 0 0 17 6.17V2"/>' }; })(), MK_CLOUD_ICO_RE = /(?:☁|🩺|❓|⚠|🛡|🔗|⚪|🔄|⚙|💾|📖|📤|📥|👁|🗑|🔒|🔓|📌|ℹ|✅|❌|📦|⏳|✏|♻)️?/g;
         function mkCloudIconSvg(ch) { const key = ch.replace(/️/g, ""), inner = MK_CLOUD_ICONS[key]; return inner ? `<svg class="mk-ico" width="1.15em" height="1.15em" viewBox="0 0 24 24" fill="none" stroke="${key === "⚠" ? "#ffc107" : "currentColor"}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="flex:none;vertical-align:-0.2em">${inner}</svg>` : null; }
         function mkCloudIconify(root) { if (!root)
             return; const w = document.createTreeWalker(root, NodeFilter.SHOW_TEXT, null), nodes = []; for (let n = w.nextNode(); n; n = w.nextNode())
@@ -35642,20 +35929,79 @@ HX().scheduleCloudBackup(!1, !0), HX().showToast(fa ? `✅ ذخیره شد — �
 <script>
 // 5) PASTE-AS-PLAIN-TEXT FOR NOTE TEXT BOXES Pasting from outside (Word, a website, another app) brings
 // along the source's own inline styles — color:#000, a tiny font-size, a different font-family
-(function () { function mu3_handleTextBoxPaste(e) { const box = e.target && e.target.closest && e.target.closest('.text-box[contenteditable="true"]'); if (!box)
-    return; const cd = e.clipboardData || window.clipboardData; if (!cd || (cd.files && cd.files.length))
-    // No text on the clipboard (e.g. a copied screenshot/image) — let the browser's normal paste handle
-    // that case untouched
-    return; const text = cd.getData("text/plain"); if (text)
-    if (e.preventDefault(), document.queryCommandSupported && document.queryCommandSupported("insertText"))
-        document.execCommand("insertText", !1, text);
-    else {
+(function () {
+    // Multi-line paste. A link must not swallow the pasted lines (default editing split the <a> into pieces and left the middle lines
+    // un-linked), and the no-execCommand fallback used to insert ONE text node, which collapsed every line break.
+    const INL = /^(B|STRONG|I|EM|U|S|STRIKE|DEL|INS|SPAN|A|CODE|FONT|MARK|SUB|SUP|SMALL)$/, BLK = /^(DIV|P|LI|BLOCKQUOTE|H[1-6])$/;
+    function inlineChain(node, box) {
+        const chain = [];
+        let n = node && node.nodeType === 3 ? node.parentNode : node;
+        while (n && n !== box && INL.test(n.nodeName)) { chain.push(n); n = n.parentNode; }
+        return { chain: chain, block: n };
+    }
+    // Splits the current block at the caret and writes `text` line by line as sibling blocks (formatting of the caret is kept, links are dropped).
+    function pasteLines(box, text, range) {
+        if (!range.collapsed) range.deleteContents();
+        const info = inlineChain(range.startContainer, box), block = info.block;
+        if (!block || block === box || !box.contains(block) || !BLK.test(block.nodeName)) return !1;
+        const lines = text.replace(/\r\n?/g, "\n").split("\n"), chain = info.chain.slice().reverse(), hasA = chain.some(n => n.nodeName === "A");
+        const tailR = document.createRange();
+        tailR.setStart(range.startContainer, range.startOffset), tailR.setEnd(block, block.childNodes.length);
+        const tail = tailR.extractContents();
+        const wrap = t => { let node = document.createTextNode(t); for (let i = chain.length - 1; i >= 0; i--) { if (chain[i].nodeName === "A") continue; const w = chain[i].cloneNode(!1); w.appendChild(node), node = w; } return node; };
+        const clean = el => { el.querySelectorAll && el.querySelectorAll("a,b,strong,i,em,u,s,span,code,font,mark").forEach(x => { x.textContent === "" && !x.querySelector("img,br,audio,video,[data-mu-media]") && x.remove(); }); };
+        let lastNode = null;
+        if (lines[0] !== "") {
+            lastNode = hasA ? wrap(lines[0]) : document.createTextNode(lines[0]);
+            hasA ? block.appendChild(lastNode) : range.insertNode(lastNode);
+        }
+        clean(block), block.childNodes.length || block.appendChild(document.createElement("br"));
+        let ref = block, lastBlock = block;
+        for (let i = 1; i < lines.length; i++) {
+            const nb = block.cloneNode(!1);
+            nb.removeAttribute("data-mu-d"), nb.removeAttribute("id");
+            lastNode = null;
+            if (lines[i] !== "") { lastNode = wrap(lines[i]), nb.appendChild(lastNode); }
+            if (i === lines.length - 1) { nb.appendChild(tail), clean(nb); }
+            nb.childNodes.length || nb.appendChild(document.createElement("br"));
+            ref.after(nb), ref = lastBlock = nb;
+        }
+        if (lines.length === 1) block.appendChild(tail), clean(block);
+        const r2 = document.createRange();
+        lastNode && lastNode.parentNode ? r2.setStartAfter(lastNode) : r2.setStart(lastBlock, 0);
+        r2.collapse(!0);
         const sel = window.getSelection();
-        if (!sel || !sel.rangeCount)
-            return;
-        const range = sel.getRangeAt(0);
-        range.deleteContents(), range.insertNode(document.createTextNode(text)), range.collapse(!1), sel.removeAllRanges(), sel.addRange(range), box.dispatchEvent(new Event("input", { bubbles: !0 }));
-    } } document.addEventListener("paste", mu3_handleTextBoxPaste); })();
+        sel.removeAllRanges(), sel.addRange(r2);
+        box.dispatchEvent(new Event("input", { bubbles: !0 }));
+        return !0;
+    }
+    function mu3_handleTextBoxPaste(e) {
+        const box = e.target && e.target.closest && e.target.closest('.text-box[contenteditable="true"]');
+        if (!box) return;
+        const cd = e.clipboardData || window.clipboardData;
+        // No text on the clipboard (e.g. a copied screenshot/image): let the browser's normal paste handle it untouched
+        if (!cd || (cd.files && cd.files.length)) return;
+        const text = cd.getData("text/plain");
+        if (!text) return;
+        e.preventDefault();
+        const sel = window.getSelection(), multi = /[\r\n]/.test(text), range = sel && sel.rangeCount ? sel.getRangeAt(0) : null;
+        if (multi && range && box.contains(range.startContainer)) {
+            try {
+                const inA = inlineChain(range.startContainer, box).chain.some(n => n.nodeName === "A");
+                if ((inA || !(document.queryCommandSupported && document.queryCommandSupported("insertText"))) && pasteLines(box, text, range)) return;
+            }
+            catch (err) { console.warn("multi-line paste fallback", err); }
+        }
+        if (document.queryCommandSupported && document.queryCommandSupported("insertText")) { document.execCommand("insertText", !1, text); return; }
+        if (!range) return;
+        range.deleteContents();
+        const frag = document.createDocumentFragment();
+        text.replace(/\r\n?/g, "\n").split("\n").forEach((ln, i) => { i && frag.appendChild(document.createElement("br")), ln && frag.appendChild(document.createTextNode(ln)); });
+        const last = frag.lastChild;
+        range.insertNode(frag), last && (range.setStartAfter(last), range.collapse(!0)), sel.removeAllRanges(), sel.addRange(range), box.dispatchEvent(new Event("input", { bubbles: !0 }));
+    }
+    document.addEventListener("paste", mu3_handleTextBoxPaste);
+})();
 </script>
 
 
@@ -63512,10 +63858,16 @@ var CONT = [["AS", "آسیا", "Asia"], ["EU", "اروپا", "Europe"], ["NA", "
             const f = new File([blob], nm, { type: type || blob.type || "application/octet-stream" });
             const res = await api("sendDocument", form({ chat_id: String(cid), caption: String(caption || nm).slice(0, 900), document: f }), { send: !0, timeout: 240000 });
             if (!(res && res.document)) return { ok: !1, why: "api", msg: "no document in reply" };
-            return { ok: !0, mid: res.message_id || 0, bot: await botUser() };
+            return { ok: !0, mid: res.message_id || 0, bot: await botUser(), fid: res.document.file_id || "", name: nm, size: blob.size, at: Date.now() };
         } catch (e) { return { ok: !1, why: "api", msg: errText(e) }; }
     }
-    window.MKMED = { S, sendFile, botUser, encodeToken, autoSync, fullSync, purgeOrphans, orphanIds, activate, api, setupWith, unlockWith, pushManifest, pullManifest, ensure, scanUploads, freeSpace, refreshLocal, known, onAct, render, patchModel, afterDownload, referenced, loadState, startObservers, readCloudCfg, sha256, _cfg: readCfg };
+    // download link for a file the bot already holds (route chosen by the app's own network race); used by Telegram's native downloader
+    async function botFileUrl(fid) {
+        const f = await api("getFile", form({ file_id: String(fid) }));
+        if (!f || !f.file_path) throw new ApiErr(0, "no file_path");
+        return { url: `${curBase()}/file/bot${S.token}/${f.file_path}`, size: f.file_size || 0 };
+    }
+    window.MKMED = { S, sendFile, botFileUrl, ensureUnlocked, botUser, encodeToken, autoSync, fullSync, purgeOrphans, orphanIds, activate, api, setupWith, unlockWith, pushManifest, pullManifest, ensure, scanUploads, freeSpace, refreshLocal, known, onAct, render, patchModel, afterDownload, referenced, loadState, startObservers, readCloudCfg, sha256, _cfg: readCfg };
     init();
 })();
 
