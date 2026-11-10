@@ -28936,9 +28936,11 @@ async function mkTgDownload(blob, name, type, options) {
         catch (e) {
             console.warn("Desktop Telegram blob download failed", e);
         }
-    const b = await mkTgBotSend(blob, name, type);
-    if (b)
-        return b;
+    if (!(options && options.noBot)) {
+        const b = await mkTgBotSend(blob, name, type);
+        if (b)
+            return b;
+    }
     try {
         if (await tgOpenInSystemBrowser(blob, name, type, "dl"))
             return "telegram-bridge";
@@ -28948,6 +28950,9 @@ async function mkTgDownload(blob, name, type, options) {
     }
     return !1;
 }
+// Download button of the export sheet inside Telegram: only real download routes (native share sheet, desktop blob, phone-browser bridge).
+// It never falls back to the bot chat; that is the job of the "Send to bot chat" button.
+const mkTgDownloadOnly = (blob, name, type) => mkTgDownload(blob, name, type, { noBot: !0 });
 // ===== Dedicated share engines: browser and Telegram each have their own path =====
 const MK_TXT_RE = /^(text\/|application\/(json|xml))/;
 function mkIsTextLike(type, name) { return MK_TXT_RE.test(type || "") || /\.(txt|md|html?|csv|json|xml)$/i.test(name || ""); }
@@ -29012,6 +29017,99 @@ async function mkWebShare(blob, name, type, text) {
         return "failed";
     }
 }
+// ---- Full-text sending in parts (Telegram's share link carries only ~4.7k URL-encoded chars, i.e. ~780 Persian letters) ----
+// The text is cut at natural boundaries (blank line > line > sentence end > space), every part is numbered "(k/N)",
+// and a small panel opens the chat picker part after part, one tap each. Nothing is silently truncated.
+function mkSplitForTg(text, maxEnc, maxRaw) {
+    maxEnc = maxEnc || 4700, maxRaw = maxRaw || 3800;
+    let rest = String(text || "").replace(/\r\n?/g, "\n").trim();
+    const parts = [];
+    while (rest.length) {
+        if (rest.length <= maxRaw && encodeURIComponent(rest).length <= maxEnc) { parts.push(rest); break; }
+        let lo = 1, hi = Math.min(rest.length, maxRaw);
+        while (lo < hi) { const mid = Math.ceil((lo + hi) / 2); encodeURIComponent(rest.slice(0, mid)).length <= maxEnc ? lo = mid : hi = mid - 1; }
+        let cut = lo;
+        const floor = Math.floor(cut * 0.55), win = rest.slice(floor, cut);
+        for (const re of [/\n[ \t]*\n/g, /\n/g, /[.!?\u061f\u061b\u2026]\s/g, /\s/g]) {
+            let m, last = -1;
+            re.lastIndex = 0;
+            while ((m = re.exec(win))) last = m.index + m[0].length;
+            if (last > 0) { cut = floor + last; break; }
+        }
+        const cc = rest.charCodeAt(cut - 1);
+        if (cc >= 0xD800 && cc <= 0xDBFF && cut > 1) cut--;
+        parts.push(rest.slice(0, cut).replace(/\s+$/, ""));
+        rest = rest.slice(cut).replace(/^\s+/, "");
+    }
+    return parts;
+}
+window.mkSplitForTg = mkSplitForTg;
+function mkTgTextFlow(text, title, fa) {
+    const parts = mkSplitForTg(text), n = parts.length;
+    if (!n) return !1;
+    const old = document.getElementById("mkTgTextPanel");
+    old && old.remove();
+    const host = document.createElement("div");
+    host.id = "mkTgTextPanel", host.setAttribute("dir", fa ? "rtl" : "ltr"), host.setAttribute("data-mu-noemo", "1");
+    host.style.cssText = 'position:fixed;inset:0;z-index:2147483647;background:rgba(3,10,20,.88);display:flex;align-items:center;justify-content:center;padding:20px;box-sizing:border-box;overflow:auto;font-family:Tahoma,"Segoe UI",Arial,sans-serif';
+    const card = document.createElement("div");
+    card.style.cssText = "background:#0f172a!important;color:#e2e8f0!important;border:1px solid #334155;border-radius:16px;max-width:380px;width:100%;padding:18px;text-align:center;box-sizing:border-box";
+    const T = (css, t) => { const d = document.createElement("div"); d.textContent = t, d.style.cssText = css + ";opacity:1!important"; return d; };
+    const btnCss = "display:flex;align-items:center;justify-content:center;width:100%;border:0;border-radius:11px;padding:13px 8px;min-height:46px;font:800 13px Tahoma,Arial,sans-serif;color:#fff!important;-webkit-text-fill-color:#fff!important;cursor:pointer;margin:0 0 8px";
+    const smallCss = "flex:1;border:1px solid #475569;background:transparent;border-radius:10px;padding:10px 6px;font:600 12px Tahoma,Arial,sans-serif;color:#e2e8f0!important;-webkit-text-fill-color:#e2e8f0!important;cursor:pointer";
+    card.appendChild(T("font-size:15px;font-weight:800;margin-bottom:6px;color:#f8fafc!important;-webkit-text-fill-color:#f8fafc!important", fa ? "ارسال کامل متن در تلگرام" : "Send the full text in Telegram"));
+    card.appendChild(T("font-size:12px;line-height:1.9;margin-bottom:10px;color:#cbd5e1!important;-webkit-text-fill-color:#cbd5e1!important", n === 1
+        ? (fa ? "کل متن در یک پیام جا می‌شود." : "The whole text fits in one message.")
+        : (fa ? "تلگرام در هر بار فقط متن کوتاه را از لینک می‌پذیرد، پس متن در " + n + " قسمت شماره‌دار برش خورد (از جاهای طبیعی مثل پایان بند). هر بار یک قسمت را بزن، همان مخاطب را انتخاب کن، ارسال کن و برگرد."
+              : "Telegram only takes short text per link, so the text was cut into " + n + " numbered parts at natural breaks. Tap a part, pick the same chat, send, then come back.")));
+    if (n > 15) card.appendChild(T("font-size:11.5px;line-height:1.9;margin-bottom:10px;color:#fbbf24!important;-webkit-text-fill-color:#fbbf24!important", fa ? "این متن خیلی بلند است (" + n + " قسمت). برای متن‌های بزرگ دکمهٔ «ارسال به چت ربات» (کل فایل در یک پیام) بهتر است." : "This text is very long (" + n + " parts). For big texts “Send to bot chat” (the whole file in one go) is better."));
+    const bar = document.createElement("div");
+    bar.style.cssText = "height:6px;border-radius:6px;background:#1e293b;margin:0 0 12px;overflow:hidden;direction:ltr";
+    const fill = document.createElement("div");
+    fill.style.cssText = "height:100%;width:0;background:#38bdf8;transition:none";
+    bar.appendChild(fill), card.appendChild(bar);
+    const status = T("font-size:11.5px;line-height:1.9;min-height:22px;margin-bottom:8px;color:#86efac!important;-webkit-text-fill-color:#86efac!important", "");
+    let cur = 0, opened = 0;
+    const main = document.createElement("button");
+    main.type = "button", main.style.cssText = btnCss + ";background:#2563eb!important";
+    const paint = () => {
+        main.textContent = n === 1 ? (fa ? "ارسال متن" : "Send text") : (fa ? "ارسال قسمت " + (cur + 1) + " از " + n : "Send part " + (cur + 1) + " of " + n);
+        fill.style.width = Math.round(opened / n * 100) + "%";
+        status.textContent = opened >= n ? (fa ? "همهٔ قسمت‌ها باز شد." : "All parts were opened.") : opened ? (fa ? opened + " از " + n + " قسمت باز شد." : opened + " of " + n + " parts opened.") : "";
+    };
+    const open = k => {
+        const body = n > 1 ? "(" + (k + 1) + "/" + n + ")\n" + parts[k] : parts[k];
+        const url = "https://t.me/share/url?url=" + encodeURIComponent(" ") + "&text=" + encodeURIComponent(body);
+        try { if (typeof IS_TELEGRAM !== "undefined" && IS_TELEGRAM && TG && TG.openTelegramLink) TG.openTelegramLink(url); else window.open(url, "_blank", "noopener"); }
+        catch (e) { status.textContent = fa ? "باز کردن تلگرام ممکن نشد." : "Couldn’t open Telegram."; return; }
+        opened = Math.max(opened, k + 1);
+        if (cur < n - 1) cur = k + 1;
+        paint();
+    };
+    main.onclick = () => open(cur);
+    card.appendChild(main), card.appendChild(status);
+    if (n > 1) {
+        const nav = document.createElement("div");
+        nav.style.cssText = "display:flex;gap:8px;margin:0 0 8px";
+        const prev = document.createElement("button"), next = document.createElement("button");
+        prev.type = next.type = "button", prev.style.cssText = next.style.cssText = smallCss;
+        prev.textContent = fa ? "قسمت قبلی" : "Previous part", next.textContent = fa ? "قسمت بعدی" : "Next part";
+        prev.onclick = () => { cur = Math.max(0, cur - 1), paint(); };
+        next.onclick = () => { cur = Math.min(n - 1, cur + 1), paint(); };
+        nav.appendChild(prev), nav.appendChild(next), card.appendChild(nav);
+    }
+    const row2 = document.createElement("div");
+    row2.style.cssText = "display:flex;gap:8px;margin:0 0 8px";
+    const cp = document.createElement("button"), cl = document.createElement("button");
+    cp.type = cl.type = "button", cp.style.cssText = cl.style.cssText = smallCss;
+    cp.textContent = fa ? "کپی همهٔ متن" : "Copy all text", cl.textContent = fa ? "بستن" : "Close";
+    cp.onclick = async () => { const ok = await mkCopyText(text); status.textContent = ok ? (fa ? "کل متن کپی شد." : "All text copied.") : (fa ? "کپی انجام نشد." : "Copy failed."); };
+    cl.onclick = () => host.remove();
+    row2.appendChild(cp), row2.appendChild(cl), card.appendChild(row2);
+    host.appendChild(card), document.body.appendChild(host), paint();
+    return !0;
+}
+window.mkTgTextFlow = mkTgTextFlow;
 // ---- Telegram: chat picker (t.me/share) with the note's text. Returns true when the picker was opened.
 function mkTgTextPicker(text) {
     try {
@@ -29173,7 +29271,7 @@ function mkExportChoice(blob0, filename, mime, options) {
     };
     const why = r => r === "timeout" ? fa ? "پنجرهٔ اشتراک‌گذاری باز نشد؛ دوباره «اشتراک‌گذاری» را بزن یا از دانلود استفاده کن." : "The share sheet didn’t open; tap Share again or use Download." : inTg ? fa ? "تلگرام روی این دستگاه اشتراک‌گذاری مستقیم فایل را پشتیبانی نمی‌کند. از «راه‌های دیگر» پایین استفاده کن." : "Telegram on this device can’t share files directly. Use “Other ways” below." : fa ? "این مرورگر/دستگاه اشتراک‌گذاری مستقیم فایل را پشتیبانی نمی‌کند؛ از دانلود یا «راه‌های دیگر» استفاده کن." : "This browser/device can’t share files directly; use Download or “Other ways”.";
     opts.reason !== void 0 && opts.reason !== "gesture" && say(why(opts.reason), "warn");
-    opts.reason === void 0 && inTg && !mkTgDesktop() && !navigator.share && !mkTgBotAvailable() && blob0.size > 96 * 1024 && say(fa ? "این فایل سنگین است و تلگرام روی گوشی ذخیرهٔ مستقیم را پشتیبانی نمی‌کند. «📦 بکاپ رسانه» (ربات خودت) را یک‌بار فعال کن تا دانلود و اشتراک با یک لمس به چت ربات برود." : "This file is heavy and Telegram on phones can’t save it directly. Enable “📦 Media backup” (your own bot) once so Download and Share send it to your bot chat in one tap.", "info");
+    opts.reason === void 0 && inTg && !mkTgDesktop() && !navigator.share && !mkTgBotAvailable() && blob0.size > 96 * 1024 && say(fa ? "این فایل سنگین است و تلگرام روی گوشی ذخیرهٔ مستقیم را پشتیبانی نمی‌کند. «📦 بکاپ رسانه» (ربات خودت) را یک‌بار فعال کن تا با دکمهٔ «ارسال به چت ربات» بتوانی فایل را بگیری." : "This file is heavy and Telegram on phones can’t save it directly. Enable “📦 Media backup” (your own bot) once so Download and Share send it to your bot chat in one tap.", "info");
     const row = document.createElement("div");
     row.style.cssText = "display:flex;gap:10px;margin-bottom:10px";
     const btnCss = "flex:1;display:flex;align-items:center;justify-content:center;gap:7px;border:0;border-radius:11px;padding:13px 6px;min-height:46px;font:800 13px Tahoma,Arial,sans-serif;color:#fff!important;-webkit-text-fill-color:#fff!important;text-shadow:none!important;opacity:1!important;cursor:pointer;animation:none!important;transition:none!important";
@@ -29200,7 +29298,19 @@ function mkExportChoice(blob0, filename, mime, options) {
     const done = (btn, key, label) => { btn.dataset.keep = "1", mkShLabel(btn, key, label); };
     dl.onclick = () => run(dl, "down", dlLabel, async () => {
         try {
-            const r = await robustDownloadCore(blob, safeName, type, Object.assign({}, opts, { noChoice: !0, reason: void 0 }));
+            const r = inTg ? await mkTgDownloadOnly(blob, safeName, type) : await robustDownloadCore(blob, safeName, type, Object.assign({}, opts, { noChoice: !0, reason: void 0 }));
+            if (inTg && r === !1) {
+                try {
+                    extra.style.cssText += ";border:1px solid #38bdf8;border-radius:12px;padding:10px;margin-bottom:10px";
+                    extra.firstChild.textContent = fa ? "راه‌های جایگزین دانلود (هرکدام کار خودش را می‌کند)" : "Alternative ways to get the file";
+                    extra.firstChild.style.setProperty("color", "#7dd3fc", "important");
+                    extra.scrollIntoView({ block: "nearest" });
+                } catch (e2) { }
+                say(mkTgBotAvailable()
+                    ? (fa ? "تلگرام روی این دستگاه ذخیرهٔ مستقیم فایل را پشتیبانی نمی‌کند و این فایل برای انتقال به مرورگر هم بزرگ است. از «راه‌های جایگزین دانلود» پایین استفاده کن (باز کردن در مرورگر، کپی، ارسال متن در قسمت‌ها) یا دکمهٔ بنفش «ارسال به چت ربات» را بزن." : "Telegram can’t save files directly on this device and the file is too big to hand over to the browser. Use the purple “Send to bot chat” button to get it.")
+                    : (fa ? "تلگرام روی این دستگاه ذخیرهٔ مستقیم فایل را پشتیبانی نمی‌کند و این فایل برای انتقال به مرورگر هم بزرگ است. «📦 بکاپ رسانه» (ربات خودت) را یک‌بار فعال کن تا با «ارسال به چت ربات» فایل را بگیری." : "Telegram can’t save files directly on this device and the file is too big to hand over to the browser. Enable “📦 Media backup” (your own bot) once, then use “Send to bot chat”."), "warn");
+                return;
+            }
             if (r === "cancelled" || r === "manual-fallback-closed")
                 return;
             if (r === "bot" || r === "manual-fallback-bot")
@@ -29229,18 +29339,24 @@ function mkExportChoice(blob0, filename, mime, options) {
                     : (fa ? "مرورگر اشتراک‌گذاری این فایل را نپذیرفت" : "The browser refused to share this file") + (mkWebShare.err ? " (" + mkWebShare.err + ")" : "") + (hasText ? (fa ? "؛ از «راه‌های دیگر» استفاده کن." : "; use “Other ways” below.") : fa ? "؛ از دانلود استفاده کن." : "; use Download."), "warn");
                 return;
             }
-            // TELEGRAM: native sheet (iOS) -> Telegram's chat picker (text) -> bot chat -> phone browser
-            const text = await getText(), r = await mkShareBlob(blob, safeName, type, { prefer: "picker", text: text });
-            if (r === "share") { done(sh, "ok", fa ? "ارسال شد" : "Shared"); return; }
-            if (r === "telegram-text") {
-                done(sh, "ok", fa ? "منوی تلگرام باز شد" : "Telegram menu opened");
-                say(mkTgTextPicker.cut ? (fa ? "فقط بخش اول متن در پنجرهٔ انتخاب مخاطب گذاشته شد. برای کل فایل «ارسال به چت ربات» را بزن." : "Only the first part of the text was put in Telegram’s chat picker. Use “Send to bot chat” for the whole file.") : fa ? "متن در پنجرهٔ انتخاب مخاطب تلگرام باز شد." : "The text opened in Telegram’s chat picker.", mkTgTextPicker.cut ? "warn" : "ok");
+            // TELEGRAM: native share sheet (iOS) -> the FULL text in numbered parts through Telegram's chat picker -> phone-browser share page.
+            // The bot chat is not part of Share; it has its own purple button.
+            if (navigator.share && mkActive()) {
+                const r0 = await mkWebShare(blob, safeName, type, "");
+                if (r0 === "share") { done(sh, "ok", fa ? "ارسال شد" : "Shared"); return; }
+                if (r0 === "cancelled") return;
+            }
+            const text = await getText();
+            if (text) {
+                mkTgTextFlow(text, safeName0, fa);
                 return;
             }
-            if (r === "bot") { done(sh, "ok", fa ? "به چت ربات رفت" : "Sent to bot chat"), afterBot(); return; }
-            if (r === "telegram-bridge") { done(sh, "globe", fa ? "در مرورگر باز شد" : "Opened in browser"), say(fa ? "فایل در مرورگر گوشی باز شد؛ از آنجا «اشتراک‌گذاری» را بزن." : "The file opened in your phone’s browser; tap “Share” there.", "ok"); return; }
-            if (r === "cancelled") return;
-            say((mkTgBotSend.err ? mkTgBotSend.err + " — " : "") + why(r), "warn");
+            if (await tgOpenInSystemBrowser(blob, safeName, type, "share")) {
+                done(sh, "globe", fa ? "در مرورگر باز شد" : "Opened in browser");
+                say(fa ? "فایل در مرورگر گوشی باز شد؛ از آنجا «اشتراک‌گذاری» را بزن." : "The file opened in your phone’s browser; tap “Share” there.", "ok");
+                return;
+            }
+            say(fa ? "تلگرام روی این دستگاه اشتراک‌گذاری مستقیم فایل را پشتیبانی نمی‌کند و این فایل متنی نیست. برای فرستادن فایل از دکمهٔ بنفش «ارسال به چت ربات» استفاده کن." : "Telegram can’t share this file directly on this device and it isn’t text. Use the purple “Send to bot chat” button to send the file.", "warn");
         }
         catch (e) { console.warn("Share from export sheet failed", e), say(fa ? "اشتراک‌گذاری انجام نشد." : "Sharing failed.", "warn"); }
     });
@@ -29279,7 +29395,7 @@ function mkExportChoice(blob0, filename, mime, options) {
         mini("chat", fa ? "ارسال متن در تلگرام (انتخاب مخاطب)" : "Send text in Telegram (pick a chat)", async () => {
             const t = await getText();
             if (!t) { say(fa ? "این فایل متنی نیست؛ از «ارسال به چت ربات» استفاده کن." : "This file isn’t text; use “Send to bot chat”.", "warn"); return; }
-            mkTgTextPicker(t) ? say(mkTgTextPicker.cut ? fa ? "فقط بخش اول متن گذاشته شد." : "Only the first part of the text was used." : fa ? "پنجرهٔ انتخاب مخاطب باز شد." : "The chat picker opened.", mkTgTextPicker.cut ? "warn" : "ok") : say(fa ? "باز کردن پنجرهٔ تلگرام ممکن نشد." : "Couldn’t open Telegram’s picker.", "warn");
+            mkTgTextFlow(t, safeName0, fa) || say(fa ? "باز کردن پنجرهٔ تلگرام ممکن نشد." : "Couldn’t open Telegram’s picker.", "warn");
         }), shown++;
         mini("globe", fa ? "باز کردن در مرورگر" : "Open in browser", async () => {
             const ok = await tgOpenInSystemBrowser(blob, safeName, type, "share");
@@ -29291,9 +29407,7 @@ function mkExportChoice(blob0, filename, mime, options) {
         mini("chat", fa ? "تلگرام (انتخاب مخاطب)" : "Telegram (pick a chat)", async () => {
             const t = await getText();
             if (!t) { say(fa ? "این فایل متنی نیست؛ از دانلود استفاده کن." : "This file isn’t text; use Download.", "warn"); return; }
-            const fitT = mkFitEncoded(t, 5000);
-            window.open("https://t.me/share/url?url=%20&text=" + encodeURIComponent(fitT.text), "_blank", "noopener");
-            fitT.cut && say(fa ? "تلگرام فقط متن کوتاه را از لینک می‌پذیرد؛ بخش اول متن فرستاده شد. برای کل فایل «دانلود» یا «اشتراک‌گذاری» را بزن." : "Telegram only accepts short text through a link; the first part was sent. Use Download or Share for the whole file.", "warn");
+            mkTgTextFlow(t, safeName0, fa);
         }), shown++;
         mini("wa", fa ? "واتساپ" : "WhatsApp", async () => {
             const t = await getText();
