@@ -29471,18 +29471,18 @@ function mkExportChoice(blob0, filename, mime, options) {
     let host = document.getElementById("mkShChoice");
     if (!host) {
         host = document.createElement("div"), host.id = "mkShChoice", host.setAttribute("dir", dir), host.setAttribute("data-mu-noemo", "1");
-        host.style.cssText = 'position:fixed;inset:0;z-index:2147483647;background:rgba(3,10,20,.82);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;padding:20px;box-sizing:border-box;overflow:auto;font-family:Tahoma,"Segoe UI",Arial,sans-serif;animation:none!important;transition:none!important';
+        host.style.cssText = 'position:fixed;inset:0;z-index:2147483647;background:rgba(3,10,20,.82);display:flex;flex-direction:column;align-items:center;justify-content:flex-start;gap:12px;padding:max(12px,env(safe-area-inset-top)) 12px max(12px,env(safe-area-inset-bottom));box-sizing:border-box;overflow:auto;overscroll-behavior:contain;font-family:Tahoma,"Segoe UI",Arial,sans-serif;animation:none!important;transition:none!important';
         document.body.appendChild(host);
     }
     const card = document.createElement("div");
     card.setAttribute("data-mu-noemo", "1");
-    card.style.cssText = "background:#0f172a!important;color:#e2e8f0!important;border:1px solid #334155;border-radius:16px;max-width:380px;width:100%;padding:20px;text-align:center;box-shadow:0 20px 60px rgba(0,0,0,.5);box-sizing:border-box;animation:none!important;transition:none!important";
+    card.style.cssText = "background:#0f172a!important;color:#e2e8f0!important;border:1px solid #334155;border-radius:16px;max-width:420px;width:100%;padding:0;margin:auto;display:flex;flex-direction:column;flex:0 1 auto;min-height:0;max-height:calc(100vh - 24px);max-height:calc(100dvh - 24px);overflow:hidden;text-align:center;box-shadow:0 20px 60px rgba(0,0,0,.5);box-sizing:border-box;animation:none!important;transition:none!important";
     const txt = (css, t) => { const d = document.createElement("div"); d.textContent = t, d.style.cssText = css + ";opacity:1!important"; return d; };
     const icoBox = document.createElement("div");
-    icoBox.style.cssText = "display:flex;justify-content:center;margin-bottom:8px;color:#fbbf24", icoBox.appendChild(mkShIcon("share", 34)), icoBox.firstChild.style.color = "#38bdf8";
+    icoBox.style.cssText = "display:flex;justify-content:center;margin-bottom:4px;color:#fbbf24", icoBox.appendChild(mkShIcon("share", 26)), icoBox.firstChild.style.color = "#38bdf8";
     card.appendChild(icoBox);
     card.appendChild(txt("font-size:15px;font-weight:800;margin-bottom:6px;color:#f8fafc!important;-webkit-text-fill-color:#f8fafc!important", fa ? "خروجی آماده است" : "Your export is ready"));
-    const nameEl = txt("font-size:12px;word-break:break-all;direction:ltr;margin-bottom:2px;color:#cbd5e1!important;-webkit-text-fill-color:#cbd5e1!important", safeName), sizeEl = txt("font-size:11px;margin-bottom:14px;direction:ltr;color:#94a3b8!important;-webkit-text-fill-color:#94a3b8!important", mkShHuman(blob.size));
+    const nameEl = txt("font-size:12px;word-break:break-all;direction:ltr;margin-bottom:2px;color:#cbd5e1!important;-webkit-text-fill-color:#cbd5e1!important", safeName), sizeEl = txt("font-size:11px;margin-bottom:10px;direction:ltr;color:#94a3b8!important;-webkit-text-fill-color:#94a3b8!important", mkShHuman(blob.size));
     const paintSize = () => { nameEl.textContent = safeName, sizeEl.textContent = gzv && blob === gzv.blob ? mkShHuman(blob0.size) + " → " + mkShHuman(blob.size) + " (gzip)" : mkShHuman(blob.size); };
     paintSize();
     card.appendChild(nameEl), card.appendChild(sizeEl);
@@ -29675,10 +29675,10 @@ function mkExportChoice(blob0, filename, mime, options) {
     card.appendChild(note);
     // ---- Other ways (different set for each environment) ----
     const extra = document.createElement("div");
-    extra.style.cssText = "border-top:1px solid #1e293b;margin:2px 0 10px;padding-top:10px";
-    extra.appendChild(txt("font-size:11px;margin-bottom:8px;color:#94a3b8!important;-webkit-text-fill-color:#94a3b8!important", fa ? "راه‌های دیگر" : "Other ways"));
-    const smallCss = "display:flex;align-items:center;justify-content:center;gap:7px;width:100%;border:1px solid #475569;background:transparent;border-radius:10px;padding:10px;margin:0 0 8px;font:600 12px Tahoma,Arial,sans-serif;color:#e2e8f0!important;-webkit-text-fill-color:#e2e8f0!important;opacity:1!important;cursor:pointer;animation:none!important;transition:none!important";
-    const mini = (key, label, fn) => { const b = document.createElement("button"); b.type = "button", mkShLabel(b, key, label), b.style.cssText = smallCss, b.onclick = async () => { if (b.dataset.busy) return; b.dataset.busy = "1"; try { await fn(b); } finally { delete b.dataset.busy; } }; extra.appendChild(b); return b; };
+    extra.style.cssText = "border-top:1px solid #1e293b;margin:2px 0 6px;padding-top:10px;display:grid;grid-template-columns:1fr 1fr;gap:6px";
+    extra.appendChild(txt("grid-column:1/-1;font-size:11px;margin-bottom:2px;color:#94a3b8!important;-webkit-text-fill-color:#94a3b8!important", fa ? "راه‌های دیگر" : "Other ways"));
+    const smallCss = "display:flex;flex-direction:column;align-items:center;justify-content:center;gap:5px;width:100%;min-width:0;box-sizing:border-box;border:1px solid #475569;background:transparent;border-radius:10px;padding:9px 6px;margin:0;font:600 11.5px Tahoma,Arial,sans-serif;color:#e2e8f0!important;-webkit-text-fill-color:#e2e8f0!important;opacity:1!important;cursor:pointer;animation:none!important;transition:none!important";
+    const mini = (key, label, fn) => { const b = document.createElement("button"); b.type = "button", mkShLabel(b, key, label), b.style.cssText = smallCss, b.onclick = async () => { if (b.dataset.busy) return; b.dataset.busy = "1"; try { await fn(b); } finally { delete b.dataset.busy; } }; label.length > 30 && (b.style.gridColumn = "1 / -1", b.style.flexDirection = "row"), extra.appendChild(b); return b; };
     const textUrl = (base, t, cap) => base + encodeURIComponent(mkFitEncoded(t, cap).text);
     let shown = 0;
     if (inTg) {
@@ -29716,10 +29716,26 @@ function mkExportChoice(blob0, filename, mime, options) {
             if (r === "bot") { afterBot(), mkTgOpenBotChat(); }
             else if (r !== "cancelled") say(mkTgBotSend.err || (fa ? "ارسال به چت ربات انجام نشد." : "Sending to the bot chat failed."), "warn");
         }), shown++;
-        const needTxt = async fn => { const t = await getText(); if (!t) { say(fa ? "این فایل متنی نیست؛ برای اشتراک فایل از «ارسال به ربات» استفاده کن." : "This file isn’t text; use “Send to bot” to share the file.", "warn"); return; } fn(t); };
+        const needTxt = async fn => { const t = await getText(); if (!t) { say(fa ? "این فایل متنی نیست؛ برای اشتراک فایل از «ارسال به ربات» استفاده کن." : "This file isn’t text; use “Send to bot” to share the file.", "warn"); return; } await fn(t); };
         mini("wa", fa ? "واتساپ (متن)" : "WhatsApp (text)", () => needTxt(t => { const u = textUrl("https://wa.me/?text=", t, 6000); TG && TG.openLink ? TG.openLink(u) : window.open(u, "_blank", "noopener"); })), shown++;
         mini("mail", fa ? "ایمیل (متن)" : "E-mail (text)", () => needTxt(t => { const u = "mailto:?subject=" + encodeURIComponent(safeName) + "&body=" + encodeURIComponent(mkFitEncoded(t, 6000).text); TG && TG.openLink ? TG.openLink(u) : location.href = u; })), shown++;
-        mini("chat", fa ? "پیامک (متن)" : "SMS (text)", () => needTxt(t => { const u = "sms:?&body=" + encodeURIComponent(mkFitEncoded(t, 1500).text); TG && TG.openLink ? TG.openLink(u) : location.href = u; })), shown++;
+        mini("chat", fa ? "پیامک (متن)" : "SMS (text)", () => needTxt(async t => {
+            // Telegram's openLink() only accepts http(s)/tg links, so sms: was silently ignored. Fire the scheme through a real <a> click
+            // (the webview hands it to the OS), then detect whether the page really lost focus; if not, fall back to copying the text.
+            const fit = mkFitEncoded(t, 1500).text, ios = /iPad|iPhone|iPod/i.test(navigator.userAgent || ""), u = "sms:" + (ios ? "&" : "?") + "body=" + encodeURIComponent(fit);
+            let left = false;
+            const mark = () => { left = true; }, onVis = () => { document.hidden && (left = true); };
+            window.addEventListener("blur", mark), window.addEventListener("pagehide", mark), document.addEventListener("visibilitychange", onVis);
+            try { const a = document.createElement("a"); a.href = u, a.rel = "noopener", a.style.display = "none", document.body.appendChild(a), a.click(), setTimeout(() => a.remove(), 0); }
+            catch (e0) { try { location.href = u; } catch (e1) { } }
+            await new Promise(r => setTimeout(r, 1400));
+            window.removeEventListener("blur", mark), window.removeEventListener("pagehide", mark), document.removeEventListener("visibilitychange", onVis);
+            if (!left) {
+                let ok = false;
+                try { ok = await mkCopyText(fit); } catch (e2) { }
+                say(ok ? (fa ? "برنامهٔ پیامک باز نشد (تلگرام این لینک را نمی‌پذیرد). متن کپی شد؛ پیامک را باز کن و بچسبان." : "The SMS app didn’t open (Telegram blocks this link). The text was copied; open Messages and paste it.") : (fa ? "برنامهٔ پیامک باز نشد و کپی هم انجام نشد." : "The SMS app didn’t open and copying failed."), "warn");
+            }
+        })), shown++;
         mini("globe", fa ? "باز کردن در مرورگر" : "Open in browser", async () => {
             const ok = await tgOpenInSystemBrowser(blob, safeName, type, "share");
             say(ok ? fa ? "فایل در مرورگر گوشی باز شد؛ از آنجا «دانلود» یا «اشتراک‌گذاری» را بزن." : "The file opened in your phone’s browser; tap Download or Share there." : fa ? "این فایل برای انتقال به مرورگر بزرگ است (حدود ۹ کیلوبایت فشرده). از «ارسال به چت ربات» استفاده کن." : "This file is too big to pass to the browser (about 9 KB compressed). Use “Send to bot chat”.", ok ? "ok" : "warn");
@@ -29751,7 +29767,15 @@ function mkExportChoice(blob0, filename, mime, options) {
     if (inTg)
         openChat = mini("bot", fa ? "باز کردن چت ربات" : "Open bot chat", async () => { mkTgOpenBotChat(); }), openChat.style.display = "none";
     shown && card.appendChild(extra);
-    card.appendChild(close);
+    {
+        // Layout: scrollable body + fixed footer (status line + Close) so nothing is ever cut off on small screens
+        const body = document.createElement("div"), foot = document.createElement("div");
+        body.style.cssText = "flex:1 1 auto;min-height:0;overflow-y:auto;-webkit-overflow-scrolling:touch;overscroll-behavior:contain;padding:16px 16px 6px;box-sizing:border-box";
+        while (card.firstChild) body.appendChild(card.firstChild);
+        foot.style.cssText = "flex:none;padding:10px 16px calc(12px + env(safe-area-inset-bottom,0px));border-top:1px solid #1e293b;background:#0f172a;box-sizing:border-box";
+        note.style.margin = "0 0 8px", note.style.maxHeight = "96px", note.style.overflowY = "auto";
+        foot.appendChild(note), foot.appendChild(close), card.appendChild(body), card.appendChild(foot);
+    }
     host.appendChild(card);
     // The export itself is finished at this point; the sheet lives on its own so callers (and the progress overlay) are not held up
     return "choice";
