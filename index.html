@@ -29167,6 +29167,29 @@ async function mkTgShareViaBrowser(blob, name, type) {
     catch (e) { mkTgShareViaBrowser.err = String(e && e.message || e); return !1; }
 }
 window.mkTgShareViaBrowser = mkTgShareViaBrowser;
+// Browser fallback for the native Telegram download: tiny files travel inside the link, bigger ones (<= 19 MB) are fetched by the phone browser from the bot's file link. Returns "telegram-bridge" | false (reason in mkTgBrowserDownload.err).
+async function mkTgBrowserDownload(blob, name, type) {
+    mkTgBrowserDownload.err = "";
+    const fa = mkShFa();
+    try { if (blob.size <= 96 * 1024 && await tgOpenInSystemBrowser(blob, name, type, "dl")) return "telegram-bridge"; } catch (e) { }
+    if (!mkTgBotAvailable()) { mkTgBrowserDownload.err = fa ? "برای فایل سنگین «📦 بکاپ رسانه» (ربات خودت) را یک‌بار فعال کن." : "For a heavy file, enable “📦 Media backup” (your own bot) once."; return !1; }
+    if (blob.size > MK_TG_NATIVE_MAX) { mkTgBrowserDownload.err = fa ? "فایل برای دانلود از مرورگر بزرگ است (بیش از 19 مگابایت)؛ از «ارسال به چت ربات» استفاده کن." : "The file is too big for the browser route (over 19 MB); use “Send to bot chat”."; return !1; }
+    let r = mkTgLastBot && mkTgLastBot.size === blob.size && mkTgLastBot.fid && Date.now() - (mkTgLastBot.at || 0) < 600000 ? mkTgLastBot : null;
+    if (!r) {
+        const s = await mkTgBotSend(blob, name, type);
+        if (s === "cancelled") return !1;
+        if (s !== "bot") { mkTgBrowserDownload.err = mkTgBotSend.err; return !1; }
+        r = mkTgLastBot;
+    }
+    let info;
+    try { info = await mu_withTimeout(window.MKMED.botFileUrl(r.fid), 30000); }
+    catch (e) { mkTgBrowserDownload.err = fa ? "لینک فایل از ربات گرفته نشد." : "Could not get the file link from the bot."; return !1; }
+    const u = location.href.split("#")[0] + "#tgf=" + encodeURIComponent(info.url) + "&tgname=" + encodeURIComponent(name) + "&tgmime=" + encodeURIComponent(type || "");
+    try { TG && TG.openLink ? TG.openLink(u, { try_instant_view: !1 }) : window.open(u, "_blank"); return "telegram-bridge"; }
+    catch (e) { mkTgBrowserDownload.err = String(e && e.message || e); return !1; }
+}
+window.mkTgBrowserDownload = mkTgBrowserDownload;
+
 
 
 // ===== Dedicated share engines: browser and Telegram each have their own path =====
@@ -29531,7 +29554,18 @@ function mkExportChoice(blob0, filename, mime, options) {
     const done = (btn, key, label) => { btn.dataset.keep = "1", mkShLabel(btn, key, label); };
     dl.onclick = () => run(dl, "down", dlLabel, async () => {
         try {
-            const r = inTg ? await mkTgDownloadOnly(blob, safeName, type) : await robustDownloadCore(blob, safeName, type, Object.assign({}, opts, { noChoice: !0, reason: void 0 }));
+            let r = inTg ? await mkTgDownloadOnly(blob, safeName, type) : await robustDownloadCore(blob, safeName, type, Object.assign({}, opts, { noChoice: !0, reason: void 0 }));
+            if (inTg && r === !1 && mkTgBotAvailable()) {
+                // 1) Telegram's own downloader (through the bot link), 2) if that does not work: download through the phone browser
+                say(fa ? "در حال ساخت لینک دانلود…" : "Building the download link…", "info");
+                const n = await mkTgNativeDownload(blob, safeName, type);
+                if (n === "native" || n === "cancelled") r = n;
+                else {
+                    say(fa ? "دانلود تلگرام انجام نشد؛ در حال دانلود از مرورگر…" : "Telegram download didn’t work; downloading through the browser…", "info");
+                    const b = await mkTgBrowserDownload(blob, safeName, type);
+                    if (b) r = b;
+                }
+            }
             if (inTg && r === !1) {
                 try {
                     extra.style.cssText += ";border:1px solid #38bdf8;border-radius:12px;padding:10px;margin-bottom:10px";
@@ -29546,7 +29580,9 @@ function mkExportChoice(blob0, filename, mime, options) {
             }
             if (r === "cancelled" || r === "manual-fallback-closed")
                 return;
-            if (r === "bot" || r === "manual-fallback-bot")
+            if (r === "native")
+                done(dl, "ok", fa ? "دانلود شروع شد" : "Download started"), say(fa ? "پنجرهٔ دانلود تلگرام باز شد؛ تأیید کن تا فایل در گوشی ذخیره شود." : "Telegram’s download dialog is open; confirm to save the file.", "ok");
+            else if (r === "bot" || r === "manual-fallback-bot")
                 done(dl, "ok", fa ? "به چت ربات رفت" : "Sent to bot chat"), afterBot();
             else if (r === "telegram-bridge")
                 done(dl, "globe", fa ? "در مرورگر باز شد" : "Opened in browser"), say(fa ? "فایل در مرورگر گوشی باز شد؛ آنجا دانلود می‌شود." : "The file opened in your phone’s browser, where it downloads.", "ok");
@@ -29693,7 +29729,13 @@ function mkExportChoice(blob0, filename, mime, options) {
             const r = await mkTgNativeDownload(blob, safeName, type);
             if (r === "native") say(fa ? "پنجرهٔ دانلود تلگرام باز شد؛ تأیید کن." : "Telegram’s download dialog is open; confirm it.", "ok");
             else if (r === "cancelled") say("", "ok");
-            else say(mkTgNativeDownload.err || (fa ? "دانلود بومی انجام نشد." : "Native download failed."), "warn");
+            else {
+                // native download did not work: fall back to downloading through the phone browser
+                say(fa ? "دانلود تلگرام انجام نشد؛ در حال دانلود از مرورگر…" : "Telegram download didn’t work; downloading through the browser…", "info");
+                const b = await mkTgBrowserDownload(blob, safeName, type);
+                if (b === "telegram-bridge") say(fa ? "فایل در مرورگر گوشی باز شد؛ آنجا دانلود می‌شود." : "The file opened in your phone’s browser, where it downloads.", "ok");
+                else say(mkTgBrowserDownload.err || mkTgNativeDownload.err || (fa ? "دانلود انجام نشد." : "Download failed."), "warn");
+            }
         }), shown++;
         if (blob.size > MK_TG_BOT_MAX)
             mini("bot", fa ? "ارسال در چند بخش به چت ربات (فایل بزرگ)" : "Send to bot chat in parts (large file)", async () => {
@@ -29716,10 +29758,6 @@ function mkExportChoice(blob0, filename, mime, options) {
             if (r === "bot") { afterBot(), mkTgOpenBotChat(); }
             else if (r !== "cancelled") say(mkTgBotSend.err || (fa ? "ارسال به چت ربات انجام نشد." : "Sending to the bot chat failed."), "warn");
         }), shown++;
-        const needTxt = async fn => { const t = await getText(); if (!t) { say(fa ? "این فایل متنی نیست؛ برای اشتراک فایل از «ارسال به ربات» استفاده کن." : "This file isn’t text; use “Send to bot” to share the file.", "warn"); return; } fn(t); };
-        mini("wa", fa ? "واتساپ (متن)" : "WhatsApp (text)", () => needTxt(t => { const u = textUrl("https://wa.me/?text=", t, 6000); TG && TG.openLink ? TG.openLink(u) : window.open(u, "_blank", "noopener"); })), shown++;
-        mini("mail", fa ? "ایمیل (متن)" : "E-mail (text)", () => needTxt(t => { const u = "mailto:?subject=" + encodeURIComponent(safeName) + "&body=" + encodeURIComponent(mkFitEncoded(t, 6000).text); TG && TG.openLink ? TG.openLink(u) : location.href = u; })), shown++;
-        mini("chat", fa ? "پیامک (متن)" : "SMS (text)", () => needTxt(t => { const u = "sms:?&body=" + encodeURIComponent(mkFitEncoded(t, 1500).text); TG && TG.openLink ? TG.openLink(u) : location.href = u; })), shown++;
         mini("globe", fa ? "باز کردن در مرورگر" : "Open in browser", async () => {
             const ok = await tgOpenInSystemBrowser(blob, safeName, type, "share");
             say(ok ? fa ? "فایل در مرورگر گوشی باز شد؛ از آنجا «دانلود» یا «اشتراک‌گذاری» را بزن." : "The file opened in your phone’s browser; tap Download or Share there." : fa ? "این فایل برای انتقال به مرورگر بزرگ است (حدود 9 کیلوبایت فشرده). از «ارسال به چت ربات» استفاده کن." : "This file is too big to pass to the browser (about 9 KB compressed). Use “Send to bot chat”.", ok ? "ok" : "warn");
@@ -29731,16 +29769,6 @@ function mkExportChoice(blob0, filename, mime, options) {
             const t = await getText();
             if (!t) { say(fa ? "این فایل متنی نیست؛ از دانلود استفاده کن." : "This file isn’t text; use Download.", "warn"); return; }
             mkTgTextFlow(t, safeName0, fa);
-        }), shown++;
-        mini("wa", fa ? "واتساپ" : "WhatsApp", async () => {
-            const t = await getText();
-            if (!t) { say(fa ? "این فایل متنی نیست؛ از دانلود استفاده کن." : "This file isn’t text; use Download.", "warn"); return; }
-            window.open(textUrl("https://wa.me/?text=", t, 6000), "_blank", "noopener");
-        }), shown++;
-        mini("mail", fa ? "ایمیل" : "E-mail", async () => {
-            const t = await getText();
-            if (!t) { say(fa ? "این فایل متنی نیست؛ از دانلود استفاده کن." : "This file isn’t text; use Download.", "warn"); return; }
-            location.href = "mailto:?subject=" + encodeURIComponent(safeName) + "&body=" + encodeURIComponent(mkFitEncoded(t, 6000).text);
         }), shown++;
     }
     if (mkIsTextLike(type0, safeName0))
