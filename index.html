@@ -19598,7 +19598,7 @@ html.mk-tg #muNav .mu-nav-panel{will-change:transform}
     }
     window.mk_expMediaSet = function (v) { try { v === "off" ? localStorage.removeItem("mk_exp_media_lvl") : localStorage.setItem("mk_exp_media_lvl", v); } catch (e) { } SHRUNK.clear(); try { showToast(T("تنظیم فشرده‌سازی رسانه ذخیره شد.", "Media compression setting saved.")); } catch (e) { } };
     window.mk_expMediaRowHtml = function (fa) {
-        var cur = expLvl(), o = [["off", fa ? "خاموش (کیفیت اصلی)" : "Off (original quality)"], ["light", fa ? "سبک (۲۰۴۸px، کیفیت ۸۵٪)" : "Light (2048px, 85%)"], ["medium", fa ? "متوسط (۱۶۰۰px، کیفیت ۷۵٪)" : "Medium (1600px, 75%)"], ["strong", fa ? "شدید (۱۰۲۴px، کیفیت ۶۰٪)" : "Strong (1024px, 60%)"]];
+        var cur = expLvl(), o = [["off", fa ? "خاموش (کیفیت اصلی)" : "Off (original quality)"], ["light", fa ? "سبک (2048px، کیفیت 85٪)" : "Light (2048px, 85%)"], ["medium", fa ? "متوسط (1600px، کیفیت 75٪)" : "Medium (1600px, 75%)"], ["strong", fa ? "شدید (1024px، کیفیت 60٪)" : "Strong (1024px, 60%)"]];
         return '<div class="mu-set-row" style="flex-direction:column;align-items:stretch"><div class="mu-set-text"><div class="mu-set-title">' + (fa ? "فشرده‌سازی عکس‌ها در خروجی" : "Compress images in exports") + '</div><div class="mu-set-desc">' + (fa ? "عکس‌ها فقط در فایل خروجی کوچک می‌شوند و نسخه‌ی اصلی داخل برنامه دست نمی‌خورد. ویس و ویدیو چون از قبل فشرده‌اند تغییری نمی‌کنند." : "Images are shrunk only in the exported file; originals in the app are untouched. Voice and video are already compressed and stay as they are.") + '</div></div><select onchange="mk_expMediaSet(this.value)" style="margin-top:8px;padding:10px 12px;border-radius:10px;font:inherit;font-size:13.5px;width:100%;cursor:pointer;color:var(--ink,inherit);background:var(--pp-surface,rgba(0,0,0,.28));border:1px solid var(--line,var(--panel-border,rgba(128,128,128,.55)));-webkit-appearance:menulist;appearance:menulist">' + o.map(function (p) { return '<option style="color:var(--ink,inherit);background:var(--pp-surface,#222)" value="' + p[0] + '"' + (p[0] === cur ? " selected" : "") + ">" + p[1] + "</option>"; }).join("") + "</select></div>";
     };
     async function getBlob(id) { try { var b = await MED().get(id); return b || null; } catch (e) { return null; } }
@@ -26888,7 +26888,7 @@ async function insertFileToNote(id, event) {
             typeof showToast == "function" && showToast(fa ? "ذخیره‌ی فایل ممکن نشد (حافظه‌ی مرورگر در دسترس نیست)." : "Could not store the file (browser storage is unavailable).");
             continue;
         }
-        file.size > 49 * 1024 * 1024 && typeof showToast == "function" && showToast(fa ? "این فایل از ۴۹ مگابایت بیشتر است و در بکاپ رسانه‌ای (تلگرام) آپلود نمی‌شود." : "This file is over 49 MB, so Telegram media backup cannot upload it.");
+        file.size > 49 * 1024 * 1024 && typeof showToast == "function" && showToast(fa ? "این فایل از 49 مگابایت بیشتر است و در بکاپ رسانه‌ای (تلگرام) آپلود نمی‌شود." : "This file is over 49 MB, so Telegram media backup cannot upload it.");
         const wrapper = mu_buildFileWrapper(mediaId, { name: file.name, size: file.size, type: file.type });
         wrapper.dataset.muHydratedFor = mediaId;
         const delBtn = wrapper.querySelector("button");
@@ -26940,7 +26940,7 @@ async function insertVideoToNote(id, event) {
             say(fa ? "ذخیره‌ی ویدیو ممکن نشد (حافظه‌ی مرورگر در دسترس نیست)." : "Could not store the video (browser storage is unavailable).");
             continue;
         }
-        file.size > 49 * 1024 * 1024 ? say(fa ? "این ویدیو از ۴۹ مگابایت بیشتر است و در بکاپ رسانه‌ای (تلگرام) آپلود نمی‌شود." : "This video is over 49 MB, so Telegram media backup cannot upload it.") : file.size > 20 * 1024 * 1024 && say(fa ? "این ویدیو از ۲۰ مگابایت بیشتر است؛ آپلود می‌شود ولی روی دستگاه‌های دیگر از طریق بکاپ رسانه‌ای دانلود نخواهد شد." : "This video is over 20 MB: it uploads, but other devices cannot download it through media backup.");
+        file.size > 49 * 1024 * 1024 ? say(fa ? "این ویدیو از 49 مگابایت بیشتر است و در بکاپ رسانه‌ای (تلگرام) آپلود نمی‌شود." : "This video is over 49 MB, so Telegram media backup cannot upload it.") : file.size > 20 * 1024 * 1024 && say(fa ? "این ویدیو از 20 مگابایت بیشتر است؛ آپلود می‌شود ولی روی دستگاه‌های دیگر از طریق بکاپ رسانه‌ای دانلود نخواهد شد." : "This video is over 20 MB: it uploads, but other devices cannot download it through media backup.");
         const src = URL.createObjectURL(mu_mediaBlob(mediaId, blob));
         { const lastN = textBox.lastChild, blankN = n => !!n && n.nodeType === 1 && /^(DIV|P)$/.test(n.tagName) && !n.querySelector("img,video,audio,canvas,table,.audio-wrapper,.img-drag-wrapper") && !n.textContent.replace(/[\u200B\s]/g, ""); blankN(lastN) || textBox.appendChild(mu_createImgAboveLine()); }
         const wrapper = mu_buildVideoWrapper(src, mediaId), delBtn = wrapper.querySelector("button");
@@ -29000,7 +29000,7 @@ async function mkTgBotSend(blob, filename, mime) {
     const fa = mkShFa(), why = r && r.why;
     if (why === "locked")
         return "cancelled";
-    mkTgBotSend.err = why === "big" ? fa ? "حجم فایل از ۴۹ مگابایت بیشتر است و به ربات نمی‌رسد." : "The file is over 49 MB, too large for the bot." : why === "nochat" ? fa ? "شناسهٔ تلگرام شما پیدا نشد؛ برنامه را از داخل تلگرام باز کن." : "Your Telegram user id wasn’t found; open the app from inside Telegram." : why === "nocfg" ? fa ? "«📦 بکاپ رسانه» هنوز تنظیم نشده است." : "“📦 Media backup” isn’t set up yet." : why === "empty" ? fa ? "فایل خالی است." : "The file is empty." : (fa ? "ارسال به چت ربات انجام نشد" : "Sending to the bot chat failed") + (r && r.msg ? ": " + r.msg : "");
+    mkTgBotSend.err = why === "big" ? fa ? "حجم فایل از 49 مگابایت بیشتر است و به ربات نمی‌رسد." : "The file is over 49 MB, too large for the bot." : why === "nochat" ? fa ? "شناسهٔ تلگرام شما پیدا نشد؛ برنامه را از داخل تلگرام باز کن." : "Your Telegram user id wasn’t found; open the app from inside Telegram." : why === "nocfg" ? fa ? "«📦 بکاپ رسانه» هنوز تنظیم نشده است." : "“📦 Media backup” isn’t set up yet." : why === "empty" ? fa ? "فایل خالی است." : "The file is empty." : (fa ? "ارسال به چت ربات انجام نشد" : "Sending to the bot chat failed") + (r && r.msg ? ": " + r.msg : "");
     return !1;
 }
 function mkTgOpenBotChat() { try { const u = mkTgLastBot && mkTgLastBot.bot; if (u && TG && TG.openTelegramLink) return TG.openTelegramLink("https://t.me/" + u), !0; } catch (e) { } return !1; }
@@ -29061,8 +29061,8 @@ function mkTgNativeCan() { try { return !!(IS_TELEGRAM && TG && typeof TG.downlo
 async function mkTgNativeDownload(blob, name, type, known) {
     mkTgNativeDownload.err = "";
     const fa = mkShFa();
-    if (!mkTgNativeCan()) { mkTgNativeDownload.err = fa ? "این نسخهٔ تلگرام دانلود بومی را پشتیبانی نمی‌کند (نیاز به نسخهٔ ۸ یا بالاتر)." : "This Telegram version has no native download (needs version 8+)."; return !1; }
-    if (blob.size > MK_TG_NATIVE_MAX) { mkTgNativeDownload.err = fa ? "برای دانلود بومی فایل باید کمتر از ۱۹ مگابایت باشد (محدودیت ربات تلگرام)." : "Native download needs a file under 19 MB (Telegram bot limit)."; return !1; }
+    if (!mkTgNativeCan()) { mkTgNativeDownload.err = fa ? "این نسخهٔ تلگرام دانلود بومی را پشتیبانی نمی‌کند (نیاز به نسخهٔ 8 یا بالاتر)." : "This Telegram version has no native download (needs version 8+)."; return !1; }
+    if (blob.size > MK_TG_NATIVE_MAX) { mkTgNativeDownload.err = fa ? "برای دانلود بومی فایل باید کمتر از 19 مگابایت باشد (محدودیت ربات تلگرام)." : "Native download needs a file under 19 MB (Telegram bot limit)."; return !1; }
     let r = known;
     if (!r || !r.fid) {
         const s = await mkTgBotSend(blob, name, type);
@@ -29151,7 +29151,7 @@ async function mkTgShareViaBrowser(blob, name, type) {
     const fa = mkShFa();
     try { if (blob.size <= 96 * 1024 && await tgOpenInSystemBrowser(blob, name, type, "share")) return "telegram-bridge"; } catch (e) { }
     if (!mkTgBotAvailable()) { mkTgShareViaBrowser.err = fa ? "برای فایل سنگین «📦 بکاپ رسانه» (ربات خودت) را یک‌بار فعال کن." : "For a heavy file, enable “📦 Media backup” (your own bot) once."; return !1; }
-    if (blob.size > MK_TG_NATIVE_MAX) { mkTgShareViaBrowser.err = fa ? "برای اشتراک از مرورگر فایل باید کمتر از ۱۹ مگابایت باشد." : "Sharing through the browser needs a file under 19 MB."; return !1; }
+    if (blob.size > MK_TG_NATIVE_MAX) { mkTgShareViaBrowser.err = fa ? "برای اشتراک از مرورگر فایل باید کمتر از 19 مگابایت باشد." : "Sharing through the browser needs a file under 19 MB."; return !1; }
     let r = mkTgLastBot && mkTgLastBot.size === blob.size && mkTgLastBot.fid && Date.now() - (mkTgLastBot.at || 0) < 600000 ? mkTgLastBot : null;
     if (!r) {
         const s = await mkTgBotSend(blob, name, type);
@@ -29687,7 +29687,7 @@ function mkExportChoice(blob0, filename, mime, options) {
             if (!t) { say(fa ? "این فایل متنی نیست؛ از «ارسال به چت ربات» استفاده کن." : "This file isn’t text; use “Send to bot chat”.", "warn"); return; }
             mkTgTextFlow(t, safeName0, fa) || say(fa ? "باز کردن پنجرهٔ تلگرام ممکن نشد." : "Couldn’t open Telegram’s picker.", "warn");
         }), shown++;
-        mini("down", fa ? "دانلود بومی تلگرام (از لینک ربات، تا ۱۹ مگابایت)" : "Telegram native download (via bot link, up to 19 MB)", async () => {
+        mini("down", fa ? "دانلود بومی تلگرام (از لینک ربات، تا 19 مگابایت)" : "Telegram native download (via bot link, up to 19 MB)", async () => {
             if (!mkTgBotAvailable()) { say(fa ? "این راه به «📦 بکاپ رسانه» (ربات خودت) نیاز دارد." : "This route needs “📦 Media backup” (your own bot).", "warn"); return; }
             say(fa ? "در حال ساخت لینک دانلود…" : "Building the download link…", "info");
             const r = await mkTgNativeDownload(blob, safeName, type);
@@ -29722,7 +29722,7 @@ function mkExportChoice(blob0, filename, mime, options) {
         mini("chat", fa ? "پیامک (متن)" : "SMS (text)", () => needTxt(t => { const u = "sms:?&body=" + encodeURIComponent(mkFitEncoded(t, 1500).text); TG && TG.openLink ? TG.openLink(u) : location.href = u; })), shown++;
         mini("globe", fa ? "باز کردن در مرورگر" : "Open in browser", async () => {
             const ok = await tgOpenInSystemBrowser(blob, safeName, type, "share");
-            say(ok ? fa ? "فایل در مرورگر گوشی باز شد؛ از آنجا «دانلود» یا «اشتراک‌گذاری» را بزن." : "The file opened in your phone’s browser; tap Download or Share there." : fa ? "این فایل برای انتقال به مرورگر بزرگ است (حدود ۹ کیلوبایت فشرده). از «ارسال به چت ربات» استفاده کن." : "This file is too big to pass to the browser (about 9 KB compressed). Use “Send to bot chat”.", ok ? "ok" : "warn");
+            say(ok ? fa ? "فایل در مرورگر گوشی باز شد؛ از آنجا «دانلود» یا «اشتراک‌گذاری» را بزن." : "The file opened in your phone’s browser; tap Download or Share there." : fa ? "این فایل برای انتقال به مرورگر بزرگ است (حدود 9 کیلوبایت فشرده). از «ارسال به چت ربات» استفاده کن." : "This file is too big to pass to the browser (about 9 KB compressed). Use “Send to bot chat”.", ok ? "ok" : "warn");
         }), shown++;
     }
     else {
@@ -33770,7 +33770,7 @@ window.__mkFixAutoSyncBusy = !0, window.__mkFixProgHold = !0; const btn = docume
                     if (mr && mr.locked) mediaMsg = fa ? " ⚠️ بکاپ رسانه قفل است؛ در تب رسانه رمز را وارد کن." : " ⚠️ Media backup is locked; enter the password in the Media tab.";
                     else if (mr && mr.failed) mediaMsg = fa ? " ⚠️ همگام‌سازی رسانه ناموفق بود." : " ⚠️ Media sync failed.";
                     else if (mr && !mr.skipped) {
-                        const nn = x => fa ? String(x).replace(/\d/g, d => "۰۱۲۳۴۵۶۷۸۹"[d]) : String(x);
+                        const nn = x => String(x);
                         mediaMsg = fa ? ` 📦 رسانه: ${nn(mr.up)} آپلود، ${nn(mr.down)} دریافت${mr.err ? `، ${nn(mr.err)} خطا` : ""}${mr.capped ? " (سقف حجم پر شد)" : ""}${mr.timedOut ? " (بقیه در پس‌زمینه ادامه دارد)" : ""}.` : ` 📦 Media: ${mr.up} uploaded, ${mr.down} downloaded${mr.err ? `, ${mr.err} error(s)` : ""}${mr.capped ? " (size limit reached)" : ""}${mr.timedOut ? " (the rest continues in the background)" : ""}.`;
                     }
                 }
@@ -33888,12 +33888,12 @@ window.__mkFixAutoSyncBusy = !0, window.__mkFixProgHold = !0; const btn = docume
 
             <h4 style="margin:14px 0 6px">📷 بکاپ رسانه (عکس و ویس) روی چند دستگاه</h4>
             <p>این بخش اختیاری است و در همین پنل، در تب «📦 بکاپ رسانه» (کنار «بکاپ خودکار» و «بکاپ دستی») قرار دارد. عکس‌ها و ویس‌ها رمزنگاری می‌شوند و در چت خصوصی یک ربات شخصیِ خودت ذخیره می‌شوند؛ فهرستشان در Cloud تلگرام می‌ماند تا دستگاه‌های دیگر پیدایشان کنند. سرور ذخیره‌سازی در کار نیست؛ فقط درخواست‌های ربات به‌صورت پیش‌فرض از یک پروکسی ساده عبور می‌کند تا به api.telegram.org برسد و اگر کار نکرد برنامه خودکار مستقیم هم امتحان می‌کند. توکن ربات از همان آدرس رد می‌شود؛ در «⚙️ پیشرفته: آدرس پایهٔ API (پروکسی)» می‌توانی پروکسی دلخواه یا https://api.telegram.org (اتصال مستقیم) بگذاری.</p>
-            <p><b>راه‌اندازی (فقط یک بار، روی دستگاه اول):</b><br>۱) در تلگرام به <b>@BotFather</b> برو، دستور <b>/newbot</b> را بزن و توکن ربات را کپی کن.<br>۲) به همان ربات جدید یک بار <b>/start</b> بده (بدون این کار ربات نمی‌تواند برایت فایل بفرستد).<br>۳) در تب «بکاپ رسانه» توکن، «رمز رسانه» و «تکرار رمز» را بنویس و «اتصال و تست» را بزن.<br>۴) اگر عکس و ویس قدیمی داری، در پیامی که می‌پرسد «همین حالا آپلود شوند؟» تأیید را بزن (یا بعداً «ارسال همه»). آپلود فایل‌ها یکی‌یکی و با فاصله‌ی حدود ۳ ثانیه انجام می‌شود؛ پیشرفتش را در کادر «آپلود n از m» بالای دکمه‌ها می‌بینی.</p>
-            <p><b>رمز رسانه چطور باشد؟</b> حداقل <b>۶ نویسه</b> و هر دو کادر دقیقاً یکسان. می‌تواند فقط عدد باشد (مثلاً یک رمز ۸ رقمی) یا ترکیبی از حرف و عدد. بهتر است ۸ نویسه یا بیشتر و غیرقابل حدس باشد (نه تاریخ تولد و نه ۱۲۳۴۵۶). رمز را روی کاغذ یا جای امن یادداشت کن: <b>خودِ رمز هیچ‌جا ذخیره نمی‌شود و اگر فراموشش کنی عکس‌ها و ویس‌های ذخیره‌شده قابل بازیابی نیستند.</b> (فقط یک کلید غیرقابل‌استخراج روی همان دستگاه می‌ماند تا هر بار رمز نپرسد.) رمز باید روی همه‌ی دستگاه‌ها همان رمز اول باشد.</p>
+            <p><b>راه‌اندازی (فقط یک بار، روی دستگاه اول):</b><br>1) در تلگرام به <b>@BotFather</b> برو، دستور <b>/newbot</b> را بزن و توکن ربات را کپی کن.<br>2) به همان ربات جدید یک بار <b>/start</b> بده (بدون این کار ربات نمی‌تواند برایت فایل بفرستد).<br>3) در تب «بکاپ رسانه» توکن، «رمز رسانه» و «تکرار رمز» را بنویس و «اتصال و تست» را بزن.<br>4) اگر عکس و ویس قدیمی داری، در پیامی که می‌پرسد «همین حالا آپلود شوند؟» تأیید را بزن (یا بعداً «ارسال همه»). آپلود فایل‌ها یکی‌یکی و با فاصله‌ی حدود 3 ثانیه انجام می‌شود؛ پیشرفتش را در کادر «آپلود n از m» بالای دکمه‌ها می‌بینی.</p>
+            <p><b>رمز رسانه چطور باشد؟</b> حداقل <b>6 نویسه</b> و هر دو کادر دقیقاً یکسان. می‌تواند فقط عدد باشد (مثلاً یک رمز 8 رقمی) یا ترکیبی از حرف و عدد. بهتر است 8 نویسه یا بیشتر و غیرقابل حدس باشد (نه تاریخ تولد و نه 123456). رمز را روی کاغذ یا جای امن یادداشت کن: <b>خودِ رمز هیچ‌جا ذخیره نمی‌شود و اگر فراموشش کنی عکس‌ها و ویس‌های ذخیره‌شده قابل بازیابی نیستند.</b> (فقط یک کلید غیرقابل‌استخراج روی همان دستگاه می‌ماند تا هر بار رمز نپرسد.) رمز باید روی همه‌ی دستگاه‌ها همان رمز اول باشد.</p>
             <p><b>دستگاه دوم:</b> برنامه را با همان حساب تلگرام و همان ربات باز کن و چند ثانیه صبر کن تا تنظیمات از Cloud خوانده شود. <b>دوباره توکن نساز و «اتصال و تست» را نزن</b>؛ فقط در «باز کردن قفل»، رمز رسانه‌ی همان دستگاه اول را وارد کن. بعد در یادداشت‌ها، تصویرهای خاکستری با برچسب «بزن و رمز را وارد کن» یا «در صف» یکی‌یکی دانلود می‌شوند؛ «همگام‌سازی همه» همه را (تا سقف حجم محلی) یک‌جا می‌گیرد. گزینه‌ی «رمز روی این دستگاه یادآوری شود» اگر روشن باشد، دفعه‌های بعد رمز نمی‌پرسد (فقط یک کلید غیرقابل‌استخراج نگه داشته می‌شود، نه خود رمز)؛ دکمه‌ی «قفل کردن» آن را پاک می‌کند.</p>
-            <p><b>محدودیت‌ها:</b> هر فایل تا حدود ۴۹ مگابایت آپلود می‌شود و فقط فایل‌های تا حدود ۲۰ مگابایت روی دستگاه دیگر دانلود می‌شوند (محدودیت Bot API تلگرام). رسانه‌ی یادداشت‌های قفل‌دار فعلاً همگام نمی‌شود. پیش از رسیدن یادداشت از بکاپ متنی، تصویرش هم دیده نمی‌شود؛ پس ابتدا مطمئن شو سینک یادداشت‌ها سبز است.</p>
+            <p><b>محدودیت‌ها:</b> هر فایل تا حدود 49 مگابایت آپلود می‌شود و فقط فایل‌های تا حدود 20 مگابایت روی دستگاه دیگر دانلود می‌شوند (محدودیت Bot API تلگرام). رسانه‌ی یادداشت‌های قفل‌دار فعلاً همگام نمی‌شود. پیش از رسیدن یادداشت از بکاپ متنی، تصویرش هم دیده نمی‌شود؛ پس ابتدا مطمئن شو سینک یادداشت‌ها سبز است.</p>
             <p><b>اگر عکس نیامد:</b> «ربات نمی‌تواند پیام بدهد» یعنی هنوز <b>/start</b> نداده‌ای. «رمز اشتباه است» یعنی رمزی غیر از رمز اول وارد کرده‌ای. «خطا — بزن تا دوباره» را بزن یا «تلاش مجدد خطاها» را انتخاب کن. اگر شمارنده‌ی «ناهمگام» در دستگاه اول صفر نیست، «ارسال همه» را بزن. اگر «مانیفست پر است» دیدی، فضای Cloud تمام شده است.</p>
-            <p><b>نوار پیشرفت و دکمه‌ها:</b> با زدن هر دکمه، همان دکمه تا پایان کار غیرفعال می‌شود و یک چرخانک نشان می‌دهد؛ نتیجه در کادر وضعیت بالای دکمه‌ها می‌آید. هنگام آپلود یا دریافت، کادری با عبارت «آپلود n از m»، نوار پیشرفت، درصد و مرحله‌ی فعلی (رمزنگاری، ارسال، دریافت…) نشان داده می‌شود و بعد از پایان حدود ۱۲ ثانیه خلاصه‌ی «موفق / کل» می‌ماند. «ارسال همه»: فایل‌های این دستگاه را که هنوز با کلید فعلی آپلود نشده‌اند صف می‌کند. «تلاش مجدد خطاها»: فایل‌های خطادار را دوباره صف می‌کند. «همگام‌سازی همه»: همه‌ی فایل‌های دیگر دستگاه‌ها را تا سقف حجم محلی دریافت می‌کند. «آزادسازی فضا»: نسخه‌ی محلیِ فایل‌هایی را که نسخه‌ی آپلودشده دارند پاک می‌کند (بعداً دوباره دریافت می‌شوند). «سقف حجم محلی»: حداقل ۲۰ مگابایت. «غیرفعال‌سازی / فعال‌سازی»: آپلود و دریافت خودکار را قطع یا وصل می‌کند و چیزی پاک نمی‌کند. «تست اتصال» و «قفل کردن» فقط وقتی قفل باز است دیده می‌شوند. «🔄 بازنشانی کامل» برای تأیید باید کلمه‌ی ok را تایپ کنی؛ پایین‌تر توضیح داده شده.</p>
+            <p><b>نوار پیشرفت و دکمه‌ها:</b> با زدن هر دکمه، همان دکمه تا پایان کار غیرفعال می‌شود و یک چرخانک نشان می‌دهد؛ نتیجه در کادر وضعیت بالای دکمه‌ها می‌آید. هنگام آپلود یا دریافت، کادری با عبارت «آپلود n از m»، نوار پیشرفت، درصد و مرحله‌ی فعلی (رمزنگاری، ارسال، دریافت…) نشان داده می‌شود و بعد از پایان حدود 12 ثانیه خلاصه‌ی «موفق / کل» می‌ماند. «ارسال همه»: فایل‌های این دستگاه را که هنوز با کلید فعلی آپلود نشده‌اند صف می‌کند. «تلاش مجدد خطاها»: فایل‌های خطادار را دوباره صف می‌کند. «همگام‌سازی همه»: همه‌ی فایل‌های دیگر دستگاه‌ها را تا سقف حجم محلی دریافت می‌کند. «آزادسازی فضا»: نسخه‌ی محلیِ فایل‌هایی را که نسخه‌ی آپلودشده دارند پاک می‌کند (بعداً دوباره دریافت می‌شوند). «سقف حجم محلی»: حداقل 20 مگابایت. «غیرفعال‌سازی / فعال‌سازی»: آپلود و دریافت خودکار را قطع یا وصل می‌کند و چیزی پاک نمی‌کند. «تست اتصال» و «قفل کردن» فقط وقتی قفل باز است دیده می‌شوند. «🔄 بازنشانی کامل» برای تأیید باید کلمه‌ی ok را تایپ کنی؛ پایین‌تر توضیح داده شده.</p>
             <p><b>🔄 بازنشانی کامل:</b> برای وقتی که می‌خواهی همه‌چیز از اول شود، مثلاً رمز را فراموش کرده‌ای یا راه‌اندازی خراب شده است؛ حتی با قفل‌بودن هم کار می‌کند. با تأیید (تایپ ok) تنظیمات (توکن، رمز، کلید) و فهرست رسانه‌ی همه‌ی دستگاه‌ها از Cloud و از این دستگاه پاک می‌شود و فرم راه‌اندازی دوباره باز می‌شود: توکن ربات می‌دهی و رمز تازه می‌گذاری. عکس و ویس‌های روی دستگاه‌ها و فایل‌های داخل چت ربات پاک نمی‌شوند، ولی فایل‌های آپلودشده با کلید قبلی دیگر باز نمی‌شوند؛ بعد از راه‌اندازی تازه «ارسال همه» را بزن تا از روی دستگاه‌هایی که فایل‌ها را دارند دوباره آپلود شوند. روی دستگاه‌های دیگر پیام «تنظیمات عوض شد» می‌آید و باید رمز جدید را وارد کنند.</p>
             <p><b>تغییر ربات:</b> دکمه‌ی «تغییر ربات» فقط وقتی قفل باز است کار می‌کند؛ توکن ربات جدید را می‌گیرد، اتصال و ارسال پیام تست را امتحان می‌کند (ربات جدید باید یک بار /start خورده باشد) و بعد فقط توکن را عوض می‌کند؛ رمز و کلید همان می‌مانند، از «بازنشانی کامل» (که کلید را عوض می‌کند) امن‌تر است. چون file_id هر فایل مخصوص همان ربات است، فایل‌های ربات قبلی برای ربات جدید باز نمی‌شوند و همه‌ی عکس/ویس‌های موجود روی این دستگاه دوباره با ربات جدید آپلود می‌شوند (پیشرفتش در نوار پیشرفت پیداست). فایلی که فقط در چت ربات قدیمی مانده و روی هیچ دستگاهی نیست از دست می‌رود؛ پس اگر لازم بود قبلش «همگام‌سازی همه» را بزن. روی دستگاه‌های دیگر پیام «تنظیمات عوض شد» می‌آید؛ فقط همان رمز قبلی را یک بار وارد کن تا ربات جدید را بگیرند و فایل‌هایشان را هم دوباره آپلود کنند.</p>
             <p><b>خطای «decrypt-failed»:</b> یعنی آن فایل با کلید دیگری رمزنگاری شده است؛ معمولاً بعد از «بازنشانی کامل» و راه‌اندازی دوباره‌ی بکاپ رسانه (رمز یا کلید جدید). با زدن «🛠 تعمیر خودکار» (یا «همگام‌سازی همه») هر فایلی که نسخه‌اش روی همین دستگاه باشد با کلید فعلی دوباره آپلود می‌شود و رکورد خراب بقیه پاک می‌شود. «🗑 فراموش‌کردن فایل‌های خراب» فقط رکورد خراب را بدون آپلود مجدد حذف می‌کند. اگر فایل‌ها روی دستگاه دیگری هستند، روی همان دستگاه «آپلود مجدد همه با کلید فعلی» را بزن و بعد اینجا «همگام‌سازی همه». فایلی که هیچ‌جا نسخه‌اش نمانده باشد قابل بازیابی نیست. برای جلوگیری از این مشکل، «بازنشانی کامل» را فقط وقتی لازم است بزن؛ برای عوض‌کردن رمز از «تغییر رمز» استفاده کن، چون کلید را حفظ می‌کند. برنامه حالا کلید هر فایل را تشخیص می‌دهد: رکوردهای کلید قدیمی را کنار می‌گذارد، و «ارسال همه» همه‌ی فایل‌های این دستگاه را که با کلید فعلی ارسال نشده‌اند دوباره می‌فرستد. بعد از بازنشانی کامل و راه‌اندازی دوباره، روی هر دستگاه دیگر فقط کافی است رمز جدید را وارد کنی.</p>
@@ -48364,7 +48364,7 @@ catch { } }; var exportPickerPattern = /downloadStructured|downloadSelectedPDF|d
         try { var ae = document.activeElement; ae && ae !== document.body && ae.blur && ae.blur(); } catch (e) { }
         try { if (typeof autosaveCategory === "function") await autosaveCategory(id); } catch (e) { }
         var name = item.name || (fa ? "یادداشت" : "Note");
-        showAdvanced('<div class="advanced-head image-export-picker-head"><div><h3 style="margin:0">📤 ' + (fa ? "اشتراک‌گذاری یادداشت" : "Share note") + '</h3><p style="margin:5px 0 0;opacity:.65;font-size:11px">' + (fa ? "از این یادداشت یک فایل HTML ساخته می‌شود؛ یکی از دو روش زیر را انتخاب کن." : "An HTML file of this note is built; pick one of the two ways below.") + '</p></div><button class="btn-main" onclick="closeAdvancedModal()">✕</button></div>'
+        showAdvanced('<div class="advanced-head image-export-picker-head"><div><h3 style="margin:0">?? ' + (fa ? "اشتراک‌گذاری یادداشت" : "Share note") + '</h3><p style="margin:5px 0 0;opacity:.65;font-size:11px">' + (fa ? "از این یادداشت یک فایل HTML ساخته می‌شود؛ یکی از دو روش زیر را انتخاب کن." : "An HTML file of this note is built; pick one of the two ways below.") + '</p></div><button class="btn-main" onclick="closeAdvancedModal()">✕</button></div>'
             + '<div class="image-export-picker-actions"><span class="image-export-count">' + (item.locked || (typeof isNoteLocked === "function" && isNoteLocked(item)) ? "🔒 " : "") + esc(name) + '</span></div>'
             + '<div class="image-export-choice-grid">' + '<button type="button" class="image-export-choice" onclick="mkShareNoteHtmlGo(\'' + jsq(id) + '\',\'bot\')"><span class="image-export-choice-icon">📨</span><span class="image-export-choice-name">' + (fa ? "ارسال به چت ربات" : "Send to bot chat") + '</span><span class="image-export-choice-action">' + (fa ? "بکاپ رسانه" : "Media backup") + '</span></button>' + '<button type="button" class="image-export-choice" onclick="mkShareNoteHtmlGo(\'' + jsq(id) + '\',\'menu\')"><span class="image-export-choice-icon">📤</span><span class="image-export-choice-name">' + (fa ? "منوی اشتراک‌گذاری" : "Share menu") + '</span><span class="image-export-choice-action">' + (fa ? "اشتراک‌گذاری / دانلود" : "Share / Download") + '</span></button>' + '</div>');
     };
@@ -62546,15 +62546,15 @@ var CONT = [["AS", "آسیا", "Asia"], ["EU", "اروپا", "Europe"], ["NA", "
         fa: {
             title: "📦 بکاپ رسانه (عکس و ویس)", off: "خاموش", notset: "تنظیم نشده", test: "تست اتصال", bot: "ربات", on: "روشن", locked: "قفل", unlocked: "باز",
             intro: "عکس، ویس و فایل‌ها رمزنگاری می‌شوند و در چت خصوصی ربات شخصی خودت ذخیره می‌شوند؛ هیچ سروری در کار نیست.",
-            steps: "۱) در @BotFather یک ربات بساز و توکن را کپی کن. ۲) یک بار به ربات پیام /start بده. ۳) توکن و یک رمز (حداقل ۶ نویسه؛ عدد یا حرف؛ روی همه‌ی دستگاه‌ها همان) را اینجا وارد کن. راهنمای کامل: دکمه‌ی ❓ بالای همین پنل.",
-            token: "توکن ربات", pw: "رمز رسانه (حداقل ۶ نویسه)", pw2: "تکرار رمز", adv: "پیشرفته: آدرس پایهٔ API (پروکسی)", base: "آدرس پایه",
+            steps: "1) در @BotFather یک ربات بساز و توکن را کپی کن. 2) یک بار به ربات پیام /start بده. 3) توکن و یک رمز (حداقل 6 نویسه؛ عدد یا حرف؛ روی همه‌ی دستگاه‌ها همان) را اینجا وارد کن. راهنمای کامل: دکمه‌ی ❓ بالای همین پنل.",
+            token: "توکن ربات", pw: "رمز رسانه (حداقل 6 نویسه)", pw2: "تکرار رمز", adv: "پیشرفته: آدرس پایهٔ API (پروکسی)", base: "آدرس پایه",
             connect: "اتصال و تست", unlock: "باز کردن قفل", lock: "قفل کردن", pwnote: "رمز هیچ‌جا ذخیره نمی‌شود؛ هر نشست یک بار پرسیده می‌شود. اگر فراموشش کنی رسانه‌ها قابل بازیابی نیستند.",
             cloudcfg: "این حساب قبلاً روی دستگاه دیگری تنظیم شده؛ فقط رمز رسانه را وارد کن.",
             total: "کل", uploaded: "آپلودشده", unsynced: "ناهمگام", here: "روی این دستگاه", errors: "خطا",
             sendAll: "ارسال همه", repair: "🛠 تعمیر خودکار", forget: "🗑 فراموش‌کردن فایل‌های خراب", confirmForget: "رکورد فایل‌های خراب فقط از حافظه‌ی همین دستگاه پاک می‌شود و دیگر خطا نمی‌دهند. ادامه بدهم؟", forgotN: "فراموش شد", redoAll: "آپلود مجدد همه با کلید فعلی", confirmRedo: "همه‌ی عکس/ویس‌های موجود روی این دستگاه با کلید فعلی دوباره آپلود می‌شوند و رکوردهای قدیمی نادیده گرفته می‌شوند. ادامه بدهم؟", badNote: "بعضی فایل‌ها با کلید دیگری رمزنگاری شده‌اند (احتمالاً بعد از بازنشانی کامل و راه‌اندازی دوباره). «تعمیر خودکار» را بزن: اگر نسخه‌ی فایل روی این دستگاه باشد دوباره آپلود می‌شود، وگرنه رکورد خراب پاک می‌شود.", repaired: "تعمیر شد", redoN: "آپلود مجدد", lostN: "غیرقابل‌بازیابی", retry: "تلاش مجدد خطاها", syncAll: "همگام‌سازی همه", free: "آزادسازی فضا", disable: "غیرفعال‌سازی", enable: "فعال‌سازی", remove: "حذف تنظیمات",
             cap: "سقف حجم محلی (MB)", usage: "حجم رسانهٔ محلی", browser: "حافظهٔ مرورگر", keys: "کلید مانیفست",
             queue: "صف", idle: "بیکار", fullM: "⚠️ مانیفست پر است؛ رسانه‌های جدید در فهرست ابری ثبت نمی‌شوند.",
-            okConnected: "✅ متصل شد:", errToken: "توکن نامعتبر است.", errPw: "رمز حداقل ۶ نویسه و هر دو یکسان باشد.", errChat: "شناسهٔ کاربر تلگرام در دسترس نیست؛ برنامه را داخل تلگرام باز کن.",
+            okConnected: "✅ متصل شد:", errToken: "توکن نامعتبر است.", errPw: "رمز حداقل 6 نویسه و هر دو یکسان باشد.", errChat: "شناسهٔ کاربر تلگرام در دسترس نیست؛ برنامه را داخل تلگرام باز کن.",
             errNet: "اتصال به سرور ربات برقرار نشد. پروکسی تلگرام (MTProto) برای مینی‌اپ کار نمی‌کند؛ برای ارسال فایل‌ها VPN یا اینترنت آزاد لازم است. به‌محض وصل شدن، خودکار ادامه می‌دهد.", errStart: "ربات نمی‌تواند پیام بدهد؛ ابتدا در تلگرام به ربات /start بده.", errWrong: "رمز اشتباه است.",
             qd: "⏳ در صف", dl: "⬇️ در حال دریافت…", er: "⚠️ خطا — بزن تا دوباره", lk: "🔒 بزن و رمز را وارد کن", big: "⛔ فایل بزرگ‌تر از حد Bot API",
             confirmFree: "رسانه‌هایی که نسخهٔ آپلودشده دارند از این دستگاه پاک شوند؟ هر وقت لازم شد دوباره دریافت می‌شوند.", confirmRm: "⚠️ هشدار: تنظیمات بکاپ رسانه از این دستگاه و Cloud حذف می‌شود.\n\nاگر دوباره راه‌اندازی کنی، کلید جدید ساخته می‌شود و فایل‌هایی که قبلاً آپلود شده‌اند دیگر باز نمی‌شوند (خطای decrypt-failed). برای عوض‌کردن رمز از «تغییر رمز» استفاده کن.\n\nفایل‌های داخل چت ربات و رسانه‌های روی دستگاه پاک نمی‌شوند.\n\nبرای تأیید، کلمه‌ی ok را تایپ کن:",
@@ -62563,7 +62563,7 @@ var CONT = [["AS", "آسیا", "Asia"], ["EU", "اروپا", "Europe"], ["NA", "
             uploadOld: "{n} عکس/ویس قدیمی هنوز آپلود نشده. همین حالا آپلود شوند تا در دستگاه دیگر هم دیده شوند؟", found: "📦 بکاپ رسانه برای این حساب فعال است. روی تصویر خاکستری بزن و رمز رسانه را وارد کن.", cfgChanged: "تنظیمات بکاپ رسانه در دستگاه دیگر عوض شد؛ دوباره رمز را وارد کن.",
             advHint: "پیش‌فرض: پروکسی val.town. می‌توانی روی Cloudflare، اتصال مستقیم تلگرام یا آدرس دلخواه سوییچ کنی. اگر «تغییر خودکار» روشن باشد و مسیر انتخابی جواب ندهد، برنامه خودش بقیه را تست می‌کند و سالم‌ترین را می‌گیرد، و وقتی مسیر اصلی برگشت دوباره به آن برمی‌گردد. توکن ربات از مسیر انتخابی رد می‌شود؛ فقط پروکسی مورد اعتماد بگذار.", rtSwitch: "مسیر جواب نداد؛ خودکار سوییچ شد به", rtBack: "مسیر اصلی دوباره سالم شد:", rtDown: "قطع", rtVia: "در حال استفاده از", rtAuto: "تغییر خودکار مسیر در صورت قطعی (پیشنهادی)", rtCustomPh: "آدرس دلخواه (اختیاری) https://...", rtTestAll: "تست همهٔ مسیرها", rtChosen: "مسیر انتخاب شد:", rtAutoOn: "تغییر خودکار روشن شد", rtAutoOff: "تغییر خودکار خاموش شد؛ فقط مسیر انتخابی استفاده می‌شود", rtTesting: "در حال تست مسیرها…", 
             advSave: "ذخیره و تست", advTest: "فقط تست", advReset: "برگشت به پیش‌فرض", advBad: "آدرس نامعتبر است؛ باید با https:// شروع شود.", advSaved: "✅ آدرس ذخیره شد", advDef: "آدرس پیش‌فرض برگردانده شد", advNow: "آدرس فعلی", advLocked: "ذخیره شد؛ برای تست، اول قفل را باز کن.",
-            chpw: "تغییر رمز", chpwT: "تغییر رمز رسانه", oldPw: "رمز فعلی", newPw: "رمز جدید (حداقل ۶ نویسه)", newPw2: "تکرار رمز جدید", pwChanged: "✅ رمز رسانه تغییر کرد", errSame: "رمز جدید باید با رمز فعلی فرق کند.", chpwNote: "رسانه‌های قبلی دوباره آپلود نمی‌شوند و همچنان باز می‌شوند. روی دستگاه‌های دیگر باید یک بار رمز جدید را وارد کنی."
+            chpw: "تغییر رمز", chpwT: "تغییر رمز رسانه", oldPw: "رمز فعلی", newPw: "رمز جدید (حداقل 6 نویسه)", newPw2: "تکرار رمز جدید", pwChanged: "✅ رمز رسانه تغییر کرد", errSame: "رمز جدید باید با رمز فعلی فرق کند.", chpwNote: "رسانه‌های قبلی دوباره آپلود نمی‌شوند و همچنان باز می‌شوند. روی دستگاه‌های دیگر باید یک بار رمز جدید را وارد کنی."
         },
         en: {
             title: "📦 Media backup (photos, voice & files)", off: "Off", notset: "Not set up", test: "Test connection", bot: "Bot", on: "On", locked: "Locked", unlocked: "Unlocked",
@@ -62592,7 +62592,7 @@ var CONT = [["AS", "آسیا", "Asia"], ["EU", "اروپا", "Europe"], ["NA", "
         intro: "عکس، ویس و فایل‌ها رمزنگاری می‌شوند و در چت خصوصی ربات شخصی خودت ذخیره می‌شوند. سرور ذخیره‌سازی در کار نیست؛ فقط درخواست‌های ربات به‌صورت پیش‌فرض از یک پروکسی ساده به api.telegram.org می‌رسد (در «پیشرفته» قابل تغییر).",
         pwnote: "خودِ رمز هیچ‌جا ذخیره نمی‌شود. به‌صورت پیش‌فرض یک کلید غیرقابل‌استخراج روی همین دستگاه می‌ماند تا رمز را دوباره نپرسد (با «قفل کردن» پاک می‌شود). اگر رمز را فراموش کنی رسانه‌ها قابل بازیابی نیستند.",
         pgUp: "آپلود", pgDn: "دریافت", pgOf: "از", pgDone: "✅ انجام شد (موفق / کل)", working: "در حال انجام…", queueL: "صف",
-        stEnc: "رمزنگاری فایل…", stSend: "ارسال به تلگرام… (بین فایل‌ها ~۳ ثانیه فاصله است)", stGet: "دریافت از تلگرام…", stDec: "رمزگشایی و ذخیره…",
+        stEnc: "رمزنگاری فایل…", stSend: "ارسال به تلگرام… (بین فایل‌ها ~3 ثانیه فاصله است)", stGet: "دریافت از تلگرام…", stDec: "رمزگشایی و ذخیره…",
         phMan: "ذخیره‌ی فهرست در Cloud…", phConn: "اتصال به تلگرام…", phScan: "بررسی فایل‌های این دستگاه…", phRetry: "آماده‌سازی تلاش مجدد…", phPull: "خواندن فهرست از Cloud…", phRepair: "تعمیر و آماده‌سازی…", phFree: "آزادسازی فضا…", phRemove: "در حال بازنشانی…",
         rtN: "✅ {n} فایل دوباره در صف قرار گرفت", rtNone: "خطایی برای تلاش مجدد نبود", syQ: "✅ {n} فایل در صف دریافت قرار گرفت", syNone: "چیزی برای دریافت نبود؛ همه‌ی فایل‌های قابل‌دریافت روی این دستگاه هستند",
         offDone: "✅ بکاپ رسانه غیرفعال شد", onDone: "✅ بکاپ رسانه فعال شد", lockDone: "🔒 قفل شد؛ برای ادامه رمز را وارد کن"
@@ -62628,7 +62628,7 @@ var CONT = [["AS", "آسیا", "Asia"], ["EU", "اروپا", "Europe"], ["NA", "
     });
     Object.assign(D.fa, {
         autoT: "همگام‌سازی خودکار",
-        autoH: "وقتی روشن است، عکس و ویس‌های جدید خودکار آپلود می‌شوند و رسانه‌هایی که یادداشت‌هایت به آن‌ها اشاره دارد ولی روی این دستگاه نیستند (مثلاً از دستگاه دیگر) خودکار دریافت می‌شوند؛ دیگر لازم نیست «ارسال همه» یا «همگام‌سازی همه» را بزنی. دریافت خودکار از سقف حجم محلی رد نمی‌شود و هیچ فایلی را پاک نمی‌کند. خطاهای شبکه بعد از ۱۰ دقیقه خودکار دوباره امتحان می‌شوند. فقط روی همین دستگاه اثر دارد.",
+        autoH: "وقتی روشن است، عکس و ویس‌های جدید خودکار آپلود می‌شوند و رسانه‌هایی که یادداشت‌هایت به آن‌ها اشاره دارد ولی روی این دستگاه نیستند (مثلاً از دستگاه دیگر) خودکار دریافت می‌شوند؛ دیگر لازم نیست «ارسال همه» یا «همگام‌سازی همه» را بزنی. دریافت خودکار از سقف حجم محلی رد نمی‌شود و هیچ فایلی را پاک نمی‌کند. خطاهای شبکه بعد از 10 دقیقه خودکار دوباره امتحان می‌شوند. فقط روی همین دستگاه اثر دارد.",
         autoOnT: "✅ همگام‌سازی خودکار رسانه روشن شد", autoOffT: "⏸ همگام‌سازی خودکار رسانه خاموش شد"
     });
     Object.assign(D.en, {
@@ -62642,8 +62642,8 @@ var CONT = [["AS", "آسیا", "Asia"], ["EU", "اروپا", "Europe"], ["NA", "
         orphUnsafe: "الان حذف امن نیست: یادداشتی بارگذاری نشده، یا یادداشت قفل‌شده/گاوصندوقی هست که نمی‌شود از رویش فهمید به کدام رسانه اشاره دارد. بعداً دوباره امتحان کن.",
         orphConfirm: "{n} رسانه هست که هیچ یادداشتی به آن اشاره نمی‌کند. از فهرست رسانه (شمارنده‌ها و Cloud) و از حافظه‌ی این دستگاه حذف شوند؟\n\nفایل رمزشده‌ی داخل چت ربات پاک نمی‌شود، ولی از برنامه دیگر قابل بازیابی نیست. اگر یادداشت‌های دستگاه دیگر هنوز اینجا همگام نشده‌اند، اول «فعال‌سازی / تعمیر سینک خودکار» را بزن.",
         cleanT: "حذف خودکار رسانه‌های بی‌صاحب",
-        cleanH: "وقتی روشن است، رسانه‌ای که بیش از ۳۰ دقیقه هیچ یادداشتی به آن اشاره نکند خودکار از فهرست و حافظه‌ی این دستگاه حذف می‌شود. پیش‌فرض خاموش است. فایل داخل چت ربات پاک نمی‌شود. اگر یادداشت قفل‌شده‌ی قدیمی یا گاوصندوق قدیمی داشته باشی، حذف انجام نمی‌شود.",
-        cleanAsk: "حذف خودکار روشن شود؟ رسانه‌ای که بیش از ۳۰ دقیقه به هیچ یادداشتی وصل نباشد خودکار حذف می‌شود؛ پیامش در چت ربات هم پاک می‌شود.", cleanOnT: "✅ حذف خودکار رسانه‌های بی‌صاحب روشن شد", cleanOffT: "⏸ حذف خودکار رسانه‌های بی‌صاحب خاموش شد"
+        cleanH: "وقتی روشن است، رسانه‌ای که بیش از 30 دقیقه هیچ یادداشتی به آن اشاره نکند خودکار از فهرست و حافظه‌ی این دستگاه حذف می‌شود. پیش‌فرض خاموش است. فایل داخل چت ربات پاک نمی‌شود. اگر یادداشت قفل‌شده‌ی قدیمی یا گاوصندوق قدیمی داشته باشی، حذف انجام نمی‌شود.",
+        cleanAsk: "حذف خودکار روشن شود؟ رسانه‌ای که بیش از 30 دقیقه به هیچ یادداشتی وصل نباشد خودکار حذف می‌شود؛ پیامش در چت ربات هم پاک می‌شود.", cleanOnT: "✅ حذف خودکار رسانه‌های بی‌صاحب روشن شد", cleanOffT: "⏸ حذف خودکار رسانه‌های بی‌صاحب خاموش شد"
     });
     Object.assign(D.en, {
         orphans: "Orphans (no note points at them)", purge: "Remove orphan media", phPurge: "Removing orphan media…",
@@ -62655,7 +62655,7 @@ var CONT = [["AS", "آسیا", "Asia"], ["EU", "اروپا", "Europe"], ["NA", "
         cleanAsk: "Turn on auto-remove? Media that no note points at for over 30 minutes will be removed automatically, including from the bot chat.", cleanOnT: "✅ Auto-remove of orphan media is on", cleanOffT: "⏸ Auto-remove of orphan media is off"
     });
     Object.assign(D.fa, {
-        defSteps: "ربات رسانه آماده است. ۱) یک بار در تلگرام به ربات /start بده. ۲) فقط یک رمز (حداقل ۶ نویسه؛ روی همه‌ی دستگاه‌ها همان) بگذار.",
+        defSteps: "ربات رسانه آماده است. 1) یک بار در تلگرام به ربات /start بده. 2) فقط یک رمز (حداقل 6 نویسه؛ روی همه‌ی دستگاه‌ها همان) بگذار.",
         useOwn: "استفاده از ربات خودم (توکن دلخواه)", useDef: "برگشت به ربات پیش‌فرض", botIsDef: "ربات فعلی: پیش‌فرض", botIsCustom: "ربات فعلی: سفارشی"
     });
     Object.assign(D.en, {
@@ -63086,7 +63086,7 @@ var CONT = [["AS", "آسیا", "Asia"], ["EU", "اروپا", "Europe"], ["NA", "
         for (const id of S.localKeys) { try { const b = await MU_MEDIA.get(id); b && (u += b.size || 0); } catch { } if (++n % 15 === 0) await sleep(8); }
         S.usage = u; S.usageKnown = !0;
     }
-    const capBytes = () => Math.max(20, +((readCfg() || {}).cap || 200)) * 1048576;
+    const capBytes = () => Math.max(20, +((readCfg() || {}).cap || 2000)) * 1048576;
     const touch = id => { S.la[id] = Date.now(); persist(); };
     function evictable() {
         const vis = new Set; S.visible.forEach(el => { try { const i = el.getAttribute("data-mu-media"); i && vis.add(i); } catch { } });
@@ -63243,7 +63243,7 @@ var CONT = [["AS", "آسیا", "Asia"], ["EU", "اروپا", "Europe"], ["NA", "
     /* ---------- progress box + busy buttons ---------- */
     const pgTotal = () => S.pg.done + S.qUp.length + S.qDown.length + (S.cur ? 1 : 0);
     function pgHtml() {
-        const g = S.pg, tot = pgTotal(), fa = lang() === "fa", n = x => fa ? String(x).replace(/\d/g, d => "۰۱۲۳۴۵۶۷۸۹"[d]) : String(x);
+        const g = S.pg, tot = pgTotal(), fa = lang() === "fa", n = x => String(x);
         const working = S.busy || S.acts.size > 0 || !!S.phase, fin = !working && g.done > 0 && g.fin && Date.now() - g.fin < 12000;
         if (!working && !fin) return '<div class="mkmed-prog" id="mkmedProg" hidden></div>';
         if (fin) return `<div class="mkmed-prog" id="mkmedProg" role="status"><div class="pr"><span>${T("pgDone")}</span><span>${n(g.ok)} / ${n(g.done)}</span></div><div class="bar"><i style="width:100%"></i></div>${g.err ? `<div class="sub">⚠️ ${T("errors")}: ${n(g.err)}</div>` : ""}</div>`;
@@ -63483,7 +63483,7 @@ var CONT = [["AS", "آسیا", "Asia"], ["EU", "اروپا", "Europe"], ["NA", "
        queue to finish. Respects the local size limit and the "since" point chosen at setup. Never throws. */
     async function fullSync(report, opts) {
         opts = opts || {}; report = typeof report === "function" ? report : () => { };
-        const fa = lang() === "fa", L = (x, y) => fa ? x : y, n = x => fa ? String(x).replace(/\d/g, d => "۰۱۲۳۴۵۶۷۸۹"[d]) : String(x);
+        const fa = lang() === "fa", L = (x, y) => fa ? x : y, n = x => String(x);
         try {
             if (!isOn() || !readCfg()) return { skipped: !0 };
             if (!S.token || !S.key) return { locked: !0 };
@@ -63607,7 +63607,7 @@ var CONT = [["AS", "آسیا", "Asia"], ["EU", "اروپا", "Europe"], ["NA", "
             return h;
         }
         if (!unl) h += `<div class="mkmed-card"><div class="mkmed-ct">🔒 ${T("unlock")}</div><div class="mkmed-note" style="margin:0 0 6px">${T("cloudcfg")}</div><input class="mkmed-in" id="mkmedPw" type="password" placeholder="${T("pw")}" autocomplete="current-password" autocapitalize="off" autocorrect="off" spellcheck="false" value="${esc(S.draft.mkmedPw || "")}"><label class="mkmed-note" style="display:block;margin:4px 0"><input type="checkbox" id="mkmedRem" ${S.remember ? "checked" : ""}> ${T("remember")}</label><div class="mkmed-btns"><button type="button" class="btn-main mkmed-b pri" data-mkact="unlock">${T("unlock")}</button></div><div class="mkmed-msg" id="mkmedMsg">${esc(S.msg || "")}</div></div>`;
-        const L = (x, y) => fa ? x : y, nf = x => fa ? String(x).replace(/\d/g, d => "۰۱۲۳۴۵۶۷۸۹"[d]) : String(x);
+        const L = (x, y) => fa ? x : y, nf = x => String(x);
         const card = (ic, t, body, cls) => `<div class="mkmed-card ${cls || ""}"><div class="mkmed-ct"><span>${ic}</span><span>${t}</span></div>${body}</div>`;
         const btn = (act, label, cls) => `<button type="button" class="btn-main mkmed-b ${cls || ""}" data-mkact="${act}">${label}</button>`;
         const cap = capBytes(), pct = Math.min(100, S.usage / cap * 100), mb = n => (n / 1048576).toFixed(1);
@@ -63760,7 +63760,7 @@ var CONT = [["AS", "آسیا", "Asia"], ["EU", "اروپا", "Europe"], ["NA", "
         }
     }, !0);
     document.addEventListener("input", e => { const t = e.target; t && t.id && /^mkmed(Tok|Pw|Pw2|Base)$/.test(t.id) && (S.draft[t.id] = t.value); });
-    document.addEventListener("change", e => { if (e.target && e.target.id === "mkmedCap") { const c = readCfg(); if (c) { c.cap = Math.max(20, +e.target.value || 200); lsSet(LS_CFG, JSON.stringify(c)); render(); } } });
+    document.addEventListener("change", e => { if (e.target && e.target.id === "mkmedCap") { const c = readCfg(); if (c) { c.cap = Math.max(20, +e.target.value || 2000); lsSet(LS_CFG, JSON.stringify(c)); render(); } } });
     new MutationObserver(() => { document.getElementById("cloudPaneMedia") && !document.getElementById("mkmedSec") && injectSection(); }).observe(document.body, { childList: !0, subtree: !0 });
     document.addEventListener("visibilitychange", () => { if (!isOn()) return; if (document.visibilityState === "visible") { pullManifest(); readCloudCfg(); } else S.manifestDirty && !S.manifestFull && pushManifest(); });
     window.addEventListener("pagehide", () => { isOn() && S.manifestDirty && !S.manifestFull && pushManifest(); });
@@ -63938,8 +63938,8 @@ var CONT = [["AS", "آسیا", "Asia"], ["EU", "اروپا", "Europe"], ["NA", "
     var sleep = function (ms) { return new Promise(function (r) { setTimeout(r, ms); }); };
     var bd = function (x) { return '<bdi dir="ltr">' + x + '</bdi>'; };
     function fmtSize(n) { n = +n || 0; if (n < 1024) return n + " B"; if (n < 1048576) return (n / 1024).toFixed(1) + " KB"; if (n < 1073741824) return (n / 1048576).toFixed(n < 10485760 ? 2 : 1) + " MB"; return (n / 1073741824).toFixed(2) + " GB"; }
-    var fa = function (n) { try { return new Intl.NumberFormat("fa-IR").format(n); } catch (e) { return String(n); } };
-    function fmtDate(ts) { try { return new Intl.DateTimeFormat("fa-IR-u-ca-persian", { dateStyle: "medium", timeStyle: "short" }).format(new Date(ts)); } catch (e) { return new Date(ts).toLocaleString(); } }
+    var fa = function (n) { try { return new Intl.NumberFormat("en-US").format(n); } catch (e) { return String(n); } };
+    function fmtDate(ts) { try { return new Intl.DateTimeFormat("en-US", { dateStyle: "medium", timeStyle: "short" }).format(new Date(ts)); } catch (e) { return new Date(ts).toLocaleString(); } }
     function stamp(ts) { var d = new Date(ts || Date.now()), p = function (x) { return String(x).padStart(2, "0"); }; return d.getFullYear() + p(d.getMonth() + 1) + p(d.getDate()) + "-" + p(d.getHours()) + p(d.getMinutes()); }
     async function sha256hex(str) { var b = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(str)); return Array.from(new Uint8Array(b)).map(function (x) { return x.toString(16).padStart(2, "0"); }).join(""); }
     var G = function (name) { try { return (0, eval)("typeof " + name + "!=='undefined'?" + name + ":undefined"); } catch (e) { return undefined; } };
@@ -63971,7 +63971,7 @@ var CONT = [["AS", "آسیا", "Asia"], ["EU", "اروپا", "Europe"], ["NA", "
     async function httpError(res, data) {
         if (!data) { try { data = await res.json(); } catch (e) { data = null; } }
         var msg = (data && (data.message && data.message !== data.error ? data.message : data.error)) || ("خطای سرور (" + res.status + ")");
-        var map = { unauthorized: "نشست منقضی شده؛ دوباره وارد شو.", forbidden: "کد ثبت‌نام نادرست است.", too_big: "حجم این بکاپ از ۳.۵ گیگابایت بیشتر است.", total_full: "ظرفیت کل بکاپ‌ها (۳.۶ گیگابایت) پر است.", bad_credentials: "نام کاربری یا رمز اشتباه است.", exists: "این نام کاربری قبلاً ثبت شده.", locked: "تلاش‌های ناموفق زیاد؛ چند دقیقه بعد دوباره امتحان کن.", not_configured: "Worker کامل تنظیم نشده (BUCKET / JWT_SECRET / REGISTER_CODE)." };
+        var map = { unauthorized: "نشست منقضی شده؛ دوباره وارد شو.", forbidden: "کد ثبت‌نام نادرست است.", too_big: "حجم این بکاپ از 3.5 گیگابایت بیشتر است.", total_full: "ظرفیت کل بکاپ‌ها (3.6 گیگابایت) پر است.", bad_credentials: "نام کاربری یا رمز اشتباه است.", exists: "این نام کاربری قبلاً ثبت شده.", locked: "تلاش‌های ناموفق زیاد؛ چند دقیقه بعد دوباره امتحان کن.", not_configured: "Worker کامل تنظیم نشده (BUCKET / JWT_SECRET / REGISTER_CODE)." };
         var e = new Error(map[data && data.error] || msg); e.status = res.status; e.code = data && data.error; return e;
     }
     function blobToB64(blob) { return new Promise(function (res, rej) { var r = new FileReader(); r.onload = function () { var s = String(r.result); res(s.slice(s.indexOf(",") + 1)); }; r.onerror = function () { rej(new Error("خواندن بخش ناموفق بود")); }; r.readAsDataURL(blob); }); }
@@ -64088,9 +64088,9 @@ var CONT = [["AS", "آسیا", "Asia"], ["EU", "اروپا", "Europe"], ["NA", "
     async function getPass(creating) {
         if (S.pass) return S.pass;
         if (creating) {
-            var a = await ask({ title: "رمز رمزنگاری بکاپ", text: "بکاپ قبل از ارسال روی همین دستگاه با AES-256-GCM رمزنگاری می‌شود. این رمز هرگز به سرور فرستاده نمی‌شود و جایی ذخیره نمی‌شود؛ اگر فراموشش کنی هیچ‌کس نمی‌تواند بکاپ را باز کند. (حداقل ۸ نویسه)", input: "رمز رمزنگاری بکاپ", password: 1, ok: "ادامه" });
+            var a = await ask({ title: "رمز رمزنگاری بکاپ", text: "بکاپ قبل از ارسال روی همین دستگاه با AES-256-GCM رمزنگاری می‌شود. این رمز هرگز به سرور فرستاده نمی‌شود و جایی ذخیره نمی‌شود؛ اگر فراموشش کنی هیچ‌کس نمی‌تواند بکاپ را باز کند. (حداقل 8 نویسه)", input: "رمز رمزنگاری بکاپ", password: 1, ok: "ادامه" });
             if (!a) throw cancelledErr();
-            if (!a.value || a.value.length < 8) throw new Error("رمز رمزنگاری حداقل ۸ نویسه باشد؛ بکاپ ارسال نشد.");
+            if (!a.value || a.value.length < 8) throw new Error("رمز رمزنگاری حداقل 8 نویسه باشد؛ بکاپ ارسال نشد.");
             var b = await ask({ title: "تکرار رمز رمزنگاری", text: "رمز را دوباره وارد کن تا مطمئن شویم اشتباه تایپ نشده است.", input: "تکرار رمز", password: 1, ok: "تأیید" });
             if (!b) throw cancelledErr();
             if (b.value !== a.value) throw new Error("تکرار رمز با رمز یکی نیست؛ بکاپ ارسال نشد.");
@@ -64273,7 +64273,7 @@ var CONT = [["AS", "آسیا", "Asia"], ["EU", "اروپا", "Europe"], ["NA", "
 
     async function upl(blob, path, body, onBytes) {
         blob = await encryptBlob(blob);   /* nothing is ever uploaded in plain form */
-        if (blob.size > MAX) throw new Error("حجم این بخش " + fmtSize(blob.size) + " است و از سقف ۳.۵ گیگابایتِ هر بکاپ بیشتر است.");
+        if (blob.size > MAX) throw new Error("حجم این بخش " + fmtSize(blob.size) + " است و از سقف 3.5 گیگابایتِ هر بکاپ بیشتر است.");
         body.size = blob.size;
         var init = await api(path, { method: "POST", body: body });
         var id = init.id, partSize = init.partSize || PART, total = init.parts, done = new Array(total).fill(0), parts = new Array(total), next = 0, xhrs = new Set(), failed = null;
@@ -64632,7 +64632,7 @@ details summary{cursor:pointer;color:#cfc9ff;font-weight:600;padding:4px 0}\
         var reg = S.tab === "register";
         return '<div class="card"><div class="tabs"><button class="btn' + (!reg ? " on" : "") + '" data-a="tab" data-v="login">ورود</button><button class="btn' + (reg ? " on" : "") + '" data-a="tab" data-v="register">ثبت‌نام</button></div>' +
             '<label>نام کاربری</label><input id="u" autocomplete="username" autocapitalize="none" spellcheck="false" value="' + esc(S.user) + '">' +
-            '<label>رمز عبور' + (reg ? ' (حداقل ۸ نویسه)' : '') + '</label><input id="p" type="password" autocomplete="' + (reg ? "new-password" : "current-password") + '">' +
+            '<label>رمز عبور' + (reg ? ' (حداقل 8 نویسه)' : '') + '</label><input id="p" type="password" autocomplete="' + (reg ? "new-password" : "current-password") + '">' +
             (reg ? '<label>تکرار رمز عبور</label><input id="p2" type="password" autocomplete="new-password">' : '') +
             '<div class="row" style="margin-top:14px"><button class="btn pri grow" data-a="auth" id="goBtn">' + (reg ? "ساخت حساب" : "ورود") + '</button></div><div id="msg"></div></div>' +
             '<details class="card"><summary>⚙️ آدرس سرور (Worker)</summary><label>URL</label><input id="api" placeholder="https://markhin-backup.xxx.workers.dev" value="' + esc(apiBase()) + '"><div class="row" style="margin-top:10px"><button class="btn sm" data-a="saveApi">ذخیره</button><button class="btn sm" data-a="ping">تست اتصال</button></div><div id="apiMsg" class="muted" style="margin-top:6px"></div></details>';
@@ -64675,7 +64675,7 @@ details summary{cursor:pointer;color:#cfc9ff;font-weight:600;padding:4px 0}\
     }
     function pickSumHtml() {
         var r = pickSum(), oth = othersTotal(S.pick.target), pct = r.total / MAX * 100, over = r.total > MAX || oth + r.total > MAX_TOTAL;
-        return '<div class="muted">' + fa(r.cnt) + ' یادداشت انتخاب شده · حجم تقریبی: ' + bd(fmtSize(r.add)) + '</div><div class="bar"><i style="width:' + Math.min(100, pct) + '%' + (over ? ';background:#ff6b8b' : '') + '"></i></div><div class="' + (over ? "err" : "muted") + '">مصرف پس از افزودن: ' + bd(fmtSize(r.total)) + ' از ' + bd(fmtSize(MAX)) + ' (' + pct.toFixed(1) + '٪) · مانده ' + bd(fmtSize(Math.max(0, MAX - r.total))) + (over ? " — از سقف (هر بکاپ ۳.۵GB / کل ۳.۶GB) بیشتر است؛ یادداشت‌هایی که جا نشوند رد می‌شوند." : "") + '</div>';
+        return '<div class="muted">' + fa(r.cnt) + ' یادداشت انتخاب شده · حجم تقریبی: ' + bd(fmtSize(r.add)) + '</div><div class="bar"><i style="width:' + Math.min(100, pct) + '%' + (over ? ';background:#ff6b8b' : '') + '"></i></div><div class="' + (over ? "err" : "muted") + '">مصرف پس از افزودن: ' + bd(fmtSize(r.total)) + ' از ' + bd(fmtSize(MAX)) + ' (' + pct.toFixed(1) + '٪) · مانده ' + bd(fmtSize(Math.max(0, MAX - r.total))) + (over ? " — از سقف (هر بکاپ 3.5GB / کل 3.6GB) بیشتر است؛ یادداشت‌هایی که جا نشوند رد می‌شوند." : "") + '</div>';
     }
     function pickRows() {
         var P = S.pick, q = P.q.trim().toLowerCase(), info = P.target ? S.items.filter(function (x) { return x.id === P.target; })[0] : null;
@@ -64711,12 +64711,12 @@ details summary{cursor:pointer;color:#cfc9ff;font-weight:600;padding:4px 0}\
     function statsHtml() {
         var tot = S.items.reduce(function (n, x) { return n + (x.size || 0); }, 0), big = S.items.reduce(function (n, x) { return Math.max(n, x.size || 0); }, 0), last = S.items.length ? S.items[0].createdAt : 0, L = S.local;
         return '<h3>📊 وضعیت</h3><div class="grid">' +
-            '<div class="stat"><b>' + (S.loaded ? fa(S.items.length) : "…") + '</b><span>تعداد بکاپ‌ها</span></div><div class="stat"><b>' + (S.loaded ? bd(fmtSize(tot)) : "…") + '</b><span>مجموع حجم (سقف کل ۳.۶GB)</span></div><div class="stat"><b>' + (S.loaded ? bd(fmtSize(big)) : "…") + '</b><span>بزرگ‌ترین بکاپ (سقف هر بکاپ ۳.۵GB)</span></div><div class="stat"><b>' + (S.loaded ? (last ? bd(esc(fmtDate(last))) : "—") : "…") + '</b><span>آخرین بکاپ</span></div>' +
+            '<div class="stat"><b>' + (S.loaded ? fa(S.items.length) : "…") + '</b><span>تعداد بکاپ‌ها</span></div><div class="stat"><b>' + (S.loaded ? bd(fmtSize(tot)) : "…") + '</b><span>مجموع حجم (سقف کل 3.6GB)</span></div><div class="stat"><b>' + (S.loaded ? bd(fmtSize(big)) : "…") + '</b><span>بزرگ‌ترین بکاپ (سقف هر بکاپ 3.5GB)</span></div><div class="stat"><b>' + (S.loaded ? (last ? bd(esc(fmtDate(last))) : "—") : "…") + '</b><span>آخرین بکاپ</span></div>' +
             '<div class="stat"><b>' + (L ? fa(L.notes) : "…") + '</b><span>یادداشت روی این دستگاه</span></div><div class="stat"><b>' + (L ? fa(L.media) + " · " + bd(fmtSize(L.mediaBytes)) : "…") + '</b><span>مدیا روی این دستگاه</span></div></div>';
     }
     function mainView() {
         return '<div class="card" id="stats">' + statsHtml() + '</div>' +
-            '<div class="card"><h3>➕ بکاپ جدید</h3><div class="row"><button class="btn pri grow" data-a="newPick">🗂 انتخاب یادداشت‌ها</button><button class="btn grow" data-a="newAll">⚡ همهٔ یادداشت‌ها</button></div><div class="muted" style="margin-top:8px">هر یادداشت جداگانه (همراه عکس، ویس و فایل‌های خودش) ذخیره می‌شود. سقف هر بکاپ ۳.۵ گیگابایت و سقف مجموع همهٔ بکاپ‌ها ۳.۶ گیگابایت است و پیش از شروع و هنگام افزودن هر یادداشت، حجم و فضای باقی‌مانده نشان داده می‌شود.</div>' +
+            '<div class="card"><h3>➕ بکاپ جدید</h3><div class="row"><button class="btn pri grow" data-a="newPick">🗂 انتخاب یادداشت‌ها</button><button class="btn grow" data-a="newAll">⚡ همهٔ یادداشت‌ها</button></div><div class="muted" style="margin-top:8px">هر یادداشت جداگانه (همراه عکس، ویس و فایل‌های خودش) ذخیره می‌شود. سقف هر بکاپ 3.5 گیگابایت و سقف مجموع همهٔ بکاپ‌ها 3.6 گیگابایت است و پیش از شروع و هنگام افزودن هر یادداشت، حجم و فضای باقی‌مانده نشان داده می‌شود.</div>' +
             '<label class="chk" style="margin:12px 0 2px"><input type="checkbox" data-gz' + (gzOn() ? " checked" : "") + (gzSupported() ? "" : " disabled") + '><span>🗜 فشرده‌سازی gzip بکاپ‌ها (پیش‌فرض روشن)</span></label><div class="muted">' + (gzSupported() ? "متن یادداشت‌ها و فایل‌های قابل‌فشرده‌سازی کوچک‌تر ذخیره می‌شوند؛ عکس/ویس/ویدیوی از قبل فشرده دوباره فشرده نمی‌شوند. بکاپ‌های قدیمی هم‌چنان قابل بازیابی‌اند." : "این مرورگر از gzip پشتیبانی نمی‌کند.") + '</div></div>' +
             '<div class="card"><h3>🗂 بکاپ‌ها</h3><div class="row" style="margin-bottom:10px"><input class="fa grow" id="q" placeholder="جستجو…" value="' + esc(S.q) + '"><select id="so" style="width:auto"><option value="new"' + (S.sort === "new" ? " selected" : "") + '>جدیدترین</option><option value="old"' + (S.sort === "old" ? " selected" : "") + '>قدیمی‌ترین</option><option value="big"' + (S.sort === "big" ? " selected" : "") + '>بزرگ‌ترین</option><option value="name"' + (S.sort === "name" ? " selected" : "") + '>نام</option></select><button class="btn sm" data-a="refresh">↻</button></div><div id="list">' + listHtml() + '</div></div>' +
             '<details class="card"><summary>⚙️ حساب و تنظیمات</summary><div class="row" style="margin:10px 0"><button class="btn sm" data-a="pw">🔑 تغییر رمز</button><button class="btn sm" data-a="logoutAll">🚪 خروج از همهٔ دستگاه‌ها</button><button class="btn sm" data-a="logout">خروج از حساب</button><button class="btn sm dng" data-a="delAcc">حذف حساب و همهٔ بکاپ‌ها</button></div><label>آدرس سرور</label><input id="api" value="' + esc(apiBase()) + '"><div class="row" style="margin-top:10px"><button class="btn sm" data-a="saveApi">ذخیره</button></div><div id="apiMsg" class="muted"></div></details>';
@@ -64817,7 +64817,7 @@ details summary{cursor:pointer;color:#cfc9ff;font-weight:600;padding:4px 0}\
         var reg = S.tab === "register", u = $("#u").value.trim().toLowerCase(), p = $("#p").value, btn = $("#goBtn");
         if (!u || !p) return say("#msg", "نام کاربری و رمز را وارد کن.");
         if (reg && p !== $("#p2").value) return say("#msg", "تکرار رمز با رمز یکی نیست.");
-        if (reg && p.length < 8) return say("#msg", "رمز عبور حداقل ۸ نویسه باشد.");
+        if (reg && p.length < 8) return say("#msg", "رمز عبور حداقل 8 نویسه باشد.");
         btn.disabled = true; say("#msg", "در حال اتصال…", true);
         try {
             var r = await api(reg ? "/auth/register" : "/auth/login", { method: "POST", auth: false, body: reg ? { username: u, password: p, code: S.gate } : { username: u, password: p } });
@@ -64879,11 +64879,11 @@ details summary{cursor:pointer;color:#cfc9ff;font-weight:600;padding:4px 0}\
                 var bid = target;
                 if (!bid) { setProg("ساخت بکاپ…", 0); var c = await api("/backups", { method: "POST", body: { name: name, note: note } }); bid = c.item.id; S.items.unshift(c.item); }
                 var r = await addNotes(bid, list); await refresh(true);
-                S.report = { err: r.skipped.length && !r.ok, text: "✅ " + fa(r.ok) + " یادداشت در بکاپ ذخیره شد.\n" + usageLine(r.used) + (r.gzRaw > r.gzOut ? "\n🗜 فشرده‌سازی gzip: حجم مدیاها از " + fmtSize(r.gzRaw) + " به " + fmtSize(r.gzOut) + " رسید (" + fa(Math.round((1 - r.gzOut / r.gzRaw) * 100)) + "٪ کمتر)" : "") + (r.lost ? "\n⚠️ " + fa(r.lost) + " رسانه روی دستگاه نبود و در بکاپ نیست." : "") + (r.oldLocked ? "\n🔒 " + fa(r.oldLocked) + " یادداشتِ قفل‌دارِ قدیمی بدون مدیای جدا ذخیره شد؛ یک‌بار قفلشان را باز کن تا مدیایشان داخل خود یادداشت برود، بعد دوباره بکاپ بگیر." : "") + (r.skipped.length ? "\n⚠️ جا نشد (سقف ۳.۵GB برای هر بکاپ / ۳.۶GB برای کل): " + r.skipped.join("، ") : "") };
+                S.report = { err: r.skipped.length && !r.ok, text: "✅ " + fa(r.ok) + " یادداشت در بکاپ ذخیره شد.\n" + usageLine(r.used) + (r.gzRaw > r.gzOut ? "\n🗜 فشرده‌سازی gzip: حجم مدیاها از " + fmtSize(r.gzRaw) + " به " + fmtSize(r.gzOut) + " رسید (" + fa(Math.round((1 - r.gzOut / r.gzRaw) * 100)) + "٪ کمتر)" : "") + (r.lost ? "\n⚠️ " + fa(r.lost) + " رسانه روی دستگاه نبود و در بکاپ نیست." : "") + (r.oldLocked ? "\n🔒 " + fa(r.oldLocked) + " یادداشتِ قفل‌دارِ قدیمی بدون مدیای جدا ذخیره شد؛ یک‌بار قفلشان را باز کن تا مدیایشان داخل خود یادداشت برود، بعد دوباره بکاپ بگیر." : "") + (r.skipped.length ? "\n⚠️ جا نشد (سقف 3.5GB برای هر بکاپ / 3.6GB برای کل): " + r.skipped.join("، ") : "") };
             });
         },
         fullBackup: async function () {
-            var o = await ask({ title: "بکاپ کامل برنامه", text: "همهٔ داده‌ها (یادداشت‌ها، تنظیمات، مدیاها) در یک فایل ذخیره می‌شود؛ حداکثر ۳.۵ گیگابایت.", input: "نام بکاپ", ok: "شروع" }); if (!o) return;
+            var o = await ask({ title: "بکاپ کامل برنامه", text: "همهٔ داده‌ها (یادداشت‌ها، تنظیمات، مدیاها) در یک فایل ذخیره می‌شود؛ حداکثر 3.5 گیگابایت.", input: "نام بکاپ", ok: "شروع" }); if (!o) return;
             var n = (o.value || "").trim() || ("بکاپ کامل " + stamp());
             withBusy(async function () { var it = await createBackup(n, "", "manual"); await refresh(true); S.report = { text: "✅ بکاپ کامل ذخیره شد (" + fmtSize(it.size) + ")" }; });
         },
@@ -64906,7 +64906,7 @@ details summary{cursor:pointer;color:#cfc9ff;font-weight:600;padding:4px 0}\
         },
         pw: async function () {
             var o = await ask({ title: "تغییر رمز", text: "رمز فعلی را وارد کن:", input: "رمز فعلی", password: 1 }); if (!o || !o.value) return;
-            var n = await ask({ title: "رمز جدید", text: "رمز جدید (حداقل ۸ نویسه). بعد از تغییر، بقیهٔ دستگاه‌ها خارج می‌شوند.", input: "رمز جدید", password: 1 }); if (!n || !n.value) return;
+            var n = await ask({ title: "رمز جدید", text: "رمز جدید (حداقل 8 نویسه). بعد از تغییر، بقیهٔ دستگاه‌ها خارج می‌شوند.", input: "رمز جدید", password: 1 }); if (!n || !n.value) return;
             try { var r = await api("/auth/password", { method: "POST", body: { password: o.value, newPassword: n.value } }); s(LS_TOK, r.token); toast("🔑 رمز عوض شد."); } catch (e) { toast(e.message); }
         },
         logoutAll: async function () { var o = await ask({ title: "خروج از همهٔ دستگاه‌ها", text: "همهٔ نشست‌های فعال (از جمله همین دستگاه) بسته می‌شوند.", danger: 1, ok: "خروج" }); if (!o) return; try { await api("/auth/logout-all", { method: "POST" }); } catch (e) { } A.logout(); },
@@ -65464,7 +65464,6 @@ html body .audio-wrapper.video-wrapper.mk-vplaying>button.img-btn.img-btn.img-bt
     function setToast(p) {
         if (!toast) return;
         var fa = isFa(), s = String(p);
-        if (fa) s = s.replace(/\d/g, function (c) { return "۰۱۲۳۴۵۶۷۸۹".charAt(+c); });
         toastTn.nodeValue = fa ? "در حال چسباندن… " + s + "٪" : "Pasting… " + s + "%";
     }
     function hideToast() { try { toast && toast.parentNode && toast.parentNode.removeChild(toast); } catch (e) { } toast = toastTn = null; }
