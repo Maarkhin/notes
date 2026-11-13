@@ -19835,7 +19835,7 @@ html.mk-tg #muNav .mu-nav-panel{will-change:transform}
                 }, function () { btn.disabled = false; btn.textContent = T("تلاش دوباره", "Retry"); });
             });
             var sbtn = document.createElement("button"); sbtn.type = "button"; sbtn.textContent = T("\u0627\u0634\u062a\u0631\u0627\u06a9", "Share");
-            sbtn.style.cssText = btn.style.cssText.replace("#2b6fd6", "#059669");
+            sbtn.style.cssText = btn.style.cssText.replace("#2b6fd6", "#047857");
             sbtn.addEventListener("click", function () {
                 sbtn.disabled = true; sbtn.textContent = "\u2026";
                 Promise.resolve().then(function () { return window.mkShareBlob ? window.mkShareBlob(blob, name, mime || "application/zip") : false; }).then(function (r) {
@@ -21564,7 +21564,7 @@ async function tgOpenInSystemBrowser(blob, filename, mime, mode) {
             const canShare = !!(file && navigator.share && (!navigator.canShare || navigator.canShare({ files: [file] })));
             say(fa ? "فایل «" + "\u2066" + name + "\u2069" + "» آماده است." : "Your file “" + "\u2066" + name + "\u2069" + "” is ready.");
             if (canShare) {
-                const sb = addBtn(fa ? "📤 اشتراک‌گذاری" : "📤 Share", "#059669", async () => { try { await navigator.share({ title: name, files: [file] }); } catch (e) { if (!e || e.name !== "AbortError") sb.textContent = fa ? "اشتراک‌گذاری نشد؛ دانلود را بزن" : "Sharing failed; tap Download"; } });
+                const sb = addBtn(fa ? "📤 اشتراک‌گذاری" : "📤 Share", "#047857", async () => { try { await navigator.share({ title: name, files: [file] }); } catch (e) { if (!e || e.name !== "AbortError") sb.textContent = fa ? "اشتراک‌گذاری نشد؛ دانلود را بزن" : "Sharing failed; tap Download"; } });
             }
             else if (shareMode)
                 say(fa ? "این مرورگر اشتراک‌گذاری فایل را پشتیبانی نمی‌کند؛ از دانلود استفاده کن." : "This browser can’t share files; use Download.");
@@ -29766,7 +29766,7 @@ function mkExportChoice(blob0, filename, mime, options) {
     dl.type = sh.type = close.type = "button";
     const dlLabel = fa ? "دانلود" : "Download", shLabel = fa ? "اشتراک‌گذاری" : "Share";
     dl.dataset.mkFg = sh.dataset.mkFg = "#fff", dl.classList.add("mk-solid"), sh.classList.add("mk-solid"), mkShLabel(dl, "down", dlLabel), mkShLabel(sh, "share", shLabel);
-    dl.style.cssText = btnCss + ";background:#2563eb!important", sh.style.cssText = btnCss + ";background:#059669!important";
+    dl.style.cssText = btnCss + ";background:#2563eb!important", sh.style.cssText = btnCss + ";background:#047857!important";
     close.textContent = fa ? "بستن" : "Close", close.style.cssText = "background:transparent;border:1px solid var(--mkd-line2,#475569);color:var(--mkd-fg,#e2e8f0)!important;-webkit-text-fill-color:var(--mkd-fg,#e2e8f0)!important;opacity:1!important;padding:8px 16px;border-radius:10px;font-size:12px;cursor:pointer;width:100%";
     const removeCard = () => { card.remove(), host.childElementCount || host.remove(); };
     close.onclick = removeCard;
@@ -48715,7 +48715,7 @@ html.mu-nfs-open[data-mk-dlg="light"] #toast{background:rgba(255,255,255,.97)!im
     function setPref(v) { try { localStorage.setItem(KEY, v); } catch (e) { } }
     function on() { return unlocked() && pref() !== "0"; }
     function paint() {
-        rows = rows.filter(function (r) { return r.el.isConnected; });
+        var __now = Date.now(); rows = rows.filter(function (r) { if (r.el.isConnected) { r.seen = 1; return true; } return !r.seen && __now - r.t0 < 20000; });
         rows.forEach(function (r) {
             var o = on(), f = fa();
             r.t.innerHTML = "<b class=\"mk-t\">" + (f ? "🔓 استفاده از قفل رسانه" : "🔓 Use the media lock") + "</b><small class=\"mk-tm\">" + (o ? (f ? "فعال — رسانه‌ها از ربات گرفته می‌شوند و ارسال با ربات آزاد است" : "On — media is fetched from the bot and bot sending is allowed") : unlocked() ? (f ? "غیرفعال — بدون رسانهٔ ربات" : "Off — no bot media") : (f ? "غیرفعال — بزن تا رمز رسانه را وارد کنی" : "Off — tap to enter the media password")) + "</small>";
@@ -48741,7 +48741,7 @@ html.mu-nfs-open[data-mk-dlg="light"] #toast{background:rgba(255,255,255,.97)!im
         if (!has()) return null;
         var el = document.createElement("div"); el.className = "mk-dlmedia-row";
         el.innerHTML = '<div class="t"></div><button type="button" class="sw" role="switch" aria-checked="false"><i></i></button>';
-        var r = { el: el, t: el.firstChild, sw: el.lastChild };
+        var r = { el: el, t: el.firstChild, sw: el.lastChild, t0: Date.now(), seen: 0 };
         el.onclick = function (e) { e.preventDefault(); e.stopPropagation(); toggle(el).catch(function (er) { console.warn("media lock toggle", er); }); };
         rows.push(r); paint(); return el;
     }
