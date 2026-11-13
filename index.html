@@ -138,7 +138,7 @@
     window.mkErrLog = { resolve: resolve, resolveCloud: function () { resolve(CLOUD_RE); }, list: list, add: add, section: section, refresh: refresh, copy: copy, remove: remove, clear: function () { list.length = 0; refresh(); } };
     try {
         var st = document.createElement("style"); st.id = "mkErrCss";
-        st.textContent = "html:not(#_a):not(#_b) body #advancedCard #mkErrSec>summary em{background:#e5484d!important;color:#fff!important;border:0!important}html:not(#_a):not(#_b) body #advancedCard #mkErrSec.mkerr-ok>summary em{background:#2ea043!important}.mkerr-none{font-size:12.5px;opacity:.75;padding:4px 2px}.mkerr-acts{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:8px}.mkerr-it{border:1px solid rgba(255,255,255,.14);border-radius:10px;margin:6px 0;background:rgba(229,72,77,.09)}.mkerr-it>summary{cursor:pointer;padding:8px 10px;font-size:12.5px;line-height:1.7;list-style:none;display:flex;gap:8px;align-items:flex-start}.mkerr-it>summary::-webkit-details-marker{display:none}.mkerr-tag{flex:none;font-size:10.5px;padding:0 8px;border-radius:999px;background:rgba(229,72,77,.45);color:#fff}.mkerr-msg{min-width:0;flex:1;overflow-wrap:anywhere}.mkerr-n{flex:none;font-size:11px;opacity:.75}.mkerr-it pre{margin:0;padding:8px 10px 10px;border-top:1px solid rgba(255,255,255,.1);font:11.5px/1.6 ui-monospace,Menlo,Consolas,monospace;white-space:pre-wrap;overflow-wrap:anywhere;text-align:left;user-select:text;-webkit-user-select:text;max-height:320px;overflow:auto}";
+        st.textContent = "html:not(#_a):not(#_b) body #advancedCard #mkErrSec>summary em{background:#e5484d!important;color:#fff!important;border:0!important}html:not(#_a):not(#_b) body #advancedCard #mkErrSec.mkerr-ok>summary em{background:#2ea043!important}.mkerr-none{font-size:12.5px;opacity:.75;padding:4px 2px}.mkerr-acts{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:8px}.mkerr-it{border:1px solid rgba(128,128,128,.38);border-radius:10px;margin:6px 0;background:rgba(229,72,77,.09)}.mkerr-it>summary{cursor:pointer;padding:8px 10px;font-size:12.5px;line-height:1.7;list-style:none;display:flex;gap:8px;align-items:flex-start}.mkerr-it>summary::-webkit-details-marker{display:none}.mkerr-tag{flex:none;font-size:10.5px;padding:0 8px;border-radius:999px;background:rgba(229,72,77,.45);color:#fff}.mkerr-msg{min-width:0;flex:1;overflow-wrap:anywhere}.mkerr-n{flex:none;font-size:11px;opacity:.75}.mkerr-it pre{margin:0;padding:8px 10px 10px;border-top:1px solid rgba(128,128,128,.3);font:11.5px/1.6 ui-monospace,Menlo,Consolas,monospace;white-space:pre-wrap;overflow-wrap:anywhere;text-align:left;user-select:text;-webkit-user-select:text;max-height:320px;overflow:auto}";
         (document.head || document.documentElement).appendChild(st);
     } catch (e) { }
 })();
@@ -21499,11 +21499,13 @@ async function tgOpenInSystemBrowser(blob, filename, mime, mode) {
         }
         catch (e) { }
         const box = document.createElement("div");
-        box.style.cssText = "position:fixed;inset:0;z-index:2147483647;display:flex;align-items:center;justify-content:center;background:#03192c;color:#90e0ef;font-family:Tahoma,sans-serif;text-align:center;padding:24px;direction:" + (fa ? "rtl" : "ltr") + ";";
-        box.innerHTML = '<div style="max-width:340px;width:100%"><div style="font-size:40px;margin-bottom:12px">📦</div><div id="mkLMsg" style="font-size:15px;line-height:1.9;margin-bottom:16px;word-break:break-all"></div><div id="mkLBtns"></div></div>';
+        box.id = "mkBridgeBox", box.setAttribute("data-mu-noemo", "1");
+        try { const st = document.createElement("style"); st.id = "mkBridgeCss"; st.textContent = ("html:not(#_b1):not(#_b2) body:not(#_b3) #mkBridgeBox,html:not(#_b1):not(#_b2) body:not(#_b3) #mkBridgeBox #mkLMsg,html:not(#_b1):not(#_b2) body:not(#_b3) #mkBridgeBox #mkLMsg *{color:#e6f7ff!important;-webkit-text-fill-color:#e6f7ff!important;opacity:1!important;text-shadow:none!important}" + "html:not(#_b1):not(#_b2) body:not(#_b3) #mkBridgeBox button,html:not(#_b1):not(#_b2) body:not(#_b3) #mkBridgeBox button *{color:#fff!important;-webkit-text-fill-color:#fff!important;opacity:1!important;text-shadow:none!important}" + "html:not(#_b1):not(#_b2) body:not(#_b3) #mkBridgeBox #mkLVpn,html:not(#_b1):not(#_b2) body:not(#_b3) #mkBridgeBox #mkLVpn *{color:#fde68a!important;-webkit-text-fill-color:#fde68a!important;opacity:1!important}"); document.head.appendChild(st); } catch (e) { }
+        box.style.cssText = "position:fixed;inset:0;z-index:2147483647;display:flex;align-items:center;justify-content:center;background:#03192c;color:#e6f7ff;font-family:Tahoma,sans-serif;text-align:center;padding:24px;direction:" + (fa ? "rtl" : "ltr") + ";";
+        box.innerHTML = '<div style="max-width:340px;width:100%"><div style="font-size:40px;margin-bottom:12px">📦</div><div id="mkLMsg" style="font-size:15px;line-height:1.9;margin-bottom:16px;word-break:normal;overflow-wrap:anywhere;unicode-bidi:plaintext"></div><div id="mkLBtns"></div><div id="mkLVpn" role="note" style="margin-top:6px;padding:9px 12px;border:1px solid rgba(251,191,36,.55);border-radius:10px;background:rgba(251,191,36,.12);font-size:12.5px;line-height:1.9;font-weight:700">⚠️ ' + (fa ? "برای دانلود و ارسال فایل، حتماً VPN را روشن کن؛ بدون آن ممکن است دانلود یا ارسال به ربات انجام نشود." : "Keep your VPN on while downloading or sending files; without it the download or the bot upload may fail.") + '</div></div>';
         document.body.appendChild(box);
         const msg = box.querySelector("#mkLMsg"), btns = box.querySelector("#mkLBtns"), say = t => { msg.textContent = t; };
-        say(fa ? "در حال آماده‌سازی «" + name + "»…" : "Preparing “" + name + "”…");
+        say(fa ? "در حال آماده‌سازی «" + "\u2066" + name + "\u2069" + "»…" : "Preparing “" + "\u2066" + name + "\u2069" + "”…");
         const unb64 = s => { s = s.replace(/-/g, "+").replace(/_/g, "/"); while (s.length % 4) s += "="; const b = atob(s), u = new Uint8Array(b.length); for (let i = 0; i < b.length; i++) u[i] = b.charCodeAt(i); return u; };
         const build = async () => {
             if (mF) {
@@ -21528,7 +21530,7 @@ async function tgOpenInSystemBrowser(blob, filename, mime, mode) {
                                 for (;;) {
                                     const c = await rd.read(); if (c.done) break;
                                     arm(); parts.push(c.value); got += c.value.length;
-                                    say((fa ? "در حال دریافت «" : "Downloading “") + name + (fa ? "»… " : "”… ") + (total ? Math.min(99, Math.round(got * 100 / total)) + "%" : Math.round(got / 1024) + " KB"));
+                                    say((fa ? "در حال دریافت «" : "Downloading “") + "\u2066" + name + "\u2069" + (fa ? "»… " : "”… ") + (total ? Math.min(99, Math.round(got * 100 / total)) + "%" : Math.round(got / 1024) + " KB"));
                                 }
                                 fbuf = new Blob(parts);
                             }
@@ -21560,7 +21562,7 @@ async function tgOpenInSystemBrowser(blob, filename, mime, mode) {
             let file = null;
             try { file = new File([blob], name, { type: blob.type }); } catch (e) { }
             const canShare = !!(file && navigator.share && (!navigator.canShare || navigator.canShare({ files: [file] })));
-            say(fa ? "فایل «" + name + "» آماده است." : "Your file “" + name + "” is ready.");
+            say(fa ? "فایل «" + "\u2066" + name + "\u2069" + "» آماده است." : "Your file “" + "\u2066" + name + "\u2069" + "” is ready.");
             if (canShare) {
                 const sb = addBtn(fa ? "📤 اشتراک‌گذاری" : "📤 Share", "#059669", async () => { try { await navigator.share({ title: name, files: [file] }); } catch (e) { if (!e || e.name !== "AbortError") sb.textContent = fa ? "اشتراک‌گذاری نشد؛ دانلود را بزن" : "Sharing failed; tap Download"; } });
             }
@@ -21569,7 +21571,7 @@ async function tgOpenInSystemBrowser(blob, filename, mime, mode) {
             addBtn(fa ? "⬇️ دانلود" : "⬇️ Download", "#2563eb", download);
             if (!shareMode) {
                 download();
-                say(fa ? "دانلود «" + name + "» شروع شد. فایل در پوشهٔ Downloads ذخیره می‌شود؛ اگر اعلانی ندیدی، از Files ← Downloads بازش کن. بعد این تب را ببند و به تلگرام برگرد." : "The download of “" + name + "” has started. It is saved to your Downloads folder; if you see no notification, open Files → Downloads. Then close this tab and go back to Telegram.");
+                say(fa ? "دانلود «" + "\u2066" + name + "\u2069" + "» شروع شد. فایل در پوشهٔ Downloads ذخیره می‌شود؛ اگر اعلانی ندیدی، از Files ← Downloads بازش کن. بعد این تب را ببند و به تلگرام برگرد." : "The download of “" + "\u2066" + name + "\u2069" + "” has started. It is saved to your Downloads folder; if you see no notification, open Files → Downloads. Then close this tab and go back to Telegram.");
             }
         }).catch(e => { console.warn("Bridge decode failed", e); say((fa ? "فایل خوانده نشد. به تلگرام برگرد و «ارسال به چت ربات» را امتحان کن." : "The file could not be read. Go back to Telegram and try “Send to bot chat”.") + " [" + String(e && e.message || e).slice(0, 80) + "]"); addBtn(fa ? "🔄 تلاش دوباره" : "🔄 Try again", "#2563eb", attempt); }); }; attempt();
         // This tab only exists to deliver the file: stop parsing so the rest of the app never boots here
@@ -23670,21 +23672,21 @@ window.mkBkExport = async function (id) {
         // ---- own panel: shows every step, so the screen never looks frozen ----
         host = document.createElement("div");
         host.id = "mkBkxHost"; host.setAttribute("dir", fa ? "rtl" : "ltr"); host.setAttribute("data-mu-noemo", "1");
-        host.style.cssText = "position:fixed;inset:0;z-index:2147483646;background:rgba(3,10,20,.82);display:flex;align-items:center;justify-content:center;padding:16px;box-sizing:border-box;overflow:auto;font-family:Tahoma,'Segoe UI',Arial,sans-serif";
+        host.style.cssText = "position:fixed;inset:0;z-index:2147483646;background:var(--mkd-overlay,rgba(3,10,20,.85));display:flex;align-items:center;justify-content:center;padding:16px;box-sizing:border-box;overflow:auto;font-family:Tahoma,'Segoe UI',Arial,sans-serif";
         const mk = function (tag, css, text) { const d = document.createElement(tag); if (text != null) d.textContent = text; d.style.cssText = css; return d; };
-        const card = mk("div", "background:#0f172a;color:#e2e8f0;border:1px solid #334155;border-radius:16px;max-width:400px;width:100%;padding:18px;box-sizing:border-box;box-shadow:0 20px 60px rgba(0,0,0,.5);text-align:center;max-height:96vh;overflow:auto");
-        const title = mk("div", "font-size:15px;font-weight:800;color:#f8fafc;margin-bottom:4px", T("💾 فایل بکاپ", "💾 Backup file"));
-        const info = mk("div", "font-size:11.5px;color:#94a3b8;direction:ltr;margin-bottom:8px;word-break:break-all;min-height:4px", "");
-        const statusEl = mk("div", "font-size:12.5px;line-height:1.9;margin:6px 0 10px;color:#cbd5e1", "");
-        const logEl = mk("div", "font-size:11px;line-height:1.8;text-align:start;color:#94a3b8;margin:0 0 10px;max-height:140px;overflow:auto;display:none;border:1px solid #1e293b;border-radius:10px;padding:6px 10px", "");
+        const card = mk("div", "background:var(--mkd-bg,#0f172a);color:var(--mkd-fg,#e2e8f0);border:1px solid var(--mkd-line,#334155);border-radius:16px;max-width:400px;width:100%;padding:18px;box-sizing:border-box;box-shadow:0 20px 60px rgba(0,0,0,.5);text-align:center;max-height:96vh;overflow:auto");
+        const title = mk("div", "font-size:15px;font-weight:800;color:var(--mkd-fg,#f8fafc);margin-bottom:4px", T("💾 فایل بکاپ", "💾 Backup file"));
+        const info = mk("div", "font-size:11.5px;color:var(--mkd-mut,#94a3b8);direction:ltr;margin-bottom:8px;word-break:break-all;min-height:4px", "");
+        const statusEl = mk("div", "font-size:12.5px;line-height:1.9;margin:6px 0 10px;color:var(--mkd-fg2,#cbd5e1)", "");
+        const logEl = mk("div", "--mk-fg:var(--mkd-mut,#a9b8cc);font-size:11px;line-height:1.8;text-align:start;color:var(--mkd-mut,#a9b8cc);margin:0 0 10px;max-height:140px;overflow:auto;display:none;border:1px solid var(--mkd-track,#1e293b);border-radius:10px;padding:6px 10px", "");
         const btnBox = mk("div", "display:none;flex-direction:column;gap:9px;margin-bottom:10px", "");
         const retryBtn = mk("button", "display:none;width:100%;border:0;border-radius:11px;padding:12px;margin-bottom:10px;background:#2563eb;color:#fff;font:800 13px Tahoma,Arial,sans-serif;cursor:pointer", T("🔄 تلاش دوباره", "🔄 Try again"));
         retryBtn.type = "button";
-        const closeBtn = mk("button", "background:transparent;border:1px solid #475569;color:#e2e8f0;padding:10px 16px;border-radius:10px;font-size:12px;cursor:pointer;width:100%", T("بستن", "Close"));
+        const closeBtn = mk("button", "background:transparent;border:1px solid var(--mkd-line2,#475569);color:var(--mkd-fg,#e2e8f0);padding:10px 16px;border-radius:10px;font-size:12px;cursor:pointer;width:100%", T("بستن", "Close"));
         closeBtn.type = "button"; closeBtn.onclick = closePanel;
-        [title, info, statusEl, logEl, btnBox, retryBtn, closeBtn].forEach(function (n) { card.appendChild(n); });
+        [title, info, window.mkVpnNote ? window.mkVpnNote(fa) : null, statusEl, logEl, btnBox, retryBtn, closeBtn].filter(Boolean).forEach(function (n) { card.appendChild(n); });
         host.appendChild(card); document.body.appendChild(host);
-        const TONE = { ok: "#86efac", warn: "#fbbf24", info: "#cbd5e1" };
+        const TONE = { ok: "var(--mkd-ok,#86efac)", warn: "var(--mkd-warn,#fbbf24)", info: "var(--mkd-fg2,#cbd5e1)" };
         const say = function (t, tone) { statusEl.textContent = t || ""; statusEl.style.color = TONE[tone || "info"] || TONE.info; };
         const log = function (t) { const d = mk("div", "", t); logEl.appendChild(d); logEl.style.display = "block"; logEl.scrollTop = logEl.scrollHeight; };
 
@@ -23840,8 +23842,8 @@ window.mkBkExport = async function (id) {
         if (IS_TELEGRAM) btnBox.appendChild(mkBtn("#7c3aed", T("📤 ارسال به چت ربات", "📤 Send to bot chat"), T("فایل را در چت ربات خودت می‌گذارد؛ از آنجا ذخیره کن", "Puts the file in your bot chat; save it from there"), function () { runChain("bot"); }));
         btnBox.appendChild(mkBtn("#2563eb", T("⬇️ دانلود معمولی", "⬇️ Normal download"), IS_TELEGRAM && !mkTgDesktop() ? T("از مرورگر گوشی باز می‌شود و همان‌جا ذخیره می‌شود", "Opens in the phone browser and saves there") : T("ذخیره‌ی مستقیم روی دستگاه", "Saves straight to the device"), function () { runChain("normal"); }));
         if (IS_TELEGRAM) btnBox.appendChild(mkBtn("#d97706", T("⚡ دانلود بومی تلگرام", "⚡ Telegram native download"), T("پنجره‌ی دانلود خود تلگرام (نسخه‌ی 8 به بالا)", "Telegram’s own download dialog (version 8+)"), function () { runChain("native"); }));
-        btnBox.appendChild(mkBtn("#334155", T("🧰 راه‌های بیشتر…", "🧰 More ways…"), T("منوی کامل خروجی با گزینه‌های دیگر", "Full export sheet with other options"), function () { try { mkExportChoice(blob, name, mime, {}); } catch (e) { say(T("منوی بیشتر باز نشد.", "Could not open the sheet."), "warn"); } }));
-        const note = mk("div", "font-size:10.5px;color:#94a3b8;line-height:1.7;margin-top:2px", T("اگر روشی که می‌زنی جواب ندهد، خودکار سراغ روش‌های جایگزین می‌رود.", "If the route you pick fails, the others are tried automatically."));
+        btnBox.appendChild(mkBtn("var(--mkd-line,#334155)", T("🧰 راه‌های بیشتر…", "🧰 More ways…"), T("منوی کامل خروجی با گزینه‌های دیگر", "Full export sheet with other options"), function () { try { mkExportChoice(blob, name, mime, {}); } catch (e) { say(T("منوی بیشتر باز نشد.", "Could not open the sheet."), "warn"); } }));
+        const note = mk("div", "font-size:10.5px;color:var(--mkd-mut,#94a3b8);line-height:1.7;margin-top:2px", T("اگر روشی که می‌زنی جواب ندهد، خودکار سراغ روش‌های جایگزین می‌رود.", "If the route you pick fails, the others are tried automatically."));
         btnBox.appendChild(note);
 
         // ---- flow ----
@@ -29096,16 +29098,17 @@ async function showManualDownloadFallback(blob, filename, mime) {
     const isDataUrl = typeof url == "string" && url.indexOf("data:") === 0;
     return new Promise(resolve => {
         const isImg = /^image\//.test(mime || ""), overlay = document.createElement("div");
-        overlay.id = "mkShManual", overlay.setAttribute("dir", fa ? "rtl" : "ltr"), overlay.style.cssText = 'position:fixed;inset:0;z-index:2147483647;background:rgba(3,10,20,.86);backdrop-filter:blur(6px);display:flex;align-items:center;justify-content:center;padding:20px;box-sizing:border-box;font-family:Tahoma,"Segoe UI",Arial,sans-serif;animation:markhinFadeIn .18s ease';
+        overlay.id = "mkShManual", overlay.setAttribute("dir", fa ? "rtl" : "ltr"), overlay.style.cssText = 'position:fixed;inset:0;z-index:2147483647;background:var(--mkd-overlay,rgba(3,10,20,.85));backdrop-filter:blur(6px);display:flex;align-items:center;justify-content:center;padding:20px;box-sizing:border-box;font-family:Tahoma,"Segoe UI",Arial,sans-serif;animation:markhinFadeIn .18s ease';
         const card = document.createElement("div");
-        card.style.cssText = "background:#0f172a;border:1px solid #334155;border-radius:16px;max-width:380px;width:100%;padding:22px;color:#e2e8f0;text-align:center;box-shadow:0 20px 60px rgba(0,0,0,.5);max-height:82vh;overflow:auto";
+        card.style.cssText = "background:var(--mkd-bg,#0f172a);border:1px solid var(--mkd-line,#334155);border-radius:16px;max-width:380px;width:100%;padding:22px;color:var(--mkd-fg,#e2e8f0);text-align:center;box-shadow:0 20px 60px rgba(0,0,0,.5);max-height:82vh;overflow:auto";
         const safeFilename = String(filename || "download").replace(/[<>&"]/g, "");
         if (card.innerHTML = `
                     <div style="font-size:32px;margin-bottom:10px">📥</div>
                     <h3 style="margin:0 0 8px;font-size:15px">${fa ? "دانلود خودکار انجام نشد" : "Automatic download didn't work"}</h3>
-                    <p style="margin:0 0 14px;font-size:12px;opacity:.7;line-height:1.9">${IS_TELEGRAM ? fa ? "روی دکمه پایین بزن. این کار پنجرهٔ اشتراک‌گذاری گوشی را باز می‌کند، فایل را به چت ربات خودت می‌فرستد، یا (برای فایل کوچک) در مرورگر گوشی باز می‌کند." : "Tap the button below. It will open your phone’s share sheet, send the file to your bot chat, or (for a small file) open it in your phone’s browser." : fa ? "روی دکمه پایین بزن؛ اگر باز هم چیزی ذخیره نشد، انگشتت را روی دکمه نگه‌دار و «ذخیره لینک» یا «ذخیره تصویر» را بزن." : 'Tap the button below. If it still doesn’t save, press-and-hold it and choose "Save Link" or "Save Image".'}</p>
-                    ${isImg && url ? `<img src="${url}" alt="${safeFilename}" style="max-width:100%;border-radius:10px;margin-bottom:14px;border:1px solid #334155">` : ""}
-                    <p style="margin:0 0 14px;font-size:11px;opacity:.55;word-break:break-all">${safeFilename}</p>
+                    <p style="margin:0 0 14px;font-size:12px;opacity:.88;line-height:1.9">${IS_TELEGRAM ? fa ? "روی دکمه پایین بزن. این کار پنجرهٔ اشتراک‌گذاری گوشی را باز می‌کند، فایل را به چت ربات خودت می‌فرستد، یا (برای فایل کوچک) در مرورگر گوشی باز می‌کند." : "Tap the button below. It will open your phone’s share sheet, send the file to your bot chat, or (for a small file) open it in your phone’s browser." : fa ? "روی دکمه پایین بزن؛ اگر باز هم چیزی ذخیره نشد، انگشتت را روی دکمه نگه‌دار و «ذخیره لینک» یا «ذخیره تصویر» را بزن." : 'Tap the button below. If it still doesn’t save, press-and-hold it and choose "Save Link" or "Save Image".'}</p>
+                    ${isImg && url ? `<img src="${url}" alt="${safeFilename}" style="max-width:100%;border-radius:10px;margin-bottom:14px;border:1px solid var(--mkd-line,#334155)">` : ""}
+                    <p style="margin:0 0 14px;font-size:11px;opacity:.8;word-break:break-all;direction:ltr">${safeFilename}</p>
+                    ${window.mkVpnHtml ? window.mkVpnHtml(fa) : ""}
                 `, url) {
             const link = document.createElement("a");
             link.textContent = fa ? "⬇️ دانلود / ذخیره فایل" : "⬇️ Download / save file", link.style.cssText = "display:block;background:#2563eb;color:#fff;padding:13px;border-radius:11px;text-decoration:none;font-weight:800;font-size:13px;margin-bottom:10px;cursor:pointer", IS_TELEGRAM ? (link.href = "#", link.onclick = async (e) => { if (link.dataset.fallbackExhausted || (e.preventDefault(), link.dataset.busy))
@@ -29147,7 +29150,7 @@ async function showManualDownloadFallback(blob, filename, mime) {
             warn.style.cssText = "font-size:11px;color:#f87171;margin:0 0 10px", warn.textContent = fa ? "ساخت لینک دانلود هم ممکن نشد." : "Could not even build a download link.", card.appendChild(warn);
         }
         const closeBtn = document.createElement("button");
-        closeBtn.type = "button", closeBtn.textContent = fa ? "بستن" : "Close", closeBtn.style.cssText = "background:transparent;border:1px solid #334155;color:#94a3b8;padding:10px 16px;border-radius:10px;font-size:12px;cursor:pointer;width:100%";
+        closeBtn.type = "button", closeBtn.textContent = fa ? "بستن" : "Close", closeBtn.style.cssText = "background:transparent;border:1px solid var(--mkd-line,#334155);color:var(--mkd-mut,#94a3b8);padding:10px 16px;border-radius:10px;font-size:12px;cursor:pointer;width:100%";
         let settled = !1;
         const finish = val => { settled || (settled = !0, overlay.remove(), url && !isDataUrl && setTimeout(() => { try {
             URL.revokeObjectURL(url);
@@ -29517,24 +29520,24 @@ function mkTgTextFlow(text, title, fa) {
     old && old.remove();
     const host = document.createElement("div");
     host.id = "mkTgTextPanel", host.setAttribute("dir", fa ? "rtl" : "ltr"), host.setAttribute("data-mu-noemo", "1");
-    host.style.cssText = 'position:fixed;inset:0;z-index:2147483647;background:rgba(3,10,20,.88);display:flex;align-items:center;justify-content:center;padding:20px;box-sizing:border-box;overflow:auto;font-family:Tahoma,"Segoe UI",Arial,sans-serif';
+    host.style.cssText = 'position:fixed;inset:0;z-index:2147483647;background:var(--mkd-overlay,rgba(3,10,20,.85));display:flex;align-items:center;justify-content:center;padding:20px;box-sizing:border-box;overflow:auto;font-family:Tahoma,"Segoe UI",Arial,sans-serif';
     const card = document.createElement("div");
-    card.style.cssText = "background:#0f172a!important;color:#e2e8f0!important;border:1px solid #334155;border-radius:16px;max-width:380px;width:100%;padding:18px;text-align:center;box-sizing:border-box";
+    card.style.cssText = "background:var(--mkd-bg,#0f172a)!important;color:var(--mkd-fg,#e2e8f0)!important;border:1px solid var(--mkd-line,#334155);border-radius:16px;max-width:380px;width:100%;padding:18px;text-align:center;box-sizing:border-box";
     const T = (css, t) => { const d = document.createElement("div"); d.textContent = t, d.style.cssText = css + ";opacity:1!important"; return d; };
     const btnCss = "display:flex;align-items:center;justify-content:center;width:100%;border:0;border-radius:11px;padding:13px 8px;min-height:46px;font:800 13px Tahoma,Arial,sans-serif;color:#fff!important;-webkit-text-fill-color:#fff!important;cursor:pointer;margin:0 0 8px";
-    const smallCss = "flex:1;border:1px solid #475569;background:transparent;border-radius:10px;padding:10px 6px;font:600 12px Tahoma,Arial,sans-serif;color:#e2e8f0!important;-webkit-text-fill-color:#e2e8f0!important;cursor:pointer";
-    card.appendChild(T("font-size:15px;font-weight:800;margin-bottom:6px;color:#f8fafc!important;-webkit-text-fill-color:#f8fafc!important", fa ? "ارسال کامل متن در تلگرام" : "Send the full text in Telegram"));
-    card.appendChild(T("font-size:12px;line-height:1.9;margin-bottom:10px;color:#cbd5e1!important;-webkit-text-fill-color:#cbd5e1!important", n === 1
+    const smallCss = "flex:1;border:1px solid var(--mkd-line2,#475569);background:transparent;border-radius:10px;padding:10px 6px;font:600 12px Tahoma,Arial,sans-serif;color:var(--mkd-fg,#e2e8f0)!important;-webkit-text-fill-color:var(--mkd-fg,#e2e8f0)!important;cursor:pointer";
+    card.appendChild(T("font-size:15px;font-weight:800;margin-bottom:6px;color:var(--mkd-fg,#f8fafc)!important;-webkit-text-fill-color:var(--mkd-fg,#f8fafc)!important", fa ? "ارسال کامل متن در تلگرام" : "Send the full text in Telegram"));
+    card.appendChild(T("font-size:12px;line-height:1.9;margin-bottom:10px;color:var(--mkd-fg2,#cbd5e1)!important;-webkit-text-fill-color:var(--mkd-fg2,#cbd5e1)!important", n === 1
         ? (fa ? "کل متن در یک پیام جا می‌شود." : "The whole text fits in one message.")
         : (fa ? "تلگرام در هر بار فقط متن کوتاه را از لینک می‌پذیرد، پس متن در " + n + " قسمت شماره‌دار برش خورد (از جاهای طبیعی مثل پایان بند). هر بار یک قسمت را بزن، همان مخاطب را انتخاب کن، ارسال کن و برگرد."
               : "Telegram only takes short text per link, so the text was cut into " + n + " numbered parts at natural breaks. Tap a part, pick the same chat, send, then come back.")));
-    if (n > 15) card.appendChild(T("font-size:11.5px;line-height:1.9;margin-bottom:10px;color:#fbbf24!important;-webkit-text-fill-color:#fbbf24!important", fa ? "این متن خیلی بلند است (" + n + " قسمت). برای متن‌های بزرگ دکمهٔ «ارسال به چت ربات» (کل فایل در یک پیام) بهتر است." : "This text is very long (" + n + " parts). For big texts “Send to bot chat” (the whole file in one go) is better."));
+    if (n > 15) card.appendChild(T("font-size:11.5px;line-height:1.9;margin-bottom:10px;color:var(--mkd-warn,#fbbf24)!important;-webkit-text-fill-color:var(--mkd-warn,#fbbf24)!important", fa ? "این متن خیلی بلند است (" + n + " قسمت). برای متن‌های بزرگ دکمهٔ «ارسال به چت ربات» (کل فایل در یک پیام) بهتر است." : "This text is very long (" + n + " parts). For big texts “Send to bot chat” (the whole file in one go) is better."));
     const bar = document.createElement("div");
-    bar.style.cssText = "height:6px;border-radius:6px;background:#1e293b;margin:0 0 12px;overflow:hidden;direction:ltr";
+    bar.style.cssText = "height:6px;border-radius:6px;background:var(--mkd-track,#1e293b);margin:0 0 12px;overflow:hidden;direction:ltr";
     const fill = document.createElement("div");
-    fill.style.cssText = "height:100%;width:0;background:#38bdf8;transition:none";
+    fill.style.cssText = "height:100%;width:0;background:var(--mkd-acc,#38bdf8);transition:none";
     bar.appendChild(fill), card.appendChild(bar);
-    const status = T("font-size:11.5px;line-height:1.9;min-height:22px;margin-bottom:8px;color:#86efac!important;-webkit-text-fill-color:#86efac!important", "");
+    const status = T("font-size:11.5px;line-height:1.9;min-height:22px;margin-bottom:8px;color:var(--mkd-ok,#86efac)!important;-webkit-text-fill-color:var(--mkd-ok,#86efac)!important", "");
     let cur = 0, opened = 0;
     const main = document.createElement("button");
     main.type = "button", main.style.cssText = btnCss + ";background:#2563eb!important";
@@ -29720,32 +29723,32 @@ function mkExportChoice(blob0, filename, mime, options) {
     let host = document.getElementById("mkShChoice");
     if (!host) {
         host = document.createElement("div"), host.id = "mkShChoice", host.setAttribute("dir", dir), host.setAttribute("data-mu-noemo", "1");
-        host.style.cssText = 'position:fixed;inset:0;z-index:2147483647;background:rgba(3,10,20,.82);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;padding:12px;box-sizing:border-box;overflow:auto;font-family:Tahoma,"Segoe UI",Arial,sans-serif;animation:none!important;transition:none!important';
+        host.style.cssText = 'position:fixed;inset:0;z-index:2147483647;background:var(--mkd-overlay,rgba(3,10,20,.85));display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;padding:12px;box-sizing:border-box;overflow:auto;font-family:Tahoma,"Segoe UI",Arial,sans-serif;animation:none!important;transition:none!important';
         document.body.appendChild(host);
     }
     const card = document.createElement("div");
     card.setAttribute("data-mu-noemo", "1");
-    card.style.cssText = "background:#0f172a!important;color:#e2e8f0!important;border:1px solid #334155;border-radius:16px;max-width:360px;width:100%;padding:14px;text-align:center;box-shadow:0 20px 60px rgba(0,0,0,.5);box-sizing:border-box;animation:none!important;transition:none!important";
+    card.style.cssText = "background:var(--mkd-bg,#0f172a)!important;color:var(--mkd-fg,#e2e8f0)!important;border:1px solid var(--mkd-line,#334155);border-radius:16px;max-width:360px;width:100%;padding:14px;text-align:center;box-shadow:0 20px 60px rgba(0,0,0,.5);box-sizing:border-box;animation:none!important;transition:none!important";
     const txt = (css, t) => { const d = document.createElement("div"); d.textContent = t, d.style.cssText = css + ";opacity:1!important"; return d; };
     const head = document.createElement("div");
-    head.style.cssText = "display:flex;align-items:center;justify-content:center;gap:8px;margin-bottom:4px;color:#38bdf8";
-    head.appendChild(mkShIcon("share", 20)), head.appendChild(txt("font-size:14px;font-weight:800;color:#f8fafc!important;-webkit-text-fill-color:#f8fafc!important", fa ? "خروجی آماده است" : "Your export is ready"));
+    head.style.cssText = "display:flex;align-items:center;justify-content:center;gap:8px;margin-bottom:4px;color:var(--mkd-acc,#38bdf8)";
+    head.appendChild(mkShIcon("share", 20)), head.appendChild(txt("font-size:14px;font-weight:800;color:var(--mkd-fg,#f8fafc)!important;-webkit-text-fill-color:var(--mkd-fg,#f8fafc)!important", fa ? "خروجی آماده است" : "Your export is ready"));
     card.appendChild(head);
-    const nameEl = txt("font-size:11.5px;word-break:break-all;direction:ltr;margin:0;color:#cbd5e1!important;-webkit-text-fill-color:#cbd5e1!important", safeName), sizeEl = txt("font-size:11px;margin:0;direction:ltr;color:#94a3b8!important;-webkit-text-fill-color:#94a3b8!important", mkShHuman(blob.size));
+    const nameEl = txt("font-size:11.5px;word-break:break-all;direction:ltr;margin:0;color:var(--mkd-fg2,#cbd5e1)!important;-webkit-text-fill-color:var(--mkd-fg2,#cbd5e1)!important", safeName), sizeEl = txt("font-size:11px;margin:0;direction:ltr;color:var(--mkd-mut,#94a3b8)!important;-webkit-text-fill-color:var(--mkd-mut,#94a3b8)!important", mkShHuman(blob.size));
     const paintSize = () => { nameEl.textContent = safeName, sizeEl.textContent = gzv && blob === gzv.blob ? mkShHuman(blob0.size) + " → " + mkShHuman(blob.size) + " (gzip)" : mkShHuman(blob.size); };
     paintSize();
     const metaRow = document.createElement("div");
     metaRow.style.cssText = "display:flex;flex-wrap:wrap;align-items:baseline;justify-content:center;gap:2px 8px;margin-bottom:10px", metaRow.appendChild(nameEl), metaRow.appendChild(sizeEl), card.appendChild(metaRow);
     if (gzv) {
         const gzRow = document.createElement("label"), gzCb = document.createElement("input");
-        gzRow.style.cssText = "display:flex;align-items:center;justify-content:center;gap:8px;margin:-2px 0 10px;font-size:11.5px;cursor:pointer;color:#cbd5e1!important;-webkit-text-fill-color:#cbd5e1!important;opacity:1!important", gzCb.type = "checkbox", gzCb.checked = blob === gzv.blob, gzCb.style.cssText = "width:16px;height:16px;margin:0;accent-color:#38bdf8";
+        gzRow.style.cssText = "display:flex;align-items:center;justify-content:center;gap:8px;margin:-2px 0 10px;font-size:11.5px;cursor:pointer;color:var(--mkd-fg2,#cbd5e1)!important;-webkit-text-fill-color:var(--mkd-fg2,#cbd5e1)!important;opacity:1!important", gzCb.type = "checkbox", gzCb.checked = blob === gzv.blob, gzCb.style.cssText = "width:16px;height:16px;margin:0;accent-color:var(--mkd-acc,#38bdf8)";
         gzCb.onchange = () => { mkGzSetOn(gzCb.checked), gzCb.checked ? (blob = gzv.blob, safeName = gzv.name, type = "application/gzip") : (blob = blob0, safeName = safeName0, type = type0), paintSize(); };
         gzRow.appendChild(gzCb), gzRow.appendChild(document.createTextNode(fa ? "فشرده‌سازی gzip (فایل .gz، حجم کمتر)" : "Compress with gzip (.gz, smaller file)")), card.appendChild(gzRow);
     }
     // status line: reserved height, changed in place (never hidden and re-shown, so nothing blinks)
     const note = document.createElement("div");
     note.setAttribute("aria-live", "polite"), note.style.cssText = "display:none;font-size:11.5px;line-height:1.7;margin:0 0 8px;opacity:1!important";
-    const TONE = { ok: "#86efac", warn: "#fbbf24", info: "#cbd5e1" };
+    const TONE = { ok: "var(--mkd-ok,#86efac)", warn: "var(--mkd-warn,#fbbf24)", info: "var(--mkd-fg2,#cbd5e1)" };
     const say = (t, tone) => {
         const c = TONE[tone === !0 ? "ok" : tone || "warn"] || TONE.warn;
         if (note.textContent !== (t || ""))
@@ -29757,13 +29760,14 @@ function mkExportChoice(blob0, filename, mime, options) {
     opts.reason === void 0 && inTg && !mkTgDesktop() && !navigator.share && !mkTgBotAvailable() && blob0.size > 96 * 1024 && say(fa ? "این فایل سنگین است و تلگرام روی گوشی ذخیرهٔ مستقیم را پشتیبانی نمی‌کند. «📦 بکاپ رسانه» (ربات خودت) را یک‌بار فعال کن تا با دکمهٔ «ارسال به چت ربات» بتوانی فایل را بگیری." : "This file is heavy and Telegram on phones can’t save it directly. Enable “📦 Media backup” (your own bot) once so Download and Share send it to your bot chat in one tap.", "info");
     const row = document.createElement("div");
     row.style.cssText = "display:flex;gap:8px;margin-bottom:8px";
+    try { const __vpn = window.mkVpnNote && window.mkVpnNote(fa); __vpn && card.appendChild(__vpn); } catch (e) { }
     const btnCss = "flex:1;display:flex;align-items:center;justify-content:center;gap:6px;border:0;border-radius:11px;padding:8px 6px;min-height:40px;font:800 12.5px Tahoma,Arial,sans-serif;color:#fff!important;-webkit-text-fill-color:#fff!important;text-shadow:none!important;opacity:1!important;cursor:pointer;animation:none!important;transition:none!important";
     const dl = document.createElement("button"), sh = document.createElement("button"), close = document.createElement("button");
     dl.type = sh.type = close.type = "button";
     const dlLabel = fa ? "دانلود" : "Download", shLabel = fa ? "اشتراک‌گذاری" : "Share";
     dl.dataset.mkFg = sh.dataset.mkFg = "#fff", dl.classList.add("mk-solid"), sh.classList.add("mk-solid"), mkShLabel(dl, "down", dlLabel), mkShLabel(sh, "share", shLabel);
     dl.style.cssText = btnCss + ";background:#2563eb!important", sh.style.cssText = btnCss + ";background:#059669!important";
-    close.textContent = fa ? "بستن" : "Close", close.style.cssText = "background:transparent;border:1px solid #475569;color:#e2e8f0!important;-webkit-text-fill-color:#e2e8f0!important;opacity:1!important;padding:8px 16px;border-radius:10px;font-size:12px;cursor:pointer;width:100%";
+    close.textContent = fa ? "بستن" : "Close", close.style.cssText = "background:transparent;border:1px solid var(--mkd-line2,#475569);color:var(--mkd-fg,#e2e8f0)!important;-webkit-text-fill-color:var(--mkd-fg,#e2e8f0)!important;opacity:1!important;padding:8px 16px;border-radius:10px;font-size:12px;cursor:pointer;width:100%";
     const removeCard = () => { card.remove(), host.childElementCount || host.remove(); };
     close.onclick = removeCard;
     const sentMsg = fa ? "فایل به چت ربات خودت رفت. همان‌جا نگهش دار (⋯ ← Save to Downloads) یا فوروارد کن." : "The file was sent to your bot chat. Save it (⋯ → Save to Downloads) or forward it from there.";
@@ -29795,9 +29799,9 @@ function mkExportChoice(blob0, filename, mime, options) {
             }
             if (inTg && r === !1) {
                 try {
-                    extra.style.cssText += ";border:1px solid #38bdf8;border-radius:12px;padding:10px;margin-bottom:10px";
+                    extra.style.cssText += ";border:1px solid var(--mkd-acc,#38bdf8);border-radius:12px;padding:10px;margin-bottom:10px";
                     extra.firstChild.textContent = fa ? "راه‌های جایگزین دانلود (هرکدام کار خودش را می‌کند)" : "Alternative ways to get the file";
-                    extra.firstChild.style.setProperty("color", "#7dd3fc", "important");
+                    extra.firstChild.style.setProperty("color", "var(--mkd-acc2,#7dd3fc)", "important");
                     extra.scrollIntoView({ block: "nearest" });
                 } catch (e2) { }
                 say(mkTgBotAvailable()
@@ -29864,7 +29868,7 @@ function mkExportChoice(blob0, filename, mime, options) {
                 // many numbered parts is a dead end for the user: show the menu of other routes instead of opening a 200-part panel
                 const nParts = mkSplitForTg(text).length;
                 if (nParts > 4) {
-                    try { extra.style.cssText += ";border:1px solid #38bdf8;border-radius:12px;padding:10px;margin-bottom:10px"; extra.scrollIntoView({ block: "nearest" }); } catch (e2) { }
+                    try { extra.style.cssText += ";border:1px solid var(--mkd-acc,#38bdf8);border-radius:12px;padding:10px;margin-bottom:10px"; extra.scrollIntoView({ block: "nearest" }); } catch (e2) { }
                     say((fa ? "این فایل در تلگرام " + nParts + " قسمت متنی می‌شود و اشتراک مستقیم ندارد. " : "This file would be " + nParts + " text parts in Telegram and cannot be shared directly. ")
                         + (mkTgBotAvailable() ? (mkTgBotSend.err ? mkTgBotSend.err + " " : "") + (fa ? "یکی از راه‌های پایین را بزن (ارسال به ربات و باز کردن چت، یا دانلود)." : "Pick a route below (send to bot and open chat, or download).")
                             : (fa ? "برای فرستادن فایل «📦 بکاپ رسانه» (ربات خودت) را یک‌بار فعال کن؛ یا از «ارسال متن در تلگرام» پایین (قسمت‌قسمت) استفاده کن." : "Enable “📦 Media backup” (your own bot) once to send the file; or use “Send text in Telegram” below (in parts).")), "warn");
@@ -29901,7 +29905,7 @@ function mkExportChoice(blob0, filename, mime, options) {
                 const r = await mkTgSmartDownload(blob, safeName, type, say);
                 if (r === "cancelled") { say("", "ok"); return; }
                 if (r === !1) {
-                    try { extra.style.cssText += ";border:1px solid #38bdf8;border-radius:12px;padding:10px;margin-bottom:10px"; extra.scrollIntoView({ block: "nearest" }); } catch (e2) { }
+                    try { extra.style.cssText += ";border:1px solid var(--mkd-acc,#38bdf8);border-radius:12px;padding:10px;margin-bottom:10px"; extra.scrollIntoView({ block: "nearest" }); } catch (e2) { }
                     say((mkTgSmartDownload.err || (fa ? "هیچ مسیر مستقیمی روی این دستگاه جواب نداد." : "No direct route worked on this device.")) + (fa ? " از «راه‌های دیگر» پایین استفاده کن." : " Use “Other ways” below."), "warn");
                     return;
                 }
@@ -29940,14 +29944,14 @@ function mkExportChoice(blob0, filename, mime, options) {
     card.appendChild(note);
     // ---- Other ways (different set for each environment) ----
     const extra = document.createElement("div");
-    extra.style.cssText = "border-top:1px solid #1e293b;margin:2px 0 8px;padding-top:4px";
-    const xt = txt("font-size:11.5px;padding:6px 4px;margin-bottom:2px;cursor:pointer;color:#94a3b8!important;-webkit-text-fill-color:#94a3b8!important", fa ? "راه‌های دیگر" : "Other ways");
+    extra.style.cssText = "border-top:1px solid var(--mkd-track,#1e293b);margin:2px 0 8px;padding-top:4px";
+    const xt = txt("font-size:11.5px;padding:6px 4px;margin-bottom:2px;cursor:pointer;color:var(--mkd-mut,#94a3b8)!important;-webkit-text-fill-color:var(--mkd-mut,#94a3b8)!important", fa ? "راه‌های دیگر" : "Other ways");
     xt.className = "mk-xt", extra.appendChild(xt), extra.classList.add("mk-xcollapsed");
     // "Other ways" stays folded until tapped (or until a route fails and the sheet points the person at it)
     const openExtra = () => { extra.classList.remove("mk-xcollapsed"), extra.classList.add("mk-xopen"); };
     xt.onclick = () => { extra.classList.toggle("mk-xcollapsed"), extra.classList.toggle("mk-xopen"); };
     { const sv = extra.scrollIntoView; extra.scrollIntoView = function (o) { openExtra(); return sv.call(extra, o); }; }
-    const smallCss = "display:flex;align-items:center;justify-content:center;gap:7px;width:100%;border:1px solid #475569;background:transparent;border-radius:10px;padding:8px;margin:0 0 6px;font:600 12px Tahoma,Arial,sans-serif;color:#e2e8f0!important;-webkit-text-fill-color:#e2e8f0!important;opacity:1!important;cursor:pointer;animation:none!important;transition:none!important";
+    const smallCss = "display:flex;align-items:center;justify-content:center;gap:7px;width:100%;border:1px solid var(--mkd-line2,#475569);background:transparent;border-radius:10px;padding:8px;margin:0 0 6px;font:600 12px Tahoma,Arial,sans-serif;color:var(--mkd-fg,#e2e8f0)!important;-webkit-text-fill-color:var(--mkd-fg,#e2e8f0)!important;opacity:1!important;cursor:pointer;animation:none!important;transition:none!important";
     const mini = (key, label, fn) => { const b = document.createElement("button"); b.type = "button", mkShLabel(b, key, label), b.style.cssText = smallCss, b.onclick = async () => { if (b.dataset.busy) return; b.dataset.busy = "1"; try { await fn(b); } finally { delete b.dataset.busy; } }; extra.appendChild(b); return b; };
     const textUrl = (base, t, cap) => base + encodeURIComponent(mkFitEncoded(t, cap).text);
     let shown = 0;
@@ -48615,6 +48619,64 @@ catch { } }; var exportPickerPattern = /downloadStructured|downloadSelectedPDF|d
     w.__mkTO = !0, window.showAdvanced = w;
 } } install(), document.addEventListener("DOMContentLoaded", install), window.addEventListener("load", function () { install(), sync(); }); })();
 </script>
+<style id="mkShSafeCss">
+/* ===== Root rules for every dark file-delivery card (export sheet, backup file, manual fallback) =====
+   Hosts: #mkShChoice, #mkShManual, #mkBkxHost.  Anything you append inside them is readable by default:
+   plain text elements without their own inline colour get --mk-fg, whatever the app theme says.
+   Helper classes for new content:  .mk-t (main)  .mk-t2 (secondary)  .mk-tm (muted)  .mk-tw (warning)  .mk-tok (success)
+   Warning banner for new cards:    window.mkVpnHtml(fa) / window.mkVpnNote(fa) */
+#mkShChoice,#mkShManual,#mkBkxHost{--mk-fg:#e2e8f0;--mk-fg2:#cbd5e1;--mk-mut:#a9b8cc;--mk-warn:#fbbf24;--mk-ok:#86efac;--mk-line:#334155}
+html:not(#_k1):not(#_k2) body:not(#_k3) :is(#mkShChoice,#mkShManual,#mkBkxHost) :is(div,span,p,b,strong,small,label,i,em,h1,h2,h3,h4,li):not([style*="color"]):not(button *):not(.mk-vpn *){color:var(--mk-fg)!important;-webkit-text-fill-color:var(--mk-fg)!important;text-shadow:none!important;mix-blend-mode:normal!important}
+html:not(#_k1):not(#_k2) body:not(#_k3):not(#_k4) :is(#mkShChoice,#mkShManual,#mkBkxHost) .mk-t{color:var(--mk-fg)!important;-webkit-text-fill-color:var(--mk-fg)!important}
+html:not(#_k1):not(#_k2) body:not(#_k3):not(#_k4) :is(#mkShChoice,#mkShManual,#mkBkxHost) .mk-t2{color:var(--mk-fg2)!important;-webkit-text-fill-color:var(--mk-fg2)!important}
+html:not(#_k1):not(#_k2) body:not(#_k3):not(#_k4) :is(#mkShChoice,#mkShManual,#mkBkxHost) .mk-tm{color:var(--mk-mut)!important;-webkit-text-fill-color:var(--mk-mut)!important}
+html:not(#_k1):not(#_k2) body:not(#_k3):not(#_k4) :is(#mkShChoice,#mkShManual,#mkBkxHost) .mk-tw{color:var(--mk-warn)!important;-webkit-text-fill-color:var(--mk-warn)!important}
+html:not(#_k1):not(#_k2) body:not(#_k3):not(#_k4) :is(#mkShChoice,#mkShManual,#mkBkxHost) .mk-tok{color:var(--mk-ok)!important;-webkit-text-fill-color:var(--mk-ok)!important}
+/* media-lock switch row inside those cards: readable text and a switch that is visible when OFF */
+:is(#mkShChoice,#mkShManual,#mkBkxHost) .mk-dlmedia-row{background:rgba(148,163,184,.12);border-color:rgba(125,211,252,.6)}
+:is(#mkShChoice,#mkShManual,#mkBkxHost) .mk-dlmedia-row .t small{opacity:.9;font-size:11.5px}
+:is(#mkShChoice,#mkShManual,#mkBkxHost) .mk-dlmedia-row .sw{background:#475569;box-shadow:inset 0 0 0 1px #94a3b8}
+:is(#mkShChoice,#mkShManual,#mkBkxHost) .mk-dlmedia-row .sw[aria-checked="true"]{background:#22c55e;box-shadow:none}
+</style>
+<script id="mkVpnNoteJs">
+// One warning banner for every card that downloads or sends a file (export sheet, backup file, manual fallback, media backup).
+// theme=true -> inherits the surrounding theme colours (settings panels); default = fixed amber-on-dark for the dark cards.
+window.mkVpnHtml = function (fa, theme) {
+    var t = fa ? "برای دانلود و ارسال فایل، حتماً VPN را روشن کن؛ بدون آن ممکن است دانلود یا ارسال به ربات انجام نشود." : "Keep your VPN on while downloading or sending files; without it the download or the bot upload may fail.";
+    var base = "display:flex;align-items:flex-start;gap:8px;margin:0 0 10px;padding:8px 10px;border-radius:10px;font-size:12px;line-height:1.8;text-align:start;font-weight:700;opacity:1!important;";
+    var css = theme ? base + "border:1px solid rgba(217,119,6,.6);background:rgba(245,158,11,.14)"
+        : base + "border:1px solid rgba(251,191,36,.55);background:rgba(251,191,36,.12);color:var(--mkd-vpn,#fde68a)!important;-webkit-text-fill-color:var(--mkd-vpn,#fde68a)!important";
+    var sp = theme ? "" : "color:var(--mkd-vpn,#fde68a)!important;-webkit-text-fill-color:var(--mkd-vpn,#fde68a)!important;";
+    return '<div class="mk-vpn" data-mu-noemo="1" role="note" style="' + css + '"><span style="flex:none;' + sp + '">⚠️</span><span style="' + sp + '">' + t + '</span></div>';
+};
+window.mkVpnNote = function (fa, theme) { var t = document.createElement("template"); t.innerHTML = window.mkVpnHtml(fa, theme); return t.content.firstChild; };
+</script>
+<style id="mkDlgThemeCss">
+/* Day/night harmony for every file-delivery card (export sheet, backup file, manual download, bot text, progress).
+   Palette = the notes app's own sheet colours (--nfs-sheet / --nfs-border / --nfs-text), switched by html[data-mk-dlg]. */
+:root{--mkd-bg:#2b2b2b;--mkd-fg:#ececec;--mkd-fg2:#d6d6d6;--mkd-mut:#bdbdbd;--mkd-line:#4a4a4a;--mkd-line2:#626262;--mkd-track:#3d3d3d;--mkd-acc:#5ac8fa;--mkd-acc2:#8bd8ff;--mkd-ok:#86efac;--mkd-warn:#fbbf24;--mkd-vpn:#fde68a;--mkd-overlay:rgba(0,0,0,.62);--mkd-shadow:0 20px 60px rgba(0,0,0,.5);--mkd-btn2:#4b5563}
+html[data-mk-dlg="light"]{--mkd-bg:#ffffff;--mkd-fg:#1f1f1f;--mkd-fg2:#2e2e2e;--mkd-mut:#555555;--mkd-line:#c4c4c4;--mkd-line2:#a3a3a3;--mkd-track:#e3e3e3;--mkd-acc:#0369a1;--mkd-acc2:#0369a1;--mkd-ok:#15803d;--mkd-warn:#b45309;--mkd-vpn:#78350f;--mkd-overlay:rgba(0,0,0,.38);--mkd-shadow:0 20px 50px rgba(0,0,0,.22);--mkd-btn2:#5b6472}
+#mkShChoice,#mkShManual,#mkBkxHost,#mkTgTextPanel{--mk-fg:var(--mkd-fg);--mk-fg2:var(--mkd-fg2);--mk-mut:var(--mkd-mut);--mk-warn:var(--mkd-warn);--mk-ok:var(--mkd-ok);--mk-line:var(--mkd-line)}
+html.mu-nfs-open[data-mk-dlg="light"] #toast{background:rgba(255,255,255,.97)!important;color:#1f1f1f!important;-webkit-text-fill-color:#1f1f1f!important;border-color:#c4c4c4!important;box-shadow:0 10px 30px rgba(0,0,0,.18)!important}
+:is(#mkShChoice,#mkShManual,#mkBkxHost,#mkTgTextPanel)>div{box-shadow:var(--mkd-shadow)!important}
+:is(#mkShChoice,#mkShManual,#mkBkxHost) .mk-dlmedia-row{background:color-mix(in srgb,var(--mkd-fg) 7%,transparent);border-color:var(--mkd-acc)}
+:is(#mkShChoice,#mkShManual,#mkBkxHost) .mk-dlmedia-row .sw{background:var(--mkd-line2);box-shadow:none}
+:is(#mkShChoice,#mkShManual,#mkBkxHost) .mk-dlmedia-row .sw[aria-checked="true"]{background:#22c55e}
+</style>
+<script id="mkDlgThemeJs">
+(function () {
+    var H = document.documentElement;
+    function cur() {
+        var r = document.getElementById("muNotesFs"), a = r && r.getAttribute("data-theme"), b = H.getAttribute("data-mxe-theme");
+        var t = H.classList.contains("mu-nfs-open") ? (a || b) : (b || a);
+        return t === "light" ? "light" : "dark";
+    }
+    function sync() { var t = cur(); if (H.getAttribute("data-mk-dlg") !== t) H.setAttribute("data-mk-dlg", t); }
+    sync();
+    try { new MutationObserver(sync).observe(H, { attributes: true, subtree: true, attributeFilter: ["data-theme", "data-mxe-theme", "class"] }); } catch (e) { }
+    document.addEventListener("DOMContentLoaded", sync); window.addEventListener("load", sync);
+})();
+</script>
 <style id="mkDlMediaCss">
 .mkmed-modal{z-index:2147483647!important;background:rgba(2,8,20,.6)!important;-webkit-backdrop-filter:blur(6px);backdrop-filter:blur(6px)}
 .mkmed-card.mkpw{--pw-bg:#fff;--pw-fg:#0f172a;--pw-mut:#64748b;--pw-line:rgba(100,116,139,.35);--pw-in:#f1f5f9;max-width:360px;width:100%;box-sizing:border-box;padding:20px 18px 16px;border-radius:22px;background:var(--pw-bg)!important;color:var(--pw-fg)!important;box-shadow:0 24px 70px rgba(0,0,0,.45);text-align:center;animation:mkpwIn .18s ease-out}
@@ -48656,15 +48718,22 @@ catch { } }; var exportPickerPattern = /downloadStructured|downloadSelectedPDF|d
         rows = rows.filter(function (r) { return r.el.isConnected; });
         rows.forEach(function (r) {
             var o = on(), f = fa();
-            r.t.innerHTML = "<b>" + (f ? "🔓 استفاده از قفل رسانه" : "🔓 Use the media lock") + "</b><small>" + (o ? (f ? "فعال — رسانه‌ها از ربات گرفته می‌شوند و ارسال با ربات آزاد است" : "On — media is fetched from the bot and bot sending is allowed") : unlocked() ? (f ? "غیرفعال — بدون رسانهٔ ربات" : "Off — no bot media") : (f ? "غیرفعال — بزن تا رمز رسانه را وارد کنی" : "Off — tap to enter the media password")) + "</small>";
+            r.t.innerHTML = "<b class=\"mk-t\">" + (f ? "🔓 استفاده از قفل رسانه" : "🔓 Use the media lock") + "</b><small class=\"mk-tm\">" + (o ? (f ? "فعال — رسانه‌ها از ربات گرفته می‌شوند و ارسال با ربات آزاد است" : "On — media is fetched from the bot and bot sending is allowed") : unlocked() ? (f ? "غیرفعال — بدون رسانهٔ ربات" : "Off — no bot media") : (f ? "غیرفعال — بزن تا رمز رسانه را وارد کنی" : "Off — tap to enter the media password")) + "</small>";
             r.sw.setAttribute("aria-checked", o ? "true" : "false");
         });
     }
-    async function toggle() {
+    async function toggle(rowEl) {
+        var hosts = []; try { var h0 = rowEl && rowEl.closest && rowEl.closest("#mkShChoice,#mkShManual,#mkBkxHost"); h0 && hosts.push(h0); } catch (e) { }
+        var say = function (a, b) { try { typeof showToast === "function" && showToast(fa() ? a : b, 3500); } catch (e) { } };
         if (!unlocked()) {
             var m = M(); if (!has() || !m || typeof m.ensureUnlocked !== "function") return on();
-            var ok = !1; try { ok = await m.ensureUnlocked(!0); } catch (e) { }
-            if (ok) setPref("1");
+            var ok = !1, err = null;
+            /* the password dialog must never sit under the file card: hide the card while it is open */
+            hosts.forEach(function (h) { h.style.visibility = "hidden"; });
+            try { ok = await m.ensureUnlocked(!0); } catch (e) { err = e; console.warn("media lock unlock failed", e); }
+            finally { hosts.forEach(function (h) { h.style.visibility = ""; }); }
+            if (ok) { setPref("1"); say("🔓 قفل رسانه فعال شد", "🔓 Media lock is on"); }
+            else say(err ? "باز نشد: " + String(err && err.message || err).slice(0, 80) + " (VPN روشن است؟)" : "رمز وارد نشد؛ قفل رسانه روشن نشد", err ? "Unlock failed: " + String(err && err.message || err).slice(0, 80) + " (is the VPN on?)" : "No password entered; the media lock stays off");
         } else setPref(on() ? "0" : "1");
         paint(); return on();
     }
@@ -48673,7 +48742,7 @@ catch { } }; var exportPickerPattern = /downloadStructured|downloadSelectedPDF|d
         var el = document.createElement("div"); el.className = "mk-dlmedia-row";
         el.innerHTML = '<div class="t"></div><button type="button" class="sw" role="switch" aria-checked="false"><i></i></button>';
         var r = { el: el, t: el.firstChild, sw: el.lastChild };
-        el.onclick = function (e) { e.preventDefault(); e.stopPropagation(); toggle(); };
+        el.onclick = function (e) { e.preventDefault(); e.stopPropagation(); toggle(el).catch(function (er) { console.warn("media lock toggle", er); }); };
         rows.push(r); paint(); return el;
     }
     window.mkDlMedia = { on: on, toggle: toggle, make: make, paint: paint };
@@ -63987,7 +64056,7 @@ var CONT = [["AS", "آسیا", "Asia"], ["EU", "اروپا", "Europe"], ["NA", "
         h += pgBox() + `<div class="mkmed-msg"${unl ? ' id="mkmedMsg"' : ""}>${unl ? esc(S.msg || "") : ""}</div>`;
         // 4) main actions
         const orphN = orphanSafe() ? orphanIds().length : 0;
-        h += card("🔄", L("همگام‌سازی", "Sync"), autoHtml() + `<div class="mkmed-btns">${btn("sendAll", "⬆️ " + T("sendAll"), "pri")}${btn("syncAll", "⬇️ " + T("syncAll"))}${btn("retry", "🔁 " + T("retry"))}${btn("purge", "🧹 " + T("purge") + (orphN ? " (" + nf(orphN) + ")" : ""))}</div>`);
+        h += card("🔄", L("همگام‌سازی", "Sync"), (window.mkVpnHtml ? window.mkVpnHtml(fa, !0) : "") + autoHtml() + `<div class="mkmed-btns">${btn("sendAll", "⬆️ " + T("sendAll"), "pri")}${btn("syncAll", "⬇️ " + T("syncAll"))}${btn("retry", "🔁 " + T("retry"))}${btn("purge", "🧹 " + T("purge") + (orphN ? " (" + nf(orphN) + ")" : ""))}</div>`);
         // 5) settings
         h += card("⚙️", L("تنظیمات", "Settings"), `<div class="mkmed-capr"><label class="mkmed-note" for="mkmedCap">${T("cap")}</label><input class="mkmed-in" id="mkmedCap" type="number" min="20" step="10" value="${Math.round(cap / 1048576)}"></div><div class="mkmed-btns">${btn(on ? "disable" : "enable", on ? "⏸ " + T("disable") : "▶️ " + T("enable"))}${unl ? btn("test", "📡 " + T("test")) : ""}${unl ? btn("lock", "🔒 " + T("lock")) : ""}${btn("free", "🧹 " + T("free"))}</div>` + advHtml());
         // 6) security
