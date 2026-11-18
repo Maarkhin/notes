@@ -22710,6 +22710,25 @@ async function cloudReadIndex() { const raw = await cloudGetItem(CLOUD_INDEX_KEY
     throw new Error("cloud-read-failed");
     // only after the new copy + index are safely written
     return await cloudRemoveItems(oldKeys.concat([CLOUD_META_KEY])), migrated; }
+// Final "finalizing" read of the index: retried with growing pauses; if Telegram still won't answer, the copy read
+// at the start of THIS backup is used instead of throwing away a fully written + verified backup.
+async function cloudReadIndexFinal(fallback) { for (let t = 0; t < 3; t++) {
+    try {
+        return await cloudReadIndex();
+    }
+    catch (e) {
+        if (!(e && e.message === "cloud-read-failed"))
+            throw e;
+        try {
+            cloudParBackoff();
+        }
+        catch { }
+        await cloudSleep(900 * (t + 1));
+    }
+} if (Array.isArray(fallback)) {
+    console.warn("Cloud index re-read failed; committing from the start-of-backup copy");
+    return fallback.slice();
+} throw new Error("cloud-read-failed"); }
 // Newest-first list of every backup (the one auto slot, plus up to MAX_MANUAL_BACKUPS manual snapshots) —
 // what the Cloud Backup panel renders
 function cloudListBackups() { return cloudSerial(async () => { let idx; try {
@@ -23915,7 +23934,7 @@ catch (error) {
     if (meta.hint)
         newEntry.hint = meta.hint;
 } let freshIndex; try {
-    freshIndex = await cloudReadIndex();
+    freshIndex = await cloudReadIndexFinal(index);
 }
 catch (error) {
     return await cloudRemoveItems(chunkKeys), { ok: !1, reason: "write-failed" };
@@ -24698,7 +24717,7 @@ async function cloudManualDeltaTry(idx, id, overflow, label, noWide, noRaw) { tr
     mkBkSetFor("manual", { phase: "finalizing" });
     let fresh;
     try {
-        fresh = await cloudReadIndex();
+        fresh = await cloudReadIndexFinal(idx);
     }
     catch {
         return await rollback(), { ok: !1, reason: "write-failed" };
@@ -24896,7 +24915,7 @@ pfx !== id && (entry.pfx = pfx), kind === "auto" && hash && (entry.h = hash);
 // Re-read the index right before committing: another device may have changed it while this (multi-second) write
 // was running; committing from the stale copy read at the start would silently undo its change.
 let fresh; try {
-    fresh = await cloudReadIndex();
+    fresh = await cloudReadIndexFinal(idx);
 }
 catch {
     return await rollback(keys.length), { ok: !1, reason: "write-failed" };
