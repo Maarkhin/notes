@@ -21611,7 +21611,7 @@ window.mkMediaFeatureSet = function (on) {
 window.mkMediaFeatureToggle = function () { window.mkMediaFeatureSet(!mkMediaFeatureOn()); };
 window.mk_mediaFeatureRowHtml = function (fa) {
     const on = mkMediaFeatureOn();
-    return '<div class="mu-set-row"><div class="mu-set-text"><div class="mu-set-title">' + (fa ? "بکاپ رسانه (عکس و ویس)" : "Media backup (photos & voice)") + '</div><div class="mu-set-desc">' + (fa ? "پیش‌فرض غیرفعال است. وقتی غیرفعال باشد، تب «بکاپ رسانه» پنهان است، ابر بکاپ رسانه‌ای در صفحه اصلی فقط می‌گوید غیرفعال است، و کلیدهای اختصاص‌داده‌شده به آن به بکاپ خودکار و دستی برمی‌گردد." : "Off by default. While off, the Media backup tab is hidden, the media cloud on the home page only says it is disabled, and the keys reserved for it go back to auto and manual backup.") + '</div></div><button type="button" class="mu-switch" id="mkMediaFeatureSwitch" role="switch" aria-checked="' + (on ? "true" : "false") + '" aria-label="' + (fa ? "بکاپ رسانه" : "Media backup") + '" onclick="mkMediaFeatureToggle()"></button></div>';
+    return '<div class="mu-set-row"><div class="mu-set-text"><div class="mu-set-title">' + (fa ? "بکاپ رسانه (عکس و ویس)" : "Media backup (photos & voice)") + '</div><div class="mu-set-desc">' + (fa ? "پیش‌فرض غیرفعال است. وقتی غیرفعال باشد، تب «بکاپ رسانه» پنهان است، ابر بکاپ رسانه‌ای در صفحه اصلی فقط می‌گوید غیرفعال است، و کلیدهای اختصاص‌داده‌شده به آن به بکاپ خودکار و دستی برمی‌گردد. دانلود، اشتراک‌گذاری و ارسال خروجی‌ها به چت ربات با رباتِ تنظیم‌شده همچنان کار می‌کند." : "Off by default. While off, the Media backup tab is hidden, the media cloud on the home page only says it is disabled, and the keys reserved for it go back to auto and manual backup. Downloads, sharing and sending exports to the bot chat keep working with the bot you already set up.") + '</div></div><button type="button" class="mu-switch" id="mkMediaFeatureSwitch" role="switch" aria-checked="' + (on ? "true" : "false") + '" aria-label="' + (fa ? "بکاپ رسانه" : "Media backup") + '" onclick="mkMediaFeatureToggle()"></button></div>';
 };
 function cloudChunksPerSlot(manualCount) { return Math.max(1, Math.floor((CLOUD_KEY_BUDGET - CLOUD_RESERVED_KEYS - cloudMediaReserve()) / (1 + manualCount))); }
 // Accepts a number or numeric string; returns an integer 0-2 or null; a larger saved value (older versions allowed up to 7) is clamped to 2. (An empty string must NOT become 0 -
@@ -29293,7 +29293,7 @@ function mkShHuman(n) { n = Number(n) || 0; return n >= 1048576 ? (n / 1048576).
 let mkTgLastBot = null;
 function mkTgPlat() { try { return String(TG && TG.platform || window.Telegram && window.Telegram.WebApp && window.Telegram.WebApp.platform || "").toLowerCase(); } catch (e) { return ""; } }
 function mkTgDesktop() { return /^(tdesktop|macos|weba|webk|web|unigram)/.test(mkTgPlat()); }
-function mkTgBotAvailable() { try { const M = window.MKMED; return !!(window.mkMediaFeatureOn && window.mkMediaFeatureOn() && IS_TELEGRAM && M && typeof M.sendFile === "function" && (M.S && M.S.token || typeof M._cfg === "function" && M._cfg())); } catch (e) { return !1; } }
+function mkTgBotAvailable() { try { const M = window.MKMED; return !!(IS_TELEGRAM && M && typeof M.sendFile === "function" && (M.S && M.S.token || typeof M._cfg === "function" && M._cfg())); } catch (e) { return !1; } }
 function mkTgBotReady() { try { const M = window.MKMED; return mkTgBotAvailable() && !!(M && M.S && M.S.token && M.S.key) && (!window.mkDlMedia || window.mkDlMedia.on()); } catch (e) { return !1; } }
 // automatic routes never ask for the media password: they use the bot only when it is already unlocked
 async function mkTgBotSendQ(blob, filename, mime) {
@@ -64350,7 +64350,7 @@ var CONT = [["AS", "آسیا", "Asia"], ["EU", "اروپا", "Europe"], ["NA", "
     async function init() {
         if (!document.getElementById("mkmedCss")) { const st = document.createElement("style"); st.id = "mkmedCss"; st.textContent = CSS; document.head.appendChild(st); }
         if (lsGet(LS_SEEN) === "1") applyBudget();
-        if (!window.mkMediaFeatureOn()) return;
+        if (!window.mkMediaFeatureOn()) { try { if (readCfg()) await keyRestore(); } catch { } return; }   // switch off: media sync stays off, but the bot link used by Download / Share / Send to bot chat keeps working
         if (isOn()) { await loadState(); await keyRestore(); S.paused = !1; startObservers(); }
         if (!await waitCloud(45000)) { markDormant(); return; }
         await readCloudCfg();
