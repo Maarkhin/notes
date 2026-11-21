@@ -21593,25 +21593,26 @@ let hasCloudStorage = !!(TG && TG.CloudStorage);
 // (index + config) are reserved and the rest is shared equally by the auto slot and every manual slot.
 const CLOUD_CHUNK_SIZE = 4000, CLOUD_INDEX_KEY = "mk_idx", CLOUD_BACKUP_PREFIX = "mk_b_", CLOUD_CONFIG_KEY = "mk_cfg", CLOUD_MANUAL_MIN = 0, CLOUD_MANUAL_MAX = 2, CLOUD_MANUAL_DEFAULT = 0, CLOUD_LOCAL_LIMIT_KEY = "mk_manual_limit_v1", CLOUD_KEY_BUDGET = 960, CLOUD_RESERVED_KEYS = 2;
 // Max chunks per slot: fewer manual backups => a bigger auto backup (0 manual = 958 chunks, ~3.7 MB of stored text).
-// Media-sync (mkmed): keys reserved for the media manifest + bot config. 0 unless the feature is (or was seen) enabled, so
-// with the feature off the text-backup budget is exactly what it was before.
-const CLOUD_MEDIA_KEY_BUDGET = 120;
-// Master switch for the whole media-backup feature (Settings). Default OFF: only "1" turns it on. While off, the reserved keys go back to auto/manual backup.
-function mkMediaFeatureOn() { try { return localStorage.getItem("mkmed_feature_v1") === "1"; } catch { return !1; } }
+// Media-sync (mkmed): NO fixed reserve. The media manifest lives in the same shared key pool as the text backups and takes
+// only as many keys as it really uses; the media module keeps that real number in localStorage and the per-slot cap of the
+// text backups shrinks by exactly that much. With no media backup in use, the text backups get the whole budget.
+const CLOUD_MEDIA_KEYS_LS = "mkmed_keys_v1";
+// Master switch for the whole media-backup feature (Settings). Default ON: only an explicit "0" turns it off. It never reserves keys of its own (it uses the shared pool as needed).
+function mkMediaFeatureOn() { try { return localStorage.getItem("mkmed_feature_v1") !== "0"; } catch { return !0; } }
 window.mkMediaFeatureOn = mkMediaFeatureOn;
-function cloudMediaReserve() { try { if (!mkMediaFeatureOn()) return 0; return localStorage.getItem("mkmed_on_v1") === "1" || localStorage.getItem("mkmed_seen_v1") === "1" ? CLOUD_MEDIA_KEY_BUDGET : 0; } catch { return 0; } }
+function cloudMediaReserve() { try { const n = parseInt(localStorage.getItem(CLOUD_MEDIA_KEYS_LS) || "0", 10); return n > 0 ? Math.min(n, CLOUD_KEY_BUDGET - CLOUD_RESERVED_KEYS - 1) : 0; } catch { return 0; } }
 window.mkMediaFeatureSet = function (on) {
     on = !!on;
     try { localStorage.setItem("mkmed_feature_v1", on ? "1" : "0"); } catch (e) { }
     try { cloudApplyManualLimit(MAX_MANUAL_BACKUPS); } catch (e) { }
     try { typeof window.mkMediaFeatureApply == "function" && window.mkMediaFeatureApply(on); } catch (e) { }
     try { const sw = document.getElementById("mkMediaFeatureSwitch"); sw && sw.setAttribute("aria-checked", on ? "true" : "false"); } catch (e) { }
-    try { const fa = typeof currentLang == "string" ? currentLang === "fa" : !0; showToast(on ? (fa ? "بکاپ رسانه فعال شد؛ از تب «بکاپ رسانه» در بکاپ ابری تنظیمش کن." : "Media backup enabled; set it up in the Media tab of Cloud backup.") : (fa ? "بکاپ رسانه غیرفعال شد؛ کلیدهای آن به بکاپ خودکار و دستی برگشت." : "Media backup disabled; its keys went back to auto and manual backup."), 3500); } catch (e) { }
+    try { const fa = typeof currentLang == "string" ? currentLang === "fa" : !0; showToast(on ? (fa ? "بکاپ رسانه فعال شد؛ از تب «بکاپ رسانه» در بکاپ ابری تنظیمش کن." : "Media backup enabled; set it up in the Media tab of Cloud backup.") : (fa ? "بکاپ رسانه غیرفعال شد." : "Media backup disabled."), 3500); } catch (e) { }
 };
 window.mkMediaFeatureToggle = function () { window.mkMediaFeatureSet(!mkMediaFeatureOn()); };
 window.mk_mediaFeatureRowHtml = function (fa) {
     const on = mkMediaFeatureOn();
-    return '<div class="mu-set-row"><div class="mu-set-text"><div class="mu-set-title">' + (fa ? "بکاپ رسانه (عکس و ویس)" : "Media backup (photos & voice)") + '</div><div class="mu-set-desc">' + (fa ? "پیش‌فرض غیرفعال است. وقتی غیرفعال باشد، تب «بکاپ رسانه» پنهان است، ابر بکاپ رسانه‌ای در صفحه اصلی فقط می‌گوید غیرفعال است، و کلیدهای اختصاص‌داده‌شده به آن به بکاپ خودکار و دستی برمی‌گردد. دانلود، اشتراک‌گذاری و ارسال خروجی‌ها به چت ربات با رباتِ تنظیم‌شده همچنان کار می‌کند." : "Off by default. While off, the Media backup tab is hidden, the media cloud on the home page only says it is disabled, and the keys reserved for it go back to auto and manual backup. Downloads, sharing and sending exports to the bot chat keep working with the bot you already set up.") + '</div></div><button type="button" class="mu-switch" id="mkMediaFeatureSwitch" role="switch" aria-checked="' + (on ? "true" : "false") + '" aria-label="' + (fa ? "بکاپ رسانه" : "Media backup") + '" onclick="mkMediaFeatureToggle()"></button></div>';
+    return '<div class="mu-set-row"><div class="mu-set-text"><div class="mu-set-title">' + (fa ? "بکاپ رسانه (عکس و ویس)" : "Media backup (photos & voice)") + '</div><div class="mu-set-desc">' + (fa ? "پیش‌فرض فعال است. وقتی غیرفعال باشد، تب «بکاپ رسانه» پنهان است، ابر بکاپ رسانه‌ای در صفحه اصلی فقط می‌گوید غیرفعال است، و برای بکاپ رسانه هیچ کلیدی جدا رزرو نمی‌شود؛ فقط به اندازه‌ی نیاز از کلیدهای مشترکِ بکاپ استفاده می‌کند. دانلود، اشتراک‌گذاری و ارسال خروجی‌ها به چت ربات با رباتِ تنظیم‌شده همچنان کار می‌کند." : "On by default. While off, the Media backup tab is hidden, the media cloud on the home page only says it is disabled, and no keys are set aside for media backup; it only uses as many of the shared backup keys as it needs. Downloads, sharing and sending exports to the bot chat keep working with the bot you already set up.") + '</div></div><button type="button" class="mu-switch" id="mkMediaFeatureSwitch" role="switch" aria-checked="' + (on ? "true" : "false") + '" aria-label="' + (fa ? "بکاپ رسانه" : "Media backup") + '" onclick="mkMediaFeatureToggle()"></button></div>';
 };
 function cloudChunksPerSlot(manualCount) { return Math.max(1, Math.floor((CLOUD_KEY_BUDGET - CLOUD_RESERVED_KEYS - cloudMediaReserve()) / (1 + manualCount))); }
 // Accepts a number or numeric string; returns an integer 0-2 or null; a larger saved value (older versions allowed up to 7) is clamped to 2. (An empty string must NOT become 0 -
@@ -24884,7 +24885,7 @@ if (!preMergeOk && !forceRebuild && prevEntry.notes > 0 && (categories.length < 
 }
 // A new manual snapshot takes one of the manual slots: only the newest (limit - 1) existing ones survive;
 // older ones are "overflow". Key budget: what is left after every other backup that stays.
-let overflow = []; kind === "manual" && (overflow = idx.filter(e => e.kind === "manual").sort((a, b) => (b.ts || 0) - (a.ts || 0)).slice(Math.max(0, MAX_MANUAL_BACKUPS - 1))); const overflowIds = new Set(overflow.map(e => e.id)), othersChunks = idx.filter(e => e.id !== id && !overflowIds.has(e.id)).reduce((sum, e) => sum + (e.chunks || 0), 0), room = CLOUD_KEY_BUDGET - CLOUD_RESERVED_KEYS - othersChunks, allowed = Math.min(MAX_CHUNKS_PER_BACKUP, room);
+let overflow = []; kind === "manual" && (overflow = idx.filter(e => e.kind === "manual").sort((a, b) => (b.ts || 0) - (a.ts || 0)).slice(Math.max(0, MAX_MANUAL_BACKUPS - 1))); const overflowIds = new Set(overflow.map(e => e.id)), othersChunks = idx.filter(e => e.id !== id && !overflowIds.has(e.id)).reduce((sum, e) => sum + (e.chunks || 0), 0), room = CLOUD_KEY_BUDGET - CLOUD_RESERVED_KEYS - cloudMediaReserve() - othersChunks, allowed = Math.min(MAX_CHUNKS_PER_BACKUP, room);
 // Manual backup without password / LZMA: delta first (shares chunks with the auto backup); null = use the full path below.
 if (kind === "manual" && !wantsEncryption && mkIsDeltaMode(mkManualCompGet())) {
     const __lbl = String(label || "").trim().slice(0, CLOUD_LABEL_MAX_LEN);
@@ -25660,7 +25661,7 @@ const oldKeys = cloudEntryKeys(entry), parts = await cloudGetItems(oldKeys); if 
     } const chunks = cloudSplitChunks(storedData); if (!chunks.length)
     return { ok: !1, reason: "write-failed" };
 // Budget: the new copy may be a bit bigger (encryption overhead) than the old one.
-const othersChunks = idx.filter(e => e.id !== id).reduce((sum, e) => sum + (e.chunks || 0), 0), room = CLOUD_KEY_BUDGET - CLOUD_RESERVED_KEYS - othersChunks, allowed = Math.max(entry.chunks || 0, Math.min(MAX_CHUNKS_PER_BACKUP, room)); if (chunks.length > allowed)
+const othersChunks = idx.filter(e => e.id !== id).reduce((sum, e) => sum + (e.chunks || 0), 0), room = CLOUD_KEY_BUDGET - CLOUD_RESERVED_KEYS - cloudMediaReserve() - othersChunks, allowed = Math.max(entry.chunks || 0, Math.min(MAX_CHUNKS_PER_BACKUP, room)); if (chunks.length > allowed)
     return { ok: !1, reason: "no-space" }; if (CLOUD_RESERVED_KEYS + idx.reduce((sum, e) => sum + (e.chunks || 0), 0) + chunks.length > 1e3)
     return { ok: !1, reason: "no-space" }; const newPfx = cloudEntryPrefix(entry) === id ? id + "b" : id; try {
     await cloudRemoveStrayTail(newPfx, 0);
@@ -48821,6 +48822,10 @@ html.mu-nfs-open[data-mk-dlg="light"] #toast{background:rgba(255,255,255,.97)!im
 .mk-dlmedia-row .sw{flex:none;width:46px;height:26px;border-radius:13px;border:0;background:#94a3b8;position:relative;cursor:pointer;padding:0;transition:background .15s}
 .mk-dlmedia-row .sw i{position:absolute;top:3px;left:3px;width:20px;height:20px;border-radius:50%;background:#fff;transition:transform .15s}
 .mk-dlmedia-row .sw[aria-checked="true"]{background:#22c55e}.mk-dlmedia-row .sw[aria-checked="true"] i{transform:translateX(20px)}
+/* the generic "button{background:...!important}" theme rules of the export sheets (black/white + dark) used to paint this switch gray even when it is ON; ID-weight selector so green always wins */
+html:not(#_mkdm) body .mk-dlmedia-row button.sw[aria-checked="true"]{background:#22c55e!important;box-shadow:none!important}
+html:not(#_mkdm) body .mk-dlmedia-row button.sw[aria-checked="false"]{background:#94a3b8!important}
+html:not(#_mkdm) body .mk-dlmedia-row button.sw i{background:#fff!important}
 </style>
 <script id="mkDlMediaOpt">
 // Optional switch "use the media lock" in exports / downloads / manual backup.
@@ -63078,7 +63083,7 @@ var CONT = [["AS", "آسیا", "Asia"], ["EU", "اروپا", "Europe"], ["NA", "
 (function () {
     "use strict";
     if (window.MKMED) return;
-    const BUDGET = typeof CLOUD_MEDIA_KEY_BUDGET === "number" ? CLOUD_MEDIA_KEY_BUDGET : 120;
+    const BUDGET = typeof CLOUD_KEY_BUDGET === "number" ? CLOUD_KEY_BUDGET : 960, LS_KEYS = typeof CLOUD_MEDIA_KEYS_LS === "string" ? CLOUD_MEDIA_KEYS_LS : "mkmed_keys_v1";   // shared pool, no own budget
     const LS_CFG = "mkmed_cfg_v1", LS_ON = "mkmed_on_v1", LS_SEEN = "mkmed_seen_v1", LS_DEV = "mkmed_dev_v1", KV_STATE = "mkmed_state_v1";
     const LS_AUTO = "mkmed_auto_v1", LS_CLEAN = "mkmed_autoclean_v1";   // auto sync switch (default ON; only "0" turns it off)
     const CFG_KEY = "mk_media_cfg", IDX_PFX = "mk_medx_", CH_PFX = "mk_med_";
@@ -63100,8 +63105,8 @@ var CONT = [["AS", "آسیا", "Asia"], ["EU", "اروپا", "Europe"], ["NA", "
             cloudcfg: "این حساب قبلاً روی دستگاه دیگری تنظیم شده؛ فقط رمز رسانه را وارد کن.",
             total: "کل", uploaded: "آپلودشده", unsynced: "ناهمگام", here: "روی این دستگاه", errors: "خطا",
             sendAll: "ارسال همه", repair: "🛠 تعمیر خودکار", forget: "🗑 فراموش‌کردن فایل‌های خراب", confirmForget: "رکورد فایل‌های خراب فقط از حافظه‌ی همین دستگاه پاک می‌شود و دیگر خطا نمی‌دهند. ادامه بدهم؟", forgotN: "فراموش شد", redoAll: "آپلود مجدد همه با کلید فعلی", confirmRedo: "همه‌ی عکس/ویس‌های موجود روی این دستگاه با کلید فعلی دوباره آپلود می‌شوند و رکوردهای قدیمی نادیده گرفته می‌شوند. ادامه بدهم؟", badNote: "بعضی فایل‌ها با کلید دیگری رمزنگاری شده‌اند (احتمالاً بعد از بازنشانی کامل و راه‌اندازی دوباره). «تعمیر خودکار» را بزن: اگر نسخه‌ی فایل روی این دستگاه باشد دوباره آپلود می‌شود، وگرنه رکورد خراب پاک می‌شود.", repaired: "تعمیر شد", redoN: "آپلود مجدد", lostN: "غیرقابل‌بازیابی", retry: "تلاش مجدد خطاها", syncAll: "همگام‌سازی همه", free: "آزادسازی فضا", disable: "غیرفعال‌سازی", enable: "فعال‌سازی", remove: "حذف تنظیمات",
-            cap: "سقف حجم محلی (MB)", usage: "حجم رسانهٔ محلی", browser: "حافظهٔ مرورگر", keys: "کلید مانیفست",
-            queue: "صف", idle: "بیکار", fullM: "⚠️ مانیفست پر است؛ رسانه‌های جدید در فهرست ابری ثبت نمی‌شوند.",
+            cap: "سقف حجم محلی (MB)", usage: "حجم رسانهٔ محلی", browser: "حافظهٔ مرورگر", keys: "کلید مانیفست", keysFree: "کلید آزادِ مشترک",
+            queue: "صف", idle: "بیکار", fullM: "⚠️ کلیدهای مشترک Cloud تمام شده؛ رسانه‌های جدید در فهرست ابری ثبت نمی‌شوند. از بکاپ‌های متن (دستی/خودکار) جا باز کن.",
             okConnected: "✅ متصل شد:", errToken: "توکن نامعتبر است.", errPw: "رمز حداقل 6 نویسه و هر دو یکسان باشد.", errChat: "شناسهٔ کاربر تلگرام در دسترس نیست؛ برنامه را داخل تلگرام باز کن.",
             errNet: "اتصال به سرور ربات برقرار نشد. پروکسی تلگرام (MTProto) برای مینی‌اپ کار نمی‌کند؛ برای ارسال فایل‌ها VPN یا اینترنت آزاد لازم است. به‌محض وصل شدن، خودکار ادامه می‌دهد.", errStart: "ربات نمی‌تواند پیام بدهد؛ ابتدا در تلگرام به ربات /start بده.", errWrong: "رمز اشتباه است.",
             qd: "⏳ در صف", dl: "⬇️ در حال دریافت…", er: "⚠️ خطا — بزن تا دوباره", lk: "🔒 بزن و رمز را وارد کن", big: "⛔ فایل بزرگ‌تر از حد Bot API",
@@ -63122,8 +63127,8 @@ var CONT = [["AS", "آسیا", "Asia"], ["EU", "اروپا", "Europe"], ["NA", "
             cloudcfg: "This account was already set up on another device; just enter the media password.",
             total: "Total", uploaded: "Uploaded", unsynced: "Not synced", here: "On this device", errors: "Errors",
             sendAll: "Upload all", repair: "🛠 Auto-repair", forget: "🗑 Forget broken files", confirmForget: "The records of the broken files are dropped on this device only and stop raising errors. Continue?", forgotN: "forgotten", redoAll: "Re-upload all with current key", confirmRedo: "Every photo/voice note stored on this device will be uploaded again with the current key and old records will be ignored. Continue?", badNote: "Some files were encrypted with a different key (usually after removing the setup and setting it up again). Tap Auto-repair: files that exist on this device are re-uploaded, otherwise the broken record is dropped.", repaired: "Repaired", redoN: "re-uploaded", lostN: "unrecoverable", retry: "Retry failed", syncAll: "Sync all", free: "Free space", disable: "Disable", enable: "Enable", remove: "Remove setup",
-            cap: "Local size limit (MB)", usage: "Local media size", browser: "Browser storage", keys: "Manifest keys",
-            queue: "Queue", idle: "idle", fullM: "⚠️ Manifest is full; new media are not listed in the cloud.",
+            cap: "Local size limit (MB)", usage: "Local media size", browser: "Browser storage", keys: "Manifest keys", keysFree: "Shared free keys",
+            queue: "Queue", idle: "idle", fullM: "⚠️ The shared Cloud keys are used up; new media are not listed in the cloud. Free some space from the text backups (manual/auto).",
             okConnected: "✅ Connected:", errToken: "Invalid token.", errPw: "Password: at least 6 characters, both fields equal.", errChat: "Telegram user id unavailable; open the app inside Telegram.",
             errNet: "Cannot reach the bot server. A Telegram (MTProto) proxy does not carry mini-app traffic; a VPN or open internet is needed to send files. It resumes automatically once connected.", errStart: "The bot cannot message you; send /start to it in Telegram first.", errWrong: "Wrong password.",
             qd: "⏳ Queued", dl: "⬇️ Downloading…", er: "⚠️ Error — tap to retry", lk: "🔒 Tap and enter password", big: "⛔ File larger than Bot API limit",
@@ -63543,6 +63548,8 @@ var CONT = [["AS", "آسیا", "Asia"], ["EU", "اروپا", "Europe"], ["NA", "
         });
     }
     const applyBudget = () => { try { cloudApplyManualLimit(MAX_MANUAL_BACKUPS); } catch { } };
+    // publish the REAL number of media keys so the text backups shrink by exactly that much (and by nothing when there are none)
+    const keysNote = () => { try { const n = Math.max(0, S.mkeys | 0); if (String(n) !== String(lsGet(LS_KEYS) || "0")) { lsSet(LS_KEYS, n ? String(n) : null); applyBudget(); } } catch { } };
 
     /* ---------- manifest (CloudStorage) ---------- */
     const encRec = r => [r.id, r.sha, r.fid, r.size, r.t, (r.ts || 0).toString(36), r.k || "", r.m || ""].join("|");
@@ -63557,9 +63564,9 @@ var CONT = [["AS", "آسیا", "Asia"], ["EU", "اروپا", "Europe"], ["NA", "
         if (!cloudOk()) return !1;
         const own = Object.values(S.recs).filter(r => r.fid && !r.noList).sort((a, b) => (a.ts || 0) - (b.ts || 0)), chunks = packChunks(own), dev = devId();
         return serial(async () => {
-            const keys = await cloudGetKeys() || [], mine = k => k.indexOf(CH_PFX + dev + "_") === 0 || k === IDX_PFX + dev;
+            const keys = await cloudGetKeys(); if (!keys) return !1; const mine = k => k.indexOf(CH_PFX + dev + "_") === 0 || k === IDX_PFX + dev;
             const others = keys.filter(k => (k.indexOf(CH_PFX) === 0 && /^mk_med_[a-z0-9]+_\d+$/.test(k) || k.indexOf(IDX_PFX) === 0) && !mine(k)).length;
-            const allowed = BUDGET - 1 - others - 1;
+            const nonMine = keys.filter(k => !mine(k)).length, allowed = Math.max(0, BUDGET - nonMine - 1);   // everything still free in the shared pool
             S.mkeys = others + 1;
             if (chunks.length > allowed) { S.manifestFull = !0; return !1; }
             S.manifestFull = !1;
@@ -63568,7 +63575,7 @@ var CONT = [["AS", "آسیا", "Asia"], ["EU", "اروپا", "Europe"], ["NA", "
             if (idx && idx.h === h && idx.n === chunks.length) {
                 let okSame = !0;
                 if (force && chunks.length) { const nm = chunks.map((_, i) => CH_PFX + dev + "_" + i), got = await cloudGetItems(nm) || {}; okSame = nm.every((k, i) => got[k] === chunks[i]); }
-                if (okSame) { S.mkeys = others + 1 + chunks.length + 0; S.manifestDirty = !1; return !0; }
+                if (okSame) { S.mkeys = others + 1 + chunks.length; S.kfree = Math.max(0, BUDGET - nonMine - 1 - chunks.length); keysNote(); S.manifestDirty = !1; return !0; }
             }
             const names = chunks.map((_, i) => CH_PFX + dev + "_" + i);
             for (let i = 0; i < chunks.length; i++) if (!await cloudSetItem(names[i], chunks[i])) return !1;
@@ -63577,7 +63584,7 @@ var CONT = [["AS", "آسیا", "Asia"], ["EU", "اروپا", "Europe"], ["NA", "
             if (!await cloudSetItem(IDX_PFX + dev, JSON.stringify({ v: 1, n: chunks.length, c: own.length, ts: Date.now(), h }))) return !1;
             const stray = keys.filter(k => k.indexOf(CH_PFX + dev + "_") === 0 && /^\d+$/.test(k.slice((CH_PFX + dev + "_").length)) && +k.slice((CH_PFX + dev + "_").length) >= chunks.length);
             stray.length && await cloudRemoveItems(stray);
-            S.mkeys = others + 1 + chunks.length; S.manifestDirty = !1; return !0;
+            S.mkeys = others + 1 + chunks.length; S.kfree = Math.max(0, BUDGET - nonMine - 1 - chunks.length); keysNote(); S.manifestDirty = !1; return !0;
         }).catch(() => !1);
     }
     async function pullManifest() {
@@ -63587,7 +63594,7 @@ var CONT = [["AS", "آسیا", "Asia"], ["EU", "اروپا", "Europe"], ["NA", "
             return await serial(async () => {
                 const keys = await cloudGetKeys(); if (!keys) return !1;
                 const devs = keys.filter(k => k.indexOf(IDX_PFX) === 0).map(k => k.slice(IDX_PFX.length)), idxKeys = devs.map(d => IDX_PFX + d);
-                S.mkeys = keys.filter(k => /^mk_med_[a-z0-9]+_\d+$/.test(k) || k.indexOf(IDX_PFX) === 0).length;
+                S.mkeys = keys.filter(k => /^mk_med_[a-z0-9]+_\d+$/.test(k) || k.indexOf(IDX_PFX) === 0).length; S.kfree = Math.max(0, BUDGET - keys.length); keysNote();
                 if (!devs.length) return !0;
                 const idxVals = await cloudGetItems(idxKeys); if (!idxVals) return !1;
                 let complete = !0; const fresh = {}, BT = bts(), refsG = Object.keys(S.gone).length ? refsAll() : null; for (const gid in S.gone) Date.now() - S.gone[gid] > 5184e6 && delete S.gone[gid];
@@ -64163,7 +64170,7 @@ var CONT = [["AS", "آسیا", "Asia"], ["EU", "اروپا", "Europe"], ["NA", "
         // 1) status
         const tile = (n, lbl, c) => `<div class="${c || ""}"><b>${nf(n)}</b><span>${lbl}</span></div>`;
         let st1 = `<div class="mkmed-grid">${tile(st.total, T("total"))}${tile(st.up, T("uploaded"), "good")}${tile(st.uns, T("unsynced"), st.uns ? "warn" : "")}${tile(st.here, T("here"))}${tile(st.err, T("errors"), st.err ? "bad" : "")}</div>`;
-        st1 += `<div class="mkmed-note">${T("usage")}: ${S.usageKnown ? nf(mb(S.usage)) : "…"} / ${nf(mb(cap))} MB</div><div class="mkmed-bar"><i style="width:${pct}%"></i></div><div class="mkmed-note" id="mkmedEst"></div><div class="mkmed-note">${T("keys")}: ${nf(S.mkeys)} / ${nf(BUDGET)}</div>`;
+        st1 += `<div class="mkmed-note">${T("usage")}: ${S.usageKnown ? nf(mb(S.usage)) : "…"} / ${nf(mb(cap))} MB</div><div class="mkmed-bar"><i style="width:${pct}%"></i></div><div class="mkmed-note" id="mkmedEst"></div><div class="mkmed-note">${T("keys")}: ${nf(S.mkeys)} · ${T("keysFree")}: ${nf(S.kfree == null ? Math.max(0, BUDGET - S.mkeys) : S.kfree)}</div>`;
         S.manifestFull && (st1 += `<div class="mkmed-note">${T("fullM")}</div>`);
         { const on0 = orphanSafe() ? orphanIds().length : 0; on0 && (st1 += `<div class="mkmed-note">🧹 ${T("orphans")}: ${nf(on0)}</div>`); }
         h += card("📊", L("وضعیت", "Status"), st1);
@@ -64293,7 +64300,7 @@ var CONT = [["AS", "آسیا", "Asia"], ["EU", "اروپا", "Europe"], ["NA", "
                     if (!ok) { msg(T("errReset")); return; }
                 }
                 stopObservers(); [LS_CFG, LS_ON, LS_SEEN, "mkmed_base_v1", "mkmed_remember_v1", LS_RAUTO].forEach(k => lsSet(k, null));
-                resetState(); KEYDB.del(); S.token = S.key = null; S.base = DEF_BASE; S.remember = !0; S.draft = {}; S.warn = ""; S.netErr = !1; S.advOpen = !1; S.manifestFull = !1; S.manifestDirty = !1; S.mkeys = 0; S.paused = !1;
+                resetState(); KEYDB.del(); S.token = S.key = null; S.base = DEF_BASE; S.remember = !0; S.draft = {}; S.warn = ""; S.netErr = !1; S.advOpen = !1; S.manifestFull = !1; S.manifestDirty = !1; S.mkeys = 0; S.kfree = null; lsSet(LS_KEYS, null); S.paused = !1;
                 applyBudget(); msg(T("resetDone")); render();
             }
 
